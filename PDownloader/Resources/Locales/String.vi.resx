@@ -1,0 +1,240 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root xmlns:ns1="urn:schemas-microsoft-com:xml-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  
+  <xs:schema id="root">
+    <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xs:element name="root" ns1:IsDataSet="true">
+      <xs:complexType>
+        <xs:choice maxOccurs="unbounded">
+          <xs:element name="metadata">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" />
+              </xs:sequence>
+              <xs:attribute name="name" use="required" type="xsd:string" />
+              <xs:attribute name="type" type="xsd:string" />
+              <xs:attribute name="mimetype" type="xsd:string" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="assembly">
+            <xs:complexType>
+              <xs:attribute name="alias" type="xsd:string" />
+              <xs:attribute name="name" type="xsd:string" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="data">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+                <xs:element name="comment" type="xsd:string" minOccurs="0" ns1:Ordinal="2" />
+              </xs:sequence>
+              <xs:attribute name="name" type="xsd:string" use="required" ns1:Ordinal="1" />
+              <xs:attribute name="type" type="xsd:string" ns1:Ordinal="3" />
+              <xs:attribute name="mimetype" type="xsd:string" ns1:Ordinal="4" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="resheader">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+              </xs:sequence>
+              <xs:attribute name="name" type="xsd:string" use="required" />
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+    </xs:element>
+  </xs:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="page_home_summary" xml:space="preserve">
+    <value>Đi đến Trang Chủ</value>
+  </data>
+  <data name="page_home_title" xml:space="preserve">
+    <value>Trang chủ</value>
+  </data>
+  <data name="page_settings_about_title" xml:space="preserve">
+    <value>Về chúng tôi</value>
+  </data>
+  <data name="page_settings_app_theme_summary" xml:space="preserve">
+    <value>Chọn chủ đề ứng dụng để hiển thị</value>
+  </data>
+  <data name="page_settings_app_theme_title" xml:space="preserve">
+    <value>Chủ đề ứng dụng</value>
+  </data>
+  <data name="page_settings_auto_hide_nav_title" xml:space="preserve">
+    <value>Tự động Ẩn/Hiện khung điều hướng</value>
+  </data>
+  <data name="page_settings_contact_us_title" xml:space="preserve">
+    <value>Liên hệ với chúng tôi</value>
+  </data>
+  <data name="page_settings_display_material_summary" xml:space="preserve">
+    <value>Chọn vật liệu thiết kế cho nền ứng dụng</value>
+  </data>
+  <data name="page_settings_display_material_title" xml:space="preserve">
+    <value>Vật liệu hiển thị</value>
+  </data>
+  <data name="page_settings_personalization_title" xml:space="preserve">
+    <value>Cá nhân hóa</value>
+  </data>
+  <data name="page_settings_summary" xml:space="preserve">
+    <value>Đi đến trang cài đặt</value>
+  </data>
+  <data name="page_settings_title" xml:space="preserve">
+    <value>Cài đặt</value>
+  </data>
+  <data name="page_settings_languageset_title" xml:space="preserve">
+    <value>Ngôn ngữ</value>
+  </data>
+  <data name="page_settings_languageset_display_title" xml:space="preserve">
+    <value>Ngôn ngữ ưa thích</value>
+  </data>
+  <data name="page_settings_languageset_display_summary" xml:space="preserve">
+    <value>Ứng dụng sẽ hiển thị các ngôn ngữ được hỗ trợ để bạn lựa chọn.</value>
+  </data>
+  <data name="sys_notification_title" xml:space="preserve">
+    <value>Thông báo từ hệ thống</value>
+  </data>
+  <data name="sys_need_restart_app_summary" xml:space="preserve">
+    <value>Cần khởi động lại ứng dụng khi thực hiện thay đổi này.</value>
+  </data>
+  <data name="page_settings_corner_radius_title" xml:space="preserve">
+    <value>Bo tròn cạnh đối tượng</value>
+  </data>
+  <data name="page_settings_corner_radius_summary" xml:space="preserve">
+    <value>Hiệu chỉnh các cạnh tròn của đối tượng được hiển thị.</value>
+  </data>
+  <data name="save_title" xml:space="preserve">
+    <value>Lưu</value>
+  </data>
+  <data name="on_title" xml:space="preserve">
+    <value>Bật</value>
+  </data>
+  <data name="off_title" xml:space="preserve">
+    <value>Tắt</value>
+  </data>
+  <data name="page_settings_rat_title" xml:space="preserve">
+    <value>Khởi động cùng Windows</value>
+  </data>
+  <data name="page_settings_rat_summary" xml:space="preserve">
+    <value>Bật để khởi động cùng hệ thống</value>
+  </data>
+  <data name="open_title" xml:space="preserve">
+    <value>Mở</value>
+  </data>
+  <data name="exit_title" xml:space="preserve">
+    <value>Đóng</value>
+  </data>
+  <data name="clean_title" xml:space="preserve">
+    <value>Làm sạch</value>
+  </data>
+  <data name="sys_noti_complete_summary" xml:space="preserve">
+    <value>Thao tác thành công</value>
+  </data>
+  <data name="page_settings_vab_title" xml:space="preserve">
+    <value>Hiện khi khởi động</value>
+  </data>
+  <data name="page_settings_vab_summary" xml:space="preserve">
+    <value>Bật để hiển thị cửa sổ này khi khởi động</value>
+  </data>
+  <data name="page_settings_auto_hide_nav_summary" xml:space="preserve">
+    <value>Bật để tự động ẩn khung điều hướng khi đạt kích thước tối thiểu</value>
+  </data>  <data name="page_config_title" xml:space="preserve">
+    <value>Cấu hình</value>
+  </data>
+  <data name="page_config_summary" xml:space="preserve">
+    <value>Cài đặt tải xuống và hành vi ứng dụng</value>
+  </data>
+<data name="page_settings_update_title" xml:space="preserve"><value>Cập nhật ứng dụng</value></data><data name="page_settings_update_current_version_title" xml:space="preserve"><value>Phiên bản hiện tại</value></data><data name="page_settings_update_check_btn" xml:space="preserve"><value>Kiểm tra cập nhật</value></data><data name="page_settings_update_cancel_btn" xml:space="preserve"><value>Hủy</value></data><data name="page_settings_update_download_btn" xml:space="preserve"><value>Tải xuống</value></data><data name="page_settings_update_install_btn" xml:space="preserve"><value>Cài đặt ngay</value></data><data name="page_settings_update_idle" xml:space="preserve"><value>Nhấn để kiểm tra phiên bản mới</value></data><data name="page_settings_update_checking" xml:space="preserve"><value>Đang kiểm tra cập nhật...</value></data><data name="page_settings_update_uptodate" xml:space="preserve"><value>Bạn đang dùng phiên bản mới nhất</value></data><data name="page_settings_update_available" xml:space="preserve"><value>Phiên bản {0} đã có sẵn</value></data><data name="page_settings_update_downloading" xml:space="preserve"><value>Đang tải xuống bản cập nhật...</value></data><data name="page_settings_update_downloading_progress" xml:space="preserve"><value>Đang tải... {0}%</value></data><data name="page_settings_update_ready" xml:space="preserve"><value>Tải xong — sẵn sàng cài đặt</value></data><data name="page_settings_update_error" xml:space="preserve"><value>Không thể kiểm tra cập nhật</value></data><data name="page_settings_update_new_version_title" xml:space="preserve"><value>Có phiên bản mới</value></data>
+  <data name="page_config_header_title" xml:space="preserve">
+    <value>PDownloader — Cài đặt tải xuống</value>
+  </data>
+  <data name="page_config_header_summary" xml:space="preserve">
+    <value>Cấu hình thư mục, luồng và hành vi mặc định</value>
+  </data>
+  <data name="page_config_folder_title" xml:space="preserve">
+    <value>Thư mục tải xuống</value>
+  </data>
+  <data name="page_config_folder_summary" xml:space="preserve">
+    <value>Nơi lưu file khi tải xong</value>
+  </data>
+  <data name="page_config_folder_placeholder" xml:space="preserve">
+    <value>Để trống = thư mục Downloads mặc định</value>
+  </data>
+  <data name="page_config_folder_browse" xml:space="preserve">
+    <value>Chọn...</value>
+  </data>
+  <data name="page_config_threads_title" xml:space="preserve">
+    <value>Số luồng tải mặc định</value>
+  </data>
+  <data name="page_config_threads_summary" xml:space="preserve">
+    <value>Số kết nối song song cho mỗi file (tương tự IDM)</value>
+  </data>
+  <data name="page_config_threads_unit" xml:space="preserve">
+    <value>luồng</value>
+  </data>
+  <data name="page_config_concurrent_title" xml:space="preserve">
+    <value>Số tải đồng thời tối đa</value>
+  </data>
+  <data name="page_config_concurrent_summary" xml:space="preserve">
+    <value>Bao nhiêu file có thể tải cùng lúc</value>
+  </data>
+  <data name="page_config_concurrent_unit" xml:space="preserve">
+    <value>file</value>
+  </data>
+  <data name="page_config_open_runner" xml:space="preserve">
+    <value>Mở cửa sổ tải xuống</value>
+  </data>
+  <data name="page_config_save" xml:space="preserve">
+    <value>Lưu cài đặt</value>
+  </data>
+  <data name="page_config_svc_active_title" xml:space="preserve">
+    <value>Đang hoạt động</value>
+  </data>
+  <data name="page_config_svc_inactive_title" xml:space="preserve">
+    <value>Chưa khởi động</value>
+  </data>
+  <data name="page_downloads_title" xml:space="preserve">
+    <value>Tải xuống</value>
+  </data>
+  <data name="page_downloads_summary" xml:space="preserve">
+    <value>Xem tệp đang và đã tải</value>
+  </data>
+  <data name="page_downloads_empty_title" xml:space="preserve">
+    <value>Chưa có tải xuống</value>
+  </data>
+  <data name="page_downloads_empty_hint" xml:space="preserve">
+    <value>Mở trình duyệt và bắt link để bắt đầu</value>
+  </data>
+  <data name="page_downloads_pause" xml:space="preserve">
+    <value>Tạm dừng</value>
+  </data>
+  <data name="page_downloads_resume" xml:space="preserve">
+    <value>Tiếp tục</value>
+  </data>
+  <data name="page_downloads_retry" xml:space="preserve">
+    <value>Thử lại</value>
+  </data>
+  <data name="page_downloads_cancel" xml:space="preserve">
+    <value>Hủy / Xóa</value>
+  </data>
+  <data name="page_downloads_open_folder" xml:space="preserve">
+    <value>Mở thư mục</value>
+  </data>
+  <data name="page_downloads_refresh" xml:space="preserve">
+    <value>Làm mới</value>
+  </data>
+</root>

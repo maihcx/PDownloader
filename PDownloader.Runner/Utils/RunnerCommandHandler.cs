@@ -1,0 +1,55 @@
+namespace PDownloader.Runner.Utils;
+
+/// <summary>
+/// Handles incoming CFS messages from PDownloader.Core → Runner.
+///
+/// Commands received:
+///   "download"              – Core forwards a new URL, show confirmation dialog
+///   "muxt-download-progress"– Core broadcasts progress of a running download (display only)
+///   "state"                 – lifecycle (shutdown)
+/// </summary>
+public static class RunnerCommandHandler
+{
+    public static void Handle(string name, string value)
+    {
+        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+        {
+            switch (name)
+            {
+                case "cancel":
+                    break;
+
+                case "download":
+                    HandleDownloadRequest(value);
+                    break;
+
+                case "state":
+                    if (value == "shutdown")
+                        System.Windows.Application.Current?.Shutdown();
+                    break;
+            }
+        });
+    }
+
+    // value = JSON { url, saveTo?, fileName? }
+    private static void HandleDownloadRequest(string value)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(value);
+            var root = doc.RootElement;
+
+            string url      = root.TryGetProperty("url",      out var u) ? u.GetString() ?? "" : "";
+            string saveTo   = root.TryGetProperty("saveTo",   out var s) ? s.GetString() ?? "" : "";
+            string fileName = root.TryGetProperty("fileName", out var f) ? f.GetString() ?? "" : "";
+
+            if (string.IsNullOrWhiteSpace(url)) return;
+
+            var win = AppRuntime.MainWindow;
+            if (win == null) return;
+
+            win.ShowForDownload(url, saveTo, fileName);
+        }
+        catch { }
+    }
+}

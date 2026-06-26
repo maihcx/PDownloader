@@ -1,0 +1,159 @@
+<Page
+    x:Class="PDownloader.Views.Pages.ConfigPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:PDownloader.Views.Pages"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:utils="clr-namespace:PDownloader.Utils"
+    Title="ConfigPage"
+    d:DataContext="{d:DesignInstance local:ConfigPage, IsDesignTimeCreatable=False}"
+    d:DesignHeight="450" d:DesignWidth="800"
+    ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+    ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+    mc:Ignorable="d"
+    ScrollViewer.CanContentScroll="False">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Padding="1" BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"/>
+
+        <ScrollViewer ui:SmoothScrollBehavior.IsEnabled="True"
+                      Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,8">
+            <StackPanel>
+
+                <!-- Header status card -->
+                <ui:Card Margin="0,8,0,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="ArrowDownload24" FontSize="32"
+                                       Margin="0,0,16,0" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{utils:Localization page_config_header_title}"
+                                       FontSize="18" FontWeight="SemiBold"/>
+                            <TextBlock Text="{utils:Localization page_config_header_summary}"
+                                       Opacity="0.6" FontSize="13" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Border Grid.Column="2" VerticalAlignment="Center"
+                                Background="{Binding ViewModel.IsDaemonRunning, Converter={StaticResource BoolToGreenRedBrush}}"
+                                CornerRadius="12" Padding="10,4">
+                            <TextBlock Text="{Binding ViewModel.IsDaemonRunning, Converter={StaticResource BoolToStatusText}}"
+                                       FontSize="12" Foreground="White"/>
+                        </Border>
+                    </Grid>
+                </ui:Card>
+
+                <!-- Download folder -->
+                <ui:CardExpander Icon="{ui:SymbolIcon Folder24}"
+                                 Margin="0,0,0,8" IsExpanded="True">
+                    <ui:CardExpander.Header>
+                        <StackPanel>
+                            <ui:TextBlock FontTypography="Body"
+                                         Text="{utils:Localization page_config_folder_title}"
+                                         FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock Text="{utils:Localization page_config_folder_summary}"
+                                       Opacity="0.6" FontSize="12"/>
+                        </StackPanel>
+                    </ui:CardExpander.Header>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBox Grid.Column="0"
+                                    Text="{Binding ViewModel.DefaultDownloadFolder, UpdateSourceTrigger=PropertyChanged}"
+                                    PlaceholderText="{utils:Localization page_config_folder_placeholder}"/>
+                        <ui:Button Grid.Column="1" Margin="8,0,0,0"
+                                   Icon="{ui:SymbolIcon FolderOpen24}"
+                                   Content="{utils:Localization page_config_folder_browse}"
+                                   Command="{Binding ViewModel.BrowseDownloadFolderCommand}"/>
+                    </Grid>
+                </ui:CardExpander>
+
+                <!-- Thread count -->
+                <ui:CardExpander Icon="{ui:SymbolIcon Symbol=Settings20}"
+                                 Margin="0,0,0,8" IsExpanded="True">
+                    <ui:CardExpander.Header>
+                        <StackPanel>
+                            <ui:TextBlock FontTypography="Body"
+                                         Text="{utils:Localization page_config_threads_title}"
+                                         FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock Text="{utils:Localization page_config_threads_summary}"
+                                       Opacity="0.6" FontSize="12"/>
+                        </StackPanel>
+                    </ui:CardExpander.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Slider Minimum="1" Maximum="32"
+                                Value="{Binding ViewModel.DefaultThreadCount}"
+                                Width="240" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ViewModel.DefaultThreadCount}"
+                                   VerticalAlignment="Center" Margin="12,0,6,0"
+                                   FontSize="15" FontWeight="SemiBold"/>
+                        <TextBlock Text="{utils:Localization page_config_threads_unit}"
+                                   VerticalAlignment="Center" Opacity="0.6" FontSize="12"/>
+                    </StackPanel>
+                </ui:CardExpander>
+
+                <!-- Concurrent downloads -->
+                <ui:CardExpander Icon="{ui:SymbolIcon DocumentMultiple24}"
+                                 Margin="0,0,0,8" IsExpanded="True">
+                    <ui:CardExpander.Header>
+                        <StackPanel>
+                            <ui:TextBlock FontTypography="Body"
+                                         Text="{utils:Localization page_config_concurrent_title}"
+                                         FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock Text="{utils:Localization page_config_concurrent_summary}"
+                                       Opacity="0.6" FontSize="12"/>
+                        </StackPanel>
+                    </ui:CardExpander.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Slider Minimum="1" Maximum="10"
+                                Value="{Binding ViewModel.MaxConcurrentDownloads}"
+                                Width="200" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ViewModel.MaxConcurrentDownloads}"
+                                   VerticalAlignment="Center" Margin="12,0,6,0"
+                                   FontSize="15" FontWeight="SemiBold"/>
+                        <TextBlock Text="{utils:Localization page_config_concurrent_unit}"
+                                   VerticalAlignment="Center" Opacity="0.6" FontSize="12"/>
+                    </StackPanel>
+                </ui:CardExpander>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" Padding="24,12" BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding ViewModel.StatusMessage}"
+                           VerticalAlignment="Center" Opacity="0.7" FontSize="12"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <ui:Button Content="{utils:Localization page_config_open_runner}"
+                               Icon="{ui:SymbolIcon ArrowDownload24}"
+                               Appearance="Secondary" Margin="0,0,8,0"
+                               Command="{Binding ViewModel.OpenRunnerCommand}"/>
+                    <ui:Button Content="{utils:Localization page_config_save}"
+                               Icon="{ui:SymbolIcon Save24}"
+                               Appearance="Primary"
+                               Command="{Binding ViewModel.SaveSettingsCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

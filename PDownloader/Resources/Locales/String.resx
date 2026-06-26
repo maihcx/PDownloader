@@ -1,0 +1,240 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root xmlns:ns1="urn:schemas-microsoft-com:xml-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  
+  <xs:schema id="root">
+    <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xs:element name="root" ns1:IsDataSet="true">
+      <xs:complexType>
+        <xs:choice maxOccurs="unbounded">
+          <xs:element name="metadata">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" />
+              </xs:sequence>
+              <xs:attribute name="name" use="required" type="xsd:string" />
+              <xs:attribute name="type" type="xsd:string" />
+              <xs:attribute name="mimetype" type="xsd:string" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="assembly">
+            <xs:complexType>
+              <xs:attribute name="alias" type="xsd:string" />
+              <xs:attribute name="name" type="xsd:string" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="data">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+                <xs:element name="comment" type="xsd:string" minOccurs="0" ns1:Ordinal="2" />
+              </xs:sequence>
+              <xs:attribute name="name" type="xsd:string" use="required" ns1:Ordinal="1" />
+              <xs:attribute name="type" type="xsd:string" ns1:Ordinal="3" />
+              <xs:attribute name="mimetype" type="xsd:string" ns1:Ordinal="4" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="resheader">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+              </xs:sequence>
+              <xs:attribute name="name" type="xsd:string" use="required" />
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+    </xs:element>
+  </xs:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="page_home_summary" xml:space="preserve">
+    <value>page_home_summary</value>
+  </data>
+  <data name="page_home_title" xml:space="preserve">
+    <value>page_home_title</value>
+  </data>
+  <data name="page_settings_about_title" xml:space="preserve">
+    <value>page_settings_about_title</value>
+  </data>
+  <data name="page_settings_app_theme_summary" xml:space="preserve">
+    <value>page_settings_app_theme_summary</value>
+  </data>
+  <data name="page_settings_app_theme_title" xml:space="preserve">
+    <value>page_settings_app_theme_title</value>
+  </data>
+  <data name="page_settings_auto_hide_nav_title" xml:space="preserve">
+    <value>page_settings_auto_hide_nav_title</value>
+  </data>
+  <data name="page_settings_contact_us_title" xml:space="preserve">
+    <value>page_settings_contact_us_title</value>
+  </data>
+  <data name="page_settings_display_material_summary" xml:space="preserve">
+    <value>page_settings_display_material_summary</value>
+  </data>
+  <data name="page_settings_display_material_title" xml:space="preserve">
+    <value>page_settings_display_material_title</value>
+  </data>
+  <data name="page_settings_personalization_title" xml:space="preserve">
+    <value>page_settings_personalization_title</value>
+  </data>
+  <data name="page_settings_summary" xml:space="preserve">
+    <value>page_settings_summary</value>
+  </data>
+  <data name="page_settings_title" xml:space="preserve">
+    <value>page_settings_title</value>
+  </data>
+  <data name="page_settings_languageset_title" xml:space="preserve">
+    <value>page_settings_languageset_title</value>
+  </data>
+  <data name="page_settings_languageset_display_title" xml:space="preserve">
+    <value>page_settings_languageset_display_title</value>
+  </data>
+  <data name="page_settings_languageset_display_summary" xml:space="preserve">
+    <value>page_settings_languageset_display_summary</value>
+  </data>
+  <data name="sys_notification_title" xml:space="preserve">
+    <value>sys_notification_title</value>
+  </data>
+  <data name="sys_need_restart_app_summary" xml:space="preserve">
+    <value>page_settings_onlang_changed_summary</value>
+  </data>
+  <data name="page_settings_corner_radius_title" xml:space="preserve">
+    <value>page_settings_corner_radius_title</value>
+  </data>
+  <data name="page_settings_corner_radius_summary" xml:space="preserve">
+    <value>page_settings_corner_radius_summary</value>
+  </data>
+  <data name="save_title" xml:space="preserve">
+    <value>save_title</value>
+  </data>
+  <data name="on_title" xml:space="preserve">
+    <value>on_title</value>
+  </data>
+  <data name="off_title" xml:space="preserve">
+    <value>off_title</value>
+  </data>
+  <data name="page_settings_rat_title" xml:space="preserve">
+    <value>page_settings_rat_title</value>
+  </data>
+  <data name="page_settings_rat_summary" xml:space="preserve">
+    <value>page_settings_rat_summary</value>
+  </data>
+  <data name="open_title" xml:space="preserve">
+    <value>open_title</value>
+  </data>
+  <data name="exit_title" xml:space="preserve">
+    <value>exit_title</value>
+  </data>
+  <data name="clean_title" xml:space="preserve">
+    <value>clean_title</value>
+  </data>
+  <data name="sys_noti_complete_summary" xml:space="preserve">
+    <value>sys_noti_complete_summary</value>
+  </data>
+  <data name="page_settings_vab_title" xml:space="preserve">
+    <value>page_settings_vab_title</value>
+  </data>
+  <data name="page_settings_vab_summary" xml:space="preserve">
+    <value>page_settings_vab_summary</value>
+  </data>
+  <data name="page_settings_auto_hide_nav_summary" xml:space="preserve">
+    <value>page_settings_auto_hide_nav_summary</value>
+  </data>  <data name="page_config_title" xml:space="preserve">
+    <value>page_config_title</value>
+  </data>
+  <data name="page_config_summary" xml:space="preserve">
+    <value>page_config_summary</value>
+  </data>
+<data name="page_settings_update_title" xml:space="preserve"><value>Application Update</value></data><data name="page_settings_update_current_version_title" xml:space="preserve"><value>Current version</value></data><data name="page_settings_update_check_btn" xml:space="preserve"><value>Check for updates</value></data><data name="page_settings_update_cancel_btn" xml:space="preserve"><value>Cancel</value></data><data name="page_settings_update_download_btn" xml:space="preserve"><value>Download</value></data><data name="page_settings_update_install_btn" xml:space="preserve"><value>Install now</value></data><data name="page_settings_update_idle" xml:space="preserve"><value>Click to check for a new version</value></data><data name="page_settings_update_checking" xml:space="preserve"><value>Checking for updates...</value></data><data name="page_settings_update_uptodate" xml:space="preserve"><value>You're up to date</value></data><data name="page_settings_update_available" xml:space="preserve"><value>Version {0} is available</value></data><data name="page_settings_update_downloading" xml:space="preserve"><value>Downloading update...</value></data><data name="page_settings_update_downloading_progress" xml:space="preserve"><value>Downloading... {0}%</value></data><data name="page_settings_update_ready" xml:space="preserve"><value>Download complete — ready to install</value></data><data name="page_settings_update_error" xml:space="preserve"><value>Failed to check for updates</value></data><data name="page_settings_update_new_version_title" xml:space="preserve"><value>New version available</value></data>
+  <data name="page_config_header_title" xml:space="preserve">
+    <value>page_config_header_title</value>
+  </data>
+  <data name="page_config_header_summary" xml:space="preserve">
+    <value>page_config_header_summary</value>
+  </data>
+  <data name="page_config_folder_title" xml:space="preserve">
+    <value>page_config_folder_title</value>
+  </data>
+  <data name="page_config_folder_summary" xml:space="preserve">
+    <value>page_config_folder_summary</value>
+  </data>
+  <data name="page_config_folder_placeholder" xml:space="preserve">
+    <value>page_config_folder_placeholder</value>
+  </data>
+  <data name="page_config_folder_browse" xml:space="preserve">
+    <value>page_config_folder_browse</value>
+  </data>
+  <data name="page_config_threads_title" xml:space="preserve">
+    <value>page_config_threads_title</value>
+  </data>
+  <data name="page_config_threads_summary" xml:space="preserve">
+    <value>page_config_threads_summary</value>
+  </data>
+  <data name="page_config_threads_unit" xml:space="preserve">
+    <value>page_config_threads_unit</value>
+  </data>
+  <data name="page_config_concurrent_title" xml:space="preserve">
+    <value>page_config_concurrent_title</value>
+  </data>
+  <data name="page_config_concurrent_summary" xml:space="preserve">
+    <value>page_config_concurrent_summary</value>
+  </data>
+  <data name="page_config_concurrent_unit" xml:space="preserve">
+    <value>page_config_concurrent_unit</value>
+  </data>
+  <data name="page_config_open_runner" xml:space="preserve">
+    <value>page_config_open_runner</value>
+  </data>
+  <data name="page_config_save" xml:space="preserve">
+    <value>page_config_save</value>
+  </data>
+  <data name="page_config_svc_active_title" xml:space="preserve">
+    <value>page_config_svc_active_title</value>
+  </data>
+  <data name="page_config_svc_inactive_title" xml:space="preserve">
+    <value>page_config_svc_inactive_title</value>
+  </data>
+  <data name="page_downloads_title" xml:space="preserve">
+    <value>page_downloads_title</value>
+  </data>
+  <data name="page_downloads_summary" xml:space="preserve">
+    <value>page_downloads_summary</value>
+  </data>
+  <data name="page_downloads_empty_title" xml:space="preserve">
+    <value>page_downloads_empty_title</value>
+  </data>
+  <data name="page_downloads_empty_hint" xml:space="preserve">
+    <value>page_downloads_empty_hint</value>
+  </data>
+  <data name="page_downloads_pause" xml:space="preserve">
+    <value>page_downloads_pause</value>
+  </data>
+  <data name="page_downloads_resume" xml:space="preserve">
+    <value>page_downloads_resume</value>
+  </data>
+  <data name="page_downloads_retry" xml:space="preserve">
+    <value>page_downloads_retry</value>
+  </data>
+  <data name="page_downloads_cancel" xml:space="preserve">
+    <value>page_downloads_cancel</value>
+  </data>
+  <data name="page_downloads_open_folder" xml:space="preserve">
+    <value>page_downloads_open_folder</value>
+  </data>
+  <data name="page_downloads_refresh" xml:space="preserve">
+    <value>page_downloads_refresh</value>
+  </data>
+</root>

@@ -1,0 +1,89 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:PDownloader.Controls"
+    xmlns:models="clr-namespace:PDownloader.Models"
+    xmlns:helpers="clr-namespace:PDownloader.Helpers"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+
+    <helpers:SubtractDoubleConverter  x:Key="SubtractDoubleConverter" />
+
+    <Style TargetType="{x:Type controls:GalleryNavigationPresenter}">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="Background" Value="Aqua" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:GalleryNavigationPresenter}">
+                    <ControlTemplate.Resources>
+                        <!-- Vertical ItemsPanel -->
+                        <ItemsPanelTemplate x:Key="VerticalPanel">
+                            <controls:CustomVirtualizingWrapPanel
+                                IsItemsHost="True"
+                                Orientation="Vertical"
+                                StretchItems="True"
+                                SpacingMode="Uniform" />
+                        </ItemsPanelTemplate>
+
+                        <!-- Horizontal ItemsPanel -->
+                        <ItemsPanelTemplate x:Key="HorizontalPanel">
+                            <controls:CustomVirtualizingWrapPanel
+                                IsItemsHost="True"
+                                Orientation="Horizontal"
+                                StretchItems="True"
+                                SpacingMode="Uniform" />
+                        </ItemsPanelTemplate>
+                    </ControlTemplate.Resources>
+
+                    <ItemsControl ItemsSource="{TemplateBinding ItemsSource}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type models:NavigationCard}">
+                                <ui:CardAction
+                                    Margin="2"
+                                    MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource SubtractDoubleConverter}, ConverterParameter=8}"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Stretch"
+                                    Command="{Binding TemplateButtonCommand, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=controls:GalleryNavigationPresenter}, Mode=OneWay}"
+                                    CommandParameter="{Binding PageType, Mode=OneWay}"
+                                    IsChevronVisible="True">
+                                    <ui:CardAction.Icon>
+                                        <ui:SymbolIcon
+                                            FontSize="30"
+                                            Symbol="{Binding Icon, Mode=OneWay}"
+                                            TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    </ui:CardAction.Icon>
+                                    <StackPanel>
+                                        <ui:TextBlock
+                                            Margin="0"
+                                            FontTypography="BodyStrong"
+                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                            Text="{Binding Name, Mode=OneWay}"
+                                            TextWrapping="Wrap" />
+                                        <ui:TextBlock
+                                            Appearance="Secondary"
+                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                            Text="{Binding Description, Mode=OneWay}"
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardAction>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+
+                        <ItemsControl.Style>
+                            <Style TargetType="ItemsControl">
+                                <Setter Property="ItemsPanel" Value="{StaticResource VerticalPanel}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsVertical}" Value="False">
+                                        <Setter Property="ItemsPanel" Value="{StaticResource HorizontalPanel}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ItemsControl.Style>
+                    </ItemsControl>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

@@ -1,0 +1,60 @@
+﻿global using CommunityToolkit.Mvvm.ComponentModel;
+global using CommunityToolkit.Mvvm.Input;
+
+global using Binding = System.Windows.Data.Binding;
+global using Control = System.Windows.Controls.Control;
+
+global using System;
+global using System.Text;
+global using System.Text.Json;
+global using System.IO;
+global using System.IO.Pipes;
+global using System.Reflection;
+global using System.Globalization;
+global using System.Diagnostics;
+global using System.Resources;
+global using System.Security.AccessControl;
+global using System.Security.Principal;
+global using System.Security.Cryptography;
+global using System.ComponentModel;
+global using System.Collections.ObjectModel;
+global using System.Runtime.CompilerServices;
+global using System.Runtime.InteropServices;
+global using System.Windows;
+global using System.Windows.Input;
+global using System.Windows.Threading;
+global using System.Windows.Controls.Primitives;
+global using System.Windows.Media;
+global using System.Windows.Media.Animation;
+global using System.Windows.Data;
+global using System.Windows.Markup;
+global using System.Windows.Controls;
+global using System.Windows.Interop;
+
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Hosting;
+global using Microsoft.Win32;
+
+global using Wpf.Ui;
+global using Wpf.Ui.Appearance;
+global using Wpf.Ui.Controls;
+global using Wpf.Ui.DependencyInjection;
+global using Wpf.Ui.Abstractions;
+global using Wpf.Ui.Abstractions.Controls;
+global using ThemeType = Wpf.Ui.Appearance.ApplicationTheme;
+global using IRelayCommand = Wpf.Ui.Input.IRelayCommand;
+global using Watcher = Wpf.Ui.Appearance.SystemThemeWatcher;
+
+global using PDownloader.CFS;
+global using PDownloader.Utils;
+global using PDownloader.Services;
+global using PDownloader.Resources;
+global using PDownloader.ViewModels.Windows;
+global using PDownloader.ViewModels.Pages;
+global using PDownloader.ViewModels.PagesBottom;
+global using PDownloader.Views.Windows;
+global using PDownloader.Views.Pages;
+global using PDownloader.Views.PagesBottom;
+global using PDownloader.ControlsLookup;
+global using PDownloader.Models;

@@ -1,0 +1,54 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.5.11716.220
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader", "PDownloader\PDownloader.csproj", "{7B07DA7F-507B-4C5F-A727-5ECF775C62E3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.CFS", "PDownloader.CFS\PDownloader.CFS.csproj", "{E76531E2-47A3-4FC4-B5C6-30E2F28D0207}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Tray", "PDownloader.Tray\PDownloader.Tray.csproj", "{F960DFC4-2934-40EF-93A6-CA229CD5B3DD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Core", "PDownloader.Core\PDownloader.Core.csproj", "{215E38A5-C1E2-4C8A-91BF-002A65409656}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Runner", "PDownloader.Runner\PDownloader.Runner.csproj", "{AB343D55-F297-E44F-8703-89012686A364}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Installer", "PDownloader.Installer\PDownloader.Installer.csproj", "{818F3B27-359C-5D89-1D3B-8F85165FAE09}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7B07DA7F-507B-4C5F-A727-5ECF775C62E3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7B07DA7F-507B-4C5F-A727-5ECF775C62E3}.Debug|x64.Build.0 = Debug|Any CPU
+		{7B07DA7F-507B-4C5F-A727-5ECF775C62E3}.Release|x64.ActiveCfg = Release|Any CPU
+		{7B07DA7F-507B-4C5F-A727-5ECF775C62E3}.Release|x64.Build.0 = Release|Any CPU
+		{E76531E2-47A3-4FC4-B5C6-30E2F28D0207}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E76531E2-47A3-4FC4-B5C6-30E2F28D0207}.Debug|x64.Build.0 = Debug|Any CPU
+		{E76531E2-47A3-4FC4-B5C6-30E2F28D0207}.Release|x64.ActiveCfg = Release|Any CPU
+		{E76531E2-47A3-4FC4-B5C6-30E2F28D0207}.Release|x64.Build.0 = Release|Any CPU
+		{F960DFC4-2934-40EF-93A6-CA229CD5B3DD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F960DFC4-2934-40EF-93A6-CA229CD5B3DD}.Debug|x64.Build.0 = Debug|Any CPU
+		{F960DFC4-2934-40EF-93A6-CA229CD5B3DD}.Release|x64.ActiveCfg = Release|Any CPU
+		{F960DFC4-2934-40EF-93A6-CA229CD5B3DD}.Release|x64.Build.0 = Release|Any CPU
+		{215E38A5-C1E2-4C8A-91BF-002A65409656}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{215E38A5-C1E2-4C8A-91BF-002A65409656}.Debug|x64.Build.0 = Debug|Any CPU
+		{215E38A5-C1E2-4C8A-91BF-002A65409656}.Release|x64.ActiveCfg = Release|Any CPU
+		{215E38A5-C1E2-4C8A-91BF-002A65409656}.Release|x64.Build.0 = Release|Any CPU
+		{AB343D55-F297-E44F-8703-89012686A364}.Debug|x64.ActiveCfg = Debug|x64
+		{AB343D55-F297-E44F-8703-89012686A364}.Debug|x64.Build.0 = Debug|x64
+		{AB343D55-F297-E44F-8703-89012686A364}.Release|x64.ActiveCfg = Release|x64
+		{AB343D55-F297-E44F-8703-89012686A364}.Release|x64.Build.0 = Release|x64
+		{818F3B27-359C-5D89-1D3B-8F85165FAE09}.Debug|x64.ActiveCfg = Debug|x64
+		{818F3B27-359C-5D89-1D3B-8F85165FAE09}.Debug|x64.Build.0 = Debug|x64
+		{818F3B27-359C-5D89-1D3B-8F85165FAE09}.Release|x64.ActiveCfg = Release|x64
+		{818F3B27-359C-5D89-1D3B-8F85165FAE09}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {20C17AC4-68BA-428B-871A-582051B7E275}
+	EndGlobalSection
+EndGlobal

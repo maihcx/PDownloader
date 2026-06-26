@@ -1,0 +1,242 @@
+                    GNU GENERAL PUBLIC LICENSE
+               Phiên bản 3, ngày 29 tháng 6 năm 2007
+
+ Bản quyền (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Mọi người được phép sao chép và phân phối các bản sao nguyên văn
+ của tài liệu giấy phép này, nhưng không được phép thay đổi nội dung.
+
+                            Lời mở đầu
+
+  GNU General Public License là giấy phép tự do, copyleft dành cho
+phần mềm và các loại tác phẩm khác.
+
+  Hầu hết các giấy phép phần mềm được thiết kế để hạn chế quyền tự do
+chia sẻ và chỉnh sửa tác phẩm của bạn. Ngược lại, GNU General Public
+License được thiết kế nhằm đảm bảo quyền tự do chia sẻ và chỉnh sửa
+tất cả các phiên bản của chương trình — đảm bảo phần mềm luôn là tự do
+đối với tất cả người dùng. Chúng tôi, Free Software Foundation, sử dụng
+GNU General Public License cho hầu hết phần mềm của mình; giấy phép này
+cũng áp dụng cho bất kỳ tác phẩm nào khác được phát hành theo cách này
+bởi các tác giả của nó. Bạn cũng có thể áp dụng nó cho các chương trình
+của mình.
+
+  Khi chúng tôi nói đến phần mềm tự do, chúng tôi muốn nói đến tự do,
+không phải giá cả. GNU General Public License được thiết kế để đảm bảo
+rằng bạn có quyền tự do phân phối các bản sao của phần mềm tự do (và
+tính phí nếu muốn), nhận mã nguồn hoặc có thể lấy được nếu bạn muốn,
+sửa đổi phần mềm hoặc sử dụng từng phần của nó trong các chương trình
+tự do mới, và biết rằng bạn có thể làm những điều này.
+
+  Để bảo vệ quyền của bạn, chúng tôi cần ngăn chặn những người khác
+từ chối quyền này hoặc yêu cầu bạn từ bỏ quyền đó. Do đó, bạn có một
+số trách nhiệm nhất định nếu bạn phân phối các bản sao của phần mềm,
+hoặc nếu bạn sửa đổi nó: trách nhiệm tôn trọng tự do của người khác.
+
+  Ví dụ, nếu bạn phân phối các bản sao của một chương trình như vậy,
+dù miễn phí hay có tính phí, bạn phải truyền lại cho người nhận những
+quyền tự do tương tự như bạn đã nhận được. Bạn phải đảm bảo rằng họ
+cũng nhận được hoặc có thể lấy mã nguồn. Và bạn phải cho họ thấy các
+điều khoản này để họ biết quyền của mình.
+
+  Các nhà phát triển sử dụng GNU GPL bảo vệ quyền của bạn bằng hai
+bước: (1) khẳng định bản quyền đối với phần mềm, và (2) cung cấp cho
+bạn Giấy phép này cho phép bạn sao chép, phân phối và/hoặc sửa đổi nó.
+
+  Để bảo vệ các nhà phát triển và tác giả, GPL giải thích rõ ràng rằng
+không có bảo hành nào cho phần mềm tự do này. Vì lợi ích của cả người
+dùng và tác giả, GPL yêu cầu các phiên bản đã sửa đổi phải được đánh
+dấu là đã thay đổi, để các vấn đề của chúng không bị quy kết nhầm cho
+tác giả của các phiên bản trước.
+
+  Một số thiết bị được thiết kế để từ chối người dùng quyền truy cập
+cài đặt hoặc chạy các phiên bản đã sửa đổi của phần mềm bên trong,
+mặc dù nhà sản xuất có thể làm như vậy. Điều này về cơ bản không tương
+thích với mục tiêu bảo vệ quyền tự do của người dùng trong việc thay
+đổi phần mềm. Do đó, chúng tôi đã thiết kế phiên bản GPL này để cấm
+hành vi đó đối với các sản phẩm đó.
+
+  Cuối cùng, mọi chương trình liên tục bị đe dọa bởi các bằng sáng
+chế phần mềm. Các quốc gia không nên cho phép bằng sáng chế hạn chế
+việc phát triển và sử dụng phần mềm trên máy tính mục đích chung,
+nhưng ở những nơi cho phép, chúng tôi muốn tránh nguy cơ đặc biệt là
+các bằng sáng chế được áp dụng cho một chương trình tự do có thể khiến
+nó trở thành độc quyền. Để ngăn chặn điều này, GPL đảm bảo rằng bằng
+sáng chế không thể được sử dụng để làm cho chương trình trở thành không
+tự do.
+
+  Các điều khoản và điều kiện chính xác cho việc sao chép, phân phối
+và sửa đổi như sau.
+
+                       ĐIỀU KHOẢN VÀ ĐIỀU KIỆN
+
+  0. Định nghĩa.
+
+  "Giấy phép này" đề cập đến phiên bản 3 của GNU General Public License.
+
+  "Bản quyền" cũng có nghĩa là các luật tương tự bản quyền áp dụng cho
+các loại tác phẩm khác, chẳng hạn như mặt nạ bán dẫn.
+
+  "Chương trình" đề cập đến bất kỳ tác phẩm có thể có bản quyền nào
+được cấp phép theo Giấy phép này. Mỗi người được cấp phép được gọi là
+"bạn". "Người được cấp phép" và "người nhận" có thể là cá nhân hoặc
+tổ chức.
+
+  "Sửa đổi" một tác phẩm có nghĩa là sao chép từ hoặc điều chỉnh tất
+cả hoặc một phần của tác phẩm theo cách yêu cầu sự cho phép bản quyền,
+ngoài việc tạo ra một bản sao chính xác. Tác phẩm kết quả được gọi là
+"phiên bản đã sửa đổi" của tác phẩm trước đó hoặc là tác phẩm "dựa
+trên" tác phẩm trước đó.
+
+  "Tác phẩm được bao gồm" có nghĩa là Chương trình chưa sửa đổi hoặc
+một tác phẩm dựa trên Chương trình.
+
+  "Truyền bá" một tác phẩm có nghĩa là làm bất cứ điều gì với nó mà
+không có sự cho phép, sẽ khiến bạn trực tiếp hoặc gián tiếp chịu trách
+nhiệm về vi phạm theo luật bản quyền hiện hành, ngoại trừ việc thực
+thi nó trên máy tính hoặc sửa đổi bản sao riêng. Việc truyền bá bao
+gồm sao chép, phân phối (có hoặc không có sửa đổi), công khai cho công
+chúng và ở một số quốc gia, các hoạt động khác nữa.
+
+  "Truyền đạt" một tác phẩm có nghĩa là bất kỳ loại truyền bá nào cho
+phép các bên khác tạo hoặc nhận bản sao. Chỉ tương tác với người dùng
+thông qua mạng máy tính, không chuyển bản sao, không phải là truyền đạt.
+
+  1. Mã nguồn.
+
+  "Mã nguồn" của một tác phẩm có nghĩa là dạng ưa thích của tác phẩm
+để thực hiện các sửa đổi. "Mã đối tượng" có nghĩa là bất kỳ dạng
+không phải mã nguồn nào của một tác phẩm.
+
+  2. Các quyền cơ bản.
+
+  Tất cả các quyền được cấp theo Giấy phép này được cấp cho thời hạn
+bản quyền của Chương trình và không thể thu hồi miễn là các điều kiện
+đã nêu được đáp ứng. Giấy phép này xác nhận rõ ràng quyền không giới
+hạn của bạn để chạy Chương trình chưa sửa đổi.
+
+  3. Bảo vệ quyền pháp lý của người dùng khỏi Luật chống phá mã.
+
+  Không có tác phẩm được bao gồm nào sẽ được coi là một phần của biện
+pháp công nghệ hiệu quả theo bất kỳ luật hiện hành nào thực hiện các
+nghĩa vụ theo điều 11 của hiệp ước bản quyền WIPO được thông qua vào
+ngày 20 tháng 12 năm 1996.
+
+  4. Truyền đạt bản sao nguyên văn.
+
+  Bạn có thể truyền đạt các bản sao nguyên văn của mã nguồn Chương
+trình khi bạn nhận được, trong bất kỳ phương tiện nào, với điều kiện
+bạn xuất bản rõ ràng và phù hợp trên mỗi bản sao một thông báo bản
+quyền phù hợp; giữ nguyên tất cả các thông báo nói rằng Giấy phép này
+và bất kỳ điều khoản không cho phép nào được thêm vào áp dụng cho mã;
+giữ nguyên tất cả các thông báo về sự vắng mặt của bảo hành; và cho
+tất cả người nhận một bản sao của Giấy phép này cùng với Chương trình.
+
+  5. Truyền đạt phiên bản mã nguồn đã sửa đổi.
+
+  Bạn có thể truyền đạt một tác phẩm dựa trên Chương trình, hoặc các
+sửa đổi để tạo ra nó từ Chương trình, dưới dạng mã nguồn theo các
+điều khoản của mục 4, với điều kiện bạn cũng đáp ứng tất cả các điều
+kiện sau:
+
+    a) Tác phẩm phải có thông báo nổi bật nêu rằng bạn đã sửa đổi
+    nó và ghi ngày thích hợp.
+
+    b) Tác phẩm phải có thông báo nổi bật nêu rằng nó được phát hành
+    theo Giấy phép này và bất kỳ điều kiện nào được thêm vào theo
+    mục 7.
+
+    c) Bạn phải cấp phép toàn bộ tác phẩm, như một tổng thể, theo
+    Giấy phép này cho bất kỳ ai có được bản sao.
+
+    d) Nếu tác phẩm có giao diện người dùng tương tác, mỗi giao diện
+    phải hiển thị Thông báo pháp lý phù hợp.
+
+  6. Truyền đạt dạng không phải mã nguồn.
+
+  Bạn có thể truyền đạt một tác phẩm được bao gồm dưới dạng mã đối
+tượng theo các điều khoản của mục 4 và 5, với điều kiện bạn cũng
+truyền đạt Nguồn tương ứng có thể đọc được bằng máy theo các điều
+khoản của Giấy phép này.
+
+  7. Các điều khoản bổ sung.
+
+  "Quyền bổ sung" là các điều khoản bổ sung các điều khoản của Giấy
+phép này bằng cách tạo ra các ngoại lệ từ một hoặc nhiều điều kiện
+của nó.
+
+  8. Chấm dứt.
+
+  Bạn không được truyền bá hoặc sửa đổi một tác phẩm được bao gồm
+ngoại trừ những gì được quy định rõ ràng theo Giấy phép này. Bất kỳ
+nỗ lực nào khác để truyền bá hoặc sửa đổi nó đều vô hiệu và sẽ tự
+động chấm dứt các quyền của bạn theo Giấy phép này.
+
+  9. Không yêu cầu chấp nhận để có bản sao.
+
+  Bạn không bắt buộc phải chấp nhận Giấy phép này để nhận hoặc chạy
+một bản sao của Chương trình.
+
+  10. Cấp phép tự động cho người nhận xuôi dòng.
+
+  Mỗi lần bạn truyền đạt một tác phẩm được bao gồm, người nhận tự
+động nhận được giấy phép từ những người cấp phép gốc để chạy, sửa
+đổi và truyền bá tác phẩm đó, tùy theo Giấy phép này.
+
+  11. Bằng sáng chế.
+
+  Một "người đóng góp" là chủ sở hữu bản quyền cho phép sử dụng theo
+Giấy phép này của Chương trình hoặc một tác phẩm mà Chương trình dựa
+trên đó.
+
+  12. Không từ bỏ tự do của người khác.
+
+  Nếu các điều kiện được áp đặt lên bạn mâu thuẫn với các điều kiện
+của Giấy phép này, chúng không miễn cho bạn khỏi các điều kiện của
+Giấy phép này.
+
+  13. Sử dụng với GNU Affero General Public License.
+
+  Bất kể bất kỳ quy định nào khác của Giấy phép này, bạn có quyền
+liên kết hoặc kết hợp bất kỳ tác phẩm được bao gồm nào với một tác
+phẩm được cấp phép theo phiên bản 3 của GNU Affero General Public
+License thành một tác phẩm kết hợp duy nhất.
+
+  14. Các phiên bản sửa đổi của Giấy phép này.
+
+  Free Software Foundation có thể xuất bản các phiên bản sửa đổi
+và/hoặc mới của GNU General Public License theo thời gian. Các phiên
+bản mới như vậy sẽ tương tự về tinh thần với phiên bản hiện tại, nhưng
+có thể khác nhau về chi tiết để giải quyết các vấn đề hoặc mối quan
+tâm mới.
+
+  15. Từ chối bảo hành.
+
+  KHÔNG CÓ BẢO HÀNH NÀO CHO CHƯƠNG TRÌNH, TRONG PHẠM VI ĐƯỢC PHÁP
+LUẬT CHO PHÉP. NGOẠI TRỪ KHI ĐƯỢC NÊU RÕ BẰNG VĂN BẢN, CÁC CHỦ SỞ
+HỮU BẢN QUYỀN VÀ/HOẶC CÁC BÊN KHÁC CUNG CẤP CHƯƠNG TRÌNH "NGUYÊN
+TRẠNG" KHÔNG CÓ BẢO HÀNH DƯỚI BẤT KỲ HÌNH THỨC NÀO, DÙ RÕ RÀNG HAY
+NGỤ Ý, BAO GỒM NHƯNG KHÔNG GIỚI HẠN Ở CÁC BẢO HÀNH NGỤ Ý VỀ KHẢ
+NĂNG THƯƠNG MẠI VÀ SỰ PHÙ HỢP CHO MỘT MỤC ĐÍCH CỤ THỂ. TOÀN BỘ RỦI
+RO VỀ CHẤT LƯỢNG VÀ HIỆU SUẤT CỦA CHƯƠNG TRÌNH LÀ DO BẠN CHỊU.
+
+  16. Giới hạn trách nhiệm.
+
+  TRONG MỌI TRƯỜNG HỢP, TRỪ KHI PHÁP LUẬT YÊU CẦU HOẶC ĐƯỢC ĐỒNG Ý
+BẰNG VĂN BẢN, KHÔNG CÓ CHỦ SỞ HỮU BẢN QUYỀN NÀO, HOẶC BẤT KỲ BÊN
+NÀO KHÁC SỬA ĐỔI VÀ/HOẶC TRUYỀN ĐẠT CHƯƠNG TRÌNH NHƯ ĐÃ CHO PHÉP
+Ở TRÊN, SẼ CHỊU TRÁCH NHIỆM PHÁP LÝ VỚI BẠN VỀ CÁC THIỆT HẠI, BAO
+GỒM BẤT KỲ THIỆT HẠI CHUNG, ĐẶC BIỆT, NGẪU NHIÊN HOẶC HẬU QUẢ NÀO
+PHÁT SINH TỪ VIỆC SỬ DỤNG HOẶC KHÔNG THỂ SỬ DỤNG CHƯƠNG TRÌNH.
+
+  17. Giải thích mục 15 và 16.
+
+  Nếu từ chối bảo hành và giới hạn trách nhiệm được cung cấp ở trên
+không thể có hiệu lực pháp lý địa phương theo các điều khoản của
+chúng, các tòa án xét xử sẽ áp dụng luật địa phương gần nhất với
+việc từ bỏ hoàn toàn trách nhiệm dân sự liên quan đến Chương trình.
+
+                     KẾT THÚC CÁC ĐIỀU KHOẢN VÀ ĐIỀU KIỆN
+
+  Lưu ý: Đây là bản dịch không chính thức sang tiếng Việt nhằm mục đích
+tham khảo. Văn bản pháp lý có giá trị ràng buộc duy nhất là bản tiếng
+Anh gốc tại: https://www.gnu.org/licenses/gpl-3.0.txt

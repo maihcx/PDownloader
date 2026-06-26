@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    :root {
+      --bg:      #0d1117;
+      --bg-card: rgba(22, 27, 34, 0.9);
+      --bg-input:#161b22;
+      --border:  rgba(79,195,247,0.18);
+      --border2: rgba(255,255,255,0.08);
+      --text:    #e6edf3;
+      --muted:   #8b949e;
+      --accent:  #4FC3F7;
+      --green:   #4CAF50;
+      --red:     #f44336;
+      --green-bg:rgba(76,175,80,0.12);
+      --red-bg:  rgba(244,67,54,0.12);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 300px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 13px;
+      padding: 12px;
+    }
+
+    /* ── Header ──────────────────────────────────────────────── */
+    .header {
+      display: flex; align-items: center; gap: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border2);
+      margin-bottom: 10px;
+    }
+    .header-icon {
+      width: 28px; height: 28px;
+      background: rgba(79,195,247,0.1);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .header-icon svg { width: 16px; height: 16px; color: var(--accent); }
+    .header-title {
+      font-size: 15px; font-weight: 700;
+      background: linear-gradient(120deg, #4FC3F7 0%, #a8d8f0 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      letter-spacing: .3px;
+    }
+    .header-badge {
+      margin-left: auto;
+      background: rgba(79,195,247,0.12);
+      border: 1px solid rgba(79,195,247,0.25);
+      color: var(--accent);
+      font-size: 10px; font-weight: 700;
+      padding: 2px 7px; border-radius: 10px;
+      letter-spacing: .3px;
+    }
+
+    /* ── Status card ─────────────────────────────────────────── */
+    .status-card {
+      display: flex; align-items: center; gap: 10px;
+      border-radius: 10px; padding: 10px 12px;
+      border: 1px solid transparent;
+      margin-bottom: 10px;
+      transition: all .25s;
+    }
+    .status-card.ok  { background: var(--green-bg); border-color: rgba(76,175,80,.25); }
+    .status-card.err { background: var(--red-bg);   border-color: rgba(244,67,54,.25); }
+
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .ok  .status-dot { background: var(--green); animation: pulse-g 2s infinite; }
+    .err .status-dot { background: var(--red);   animation: pulse-r 2s infinite; }
+    @keyframes pulse-g {
+      0%  { box-shadow: 0 0 0 0 rgba(76,175,80,.5); }
+      70% { box-shadow: 0 0 0 6px rgba(76,175,80,0); }
+      100%{ box-shadow: 0 0 0 0 rgba(76,175,80,0); }
+    }
+    @keyframes pulse-r {
+      0%  { box-shadow: 0 0 0 0 rgba(244,67,54,.5); }
+      70% { box-shadow: 0 0 0 6px rgba(244,67,54,0); }
+      100%{ box-shadow: 0 0 0 0 rgba(244,67,54,0); }
+    }
+    .status-text { font-size: 12px; font-weight: 600; }
+    .ok  .status-text { color: var(--green); }
+    .err .status-text { color: var(--red); }
+
+    /* ── Stat row ────────────────────────────────────────────── */
+    .stat-row {
+      display: flex; gap: 8px; margin-bottom: 10px;
+    }
+    .stat-box {
+      flex: 1; background: var(--bg-input);
+      border: 1px solid var(--border2); border-radius: 10px;
+      padding: 8px 10px; text-align: center;
+    }
+    .stat-val { font-size: 20px; font-weight: 700; color: var(--accent); line-height: 1; }
+    .stat-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; font-weight: 600; letter-spacing: .5px; margin-top: 3px; }
+
+    /* ── Section ─────────────────────────────────────────────── */
+    .section-hd {
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .5px;
+      padding: 8px 0 6px;
+      border-top: 1px solid var(--border2);
+      margin-top: 2px;
+    }
+
+    /* ── Toggle row ──────────────────────────────────────────── */
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 0;
+    }
+    .toggle-lbl { font-size: 12px; font-weight: 600; color: var(--text); }
+    .toggle-sub { font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+    .sw { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .sw input { opacity: 0; width: 0; height: 0; }
+    .sw-track {
+      position: absolute; inset: 0;
+      background: var(--border2); border-radius: 20px;
+      cursor: pointer; transition: background .25s;
+    }
+    .sw-track::before {
+      content: ''; position: absolute;
+      width: 14px; height: 14px; left: 3px; top: 3px;
+      background: #fff; border-radius: 50%; transition: transform .25s;
+    }
+    .sw input:checked + .sw-track { background: var(--accent); }
+    .sw input:checked + .sw-track::before { transform: translateX(16px); }
+
+    /* ── Blacklist ───────────────────────────────────────────── */
+    .bl-list {
+      display: flex; flex-direction: column; gap: 4px;
+      max-height: 110px; overflow-y: auto; margin-top: 4px;
+    }
+    .bl-item {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--bg-input); border: 1px solid var(--border2);
+      border-radius: 8px; padding: 5px 10px;
+      font-size: 11px; font-weight: 500; color: var(--text);
+    }
+    .bl-item .bl-domain {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;
+    }
+    .bl-rm {
+      background: none; border: none; color: var(--red);
+      cursor: pointer; font-size: 14px; font-weight: 700; padding: 0 2px;
+      transition: opacity .15s; line-height: 1;
+    }
+    .bl-rm:hover { opacity: .7; }
+    .bl-empty { font-size: 11px; color: var(--muted); text-align: center; padding: 8px; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+    </div>
+    <span class="header-title">PDownloader</span>
+    <span class="header-badge" id="badgeCount">0 đã bắt</span>
+  </div>
+
+  <!-- Status -->
+  <div class="status-card err" id="statusCard">
+    <span class="status-dot"></span>
+    <span class="status-text" id="statusText">Đang kiểm tra...</span>
+  </div>
+
+  <!-- Stats -->
+  <div class="stat-row">
+    <div class="stat-box">
+      <div class="stat-val" id="interceptCount">0</div>
+      <div class="stat-lbl">Phiên này</div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="section-hd">Cài đặt bắt link</div>
+
+  <div class="toggle-row">
+    <div>
+      <div class="toggle-lbl">Tự động bắt link</div>
+      <div class="toggle-sub">Chặn tải của trình duyệt, chuyển sang PDownloader</div>
+    </div>
+    <label class="sw">
+      <input type="checkbox" id="autoIntercept" checked/>
+      <span class="sw-track"></span>
+    </label>
+  </div>
+
+  <div class="toggle-row">
+    <div>
+      <div class="toggle-lbl">Hiện thông báo</div>
+      <div class="toggle-sub">Thông báo khi bắt được link</div>
+    </div>
+    <label class="sw">
+      <input type="checkbox" id="showNotifications" checked/>
+      <span class="sw-track"></span>
+    </label>
+  </div>
+
+  <!-- Blacklist -->
+  <div class="section-hd">Trang bị chặn</div>
+  <div class="bl-list" id="blList"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

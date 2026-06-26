@@ -1,0 +1,78 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows7.0</TargetFramework>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <PlatformTarget>x64</PlatformTarget>
+    <Platforms>AnyCPU;x64</Platforms>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    <AssemblyVersion>0.0.0.0</AssemblyVersion>
+    <FileVersion>0.0.0.0</FileVersion>
+
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>PDownloader.Installer</AssemblyName>
+    <RootNamespace>PDownloader.Installer</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Authors>SM SOFT</Authors>
+    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+    <Resource Include="Assets\app-256.png" />
+    <None Include="Resources\Locales\String.Designer.cs" />
+    <EmbeddedResource Include="..\LICENSE" Condition="Exists('..\LICENSE')">
+      <LogicalName>PDownloader.Installer.LICENSE</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\LICENSE.vi" Condition="Exists('..\LICENSE.vi')">
+      <LogicalName>PDownloader.Installer.LICENSE.vi</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\payload.zip" Condition="Exists('Resources\payload.zip')">
+      <LogicalName>PDownloader.Installer.Resources.payload.zip</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Wpf.Ui">
+      <HintPath>..\WPF-UI.LIB\Wpf.Ui.dll</HintPath>
+    </Reference>
+    <Reference Include="Wpf.Ui.Abstractions">
+      <HintPath>..\WPF-UI.LIB\Wpf.Ui.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Wpf.Ui.DependencyInjection">
+      <HintPath>..\WPF-UI.LIB\Wpf.Ui.DependencyInjection.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <Target Name="CheckPayloadExists" BeforeTargets="BeforeBuild" Condition="'$(Configuration)' == 'Release'">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)\Resources\payload.zip')" Text="payload.zip not found at Resources\payload.zip. Run build.bat to generate it first." />
+  </Target>
+
+</Project>
