@@ -377,8 +377,13 @@ public class DownloadEngine
         foreach (var seg in segments.OrderBy(s => s.Index))
         {
             if (!File.Exists(seg.TempFilePath)) continue;
-            await using var input = new FileStream(seg.TempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            await input.CopyToAsync(output, _ct);
+
+            await using (var input = new FileStream(seg.TempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                await input.CopyToAsync(output, _ct);
+            }
+
+            try { File.Delete(seg.TempFilePath); } catch { }
         }
 
         _item.SavePath = finalPath;
