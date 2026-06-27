@@ -1,16 +1,16 @@
-using System.Windows.Controls;
-using PDownloader.ViewModels.Pages;
-
-namespace PDownloader.Views.Pages;
-
-public partial class DownloadsPage : Page
+namespace PDownloader.Views.Pages
 {
-    public DownloadsViewModel ViewModel { get; }
-
-    public DownloadsPage(DownloadsViewModel vm)
+    [PageMeta("page_downloads_title", "page_downloads_summary", SymbolRegular.ArrowTrendingSettings24, 1, false)]
+    public partial class DownloadsPage : Page
     {
-        ViewModel = vm;
-        InitializeComponent();
-        DataContext = this;
+        public DownloadsViewModel ViewModel { get; }
+
+        public DownloadsPage(DownloadsViewModel viewModel)
+        {
+            ViewModel = viewModel;
+            DataContext = this;
+
+            InitializeComponent();
+        }
     }
 }
