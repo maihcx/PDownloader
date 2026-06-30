@@ -7,27 +7,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   const notifChk      = document.getElementById('showNotifications');
   const blList        = document.getElementById('blList');
 
-  // ── Ping app ────────────────────────────────────────────────────────────────
-  chrome.runtime.sendMessage({ action: 'ping_app' }, res => {
+  // ── Khởi tạo popup: 1 round-trip duy nhất thay vì 3 lệnh tuần tự ─────────────
+  // (ping_app + get_intercept_count + get_settings trước đây gọi riêng lẻ,
+  // mỗi lần đều phải đánh thức service worker MV3 nếu nó đang ở trạng thái
+  // ngủ — gộp lại giúp popup hiển thị nhanh hơn đáng kể, nhất là lần mở đầu.)
+  chrome.runtime.sendMessage({ action: 'get_popup_init' }, res => {
     const ok = res?.connected;
     statusCard.className = 'status-card ' + (ok ? 'ok' : 'err');
     statusText.textContent = ok ? '✓ Đang kết nối với PDownloader' : '✗ Chưa kết nối — hãy mở ứng dụng';
-  });
 
-  // ── Count ───────────────────────────────────────────────────────────────────
-  chrome.runtime.sendMessage({ action: 'get_intercept_count' }, res => {
-    const n = res?.count ?? 0;
+    const n = res?.interceptCount ?? 0;
     interceptEl.textContent = n;
     badgeEl.textContent = n + ' đã bắt';
-  });
-  chrome.runtime.sendMessage({ action: 'reset_badge' });
 
-  // ── Load settings ───────────────────────────────────────────────────────────
-  chrome.runtime.sendMessage({ action: 'get_settings' }, data => {
+    const data = res?.settings || {};
     autoChk.checked  = data.autoIntercept     !== false;
     notifChk.checked = data.showNotifications !== false;
     renderBlacklist(data.blacklistedDomains || []);
   });
+
+  // reset_badge vẫn là lệnh riêng vì nó có side-effect (xóa số đếm badge),
+  // không nên gộp chung với lệnh chỉ đọc dữ liệu ở trên.
+  chrome.runtime.sendMessage({ action: 'reset_badge' });
 
   // ── Toggle handlers ─────────────────────────────────────────────────────────
   autoChk.addEventListener('change', () => save());

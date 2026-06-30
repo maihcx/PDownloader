@@ -293,6 +293,9 @@ function injectPanel() {
     _prefetchProm = null;
     removePanel();
     prefetchFormats(vid);
+  } else if (document.querySelector('.pd-yt-panel')) {
+    // Cùng video, panel đã có sẵn — không cần query lại player.
+    return;
   }
 
   const player =
@@ -380,5 +383,31 @@ function removePanel() {
 // Background.js already handles these message actions — 
 // here we just send messages and it handles the HTTP calls.
 
-setInterval(injectPanel, 1500);
+// ── Trigger re-inject on YouTube SPA navigation & player DOM changes ─────────
+// YouTube là single-page app: URL đổi không reload trang, và player có thể
+// được re-render. Thay vì poll mỗi 1.5s vô thời hạn (tốn CPU liên tục kể cả
+// khi không có gì thay đổi), ta lắng nghe đúng các sự kiện liên quan:
+//  - yt-navigate-finish: YouTube tự fire khi điều hướng SPA hoàn tất.
+//  - MutationObserver trên #content (vùng chứa chính) để bắt trường hợp
+//    player bị YouTube re-render mà không đổi URL (hiếm nhưng có thể xảy ra).
+let _injectScheduled = false;
+function scheduleInject() {
+  if (_injectScheduled) return;
+  _injectScheduled = true;
+  // requestAnimationFrame: gộp nhiều mutation liên tiếp thành một lần inject,
+  // tránh chạy injectPanel nhiều lần dồn dập khi YouTube re-render hàng loạt node.
+  requestAnimationFrame(() => {
+    _injectScheduled = false;
+    injectPanel();
+  });
+}
+
+document.addEventListener('yt-navigate-finish', scheduleInject);
+
+const _ytObserver = new MutationObserver(scheduleInject);
+_ytObserver.observe(document.documentElement, { childList: true, subtree: true });
+
+// Fallback: nếu vì lý do nào đó không init kịp lúc trang load xong, vẫn thử lại
+// sau một khoảng ngắn — nhưng không lặp lại vô thời hạn như setInterval cũ.
+setTimeout(injectPanel, 500);
 injectPanel();

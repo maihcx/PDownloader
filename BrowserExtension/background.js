@@ -86,7 +86,14 @@ chrome.webRequest.onHeadersReceived.addListener(
       }
     }
   },
-  { urls: ['<all_urls>'] },
+  {
+    urls: ['<all_urls>'],
+    // Content-Disposition chỉ thực sự có ý nghĩa trên các loại request có khả
+    // năng là một file tải xuống. Image/stylesheet/font/script/media-streaming
+    // gần như không bao giờ có header này, nên loại chúng ra giúp giảm đáng kể
+    // số lần callback phải chạy trên mỗi trang (đặc biệt trang nhiều ảnh/asset).
+    types: ['main_frame', 'sub_frame', 'xmlhttprequest', 'object', 'other']
+  },
   ['responseHeaders']
 );
 
@@ -273,6 +280,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         ['autoIntercept','extensions','showNotifications','blacklistedDomains','minInterceptSizeMb'],
         data => sendResponse(data)
       );
+      return true;
+
+    // Gộp 3 lệnh (ping app, đếm intercept, lấy settings) thành 1 round-trip
+    // message duy nhất cho popup lúc mở lên — thay vì popup.js gọi sendMessage
+    // 3 lần tuần tự, mỗi lần đều phải đánh thức service worker MV3 (có thể đang
+    // "ngủ"), gây trễ cộng dồn không cần thiết.
+    case 'get_popup_init':
+      Promise.all([
+        pingApp(),
+        chrome.storage.local.get(
+          ['autoIntercept','extensions','showNotifications','blacklistedDomains','minInterceptSizeMb']
+        )
+      ]).then(([connected, settings]) => {
+        sendResponse({ connected, interceptCount, settings });
+      });
       return true;
 
     case 'save_settings':

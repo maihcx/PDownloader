@@ -187,6 +187,28 @@ function sanitizeName(name) {
 function initListeners() {
   if (isYouTubeWatch()) return;
 
+  // Tránh gắn listener toàn cục (capture: true trên document) nếu trang không
+  // có video nào ngay từ đầu — phần lớn trang web (text, ảnh, form...) không
+  // cần overlay này, nên không có lý do để mouseover/mouseout chạy qua mọi
+  // pixel di chuột trên các trang đó.
+  if (!document.querySelector('video')) {
+    // Một số trang load video bằng JS sau khi DOMContentLoaded (lazy load,
+    // SPA...). Theo dõi DOM một lần để bật listener khi video xuất hiện,
+    // rồi ngắt observer ngay — không cần observer chạy mãi mãi.
+    const lateObserver = new MutationObserver(() => {
+      if (document.querySelector('video')) {
+        lateObserver.disconnect();
+        attachVideoListeners();
+      }
+    });
+    lateObserver.observe(document.body, { childList: true, subtree: true });
+    return;
+  }
+
+  attachVideoListeners();
+}
+
+function attachVideoListeners() {
   document.addEventListener('mouseover', (e) => {
     if (isYouTubeWatch()) return;
     let v = e.target.tagName === 'VIDEO' ? e.target : null;
