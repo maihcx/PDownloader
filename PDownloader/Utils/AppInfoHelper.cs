@@ -6,7 +6,7 @@
         public static string Author = "Song Mai Software";
         public static string SortAuthor = "SM SOFT";
         public static string AuthorCreated = "Created by SM SOFT";
-        public static string AppDescription = "Circle Search For Windows.";
+        public static string AppDescription = "A fast, lightweight download manager for Windows.";
         public static string CopyRight = "© 2026 Song Mai Software";
 
         public static string GetAppPath()
