@@ -1,3 +1,4 @@
+using PDownloader.Core.Models;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -112,14 +113,14 @@ public sealed class HttpBridgeService : IDisposable
         }
 
         var id = Guid.NewGuid().ToString();
-        var json = JsonSerializer.Serialize(new
+        var data = new FileTask
         {
-            id,
+            id = id,
             url = payload.Url,
-            saveTo = payload.SaveTo   ?? string.Empty,
+            saveTo = string.IsNullOrWhiteSpace(payload.SaveTo) ? Helpers.GetDefaultFolder() : payload.SaveTo,
             fileName = payload.FileName ?? string.Empty
-        });
-        Utils.AppRuntime.EnsureRunnerStarted(id).Send("download", json);
+        };
+        Utils.AppRuntime.EnsureRunnerStarted(id, data);
 
         await Json(resp, new { ok = true });
     }
@@ -177,17 +178,17 @@ public sealed class HttpBridgeService : IDisposable
 
         CFSIncomingHandler.RegisterYoutubePending(id, payload.FormatId ?? "bestvideo+bestaudio/best");
 
-        var json = JsonSerializer.Serialize(new
+        var data = new FileTask
         {
-            id,
+            id = id,
             url = payload.Url,
             formatId = payload.FormatId ?? "bestvideo+bestaudio/best",
-            saveTo = string.Empty,
+            saveTo = Helpers.GetDefaultFolder(),
             fileName = payload.Filename ?? string.Empty,
             title = payload.Title    ?? string.Empty,
             filesize = payload.Filesize,
-        });
-        Utils.AppRuntime.EnsureRunnerStarted(id).Send("download", json);
+        };
+        Utils.AppRuntime.EnsureRunnerStarted(id, data);
 
         await Json(resp, new { success = true });
     }

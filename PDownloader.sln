@@ -10,9 +10,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Tray", "PDownlo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Core", "PDownloader.Core\PDownloader.Core.csproj", "{215E38A5-C1E2-4C8A-91BF-002A65409656}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Runner", "PDownloader.Runner\PDownloader.Runner.csproj", "{AB343D55-F297-E44F-8703-89012686A364}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Runner.RTK", "PDownloader.Runner.RTK\PDownloader.Runner.RTK.csproj", "{AB343D55-F297-E44F-8703-89012686A364}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Installer", "PDownloader.Installer\PDownloader.Installer.csproj", "{818F3B27-359C-5D89-1D3B-8F85165FAE09}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Runner", "PDownloader.Runner\PDownloader.Runner.csproj", "{D8A75511-64C4-42EB-9B46-8C09F37CDC10}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2F50D77D-3478-4F1D-A886-316646F0188D}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -44,6 +51,10 @@ Global
 		{818F3B27-359C-5D89-1D3B-8F85165FAE09}.Debug|x64.Build.0 = Debug|x64
 		{818F3B27-359C-5D89-1D3B-8F85165FAE09}.Release|x64.ActiveCfg = Release|x64
 		{818F3B27-359C-5D89-1D3B-8F85165FAE09}.Release|x64.Build.0 = Release|x64
+		{D8A75511-64C4-42EB-9B46-8C09F37CDC10}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D8A75511-64C4-42EB-9B46-8C09F37CDC10}.Debug|x64.Build.0 = Debug|Any CPU
+		{D8A75511-64C4-42EB-9B46-8C09F37CDC10}.Release|x64.ActiveCfg = Release|Any CPU
+		{D8A75511-64C4-42EB-9B46-8C09F37CDC10}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

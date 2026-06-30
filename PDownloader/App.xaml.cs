@@ -1,3 +1,5 @@
+using PDownloader.Services.HostServices;
+
 namespace PDownloader
 {
     public partial class App
@@ -38,18 +40,23 @@ namespace PDownloader
             .ConfigureServices((context, services) =>
             {
                 services.AddNavigationViewPageProvider();
+
+                services.AddSingleton<NavigationPanelHostService>();
+                services.AddSingleton<IHostedService>(ihsv => ihsv.GetRequiredService<NavigationPanelHostService>());
+
                 services.AddHostedService<ApplicationHostService>();
 
-                services.AddSingleton<IThemeService, ThemeService>();
-                services.AddSingleton<ITaskBarService, TaskBarService>();
-                services.AddSingleton<INavigationService, NavigationService>();
+                services.AddHostedService<PowerModeHostService>();
 
-                services.AddSingleton<INavigationWindow, MainWindow>();
+                services.AddSingleton<PowerModeService>();
+
+                services.AddSingleton<IWindow, MainWindow>();
                 services.AddSingleton<MainWindowViewModel>();
+                services.AddSingleton<INavigationService, NavigationService>();
+                services.AddSingleton<ISnackbarService, SnackbarService>();
 
                 NavigationHandle.SetupPageViewModelPairs(services, "PDownloader.Views.Pages", "PDownloader.ViewModels.Pages");
                 NavigationHandle.SetupPageViewModelPairs(services, "PDownloader.Views.PagesBottom", "PDownloader.ViewModels.PagesBottom");
-                NavigationHandle.SetupPageViewModelPairs(services, "PDownloader.Views.Pages.SystemConfigPages", "PDownloader.ViewModels.Pages.SystemConfigViewModels");
             }).Build();
 
         public static IServiceProvider Services => _host.Services;

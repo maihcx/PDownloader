@@ -1,50 +1,103 @@
-using System.IO;
-using System.Text.Json;
-
-namespace PDownloader.Runner.Utils;
-
-public static class UserDataStore
+namespace PDownloader.Runner.Utils
 {
-    private static readonly string _path = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "SM SOFT", "PDownloader", "runner_settings.json");
-
-    private static Dictionary<string, string> _cache = Load();
-
-    private static Dictionary<string, string> Load()
+    public static class UserDataStore
     {
-        try
+        private static readonly string DataDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "PDownloader");
+
+        private static readonly string DataFile = Path.Combine(DataDir, "userdata.json");
+
+        private static Dictionary<string, object> _data = new();
+
+        private static Dictionary<string, string> _passCaching = new();
+
+        static UserDataStore()
         {
-            if (File.Exists(_path))
-                return JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(_path))
-                       ?? new();
+            try
+            {
+                if (File.Exists(DataFile))
+                {
+                    var json = File.ReadAllText(DataFile);
+                    _data = JsonSerializer.Deserialize<Dictionary<string, object>>(json)
+                            ?? new Dictionary<string, object>();
+                }
+            }
+            catch
+            {
+                _data = new Dictionary<string, object>();
+            }
         }
-        catch { }
-        return new();
-    }
 
-    private static void Save()
-    {
-        try
+        private static void SaveData()
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-            File.WriteAllText(_path, JsonSerializer.Serialize(_cache));
+            try
+            {
+                Directory.CreateDirectory(DataDir);
+                var json = JsonSerializer.Serialize(_data, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+                File.WriteAllText(DataFile, json);
+            }
+            catch { }
         }
-        catch { }
-    }
 
-    public static T? GetValue<T>(string key)
-    {
-        if (_cache.TryGetValue(key, out var val))
+        public static T GetValue<T>(string key)
         {
-            try { return JsonSerializer.Deserialize<T>(val); } catch { }
-        }
-        return default;
-    }
+            if (_data.TryGetValue(key, out var value))
+            {
+                try
+                {
+                    if (value is JsonElement elem)
+                        return elem.Deserialize<T>()!;
+                    return (T)Convert.ChangeType(value, typeof(T));
+                }
+                catch { }
+            }
 
-    public static void SetValue<T>(string key, T value)
-    {
-        _cache[key] = JsonSerializer.Serialize(value);
-        Save();
+            try
+            {
+                var defaultValue = Properties.Settings.Default[key];
+                if (defaultValue is T tVal)
+                    return tVal;
+                return (T)Convert.ChangeType(defaultValue, typeof(T));
+            }
+            catch
+            {
+                return default!;
+            }
+        }
+
+        public static bool SetValue<T>(string key, T value)
+        {
+            _data[key] = value!;
+            SaveData();
+            return true;
+        }
+
+        public static void Reset()
+        {
+            _data.Clear();
+            SaveData();
+        }
+
+        public static void Reload()
+        {
+            _data.Clear();
+            if (File.Exists(DataFile))
+            {
+                try
+                {
+                    var json = File.ReadAllText(DataFile);
+                    _data = JsonSerializer.Deserialize<Dictionary<string, object>>(json)
+                            ?? new Dictionary<string, object>();
+                }
+                catch
+                {
+                    _data = new Dictionary<string, object>();
+                }
+            }
+        }
     }
 }

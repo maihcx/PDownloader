@@ -94,6 +94,12 @@ namespace PDownloader
                             case "OnGoHome":
                                 NavigationHandle.NavigationService?.Navigate(typeof(HomePage));
                                 break;
+                            case "OnGoConfig":
+                                NavigationHandle.NavigationService?.Navigate(typeof(ConfigPage));
+                                break;
+                            case "OnGoDownload":
+                                NavigationHandle.NavigationService?.Navigate(typeof(DownloadsPage));
+                                break;
                             case "OnGoSettings":
                             case "OnGoSettings--UPDATE":
                                 if (value == "OnGoSettings--UPDATE")

@@ -70,6 +70,78 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to download_status_cancelled_title.
+        /// </summary>
+        internal static string download_status_cancelled_title {
+            get {
+                return ResourceManager.GetString("download_status_cancelled_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_status_completed_title.
+        /// </summary>
+        internal static string download_status_completed_title {
+            get {
+                return ResourceManager.GetString("download_status_completed_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_status_connecting_title.
+        /// </summary>
+        internal static string download_status_connecting_title {
+            get {
+                return ResourceManager.GetString("download_status_connecting_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_status_downloading_title.
+        /// </summary>
+        internal static string download_status_downloading_title {
+            get {
+                return ResourceManager.GetString("download_status_downloading_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_status_error_title.
+        /// </summary>
+        internal static string download_status_error_title {
+            get {
+                return ResourceManager.GetString("download_status_error_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_status_merging_title.
+        /// </summary>
+        internal static string download_status_merging_title {
+            get {
+                return ResourceManager.GetString("download_status_merging_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_status_paused_title.
+        /// </summary>
+        internal static string download_status_paused_title {
+            get {
+                return ResourceManager.GetString("download_status_paused_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_status_queued_title.
+        /// </summary>
+        internal static string download_status_queued_title {
+            get {
+                return ResourceManager.GetString("download_status_queued_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to exit_title.
         /// </summary>
         internal static string exit_title {
@@ -102,24 +174,6 @@ namespace PDownloader.Resources.Locales {
         internal static string open_title {
             get {
                 return ResourceManager.GetString("open_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to page_config_behavior_summary.
-        /// </summary>
-        internal static string page_config_behavior_summary {
-            get {
-                return ResourceManager.GetString("page_config_behavior_summary", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to page_config_behavior_title.
-        /// </summary>
-        internal static string page_config_behavior_title {
-            get {
-                return ResourceManager.GetString("page_config_behavior_title", resourceCulture);
             }
         }
         
@@ -214,47 +268,11 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to page_config_runner_boot_summary.
-        /// </summary>
-        internal static string page_config_runner_boot_summary {
-            get {
-                return ResourceManager.GetString("page_config_runner_boot_summary", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to page_config_runner_boot_title.
-        /// </summary>
-        internal static string page_config_runner_boot_title {
-            get {
-                return ResourceManager.GetString("page_config_runner_boot_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to page_config_save.
         /// </summary>
         internal static string page_config_save {
             get {
                 return ResourceManager.GetString("page_config_save", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to page_config_startup_summary.
-        /// </summary>
-        internal static string page_config_startup_summary {
-            get {
-                return ResourceManager.GetString("page_config_startup_summary", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to page_config_startup_title.
-        /// </summary>
-        internal static string page_config_startup_title {
-            get {
-                return ResourceManager.GetString("page_config_startup_title", resourceCulture);
             }
         }
         
@@ -322,20 +340,92 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to page_config_tray_summary.
+        ///   Looks up a localized string similar to page_downloads_cancel.
         /// </summary>
-        internal static string page_config_tray_summary {
+        internal static string page_downloads_cancel {
             get {
-                return ResourceManager.GetString("page_config_tray_summary", resourceCulture);
+                return ResourceManager.GetString("page_downloads_cancel", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to page_config_tray_title.
+        ///   Looks up a localized string similar to page_downloads_empty_hint.
         /// </summary>
-        internal static string page_config_tray_title {
+        internal static string page_downloads_empty_hint {
             get {
-                return ResourceManager.GetString("page_config_tray_title", resourceCulture);
+                return ResourceManager.GetString("page_downloads_empty_hint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_empty_title.
+        /// </summary>
+        internal static string page_downloads_empty_title {
+            get {
+                return ResourceManager.GetString("page_downloads_empty_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_open_folder.
+        /// </summary>
+        internal static string page_downloads_open_folder {
+            get {
+                return ResourceManager.GetString("page_downloads_open_folder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_pause.
+        /// </summary>
+        internal static string page_downloads_pause {
+            get {
+                return ResourceManager.GetString("page_downloads_pause", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_refresh.
+        /// </summary>
+        internal static string page_downloads_refresh {
+            get {
+                return ResourceManager.GetString("page_downloads_refresh", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_resume.
+        /// </summary>
+        internal static string page_downloads_resume {
+            get {
+                return ResourceManager.GetString("page_downloads_resume", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_retry.
+        /// </summary>
+        internal static string page_downloads_retry {
+            get {
+                return ResourceManager.GetString("page_downloads_retry", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_summary.
+        /// </summary>
+        internal static string page_downloads_summary {
+            get {
+                return ResourceManager.GetString("page_downloads_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_title.
+        /// </summary>
+        internal static string page_downloads_title {
+            get {
+                return ResourceManager.GetString("page_downloads_title", resourceCulture);
             }
         }
         
@@ -705,6 +795,15 @@ namespace PDownloader.Resources.Locales {
         internal static string sys_notification_title {
             get {
                 return ResourceManager.GetString("sys_notification_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to task_num_title.
+        /// </summary>
+        internal static string task_num_title {
+            get {
+                return ResourceManager.GetString("task_num_title", resourceCulture);
             }
         }
     }

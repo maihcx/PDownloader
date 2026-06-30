@@ -8,6 +8,8 @@
         public MainWindowViewModels ViewModel { get; }
         public ApplicationThemeManagerService ThemeManagerService { get; }
 
+        PowerModeService powerModeService = new PowerModeService();
+
         public MainWindow()
         {
             InitializeComponent();
@@ -35,8 +37,7 @@
             ApplicationThemeManager.Apply(ThemeManagerService.GetSysApplicationTheme(), ThemeManagerService.GetBackdropType(), true);
 
             this.Hide();
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
+            _ = powerModeService.OptimizeAfterAsync(TimeSpan.FromSeconds(3));
         }
 
         private void NotifyIcon_LeftClick(Wpf.Ui.Tray.Controls.NotifyIcon sender, RoutedEventArgs e)
@@ -60,6 +61,12 @@
                 AppRuntime.CoreService.Send("core-svc-state", "shutdown");
             }
             base.OnClosing(e);
+        }
+
+        private void TrayIcon_RightClick(Wpf.Ui.Tray.Controls.NotifyIcon sender, RoutedEventArgs e)
+        {
+            _ = powerModeService.OptimizeAfterAsync(TimeSpan.FromSeconds(3));
+            _ = powerModeService.OptimizeAfterAsync(TimeSpan.FromSeconds(20));
         }
     }
 }

@@ -14,7 +14,21 @@ namespace PDownloader.ViewModels.PagesBottom
         private readonly UpdateService _updateService = new();
         private CancellationTokenSource? _updateCts;
 
+        private readonly NavigationPanelHostService navigationPanelHostService;
+
         [ObservableProperty] private string _appVersion = string.Empty;
+
+        public SettingsViewModel(
+            //UpdateHostService updateHostService,
+            NavigationPanelHostService navigationPanelHostService
+        )
+        {
+            this.navigationPanelHostService = navigationPanelHostService;
+
+            _autoHideNavigationPanel = navigationPanelHostService.NaviPanelOpen == NaviPanelOpenState.Auto;
+
+            InitializeViewModel();
+        }
 
         // ── Update ─────────────────────────────────────────────────────────
         [ObservableProperty] private UpdateStatus _updateStatus = UpdateStatus.Idle;
@@ -39,11 +53,20 @@ namespace PDownloader.ViewModels.PagesBottom
 
         #region Navigation panel auto hide
         [ObservableProperty]
-        private bool _autoHideNavigationPanel = WindowHelper.IsAutoHideNavPanel;
+        private bool _autoHideNavigationPanel;
 
-        partial void OnAutoHideNavigationPanelChanged(bool oldValue, bool newValue)
+        partial void OnAutoHideNavigationPanelChanged(bool value)
         {
-            WindowHelper.IsAutoHideNavPanel = AutoHideNavigationPanel = newValue;
+            if (value)
+            {
+                navigationPanelHostService.NaviPanelOpen = NaviPanelOpenState.Auto;
+            }
+            else
+            {
+                navigationPanelHostService.NaviPanelOpen = 
+                    navigationPanelHostService.GetIsPanelInternalOpen() ? 
+                    NaviPanelOpenState.Open : NaviPanelOpenState.Close;
+            }
         }
         #endregion
 

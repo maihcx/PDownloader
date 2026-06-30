@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string"/>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter</value></resheader>
+
+  <data name="AppTitle"            xml:space="preserve"><value>PDownloader</value></data>
+  <data name="NewDownload"         xml:space="preserve"><value>Tải mới</value></data>
+  <data name="Pause"               xml:space="preserve"><value>Tạm dừng</value></data>
+  <data name="Resume"              xml:space="preserve"><value>Tiếp tục</value></data>
+  <data name="Cancel"              xml:space="preserve"><value>Hủy</value></data>
+  <data name="Retry"               xml:space="preserve"><value>Thử lại</value></data>
+  <data name="OpenFile"            xml:space="preserve"><value>Mở file</value></data>
+  <data name="OpenFolder"          xml:space="preserve"><value>Mở thư mục</value></data>
+  <data name="PauseAll"            xml:space="preserve"><value>Dừng tất cả</value></data>
+  <data name="ResumeAll"           xml:space="preserve"><value>Tiếp tục tất cả</value></data>
+  <data name="StatusReady"         xml:space="preserve"><value>Sẵn sàng</value></data>
+  <data name="StatusDownloading"   xml:space="preserve"><value>Đang tải</value></data>
+  <data name="StatusPaused"        xml:space="preserve"><value>Tạm dừng</value></data>
+  <data name="StatusCompleted"     xml:space="preserve"><value>Hoàn thành</value></data>
+  <data name="StatusError"         xml:space="preserve"><value>Lỗi</value></data>
+  <data name="StatusMerging"       xml:space="preserve"><value>Đang ghép file...</value></data>
+  <data name="StatusConnecting"    xml:space="preserve"><value>Đang kết nối...</value></data>
+  <data name="ConfirmCancel"       xml:space="preserve"><value>Bạn có chắc muốn hủy tải xuống này?</value></data>
+  <data name="UrlLabel"            xml:space="preserve"><value>URL tải xuống</value></data>
+  <data name="FileNameLabel"       xml:space="preserve"><value>Tên file (tùy chọn)</value></data>
+  <data name="SaveToLabel"         xml:space="preserve"><value>Lưu vào thư mục</value></data>
+  <data name="ThreadsLabel"        xml:space="preserve"><value>Số luồng tải</value></data>
+  <data name="EmptyStateTitle"     xml:space="preserve"><value>Chưa có tải xuống nào</value></data>
+  <data name="EmptyStateHint"      xml:space="preserve"><value>Nhấn '+ Tải mới' hoặc cài extension trình duyệt để bắt đầu</value></data>
+</root>

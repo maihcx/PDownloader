@@ -2,8 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows7.0</TargetFramework>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
@@ -35,6 +34,10 @@
     <Authors>SM SOFT</Authors>
     <UseWindowsForms>True</UseWindowsForms>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Remove="app.manifest" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />

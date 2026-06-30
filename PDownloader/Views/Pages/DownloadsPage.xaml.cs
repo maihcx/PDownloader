@@ -1,6 +1,6 @@
 namespace PDownloader.Views.Pages
 {
-    [PageMeta("page_downloads_title", "page_downloads_summary", SymbolRegular.ArrowTrendingSettings24, 1, false)]
+    [PageMeta("page_downloads_title", "page_downloads_summary", SymbolRegular.DrawerArrowDownload20, 2, false)]
     public partial class DownloadsPage : Page
     {
         public DownloadsViewModel ViewModel { get; }

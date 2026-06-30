@@ -1,29 +1,53 @@
 namespace PDownloader.Runner.Utils;
 
-public class RunnerConfig
+public partial class RunnerConfig : ObservableObject
 {
-    public string Token { get; set; } = string.Empty;
-    public string InitialUrl  { get; set; } = string.Empty;
-    public string SaveTo      { get; set; } = string.Empty;
-    public string FileName    { get; set; } = string.Empty;
-    public int    Threads     { get; set; } = 8;
-    public string AccentColor { get; set; } = "#4FC3F7";
+    [ObservableProperty]
+    public string _token = string.Empty;
+
+    [ObservableProperty]
+    public string _initialUrl = string.Empty;
+
+    [ObservableProperty]
+    public string _saveTo = string.Empty;
+
+    [ObservableProperty]
+    public string _fileName = string.Empty;
+
+    [ObservableProperty]
+    public int _threads = 8;
+
+    [ObservableProperty]
+    public bool _isArgsSetup = false;
+
+    [ObservableProperty]
+    public bool _isRunner = false;
 
     public static RunnerConfig ParseArgs(string[] args)
     {
         var cfg = new RunnerConfig();
-        for (int i = 0; i < args.Length - 1; i++)
+        if (args.Length == 0)
         {
-            switch (args[i])
+            cfg.IsArgsSetup = false;
+        }
+        else
+        {
+            cfg.IsArgsSetup = true;
+            for (int i = 0; i < args.Length - 1; i++)
             {
-                case "--token":    cfg.Token       = args[i + 1]; break;
-                case "--url":      cfg.InitialUrl  = args[i + 1]; break;
-                case "--save-to":  cfg.SaveTo      = args[i + 1]; break;
-                case "--filename": cfg.FileName    = args[i + 1]; break;
-                case "--threads":  if (int.TryParse(args[i + 1], out var t)) cfg.Threads = t; break;
-                case "--accent":   cfg.AccentColor = args[i + 1]; break;
+                switch (args[i])
+                {
+                    case "--token": cfg.Token = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case "--url": cfg.InitialUrl = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case "--save-to": cfg.SaveTo = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case "--filename": cfg.FileName = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case "--threads": if (int.TryParse(args[i + 1], out var t)) cfg.Threads = t; break;
+                    case "--download-runner": cfg.IsRunner = Helpers.Base64Decode(args[i + 1].Trim()) == "runner"; break;
+                    //case "--download-status": if (int.TryParse(args[i + 1], out var status)) cfg.DownloadStatus = (DownloadStatus)status; break;
+                }
             }
         }
+
         return cfg;
     }
 }

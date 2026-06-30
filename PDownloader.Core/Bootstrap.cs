@@ -15,7 +15,7 @@ namespace PDownloader.Core
         public void OnStarted()
         {
             // Wire up download manager broadcasts
-            AppRuntime.InitDownloadManager();
+            DownloadManagerBootstrap.InitDownloadManager();
 
             #region ConfluxService — PDownloader.exe (Main UI)
             ConfluxService cfsMain = new();

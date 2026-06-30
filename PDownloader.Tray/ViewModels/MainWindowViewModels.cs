@@ -44,7 +44,6 @@ namespace PDownloader.Tray.ViewModels
                             case "OnLanguageChanged":
                                 UserDataStore.Reload();
                                 TranslationSource.Instance.CurrentCulture = LanguageBase.GetSetupLanguage();
-                                // Rebuild menu, giữ lại item update nếu đang có
                                 createTrayIcons(hasUpdate: _updateUrl != null);
                                 _ = CheckUpdateAfterDelayAsync(TimeSpan.FromSeconds(0));
                                 break;
@@ -76,7 +75,6 @@ namespace PDownloader.Tray.ViewModels
             _ = CoreService.StartServiceAsync();
             AppRuntime.CoreService = CoreService;
 
-            // Check update sau 5 giây để không làm chậm startup
             _ = CheckUpdateAfterDelayAsync(TimeSpan.FromSeconds(5));
         }
 
@@ -91,10 +89,8 @@ namespace PDownloader.Tray.ViewModels
 
             App.Current.Dispatcher.Invoke(() =>
             {
-                // Thêm menu item update vào đầu danh sách
                 createTrayIcons(hasUpdate: true, updateVersion: info.TagName);
 
-                // Hiện balloon notification
                 ShowUpdateBalloon(info.TagName);
             });
         }
@@ -123,6 +119,10 @@ namespace PDownloader.Tray.ViewModels
                 case "tray_config":
                     CoreService?.StartApp();
                     CoreService?.Send("tray-event", "OnGoConfig");
+                    break;
+                case "tray_download":
+                    CoreService?.StartApp();
+                    CoreService?.Send("tray-event", "OnGoDownload");
                     break;
                 case "tray_settings":
                     CoreService?.StartApp();
@@ -155,7 +155,6 @@ namespace PDownloader.Tray.ViewModels
                     Tag     = "tray_update",
                     Command = TrayExecuteCommand,
                     CommandParameter = "tray_update",
-                    // Tô màu nổi bật
                     Foreground = new System.Windows.Media.SolidColorBrush(
                         System.Windows.Media.Color.FromRgb(0, 150, 255)),
                 });
@@ -180,6 +179,12 @@ namespace PDownloader.Tray.ViewModels
                 Icon    = new SymbolIcon { Symbol = SymbolRegular.ArrowTrendingSettings24 },
                 Header  = LocalizationHelper.GetLang("page_config_title"), Tag = "tray_config",
                 Command = TrayExecuteCommand, CommandParameter = "tray_config"
+            });
+            items.Add(new MenuItem
+            {
+                Icon    = new SymbolIcon { Symbol = SymbolRegular.DrawerArrowDownload24 },
+                Header  = LocalizationHelper.GetLang("page_download_title"), Tag = "tray_download",
+                Command = TrayExecuteCommand, CommandParameter = "tray_download"
             });
             items.Add(new MenuItem
             {

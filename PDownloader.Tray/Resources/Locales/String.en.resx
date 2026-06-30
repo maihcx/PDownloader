@@ -126,6 +126,9 @@
   <data name="page_config_title" xml:space="preserve">
     <value>Config</value>
   </data>
+  <data name="page_download_title" xml:space="preserve">
+    <value>Download</value>
+  </data>
   <data name="page_home_title" xml:space="preserve">
     <value>Home</value>
   </data>

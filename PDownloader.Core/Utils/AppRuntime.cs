@@ -1,3 +1,5 @@
+using PDownloader.Core.Models;
+
 namespace PDownloader.Core.Utils
 {
     public static class AppRuntime
@@ -10,9 +12,15 @@ namespace PDownloader.Core.Utils
 
         public static Dictionary<string, ConfluxService> DownloaderCFSRest = new();
 
-        public static ConfluxService EnsureRunnerStarted(string token)
+        public static ConfluxService? EnsureRunnerStarted(string token, FileTask fileTask)
         {
+            DownloaderCFSRest.TryGetValue(token, out var service);
+            if (service != null)
+            {
+                return null;
+            }
             var svc = new ConfluxService();
+            svc.CanMultiple = true;
             svc.Register(
                 "PDownloader Runner.exe",
                 $"PDownloader.CoreToRunner-{token}",
@@ -28,27 +36,19 @@ namespace PDownloader.Core.Utils
                 }
                 else if (name == "runner-ui-closed")
                 {
+                    _ = svc.StopServiceAsync();
+                    svc.GetProcess().Kill();
                     DownloaderCFSRest.Remove(token);
                 }
             };
             svc.OnMessageReceived  += CFSCommandHandler.Handle;
             _ = svc.StartServiceAsync();
 
-            if (!svc.IsAppStarted())
-                svc.StartApp($"--token {token}");
+            svc.StartApp($"--token {token} --url {Helpers.Base64Encode(fileTask.url)} --save-to {Helpers.Base64Encode(fileTask.saveTo)} --filename {Helpers.Base64Encode(fileTask.fileName)} --download-runner {Helpers.Base64Encode(fileTask.downloadRunner)}");
 
             DownloaderCFSRest.Add(token, svc);
 
             return svc;
-        }
-
-        /// <summary>Hook download manager events once at startup.</summary>
-        public static void InitDownloadManager()
-        {
-            DownloadManager.Instance.OnItemChanged += item =>
-            {
-                CFSIncomingHandler.BroadcastItemChanged(item);
-            };
         }
     }
 }

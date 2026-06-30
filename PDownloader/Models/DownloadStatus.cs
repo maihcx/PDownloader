@@ -8,6 +8,7 @@
         Paused,
         Merging,
         Completed,
+        Cancelled,
         Error
     }
 }

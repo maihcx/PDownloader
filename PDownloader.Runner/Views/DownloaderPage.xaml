@@ -1,0 +1,132 @@
+﻿<Page x:Class="PDownloader.Runner.Views.DownloaderPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:PDownloader.Runner.Views"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:utils="clr-namespace:PDownloader.Runner.Utils"
+      mc:Ignorable="d"
+      d:DataContext="{d:DesignInstance local:DownloaderPage,
+                               IsDesignTimeCreatable=False}"
+      d:DesignHeight="400"
+      d:DesignWidth="800"
+      ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+      ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      Title="DownloaderPage"
+      ScrollViewer.CanContentScroll="False">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0"
+                      ui:SmoothScrollBehavior.IsEnabled="True"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <ui:CardAction IsChevronVisible="False">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="📄"
+                                   FontSize="28"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,14,0" />
+                        <StackPanel Grid.Column="1"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="{Binding ViewModel.RunnerConfig.FileName}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding ViewModel.RunnerConfig.InitialUrl}"
+                                       FontSize="11"
+                                       TextTrimming="CharacterEllipsis"
+                                       Margin="0,3,0,0" />
+                        </StackPanel>
+                    </Grid>
+                </ui:CardAction>
+
+                <StackPanel Margin="0 8 0 0">
+                    <TextBlock Text="{utils:Localization file_name_title}"
+                               Margin="2,0,0,4" />
+
+                    <ui:TextBox Text="{Binding ViewModel.RunnerConfig.FileName, Mode=TwoWay}" />
+                </StackPanel>
+
+                <StackPanel Margin="0 8 0 0">
+                    <TextBlock Text="{utils:Localization save_to_title}"
+                               Margin="2,0,0,4" />
+
+                    <Grid Margin="0,0,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBox Grid.Column="0"
+                                    Text="{Binding ViewModel.RunnerConfig.SaveTo, Mode=TwoWay}" />
+                        <ui:Button Grid.Column="1"
+                                   Content="…"
+                                   Margin="6,0,0,0"
+                                   Padding="11 7"
+                                   Command="{Binding ViewModel.BrowseFolderCommand}" />
+                    </Grid>
+                </StackPanel>
+
+                <StackPanel Margin="0 8 0 0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="{utils:Localization threads_title}"
+                                   Margin="2,0,0,4" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding ViewModel.RunnerConfig.Threads, Mode=OneWay}"
+                                   HorizontalAlignment="Right"
+                                   Margin="2,0,0,4" />
+                    </Grid>
+
+                    <Slider Value="{Binding ViewModel.RunnerConfig.Threads, Mode=TwoWay}"
+                            Maximum="32" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="1" Margin="0 8 0 0">
+            <Border>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding ViewModel.DownloaderStatus.ErrorText}"
+                               Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding ViewModel.DownloaderStatus.HasError, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    <ui:Button Grid.Column="1"
+                               Content="{utils:Localization cancel_title}"
+                               Margin="0,0,4,0"
+                               Command="{Binding ViewModel.CancelDownloadCommand}" />
+                    <ui:Button Grid.Column="2"
+                               Appearance="Primary"
+                               Content="{utils:Localization download_start_title}"
+                               Command="{Binding ViewModel.ConfirmDownloadCommand}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="ArrowDownload16" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+                </Grid>
+            </Border>
+        </StackPanel>
+    </Grid>
+</Page>

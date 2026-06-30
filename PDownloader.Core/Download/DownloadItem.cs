@@ -11,6 +11,7 @@ public enum DownloadStatus
     Paused,
     Merging,
     Completed,
+    Cancelled,
     Error
 }
 
@@ -85,7 +86,7 @@ public class DownloadItem : INotifyPropertyChanged
     public DownloadStatus Status
     {
         get => _status;
-        set { _status = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); OnPropertyChanged(nameof(IsActive)); }
+        set { _status = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsActive)); }
     }
 
     public string ErrorMessage
@@ -114,18 +115,6 @@ public class DownloadItem : INotifyPropertyChanged
 
     // ── Computed display properties ────────────────────────────────────────────
     public bool IsActive => Status is DownloadStatus.Downloading or DownloadStatus.Connecting or DownloadStatus.Merging;
-
-    public string StatusText => Status switch
-    {
-        DownloadStatus.Queued => "Đang chờ",
-        DownloadStatus.Connecting => "Đang kết nối...",
-        DownloadStatus.Downloading => "Đang tải",
-        DownloadStatus.Paused => "Tạm dừng",
-        DownloadStatus.Merging => "Đang ghép file...",
-        DownloadStatus.Completed => "Hoàn thành",
-        DownloadStatus.Error => $"Lỗi: {ErrorMessage}",
-        _ => string.Empty
-    };
 
     public string TotalFormatted => FormatBytes(TotalBytes);
     public string DownloadedFormatted => FormatBytes(DownloadedBytes);

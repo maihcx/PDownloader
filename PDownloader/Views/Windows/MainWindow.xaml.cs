@@ -1,15 +1,19 @@
 ﻿namespace PDownloader.Views.Windows
 {
-    public partial class MainWindow : INavigationWindow
+    public partial class MainWindow : IWindow
     {
         public MainWindowViewModel ViewModel { get; }
 
         public ApplicationThemeManagerService ThemeManagerService { get; }
 
+        private PowerModeService _powerModeService { get; }
+
         public MainWindow(
             MainWindowViewModel viewModel,
-            INavigationViewPageProvider navigationViewPageProvider,
-            INavigationService navigationService
+            INavigationService navigationService,
+            IServiceProvider serviceProvider,
+            ISnackbarService snackbarService,
+            PowerModeService powerModeService
         )
         {
             ViewModel = viewModel;
@@ -18,27 +22,37 @@
             ThemeManagerService = new ApplicationThemeManagerService(this);
             WindowHelper.ThemeManagerService = ThemeManagerService;
             ThemeManagerService.InitCornerRadius();
-            ThemeManagerService.Watch();
+            ThemeManagerService.SetApplicationTheme(ThemeManagerService.GetApplicationTheme());
 
             InitializeComponent();
-            SetPageService(navigationViewPageProvider);
 
+            snackbarService.SetSnackbarPresenter(GlobalSnackbar);
             navigationService.SetNavigationControl(RootNavigation);
+
             RootNavigation.Navigated += RootNavigation_Navigated;
 
-            this.SourceInitialized += OnSourceInitialized;
             this.Closing += MainWindow_Closing;
 
-            WindowHelper.OnAutoHideNavChanged += SharedVariable_OnAutoHideNavChanged;
-
-            SnackbarService snackbarService = new SnackbarService();
-            snackbarService.SetSnackbarPresenter(GlobalSnackbar);
             WindowHelper.GlobalSnackbar = snackbarService;
 
-            //TranslationSource.Instance.PropertyChanged += (s, e) =>
+            TranslationSource.Instance.PropertyChanged += (s, e) =>
+            {
+                RootNavigation.UpdateBreadcrumbContents();
+            };
+
+            //_ = updateHostService.CheckAsync(release =>
             //{
-            //    RootNavigation.UpdateBreadcrumbContents();
-            //};
+            //    ShowUpdateBanner(release.TagName);
+            //});
+
+            ApplicationThemeManager.Changed += (currentApplicationTheme, systemAccent) =>
+            {
+                _ = powerModeService.OptimizeAfterAsync(TimeSpan.FromSeconds(1));
+            };
+
+            _ = powerModeService.OptimizeAfterAsync(TimeSpan.FromSeconds(3));
+
+            _powerModeService = powerModeService;
 
             RestoreWindow();
         }
@@ -46,7 +60,9 @@
         private void RootNavigation_Navigated(NavigationView sender, NavigatedEventArgs args)
         {
             if (args?.Page is not FrameworkElement page)
+            {
                 return;
+            }
 
             var pageType = page.GetType();
 
@@ -63,27 +79,8 @@
                 BreadcrumbBar.Visibility = Visibility.Collapsed;
                 BreadcrumbBarHolder.Visibility = Visibility.Visible;
             }
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-        }
 
-        private void OnSourceInitialized(object? sender, EventArgs e)
-        {
-            ApplicationThemeManager.Apply(ThemeManagerService.GetSysApplicationTheme(), ThemeManagerService.GetBackdropType(), true);
-            ViewModel.OnNavigatedTo();
-
-            RootNavigation.IsPaneOpen = false;
-
-            if (WindowHelper.IsAutoHideNavPanel)
-            {
-                this.SizeChanged += MainWindow_SizeChanged;
-                MainWindow_SizeChanged(null, null);
-            }
-
-            //ThemeManagerService.OnThemeChanged += (theme) =>
-            //{
-            //    Wpf.Ui.Appearance.Theme.Apply(theme, ThemeManagerService.GetBackdropType(), true);
-            //};
+            _ = _powerModeService.OptimizeAsync();
         }
 
         public void ShowWithEffect()
@@ -149,68 +146,6 @@
                 this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
             }
-        }
-
-        public void MainWindow_SizeChanged(object? sender, SizeChangedEventArgs? e)
-        {
-            double size_width = this.Width;
-            if (size_width < 900 && RootNavigation.IsPaneOpen)
-            {
-                RootNavigation.IsPaneOpen = false;
-            }
-            else if (size_width >= 900 && !RootNavigation.IsPaneOpen)
-            {
-                RootNavigation.IsPaneOpen = true;
-            }
-        }
-
-        private void SharedVariable_OnAutoHideNavChanged(bool state)
-        {
-            if (state)
-            {
-                this.SizeChanged += MainWindow_SizeChanged;
-                MainWindow_SizeChanged(null, null);
-            }
-            else
-            {
-                this.SizeChanged -= MainWindow_SizeChanged;
-                RootNavigation.IsPaneOpen = true;
-            }
-        }
-
-        #region INavigationWindow methods
-
-        public INavigationView GetNavigation() => RootNavigation;
-
-        public bool Navigate(Type pageType) => RootNavigation.Navigate(pageType);
-
-        public void SetPageService(INavigationViewPageProvider navigationViewPageProvider) => RootNavigation.SetPageProviderService(navigationViewPageProvider);
-
-        public void ShowWindow() => Show();
-
-        public void CloseWindow() => Close();
-
-        #endregion INavigationWindow methods
-
-        /// <summary>
-        /// Raises the closed event.
-        /// </summary>
-        protected override void OnClosed(EventArgs e)
-        {
-            base.OnClosed(e);
-
-            // Make sure that closing this window will begin the process of closing the application.
-            System.Windows.Application.Current.Shutdown();
-        }
-
-        INavigationView INavigationWindow.GetNavigation()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SetServiceProvider(IServiceProvider serviceProvider)
-        {
-            throw new NotImplementedException();
         }
     }
 }

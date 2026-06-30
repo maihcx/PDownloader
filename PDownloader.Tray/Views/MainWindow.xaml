@@ -23,6 +23,7 @@
             Icon="pack://application:,,,/Assets/app-100.png"
             MenuOnRightClick="True"
             LeftClick="NotifyIcon_LeftClick"
+            RightClick="TrayIcon_RightClick"
             TooltipText="{Binding ViewModel.ApplicationTitle, Mode=OneWay}">
             <tray:NotifyIcon.Menu>
                 <ContextMenu 

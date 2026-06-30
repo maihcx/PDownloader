@@ -1,6 +1,3 @@
-using PDownloader.Models;
-using PDownloader.Services;
-
 namespace PDownloader.ViewModels.Pages
 {
     public partial class ConfigViewModel : ObservableObject
@@ -8,11 +5,20 @@ namespace PDownloader.ViewModels.Pages
         private readonly AppSettings _settings;
         private readonly DownloadLauncherService _launcher;
 
-        [ObservableProperty] private string _defaultDownloadFolder  = string.Empty;
-        [ObservableProperty] private int    _defaultThreadCount      = 8;
-        [ObservableProperty] private int    _maxConcurrentDownloads  = 3;
-        [ObservableProperty] private bool   _isDaemonRunning;
-        [ObservableProperty] private string _statusMessage           = string.Empty;
+        [ObservableProperty] 
+        private string _defaultDownloadFolder  = string.Empty;
+
+        [ObservableProperty]
+        private int _defaultThreadCount = 8;
+
+        [ObservableProperty]
+        private int _maxConcurrentDownloads = 3;
+
+        [ObservableProperty]
+        private bool _isDaemonRunning;
+
+        [ObservableProperty]
+        private string _statusMessage = string.Empty;
 
         public ConfigViewModel()
         {

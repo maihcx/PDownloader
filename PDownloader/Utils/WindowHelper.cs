@@ -6,11 +6,7 @@
 
         public static Window? MainWindow;
 
-        public static SnackbarService? GlobalSnackbar;
-
-        public delegate void AutoHideNavPanelChanged(bool state);
-        public static event AutoHideNavPanelChanged? OnAutoHideNavChanged;
-
+        public static ISnackbarService? GlobalSnackbar;
 
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -88,18 +84,5 @@
                 BringToFront(mw);
             }
         }
-
-        public static bool IsAutoHideNavPanel
-        {
-            get;
-            set
-            {
-                if (field == value) return;
-
-                field = value;
-                UserDataStore.SetValue("IsAutoHideNavPanel", field);
-                OnAutoHideNavChanged?.Invoke(value);
-            }
-        } = UserDataStore.GetValue<bool>("IsAutoHideNavPanel");
     }
 }

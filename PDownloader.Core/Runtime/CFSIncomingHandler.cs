@@ -1,6 +1,3 @@
-using System.Text.Json;
-using PDownloader.Core.Download;
-
 namespace PDownloader.Core.Runtime
 {
     /// <summary>
@@ -32,40 +29,14 @@ namespace PDownloader.Core.Runtime
         {
             switch (name)
             {
-                // ── Download flow ─────────────────────────────────────────────
-                case "download":
-                    // From extension/Main → forward to Runner for confirmation
-                    // not work right now
-                    HandleShowRunnerForDownload(value);
-                    return;
-
                 case "runner-start-download":
-                    // Runner confirmed → actually start download in Core
                     HandleStartDownload(value);
                     return;
 
-                case "runner-pause":
-                    DownloadManager.Instance.Pause(value);
-                    return;
-
-                case "runner-resume":
-                    DownloadManager.Instance.Resume(value);
-                    return;
-
-                case "runner-cancel":
-                    DownloadManager.Instance.Cancel(value);
-                    return;
-
-                case "runner-retry":
-                     DownloadManager.Instance.Retry(value);
-                    return;
-
-                // ── Main UI requests list ─────────────────────────────────────
                 case "downloader-svc-getlist":
                     SendListToMain();
                     return;
 
-                // ── Routing ───────────────────────────────────────────────────
                 case "tray-event":
                 case "state":
                 case "main-event":
@@ -78,8 +49,6 @@ namespace PDownloader.Core.Runtime
             }
         }
 
-        // ── Download confirmed by user in Runner ──────────────────────────────
-        // value = JSON { url, saveTo, fileName, threads }
         private static void HandleStartDownload(string value)
         {
             try
@@ -96,38 +65,20 @@ namespace PDownloader.Core.Runtime
                     saveTo: req.SaveTo   ?? string.Empty,
                     fileName: req.FileName ?? string.Empty,
                     threads: req.Threads > 0 ? req.Threads : 8,
-                    isYoutube: ytMeta != null,           // có trong cache → YouTube
-                    formatId: ytMeta?.FormatId);        // lấy formatId từ cache
+                    isYoutube: ytMeta != null,
+                    formatId: ytMeta?.FormatId);
 
                 BroadcastItemChanged(item);
             }
             catch { }
         }
 
-        // ── Extension/Main sends a URL → forward to Runner to confirm ─────────
-        // value = JSON { url, saveTo?, fileName? }
-        private static void HandleShowRunnerForDownload(string value)
-        {
-            try
-            {
-                using var doc = JsonDocument.Parse(value);
-                var root = doc.RootElement;
-                if (!root.TryGetProperty("url", out var urlProp)) return;
-                if (string.IsNullOrWhiteSpace(urlProp.GetString())) return;
-            }
-            catch { return; }
-
-            AppRuntime.EnsureRunnerStarted(Helpers.CreateMD5(value)).Send("download", value);
-        }
-
-        // ── Send full list to Main ────────────────────────────────────────────
         private static void SendListToMain()
         {
             string json = DownloadManager.Instance.SerializeList();
             AppRuntime.cfsMain?.Send("muxt-get-downloader-list", json);
         }
 
-        // ── Broadcast one item change to Runner + Main ────────────────────────
         public static void BroadcastItemChanged(DownloadItem item)
         {
             string json = DownloadManager.SerializeItem(item);

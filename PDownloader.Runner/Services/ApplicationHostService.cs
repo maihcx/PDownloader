@@ -1,4 +1,4 @@
-﻿namespace PDownloader.Services
+﻿namespace PDownloader.Runner.Services
 {
     /// <summary>
     /// Managed host of the application.
@@ -7,7 +7,7 @@
     {
         private readonly IServiceProvider? _serviceProvider;
 
-        private INavigationWindow? _navigationWindow;
+        private IWindow? _mainWindow;
 
         public ApplicationHostService(IServiceProvider serviceProvider)
         {
@@ -37,15 +37,17 @@
         /// </summary>
         private async Task HandleActivationAsync()
         {
-            if (!System.Windows.Application.Current.Windows.OfType<MainWindow>().Any())
-            {
-                _navigationWindow = (
-                    _serviceProvider?.GetService(typeof(INavigationWindow)) as INavigationWindow
-                )!;
-                WindowHelper.BringToFront(App.Current.MainWindow);
-                _navigationWindow!.ShowWindow();
+            _mainWindow = (
+                _serviceProvider?.GetService(typeof(IWindow)) as IWindow
+            )!;
+            //WindowHelper.BringToFront(App.Current.MainWindow);
+            _mainWindow!.Show();
 
-                _navigationWindow.Navigate(typeof(Views.Pages.HomePage));
+            _mainWindow!.Activate();
+
+            if (_mainWindow is MainWindow window && window.ViewModel is INavigationAware navigationAware)
+            {
+                await navigationAware.OnNavigatedToAsync();
             }
 
             await Task.CompletedTask;

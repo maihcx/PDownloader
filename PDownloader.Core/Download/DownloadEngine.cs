@@ -16,14 +16,14 @@ namespace PDownloader.Core.Download;
 /// </summary>
 public class DownloadEngine
 {
-    private const int    MaxRetries    = 5;
-    private const int    BufferSize    = 81920;      // 80 KB read buffer
-    private const string StateExt      = ".pdstate"; // persisted segment state
+    private const int MaxRetries = 5;
+    private const int BufferSize = 81920;      // 80 KB read buffer
+    private const string StateExt = ".pdstate"; // persisted segment state
 
-    private readonly DownloadItem          _item;
+    private readonly DownloadItem _item;
     private readonly IProgress<DownloadProgress> _progress;
-    private readonly CancellationToken     _ct;
-    private static readonly HttpClient     _http = CreateHttpClient();
+    private readonly CancellationToken _ct;
+    private static readonly HttpClient _http = CreateHttpClient();
 
     public DownloadEngine(DownloadItem item, IProgress<DownloadProgress> progress, CancellationToken ct)
     {
@@ -32,7 +32,6 @@ public class DownloadEngine
         _ct       = ct;
     }
 
-    // ── Public entry point ────────────────────────────────────────────────────
     public async Task RunAsync()
     {
         if (_item.IsYoutube)
@@ -44,49 +43,51 @@ public class DownloadEngine
         string tempDir = GetTempDir();
         Directory.CreateDirectory(tempDir);
 
-        // 1. HEAD — discover total size and range support
-        var (totalBytes, supportsRange) = await ProbeAsync(_item.Url);
-        _item.TotalBytes = totalBytes;
-
-        int threadCount = (supportsRange && totalBytes > 0) ? _item.Threads : 1;
-
-        // 2. Build or restore segment list
-        var segments = BuildOrRestoreSegments(tempDir, totalBytes, threadCount);
-
-        // 3. Download segments in parallel
-        _item.Status = DownloadStatus.Downloading;
-        _item.StartTime = DateTime.Now;
-
-        using var speedTimer = new System.Timers.Timer(1000);
-        long lastReported = segments.Sum(s => s.BytesWritten);
-        speedTimer.Elapsed += (_, _) =>
+        try
         {
-            long current = segments.Sum(s => s.BytesWritten);
-            double speed = current - lastReported;
-            lastReported = current;
-            _item.DownloadedBytes = current;
-            _item.SpeedBps = speed;
-            PersistState(tempDir, segments);
-        };
-        speedTimer.Start();
+            var (totalBytes, supportsRange) = await ProbeAsync(_item.Url);
+            _item.TotalBytes = totalBytes;
 
-        await DownloadAllSegmentsAsync(segments, supportsRange);
+            int threadCount = (supportsRange && totalBytes > 0) ? _item.Threads : 1;
 
-        speedTimer.Stop();
+            var segments = BuildOrRestoreSegments(tempDir, totalBytes, threadCount);
 
-        _ct.ThrowIfCancellationRequested();
+            _item.Status = DownloadStatus.Downloading;
+            _item.StartTime = DateTime.Now;
 
-        // 4. Merge
-        _item.Status = DownloadStatus.Merging;
-        await MergeSegmentsAsync(segments);
+            using var speedTimer = new System.Timers.Timer(1000);
+            long lastReported = segments.Sum(s => s.BytesWritten);
+            speedTimer.Elapsed += (_, _) =>
+            {
+                long current = segments.Sum(s => s.BytesWritten);
+                double speed = current - lastReported;
+                lastReported = current;
+                _item.DownloadedBytes = current;
+                _item.SpeedBps = speed;
+                PersistState(tempDir, segments);
+            };
+            speedTimer.Start();
 
-        // 5. Cleanup
-        CleanupTemp(tempDir);
+            await DownloadAllSegmentsAsync(segments, supportsRange);
 
-        _item.DownloadedBytes = _item.TotalBytes;
-        _item.SpeedBps = 0;
-        _item.Status   = DownloadStatus.Completed;
-        _item.EndTime  = DateTime.Now;
+            speedTimer.Stop();
+
+            _ct.ThrowIfCancellationRequested();
+
+            _item.Status = DownloadStatus.Merging;
+            await MergeSegmentsAsync(segments);
+
+            CleanupTemp(tempDir);
+
+            _item.DownloadedBytes = _item.TotalBytes;
+            _item.SpeedBps = 0;
+            _item.Status   = DownloadStatus.Completed;
+            _item.EndTime  = DateTime.Now;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
     }
 
     private async Task RunYtDlpAsync()
@@ -105,7 +106,6 @@ public class DownloadEngine
 
         Directory.CreateDirectory(folder);
 
-        // Dùng output template để yt-dlp tự đặt tên file
         string outputTemplate = Path.Combine(folder, "%(title)s.%(ext)s");
         string args = YtDlpService.BuildDownloadArgs(
             _item.Url,
@@ -129,7 +129,6 @@ public class DownloadEngine
 
         using var proc = new Process { StartInfo = psi };
 
-        // Parse tiến độ từ stdout yt-dlp: "[download]  23.4% of  142.31MiB at  3.20MiB/s"
         proc.OutputDataReceived += (_, e) =>
         {
             if (e.Data == null) return;
@@ -171,12 +170,10 @@ public class DownloadEngine
     {
         try
         {
-            // % 
             var pctMatch = System.Text.RegularExpressions.Regex.Match(line, @"([\d.]+)%");
             if (!pctMatch.Success) return;
             double pct = double.Parse(pctMatch.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
 
-            // total size
             var sizeMatch = System.Text.RegularExpressions.Regex.Match(line, @"of\s+([\d.]+)(MiB|GiB|KiB)");
             if (sizeMatch.Success)
             {
@@ -193,7 +190,6 @@ public class DownloadEngine
             if (_item.TotalBytes > 0)
                 _item.DownloadedBytes = (long)(_item.TotalBytes * pct / 100.0);
 
-            // speed
             var speedMatch = System.Text.RegularExpressions.Regex.Match(line, @"at\s+([\d.]+)(MiB|KiB|GiB)/s");
             if (speedMatch.Success)
             {
@@ -210,7 +206,6 @@ public class DownloadEngine
         catch { }
     }
 
-    // ── HEAD probe ────────────────────────────────────────────────────────────
     private async Task<(long totalBytes, bool supportsRange)> ProbeAsync(string url)
     {
         try
@@ -223,7 +218,6 @@ public class DownloadEngine
             bool ranges = resp.Headers.AcceptRanges.Contains("bytes")
                        || (resp.Content.Headers.ContentLength.HasValue && resp.Content.Headers.ContentLength > 0);
 
-            // Infer file name from Content-Disposition if not set
             if (string.IsNullOrWhiteSpace(_item.FileName))
             {
                 var cd = resp.Content.Headers.ContentDisposition;
@@ -235,14 +229,12 @@ public class DownloadEngine
         }
         catch
         {
-            // Fall back to single-stream with unknown size
             if (string.IsNullOrWhiteSpace(_item.FileName))
                 _item.FileName = SanitizeFileName(GuessFileName(_item.Url));
             return (0, false);
         }
     }
 
-    // ── Segment building / restore ────────────────────────────────────────────
     private List<SegmentInfo> BuildOrRestoreSegments(string tempDir, long totalBytes, int threadCount)
     {
         string stateFile = Path.Combine(tempDir, "segments" + StateExt);
@@ -252,7 +244,24 @@ public class DownloadEngine
             try
             {
                 var saved = JsonSerializer.Deserialize<List<SegmentInfo>>(File.ReadAllText(stateFile));
-                if (saved != null && saved.Count == threadCount) return saved;
+                if (saved != null && saved.Count == threadCount)
+                {
+                    foreach (var seg in saved)
+                    {
+                        long actualLen = File.Exists(seg.TempFilePath)
+                            ? new FileInfo(seg.TempFilePath).Length
+                            : 0;
+
+                        if (actualLen != seg.BytesWritten)
+                        {
+                            System.Diagnostics.Debug.WriteLine(
+                                $"[Engine] Segment {seg.Index}: state nói {seg.BytesWritten} bytes " +
+                                $"nhưng file thực tế có {actualLen} bytes. Đồng bộ theo file.");
+                            seg.BytesWritten = actualLen;
+                        }
+                    }
+                    return saved;
+                }
             }
             catch { }
         }
@@ -276,7 +285,7 @@ public class DownloadEngine
             for (int i = 0; i < threadCount; i++)
             {
                 long start = i * chunkSize;
-                long end   = (i == threadCount - 1) ? totalBytes - 1 : start + chunkSize - 1;
+                long end = (i == threadCount - 1) ? totalBytes - 1 : start + chunkSize - 1;
                 segments.Add(new SegmentInfo
                 {
                     Index        = i,
@@ -301,7 +310,6 @@ public class DownloadEngine
         catch { }
     }
 
-    // ── Parallel segment download ─────────────────────────────────────────────
     private async Task DownloadAllSegmentsAsync(List<SegmentInfo> segments, bool supportsRange)
     {
         var tasks = segments
@@ -329,7 +337,7 @@ public class DownloadEngine
             catch (Exception ex) when (attempt < MaxRetries)
             {
                 attempt++;
-                int delay = (int)Math.Pow(2, attempt) * 500; // 1s, 2s, 4s, 8s, 16s
+                int delay = (int)Math.Pow(2, attempt) * 500;
                 System.Diagnostics.Debug.WriteLine($"[Runner] Segment {seg.Index} attempt {attempt} failed: {ex.Message}. Retry in {delay}ms");
                 await Task.Delay(delay, _ct);
             }
@@ -338,6 +346,12 @@ public class DownloadEngine
 
     private async Task DownloadSegmentAsync(SegmentInfo seg, bool supportsRange)
     {
+        long actualLen = File.Exists(seg.TempFilePath)
+            ? new FileInfo(seg.TempFilePath).Length
+            : 0;
+        if (actualLen != seg.BytesWritten)
+            seg.BytesWritten = actualLen;
+
         using var req = new HttpRequestMessage(HttpMethod.Get, _item.Url);
 
         long resumeFrom = seg.RangeStart + seg.BytesWritten;
@@ -350,7 +364,6 @@ public class DownloadEngine
         using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, _ct);
         resp.EnsureSuccessStatusCode();
 
-        // Open temp file in append mode if resuming
         var fileMode = seg.BytesWritten > 0 ? FileMode.Append : FileMode.Create;
         await using var fs = new FileStream(seg.TempFilePath, fileMode, FileAccess.Write, FileShare.None);
         await using var stream = await resp.Content.ReadAsStreamAsync(_ct);
@@ -365,44 +378,92 @@ public class DownloadEngine
         }
     }
 
-    // ── Merge ─────────────────────────────────────────────────────────────────
     private async Task MergeSegmentsAsync(List<SegmentInfo> segments)
     {
+        var missing = segments.Where(s => !File.Exists(s.TempFilePath)).ToList();
+        if (missing.Count > 0)
+        {
+            string ids = string.Join(", ", missing.Select(s => s.Index));
+            throw new InvalidOperationException(
+                $"Không thể ghép file: thiếu {missing.Count} segment (index: {ids}).");
+        }
+
         string finalPath = GetFinalPath();
         string? dir = Path.GetDirectoryName(finalPath);
         if (dir != null) Directory.CreateDirectory(dir);
 
-        await using var output = new FileStream(finalPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        string mergingPath = finalPath + ".merging";
 
-        foreach (var seg in segments.OrderBy(s => s.Index))
+        await using (var output = new FileStream(mergingPath, FileMode.Create, FileAccess.Write, FileShare.None))
         {
-            if (!File.Exists(seg.TempFilePath)) continue;
-
-            await using (var input = new FileStream(seg.TempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            foreach (var seg in segments.OrderBy(s => s.Index))
             {
+                await using var input = new FileStream(seg.TempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
                 await input.CopyToAsync(output, _ct);
             }
+        }
 
+        File.Move(mergingPath, finalPath, overwrite: true);
+
+        foreach (var seg in segments)
+        {
             try { File.Delete(seg.TempFilePath); } catch { }
         }
 
         _item.SavePath = finalPath;
     }
 
-    // ── Cleanup ───────────────────────────────────────────────────────────────
-    private void CleanupTemp(string tempDir)
+    private static void CleanupTemp(string tempDir)
     {
-        try { Directory.Delete(tempDir, true); }
-        catch { /* best-effort */ }
+        const int maxAttempts = 5;
+        const int delayMs = 100;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+                break;
+            }
+            catch (IOException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(delayMs);
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(delayMs);
+            }
+            catch
+            {
+                System.Diagnostics.Debug.WriteLine($"[Engine] Không thể xóa thư mục temp: {tempDir}");
+                break;
+            }
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-    private string GetTempDir()
+    private string GetTempDir() => GetTempDirFor(_item.Id);
+
+    private static string GetTempDirFor(string id) => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "SM SOFT", "PDownloader", "Temp", id);
+
+    public static void DeleteTempFiles(string id, string? savePath, string? fileName)
     {
-        string baseTmp = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "SM SOFT", "PDownloader", "Temp", _item.Id);
-        return baseTmp;
+        string tempDir = GetTempDirFor(id);
+        CleanupTemp(tempDir);
+
+        try
+        {
+            string folder = string.IsNullOrWhiteSpace(savePath)
+                ? UserDataStore.GetDefaultDownloadFolder()
+                : savePath;
+            string name = string.IsNullOrWhiteSpace(fileName) ? "download" : fileName;
+            string mergingPath = Path.Combine(folder, name) + ".merging";
+            if (File.Exists(mergingPath)) File.Delete(mergingPath);
+        }
+        catch { /* best-effort */ }
     }
 
     private string GetFinalPath()
@@ -422,8 +483,8 @@ public class DownloadEngine
         if (!File.Exists(path)) return path;
 
         string noExt = Path.GetFileNameWithoutExtension(name);
-        string ext   = Path.GetExtension(name);
-        int counter  = 1;
+        string ext = Path.GetExtension(name);
+        int counter = 1;
         while (File.Exists(path))
         {
             path = Path.Combine(folder, $"{noExt} ({counter}){ext}");
@@ -436,7 +497,7 @@ public class DownloadEngine
     {
         try
         {
-            var uri  = new Uri(url);
+            var uri = new Uri(url);
             string p = uri.AbsolutePath;
             string f = Path.GetFileName(p);
             return string.IsNullOrWhiteSpace(f) ? "download" : f;
@@ -447,8 +508,10 @@ public class DownloadEngine
     private static string SanitizeFileName(string name)
     {
         foreach (char c in Path.GetInvalidFileNameChars())
+        {
             name = name.Replace(c, '_');
-        // Remove surrounding quotes from Content-Disposition
+        }
+
         name = name.Trim('"', '\'', ' ');
         return string.IsNullOrWhiteSpace(name) ? "download" : name;
     }
