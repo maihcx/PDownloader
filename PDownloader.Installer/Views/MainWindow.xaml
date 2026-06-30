@@ -13,7 +13,6 @@
     WindowBackdropType="Tabbed">
 
     <ui:FluentWindow.Resources>
-        <!-- Step indicator style -->
         <Style x:Key="StepDot" TargetType="Ellipse">
             <Setter Property="Width" Value="10"/>
             <Setter Property="Height" Value="10"/>
@@ -29,7 +28,6 @@
             <Setter Property="Fill" Value="{DynamicResource SystemAccentColorSecondaryBrush}"/>
         </Style>
 
-        <!-- Sidebar label style -->
         <Style x:Key="SideLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}"/>
@@ -48,9 +46,6 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- ============================================================
-             LEFT SIDEBAR
-        ============================================================ -->
         <Border Grid.Column="0"
                 Background="{DynamicResource ControlStrokeColorDefaultBrush}"
                 BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
@@ -68,34 +63,29 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Step list - only visible in install flow -->
                 <StackPanel x:Name="SideSteps"
                             Visibility="{Binding IsUninstallMode,
                                 Converter={StaticResource BoolToVisibilityInverted},
                                 FallbackValue=Visible}">
 
-                    <!-- Step 1: Welcome -->
                     <StackPanel Orientation="Horizontal" Margin="0,6">
                         <Ellipse Style="{Binding StepIndex, Converter={StaticResource StepDotConverter}, ConverterParameter=1}"/>
                         <TextBlock Text="{local:LocalizationExtension welcome_title}"
                                    Style="{Binding StepIndex, Converter={StaticResource SideLabelConverter}, ConverterParameter=1}"/>
                     </StackPanel>
 
-                    <!-- Step 2: License -->
                     <StackPanel Orientation="Horizontal" Margin="0,6">
                         <Ellipse Style="{Binding StepIndex, Converter={StaticResource StepDotConverter}, ConverterParameter=2}"/>
                         <TextBlock Text="{local:LocalizationExtension license_title}"
                                    Style="{Binding StepIndex, Converter={StaticResource SideLabelConverter}, ConverterParameter=2}"/>
                     </StackPanel>
 
-                    <!-- Step 3: Path -->
                     <StackPanel Orientation="Horizontal" Margin="0,6">
                         <Ellipse Style="{Binding StepIndex, Converter={StaticResource StepDotConverter}, ConverterParameter=3}"/>
                         <TextBlock Text="{local:LocalizationExtension path_title}"
                                    Style="{Binding StepIndex, Converter={StaticResource SideLabelConverter}, ConverterParameter=3}"/>
                     </StackPanel>
 
-                    <!-- Step 4: Options -->
                     <StackPanel Orientation="Horizontal" Margin="0,6">
                         <Ellipse Style="{Binding StepIndex, Converter={StaticResource StepDotConverter}, ConverterParameter=4}"/>
                         <TextBlock Text="{local:LocalizationExtension options_title}"
@@ -112,28 +102,22 @@
             </StackPanel>
         </Border>
 
-        <!-- ============================================================
-             RIGHT CONTENT AREA  (ContentControl switches pages)
-        ============================================================ -->
         <ContentControl Grid.Column="1"
                         Content="{Binding}"
                         Margin="0,32,0,0">
             <ContentControl.Resources>
-
-                
-                <!-- PAGE: Language Selection                            -->
-                
                 <DataTemplate x:Key="LanguageTpl">
                     <Grid Margin="40,32">
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="{local:LocalizationExtension lang_select_title}"
-                                       FontSize="26" FontWeight="Bold"
+                                       FontSize="26"
+                                       FontWeight="Bold"
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                       Margin="0,0,0,8"/>
+                                       Margin="0,0,0,8" />
                             <TextBlock Text="{local:LocalizationExtension lang_select_subtitle}"
                                        FontSize="14"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       Margin="0,0,0,32"/>
+                                       Margin="0,0,0,32" />
 
                             <ListBox ItemsSource="{Binding Languages}"
                                      SelectedItem="{Binding SelectedLanguage}"
@@ -144,35 +128,77 @@
                                      Background="{DynamicResource ControlFillColorDefaultBrush}"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      Margin="0,0,0,32">
+
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Margin"
+                                                Value="4" />
+                                        <Setter Property="Padding"
+                                                Value="0" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="Border"
+                                                            CornerRadius="{DynamicResource ControlCornerRadius}"
+                                                            Background="{TemplateBinding Background}"
+                                                            Padding="4">
+                                                        <ContentPresenter />
+                                                    </Border>
+
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver"
+                                                                 Value="True">
+                                                            <Setter TargetName="Border"
+                                                                    Property="Background"
+                                                                    Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                                        </Trigger>
+
+                                                        <Trigger Property="IsSelected"
+                                                                 Value="True">
+                                                            <Setter TargetName="Border"
+                                                                    Property="Background"
+                                                                    Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                                            <Setter Property="Foreground"
+                                                                    Value="{DynamicResource ListBoxItemSelectedForegroundThemeBrush}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" Margin="2">
+                                        <StackPanel Orientation="Horizontal"
+                                                    Margin="8,6">
                                             <TextBlock Text="{Binding NativeName}"
                                                        FontSize="15"
-                                                       VerticalAlignment="Center"/>
-                                            <TextBlock Text=" - " Foreground="{DynamicResource TextFillColorTertiaryBrush}" VerticalAlignment="Center"/>
+                                                       VerticalAlignment="Center" />
+
+                                            <TextBlock Text=" - "
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       VerticalAlignment="Center" />
+
                                             <TextBlock Text="{Binding EnglishName}"
                                                        FontSize="13"
                                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                       VerticalAlignment="Center"/>
+                                                       VerticalAlignment="Center" />
                                         </StackPanel>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
+
                             </ListBox>
 
-                            <ui:Button
-                                Content="{local:LocalizationExtension lang_select_next}"
-                                Command="{Binding SelectLanguageCmd}"
-                                Appearance="Primary"
-                                Icon="{ui:SymbolIcon ChevronRight24}"
-                                HorizontalAlignment="Left"/>
+                            <ui:Button Content="{local:LocalizationExtension lang_select_next}"
+                                       Command="{Binding SelectLanguageCmd}"
+                                       Appearance="Primary"
+                                       Icon="{ui:SymbolIcon ChevronRight24}"
+                                       HorizontalAlignment="Left" />
                         </StackPanel>
                     </Grid>
                 </DataTemplate>
 
-                
-                <!-- PAGE: Welcome                                       -->
-                
                 <DataTemplate x:Key="WelcomeTpl">
                     <Grid Margin="40,32">
                         <StackPanel>
@@ -205,9 +231,6 @@
                     </Grid>
                 </DataTemplate>
 
-                
-                <!-- PAGE: License                                       -->
-                
                 <DataTemplate x:Key="LicenseTpl">
                     <Grid Margin="40,32">
                         <Grid.RowDefinitions>
@@ -252,9 +275,6 @@
                     </Grid>
                 </DataTemplate>
 
-                
-                <!-- PAGE: Install Path                                  -->
-                
                 <DataTemplate x:Key="PathTpl">
                     <Grid Margin="40,32">
                         <StackPanel>
@@ -302,9 +322,6 @@
                     </Grid>
                 </DataTemplate>
 
-                
-                <!-- PAGE: Options                                       -->
-                
                 <DataTemplate x:Key="OptionsTpl">
                     <Grid Margin="40,32">
                         <StackPanel>
@@ -338,9 +355,6 @@
                     </Grid>
                 </DataTemplate>
 
-                
-                <!-- PAGE: Installing                                    -->
-                
                 <DataTemplate x:Key="InstallingTpl">
                     <Grid Margin="40,32">
                         <StackPanel VerticalAlignment="Center">
@@ -361,9 +375,6 @@
                     </Grid>
                 </DataTemplate>
 
-                
-                <!-- PAGE: Finish                                        -->
-                
                 <DataTemplate x:Key="FinishTpl">
                     <Grid Margin="40,32">
                         <StackPanel VerticalAlignment="Center">
@@ -396,9 +407,6 @@
                     </Grid>
                 </DataTemplate>
 
-                
-                <!-- PAGE: Error                                         -->
-                
                 <DataTemplate x:Key="ErrorTpl">
                     <Grid Margin="40,32">
                         <StackPanel VerticalAlignment="Center">
@@ -432,9 +440,6 @@
                     </Grid>
                 </DataTemplate>
 
-                
-                <!-- PAGE: Uninstall Confirm                             -->
-                
                 <DataTemplate x:Key="UninstallConfirmTpl">
                     <Grid Margin="40,32">
                         <StackPanel VerticalAlignment="Center">
@@ -465,9 +470,6 @@
                     </Grid>
                 </DataTemplate>
 
-                
-                <!-- PAGE: Uninstalling                                  -->
-                
                 <DataTemplate x:Key="UninstallingTpl">
                     <Grid Margin="40,32">
                         <StackPanel VerticalAlignment="Center">
@@ -485,9 +487,6 @@
                     </Grid>
                 </DataTemplate>
 
-                
-                <!-- PAGE: Uninstall Done                                -->
-                
                 <DataTemplate x:Key="UninstallDoneTpl">
                     <Grid Margin="40,32">
                         <StackPanel VerticalAlignment="Center">
@@ -516,7 +515,6 @@
 
             </ContentControl.Resources>
 
-            <!-- Step -> template selector via triggers in code-behind -->
             <ContentControl.Style>
                 <Style TargetType="ContentControl">
                     <Style.Triggers>
@@ -558,7 +556,6 @@
             </ContentControl.Style>
         </ContentControl>
 
-        <!-- Title bar overlay (drag area) -->
         <ui:TitleBar Title="" Grid.ColumnSpan="2"
                      ShowMinimize="True" ShowMaximize="False"
                      VerticalAlignment="Top"/>
