@@ -23,6 +23,8 @@ public partial class RunnerConfig : ObservableObject
     [ObservableProperty]
     public bool _isRunner = false;
 
+    public Dictionary<string, string>? CustomHeaders { get; set; }
+
     public static RunnerConfig ParseArgs(string[] args)
     {
         var cfg = new RunnerConfig();
@@ -37,13 +39,21 @@ public partial class RunnerConfig : ObservableObject
             {
                 switch (args[i])
                 {
-                    case "--token": cfg.Token = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case "--token": cfg.Token      = Helpers.Base64Decode(args[i + 1].Trim()); break;
                     case "--url": cfg.InitialUrl = Helpers.Base64Decode(args[i + 1].Trim()); break;
-                    case "--save-to": cfg.SaveTo = Helpers.Base64Decode(args[i + 1].Trim()); break;
-                    case "--filename": cfg.FileName = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case "--save-to": cfg.SaveTo     = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case "--filename": cfg.FileName   = Helpers.Base64Decode(args[i + 1].Trim()); break;
                     case "--threads": if (int.TryParse(args[i + 1], out var t)) cfg.Threads = t; break;
-                    case "--download-runner": cfg.IsRunner = Helpers.Base64Decode(args[i + 1].Trim()) == "runner"; break;
-                    //case "--download-status": if (int.TryParse(args[i + 1], out var status)) cfg.DownloadStatus = (DownloadStatus)status; break;
+                    case "--download-runner": cfg.IsRunner   = Helpers.Base64Decode(args[i + 1].Trim()) == "runner"; break;
+                    case "--headers":
+                        try
+                        {
+                            string json = Helpers.Base64Decode(args[i + 1].Trim());
+                            cfg.CustomHeaders = System.Text.Json.JsonSerializer
+                                .Deserialize<Dictionary<string, string>>(json);
+                        }
+                        catch { }
+                        break;
                 }
             }
         }

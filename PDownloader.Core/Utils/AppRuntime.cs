@@ -4,9 +4,9 @@ namespace PDownloader.Core.Utils
 {
     public static class AppRuntime
     {
-        public static ConfluxService? cfsMain   { get; set; }
+        public static ConfluxService? cfsMain { get; set; }
 
-        public static ConfluxService? cfsTray   { get; set; }
+        public static ConfluxService? cfsTray { get; set; }
 
         public static Bootstrap? bootstrap { get; set; }
 
@@ -44,7 +44,14 @@ namespace PDownloader.Core.Utils
             svc.OnMessageReceived  += CFSCommandHandler.Handle;
             _ = svc.StartServiceAsync();
 
-            svc.StartApp($"--token {token} --url {Helpers.Base64Encode(fileTask.url)} --save-to {Helpers.Base64Encode(fileTask.saveTo)} --filename {Helpers.Base64Encode(fileTask.fileName)} --download-runner {Helpers.Base64Encode(fileTask.downloadRunner)}");
+            string headersArg = string.Empty;
+            if (fileTask.headers is { Count: > 0 })
+            {
+                string headersJson = System.Text.Json.JsonSerializer.Serialize(fileTask.headers);
+                headersArg = $" --headers {Helpers.Base64Encode(headersJson)}";
+            }
+
+            svc.StartApp($"--token {token} --url {Helpers.Base64Encode(fileTask.url)} --save-to {Helpers.Base64Encode(fileTask.saveTo)} --filename {Helpers.Base64Encode(fileTask.fileName)} --download-runner {Helpers.Base64Encode(fileTask.downloadRunner)}{headersArg}");
 
             DownloaderCFSRest.Add(token, svc);
 

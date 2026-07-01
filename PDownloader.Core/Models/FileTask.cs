@@ -16,6 +16,8 @@
 
         public long filesize { get; set; }
 
-        public string downloadRunner {  get; set; } = string.Empty;
+        public string downloadRunner { get; set; } = string.Empty;
+
+        public Dictionary<string, string>? headers { get; set; }
     }
 }

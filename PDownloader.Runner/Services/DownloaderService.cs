@@ -79,7 +79,8 @@
                     url = _runnerConfig.InitialUrl,
                     saveTo = _runnerConfig.SaveTo,
                     fileName = _runnerConfig.FileName,
-                    threads = _runnerConfig.Threads
+                    threads = _runnerConfig.Threads,
+                    headers = _runnerConfig.CustomHeaders
                 });
 
                 bool ok = await Task.Run(() => SendWithRetry(payload, retries: 3));

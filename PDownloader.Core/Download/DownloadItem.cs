@@ -3,18 +3,6 @@ using System.Runtime.CompilerServices;
 
 namespace PDownloader.Core.Download;
 
-public enum DownloadStatus
-{
-    Queued,
-    Connecting,
-    Downloading,
-    Paused,
-    Merging,
-    Completed,
-    Cancelled,
-    Error
-}
-
 public class DownloadItem : INotifyPropertyChanged
 {
     private string _url = string.Empty;
@@ -29,22 +17,14 @@ public class DownloadItem : INotifyPropertyChanged
     private DateTime _startTime;
     private DateTime _endTime;
 
+    public Dictionary<string, string>? CustomHeaders { get; set; }
+
     public string Id = string.Empty;
 
-    // ── YouTube-specific ──────────────────────────────────────────────────────
-    /// <summary>True when this item should be downloaded via YoutubeExplode.</summary>
     public bool IsYoutube { get; set; }
 
-    /// <summary>
-    /// Format selector coming from the extension:
-    ///   "best"         – best available (default)
-    ///   "video:{itag}" – video-only by itag, will be muxed with best audio
-    ///   "audio:{itag}" – audio-only by itag
-    ///   "muxed:{itag}" – muxed stream by itag
-    /// </summary>
     public string? FormatId { get; set; }
 
-    // ── Standard properties ───────────────────────────────────────────────────
     public string Url
     {
         get => _url;
@@ -113,7 +93,6 @@ public class DownloadItem : INotifyPropertyChanged
         set { _endTime = value; OnPropertyChanged(); }
     }
 
-    // ── Computed display properties ────────────────────────────────────────────
     public bool IsActive => Status is DownloadStatus.Downloading or DownloadStatus.Connecting or DownloadStatus.Merging;
 
     public string TotalFormatted => FormatBytes(TotalBytes);

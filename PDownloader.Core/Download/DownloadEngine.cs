@@ -17,19 +17,21 @@ namespace PDownloader.Core.Download;
 public class DownloadEngine
 {
     private const int MaxRetries = 5;
-    private const int BufferSize = 81920;      // 80 KB read buffer
-    private const string StateExt = ".pdstate"; // persisted segment state
+    private const int BufferSize = 81920;       // 80 KB read buffer
+    private const string StateExt = ".pdstate";  // persisted segment state
+
+    private const long MinSizeForMultiSegment = 5 * 1024 * 1024; // 5 MB
 
     private readonly DownloadItem _item;
-    private readonly IProgress<DownloadProgress> _progress;
     private readonly CancellationToken _ct;
-    private static readonly HttpClient _http = CreateHttpClient();
+    private static readonly HttpClient _defaultHttp = CreateHttpClient();
+    private readonly HttpClient _http;
 
     public DownloadEngine(DownloadItem item, IProgress<DownloadProgress> progress, CancellationToken ct)
     {
         _item     = item;
-        _progress = progress;
         _ct       = ct;
+        _http     = BuildHttpClient(item.CustomHeaders);
     }
 
     public async Task RunAsync()
@@ -48,11 +50,14 @@ public class DownloadEngine
             var (totalBytes, supportsRange) = await ProbeAsync(_item.Url);
             _item.TotalBytes = totalBytes;
 
-            int threadCount = (supportsRange && totalBytes > 0) ? _item.Threads : 1;
+            bool useMultiSegment = supportsRange
+                                   && totalBytes >= MinSizeForMultiSegment;
+
+            int threadCount = useMultiSegment ? _item.Threads : 1;
 
             var segments = BuildOrRestoreSegments(tempDir, totalBytes, threadCount);
 
-            _item.Status = DownloadStatus.Downloading;
+            _item.Status    = DownloadStatus.Downloading;
             _item.StartTime = DateTime.Now;
 
             using var speedTimer = new System.Timers.Timer(1000);
@@ -63,7 +68,7 @@ public class DownloadEngine
                 double speed = current - lastReported;
                 lastReported = current;
                 _item.DownloadedBytes = current;
-                _item.SpeedBps = speed;
+                _item.SpeedBps        = speed;
                 PersistState(tempDir, segments);
             };
             speedTimer.Start();
@@ -74,15 +79,23 @@ public class DownloadEngine
 
             _ct.ThrowIfCancellationRequested();
 
+            var incomplete = segments.Where(s => !s.IsCompleted).ToList();
+            if (incomplete.Count > 0)
+            {
+                string ids = string.Join(", ", incomplete.Select(s => s.Index));
+                throw new InvalidOperationException(
+                    $"Tải chưa hoàn tất: {incomplete.Count} segment chưa xong (index: {ids}).");
+            }
+
             _item.Status = DownloadStatus.Merging;
             await MergeSegmentsAsync(segments);
 
             CleanupTemp(tempDir);
 
             _item.DownloadedBytes = _item.TotalBytes;
-            _item.SpeedBps = 0;
-            _item.Status   = DownloadStatus.Completed;
-            _item.EndTime  = DateTime.Now;
+            _item.SpeedBps        = 0;
+            _item.Status          = DownloadStatus.Completed;
+            _item.EndTime         = DateTime.Now;
         }
         catch (OperationCanceledException)
         {
@@ -155,8 +168,8 @@ public class DownloadEngine
 
         if (proc.ExitCode == 0)
         {
-            _item.Status  = DownloadStatus.Completed;
-            _item.EndTime = DateTime.Now;
+            _item.Status          = DownloadStatus.Completed;
+            _item.EndTime         = DateTime.Now;
             _item.DownloadedBytes = _item.TotalBytes;
         }
         else
@@ -215,8 +228,7 @@ public class DownloadEngine
             resp.EnsureSuccessStatusCode();
 
             long total = resp.Content.Headers.ContentLength ?? 0;
-            bool ranges = resp.Headers.AcceptRanges.Contains("bytes")
-                       || (resp.Content.Headers.ContentLength.HasValue && resp.Content.Headers.ContentLength > 0);
+            bool ranges = resp.Headers.AcceptRanges.Contains("bytes");
 
             if (string.IsNullOrWhiteSpace(_item.FileName))
             {
@@ -255,8 +267,8 @@ public class DownloadEngine
                         if (actualLen != seg.BytesWritten)
                         {
                             System.Diagnostics.Debug.WriteLine(
-                                $"[Engine] Segment {seg.Index}: state nói {seg.BytesWritten} bytes " +
-                                $"nhưng file thực tế có {actualLen} bytes. Đồng bộ theo file.");
+                                $"[Engine] Segment {seg.Index}: state={seg.BytesWritten}B " +
+                                $"thực tế={actualLen}B — đồng bộ theo file.");
                             seg.BytesWritten = actualLen;
                         }
                     }
@@ -268,13 +280,13 @@ public class DownloadEngine
 
         var segments = new List<SegmentInfo>();
 
-        if (totalBytes <= 0 || threadCount == 1)
+        if (threadCount == 1 || totalBytes <= 0)
         {
             segments.Add(new SegmentInfo
             {
                 Index        = 0,
                 RangeStart   = 0,
-                RangeEnd     = totalBytes > 0 ? totalBytes - 1 : long.MaxValue,
+                RangeEnd     = totalBytes > 0 ? totalBytes - 1 : -1, // -1 = không biết kích thước
                 TempFilePath = Path.Combine(tempDir, "seg_0.part"),
                 BytesWritten = 0
             });
@@ -285,7 +297,7 @@ public class DownloadEngine
             for (int i = 0; i < threadCount; i++)
             {
                 long start = i * chunkSize;
-                long end = (i == threadCount - 1) ? totalBytes - 1 : start + chunkSize - 1;
+                long end = i == threadCount - 1 ? totalBytes - 1 : start + chunkSize - 1;
                 segments.Add(new SegmentInfo
                 {
                     Index        = i,
@@ -330,15 +342,13 @@ public class DownloadEngine
                 await DownloadSegmentAsync(seg, supportsRange);
                 return;
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex) when (attempt < MaxRetries)
             {
                 attempt++;
                 int delay = (int)Math.Pow(2, attempt) * 500;
-                System.Diagnostics.Debug.WriteLine($"[Runner] Segment {seg.Index} attempt {attempt} failed: {ex.Message}. Retry in {delay}ms");
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Engine] Segment {seg.Index} attempt {attempt} failed: {ex.Message}. Retry in {delay}ms");
                 await Task.Delay(delay, _ct);
             }
         }
@@ -356,19 +366,70 @@ public class DownloadEngine
 
         long resumeFrom = seg.RangeStart + seg.BytesWritten;
 
-        if (supportsRange && seg.RangeEnd != long.MaxValue)
-        {
+        bool shouldSetRange = supportsRange
+                              && seg.RangeEnd >= 0
+                              && (seg.RangeStart > 0 || seg.BytesWritten > 0 || seg.RangeEnd < long.MaxValue - 1);
+
+        if (shouldSetRange)
             req.Headers.Range = new RangeHeaderValue(resumeFrom, seg.RangeEnd);
-        }
 
         using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, _ct);
+
+        if (resp.StatusCode == System.Net.HttpStatusCode.RequestedRangeNotSatisfiable)
+        {
+            long expectedBytes = seg.RangeEnd >= 0
+                ? seg.RangeEnd - seg.RangeStart + 1
+                : -1;
+
+            if (expectedBytes > 0 && seg.BytesWritten >= expectedBytes)
+            {
+                seg.IsCompleted = true;
+                return;
+            }
+
+            throw new HttpRequestException($"Server trả 416 cho segment {seg.Index} " +
+                $"(range {resumeFrom}-{seg.RangeEnd}), đã có {seg.BytesWritten}B.");
+        }
+
         resp.EnsureSuccessStatusCode();
 
-        var fileMode = seg.BytesWritten > 0 ? FileMode.Append : FileMode.Create;
+        var contentType = resp.Content.Headers.ContentType?.MediaType ?? "";
+        if (IsHtmlContentType(contentType))
+        {
+            throw new InvalidOperationException(
+                "Server trả về trang HTML thay vì file. " +
+                "Có thể URL yêu cầu đăng nhập hoặc đã hết hạn.");
+        }
+
+        bool serverHonoredRange = resp.StatusCode == System.Net.HttpStatusCode.PartialContent;
+        var fileMode = (seg.BytesWritten > 0 && serverHonoredRange)
+            ? FileMode.Append
+            : FileMode.Create;
+
+        if (fileMode == FileMode.Create)
+            seg.BytesWritten = 0;
+
         await using var fs = new FileStream(seg.TempFilePath, fileMode, FileAccess.Write, FileShare.None);
         await using var stream = await resp.Content.ReadAsStreamAsync(_ct);
 
         byte[] buffer = new byte[BufferSize];
+        int firstRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), _ct);
+        if (firstRead > 0 && seg.BytesWritten == 0 && seg.Index == 0)
+        {
+            if (LooksLikeHtml(buffer, firstRead))
+            {
+                throw new InvalidOperationException(
+                    "Nội dung tải về là trang HTML (trang lỗi hoặc yêu cầu đăng nhập), không phải file thật.");
+            }
+        }
+
+        if (firstRead > 0)
+        {
+            _ct.ThrowIfCancellationRequested();
+            await fs.WriteAsync(buffer.AsMemory(0, firstRead), _ct);
+            seg.BytesWritten += firstRead;
+        }
+
         int read;
         while ((read = await stream.ReadAsync(buffer, _ct)) > 0)
         {
@@ -376,6 +437,8 @@ public class DownloadEngine
             await fs.WriteAsync(buffer.AsMemory(0, read), _ct);
             seg.BytesWritten += read;
         }
+
+        seg.IsCompleted = true;
     }
 
     private async Task MergeSegmentsAsync(List<SegmentInfo> segments)
@@ -426,14 +489,8 @@ public class DownloadEngine
                     Directory.Delete(tempDir, true);
                 break;
             }
-            catch (IOException) when (attempt < maxAttempts)
-            {
-                Thread.Sleep(delayMs);
-            }
-            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
-            {
-                Thread.Sleep(delayMs);
-            }
+            catch (IOException) when (attempt < maxAttempts) { Thread.Sleep(delayMs); }
+            catch (UnauthorizedAccessException) when (attempt < maxAttempts) { Thread.Sleep(delayMs); }
             catch
             {
                 System.Diagnostics.Debug.WriteLine($"[Engine] Không thể xóa thư mục temp: {tempDir}");
@@ -442,7 +499,6 @@ public class DownloadEngine
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
     private string GetTempDir() => GetTempDirFor(_item.Id);
 
     private static string GetTempDirFor(string id) => Path.Combine(
@@ -463,7 +519,7 @@ public class DownloadEngine
             string mergingPath = Path.Combine(folder, name) + ".merging";
             if (File.Exists(mergingPath)) File.Delete(mergingPath);
         }
-        catch { /* best-effort */ }
+        catch { }
     }
 
     private string GetFinalPath()
@@ -508,26 +564,101 @@ public class DownloadEngine
     private static string SanitizeFileName(string name)
     {
         foreach (char c in Path.GetInvalidFileNameChars())
-        {
             name = name.Replace(c, '_');
-        }
 
         name = name.Trim('"', '\'', ' ');
         return string.IsNullOrWhiteSpace(name) ? "download" : name;
+    }
+
+    private static bool IsHtmlContentType(string mediaType)
+    {
+        if (string.IsNullOrEmpty(mediaType)) return false;
+        var t = mediaType.Trim().ToLowerInvariant();
+        return t is "text/html" or "application/xhtml+xml" or "text/xhtml";
+    }
+
+    private static bool LooksLikeHtml(byte[] buffer, int length)
+    {
+        if (length < 5) return false;
+
+        int offset = 0;
+        if (length >= 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF)
+            offset = 3;
+        else if (length >= 2 && ((buffer[0] == 0xFF && buffer[1] == 0xFE) ||
+                                  (buffer[0] == 0xFE && buffer[1] == 0xFF)))
+            offset = 2;
+
+        int checkLen = Math.Min(length - offset, 100);
+        if (checkLen < 5) return false;
+
+        var span = System.Text.Encoding.UTF8.GetString(buffer, offset, checkLen)
+                       .TrimStart()
+                       .ToLowerInvariant();
+
+        return span.StartsWith("<!doctype html", StringComparison.Ordinal)
+            || span.StartsWith("<html", StringComparison.Ordinal)
+            || span.StartsWith("<!doctype htm", StringComparison.Ordinal);
+    }
+
+    private static HttpClient BuildHttpClient(Dictionary<string, string>? customHeaders)
+    {
+        if (customHeaders == null || customHeaders.Count == 0)
+            return _defaultHttp;
+
+        var handler = new HttpClientHandler
+        {
+            AllowAutoRedirect        = true,
+            MaxAutomaticRedirections = 10,
+            UseCookies               = false
+        };
+        var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+            "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
+
+        foreach (var (key, value) in customHeaders)
+        {
+            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(value))
+                continue;
+
+            try
+            {
+                switch (key.ToLowerInvariant())
+                {
+                    case "cookie":
+                        client.DefaultRequestHeaders.TryAddWithoutValidation("Cookie", value);
+                        break;
+                    case "referer":
+                        client.DefaultRequestHeaders.Referrer = new Uri(value, UriKind.RelativeOrAbsolute);
+                        break;
+                    case "user-agent":
+                        client.DefaultRequestHeaders.UserAgent.Clear();
+                        client.DefaultRequestHeaders.UserAgent.ParseAdd(value);
+                        break;
+                    default:
+                        client.DefaultRequestHeaders.TryAddWithoutValidation(key, value);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Engine] Bỏ qua header '{key}': {ex.Message}");
+            }
+        }
+
+        return client;
     }
 
     private static HttpClient CreateHttpClient()
     {
         var handler = new HttpClientHandler
         {
-            AllowAutoRedirect    = true,
+            AllowAutoRedirect        = true,
             MaxAutomaticRedirections = 10,
-            UseCookies           = true
+            UseCookies               = true
         };
-        var client = new HttpClient(handler)
-        {
-            Timeout = Timeout.InfiniteTimeSpan
-        };
+        var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
         client.DefaultRequestHeaders.UserAgent.ParseAdd(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
             "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");

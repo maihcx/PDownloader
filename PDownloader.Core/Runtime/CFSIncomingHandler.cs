@@ -1,22 +1,5 @@
 namespace PDownloader.Core.Runtime
 {
-    /// <summary>
-    /// Handles ALL incoming CFS messages to Core from: Main, Tray, Runner.
-    ///
-    /// CFS Commands (incoming):
-    ///   "download"                  – browser extension/Main requests a new download → show Runner for confirm
-    ///   "runner-start-download"     – Runner confirmed, start downloading in Core
-    ///   "runner-pause"              – Runner requests pause    (value = id)
-    ///   "runner-resume"             – Runner requests resume   (value = id)
-    ///   "runner-cancel"             – Runner requests cancel   (value = id)
-    ///   "runner-retry"              – Runner requests retry    (value = id)
-    ///   "downloader-svc-getlist"    – Main requests full download list
-    ///   "show-runner"               – bring Runner window to front
-    ///   "tray-event"                – tray button clicked
-    ///   "state"                     – app lifecycle (shutdown)
-    ///   "main-event"                – Main → forward to Tray
-    ///   "core-svc-state"            – core lifecycle
-    /// </summary>
     public static class CFSIncomingHandler
     {
         private static readonly Dictionary<string, string> _last = new();
@@ -59,6 +42,17 @@ namespace PDownloader.Core.Runtime
 
                 _youtubePending.TryRemove(req.Id, out var ytMeta);
 
+                Dictionary<string, string>? customHeaders = null;
+                if (req.Headers is { Count: > 0 })
+                {
+                    customHeaders = req.Headers
+                        .Where(kv => !string.IsNullOrWhiteSpace(kv.Key)
+                                  && !string.IsNullOrWhiteSpace(kv.Value))
+                        .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+                    if (customHeaders.Count == 0) customHeaders = null;
+                }
+
                 var item = DownloadManager.Instance.Enqueue(
                     id: req.Id,
                     url: req.Url,
@@ -66,7 +60,8 @@ namespace PDownloader.Core.Runtime
                     fileName: req.FileName ?? string.Empty,
                     threads: req.Threads > 0 ? req.Threads : 8,
                     isYoutube: ytMeta != null,
-                    formatId: ytMeta?.FormatId);
+                    formatId: ytMeta?.FormatId,
+                    customHeaders: customHeaders);
 
                 BroadcastItemChanged(item);
             }
@@ -103,15 +98,21 @@ namespace PDownloader.Core.Runtime
             var serialize = JsonSerializer.Serialize(new
             {
                 url = item.Url,
-                saveTo = item.SavePath   ?? string.Empty,
-                fileName = item.FileName ?? string.Empty
+                saveTo = item.SavePath  ?? string.Empty,
+                fileName = item.FileName  ?? string.Empty
             });
             return Helpers.CreateMD5(serialize);
         }
 
-        public static void RegisterYoutubePending(string id, string formatId) => _youtubePending[id] = new YoutubePendingMeta(formatId);
+        public static void RegisterYoutubePending(string id, string formatId)
+            => _youtubePending[id] = new YoutubePendingMeta(formatId);
 
         private record StartDownloadRequest(
-            string Id, string Url, string? SaveTo, string? FileName, int Threads);
+            string Id,
+            string Url,
+            string? SaveTo,
+            string? FileName,
+            int Threads,
+            Dictionary<string, string>? Headers);
     }
 }

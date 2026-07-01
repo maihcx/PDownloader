@@ -8,10 +8,6 @@ using System.Threading.Tasks;
 
 namespace PDownloader.Core.Download
 {
-    /// <summary>
-    /// Manages all download tasks in Core (no WPF dependency).
-    /// Broadcasts state changes to Runner and PDownloader.exe via CFS.
-    /// </summary>
     public class DownloadManager
     {
         public static readonly DownloadManager Instance = new();
@@ -26,7 +22,7 @@ namespace PDownloader.Core.Download
 
         public event Action<DownloadItem>? OnItemChanged;
 
-        public DownloadItem Enqueue(string id, string url, string saveTo = "", string fileName = "", int threads = 8, bool isYoutube = false, string? formatId = null)
+        public DownloadItem Enqueue(string id, string url, string saveTo = "", string fileName = "", int threads = 8, bool isYoutube = false, string? formatId = null, Dictionary<string, string>? customHeaders = null)
         {
             var item = new DownloadItem
             {
@@ -37,7 +33,8 @@ namespace PDownloader.Core.Download
                 Threads  = threads,
                 Status   = DownloadStatus.Queued,
                 IsYoutube = isYoutube,
-                FormatId = formatId
+                FormatId = formatId,
+                CustomHeaders = customHeaders
             };
 
             lock (_lock) { _downloads.Add(item); }

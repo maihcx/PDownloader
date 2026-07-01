@@ -216,7 +216,7 @@
         </ScrollViewer>
 
         <!-- ── Status bar ──────────────────────────────────────────────────── -->
-        <Border Grid.Row="2" Padding="24,8" BorderThickness="0,1,0,0"
+        <Border Grid.Row="2" Padding="0,8" BorderThickness="0,1,0,0"
                 BorderBrush="{DynamicResource ControlElevationBorderBrush}">
             <Grid>
                 <Grid.ColumnDefinitions>

@@ -1,5 +1,6 @@
 global using PDownloader.CFS;
 global using PDownloader.Core;
+global using PDownloader.Core.Models;
 global using PDownloader.Core.Utils;
 global using PDownloader.Core.Runtime;
 global using PDownloader.Core.Service;
@@ -17,5 +18,6 @@ global using System.Security.AccessControl;
 global using System.Security.Principal;
 global using System.Text;
 global using System.Text.Json;
+global using System.Text.Json.Serialization;
 global using System.Threading;
 global using System.Threading.Tasks;
