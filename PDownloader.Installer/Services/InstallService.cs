@@ -67,6 +67,10 @@ namespace PDownloader.Installer.Services
             }, ct);
 
             ct.ThrowIfCancellationRequested();
+            progress.Report((0.88, Utils.LocalizationHelper.Get("installing_browser_extension")));
+            await Task.Run(() => BrowserExtensionInstallerService.InstallForAllBrowsers(installDir), ct);
+
+            ct.ThrowIfCancellationRequested();
             progress.Report((0.92, Utils.LocalizationHelper.Get("installing_registry")));
             await Task.Run(() => RegisterUninstaller(installDir), ct);
 
@@ -180,6 +184,10 @@ namespace PDownloader.Installer.Services
 
                 SetStartup(false, "");
             }, ct);
+
+            progress?.Report((0.75, Utils.LocalizationHelper.Get("uninstall_removing")));
+
+            await Task.Run(BrowserExtensionInstallerService.UninstallForAllBrowsers, ct);
 
             progress?.Report((0.85, Utils.LocalizationHelper.Get("uninstall_removing")));
 

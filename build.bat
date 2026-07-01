@@ -81,6 +81,27 @@ if exist "LICENSE.vi" (
     echo Copied LICENSE.vi into payload
 )
 
+REM ── Bước 4b: Copy BrowserExtension đã build sẵn ──
+echo.
+echo Copying prebuilt BrowserExtension...
+
+if not exist ".\BrowserExtension\PDownloader.crx" (
+    echo [ERROR] BrowserExtension\PDownloader.crx not found!
+    pause
+    exit /b 1
+)
+
+mkdir "%PAYLOAD_DIR%\BrowserExtension" >nul 2>nul
+
+copy /y ".\BrowserExtension\PDownloader.crx" "%PAYLOAD_DIR%\BrowserExtension\" >nul
+
+REM Nếu cần update.xml thì copy luôn
+if exist ".\BrowserExtension\update.xml" (
+    copy /y ".\BrowserExtension\update.xml" "%PAYLOAD_DIR%\BrowserExtension\" >nul
+)
+
+echo BrowserExtension copied.
+
 REM ── Bước 5: Zip publish/* → payload.zip (ghi đè bản rỗng) ──
 echo.
 echo Packaging payload into zip...

@@ -195,6 +195,9 @@
   <data name="installing_shortcuts" xml:space="preserve">
     <value>installing_shortcuts</value>
   </data>
+  <data name="installing_browser_extension" xml:space="preserve">
+    <value>installing_browser_extension</value>
+  </data>
   <data name="installing_registry" xml:space="preserve">
     <value>installing_registry</value>
   </data>
