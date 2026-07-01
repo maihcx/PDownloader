@@ -19,16 +19,6 @@ namespace PDownloader.Core.Runtime
                 case "downloader-svc-getlist":
                     SendListToMain();
                     return;
-
-                case "tray-event":
-                case "state":
-                case "main-event":
-                case "core-svc-state":
-                    _last.TryGetValue(name, out string? prev);
-                    if (prev == value) return;
-                    _last[name] = value;
-                    CFSCommandHandler.Handle(name, value);
-                    return;
             }
         }
 
@@ -91,17 +81,6 @@ namespace PDownloader.Core.Runtime
             };
             AppRuntime.cfsMain?.Send("muxt-download-progress", json);
             cfsDowloaderUI?.Send("muxt-download-progress", json);
-        }
-
-        public static string DownloadItem2Token(DownloadItem item)
-        {
-            var serialize = JsonSerializer.Serialize(new
-            {
-                url = item.Url,
-                saveTo = item.SavePath  ?? string.Empty,
-                fileName = item.FileName  ?? string.Empty
-            });
-            return Helpers.CreateMD5(serialize);
         }
 
         public static void RegisterYoutubePending(string id, string formatId)

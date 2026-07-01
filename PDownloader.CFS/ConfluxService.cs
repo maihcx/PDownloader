@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.IO.Pipes;
 using System.Security.AccessControl;
-using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 
@@ -24,46 +23,16 @@ namespace PDownloader.CFS
 
         public bool CreateNoWindow = false;
 
-        public string AuthToken { get; private set; } = string.Empty;
-
         public int MaxMessageBytes { get; set; } = 1024 * 1024; // 1MB
 
         private CancellationTokenSource? _cts;
         private Task? _serviceTask;
 
-        public static string GenerateToken()
-        {
-            Span<byte> bytes = stackalloc byte[32];
-            RandomNumberGenerator.Fill(bytes);
-            return Convert.ToBase64String(bytes)
-                .Replace('+', '-')
-                .Replace('/', '_')
-                .TrimEnd('=');
-        }
 
-        private const string TokenArgName = "--cfx-token";
-
-        public static string? ExtractTokenFromCurrentProcessArgs()
-        {
-            return ExtractTokenFromArgs(Environment.GetCommandLineArgs());
-        }
-
-        public static string? ExtractTokenFromArgs(string[] args)
-        {
-            for (int i = 0; i < args.Length - 1; i++)
-            {
-                if (string.Equals(args[i], TokenArgName, StringComparison.Ordinal))
-                {
-                    return args[i + 1];
-                }
-            }
-            return null;
-        }
-
-        public void Register(string processPackage, string pipeSend, string? pipeReceive = null, string? authToken = null)
+        public void Register(string processPackage, string pipeSend, string? pipeReceive = null)
         {
             ProcessPackage = processPackage;
-            ProcessName = processPackage.Replace(".exe", "");
+            ProcessName = Path.GetFileNameWithoutExtension(processPackage);
 
             PipeSend = pipeSend;
             PipeSendReceive = pipeSend + "Response";
@@ -72,11 +41,8 @@ namespace PDownloader.CFS
             {
                 PipeGet = pipeReceive;
             }
-            PipeGetReceive = pipeReceive + "Response";
 
-            AuthToken = authToken
-                ?? ExtractTokenFromCurrentProcessArgs()
-                ?? GenerateToken();
+            PipeGetReceive = PipeGet + "Response";
         }
 
         private static PipeSecurity CreateRestrictedPipeSecurity()
@@ -109,17 +75,12 @@ namespace PDownloader.CFS
                     return;
                 }
 
-                if (string.IsNullOrEmpty(AuthToken))
-                {
-                    AuthToken = GenerateToken();
-                }
-
                 var psi = new ProcessStartInfo
                 {
                     FileName = ProcessPackage,
                     UseShellExecute = false,
 
-                    Arguments = $"--cfx-token {AuthToken} {argEnvironment}",
+                    Arguments = argEnvironment,
                     CreateNoWindow = CreateNoWindow
                 };
                 _currProcess = Process.Start(psi);
@@ -178,34 +139,16 @@ namespace PDownloader.CFS
 
                     string raw = Encoding.UTF8.GetString(buffer, 0, bytesRead);
 
-                    var parts = raw.Split('|', 3);
-                    if (parts.Length < 2)
+                    var parts = raw.Split('|', 2);
+
+                    if (parts.Length != 2)
                     {
                         server.Disconnect();
                         continue;
                     }
 
-                    string receivedToken = parts[0];
-                    string paramName;
-                    string paramValue;
-
-                    if (parts.Length == 3)
-                    {
-                        paramName = parts[1];
-                        paramValue = parts[2];
-                    }
-                    else
-                    {
-                        server.Disconnect();
-                        continue;
-                    }
-
-                    if (!ValidateToken(receivedToken))
-                    {
-                        Debug.WriteLine("[PipeServer] Token không hợp lệ - message bị từ chối.");
-                        server.Disconnect();
-                        continue;
-                    }
+                    string paramName = parts[0];
+                    string paramValue = parts[1];
 
                     OnMessageReceiving?.Invoke(paramName, paramValue);
                     await SendBitOKAsync(token);
@@ -228,34 +171,11 @@ namespace PDownloader.CFS
             }
         }
 
-        private bool ValidateToken(string receivedToken)
-        {
-            if (string.IsNullOrEmpty(AuthToken) || string.IsNullOrEmpty(receivedToken))
-            {
-                return false;
-            }
-
-            byte[] expected = Encoding.UTF8.GetBytes(AuthToken);
-            byte[] actual = Encoding.UTF8.GetBytes(receivedToken);
-
-            if (expected.Length != actual.Length)
-            {
-                return CryptographicOperations.FixedTimeEquals(expected, expected) && false;
-            }
-
-            return CryptographicOperations.FixedTimeEquals(expected, actual);
-        }
-
         public async Task StartServiceAsync()
         {
             if (_cts != null)
             {
                 return;
-            }
-
-            if (string.IsNullOrEmpty(AuthToken))
-            {
-                AuthToken = GenerateToken();
             }
 
             _cts = new CancellationTokenSource();
@@ -325,12 +245,6 @@ namespace PDownloader.CFS
                 timeout = TimeSpan.FromSeconds(5);
             }
 
-            if (string.IsNullOrEmpty(AuthToken))
-            {
-                Debug.WriteLine("[Send] AuthToken chưa được thiết lập - từ chối gửi.");
-                return false;
-            }
-
             try
             {
                 if (IsAppStarted())
@@ -338,7 +252,7 @@ namespace PDownloader.CFS
                     using var client = new NamedPipeClientStream(".", PipeSend, PipeDirection.Out);
                     client.Connect((int)timeout.Value.TotalMilliseconds);
 
-                    byte[] buffer = Encoding.UTF8.GetBytes($"{AuthToken}|{paramName}|{paramValue}");
+                    byte[] buffer = Encoding.UTF8.GetBytes($"{paramName}|{paramValue}");
                     if (buffer.Length > MaxMessageBytes)
                     {
                         Debug.WriteLine("[Send] Message vượt quá kích thước cho phép.");

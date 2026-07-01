@@ -1,6 +1,6 @@
 namespace PDownloader.ViewModels.Pages
 {
-    public partial class DownloadsViewModel : ObservableObject
+    public partial class DownloadsViewModel : ObservableObject, INavigationAware
     {
         public ObservableCollection<DownloadItemDto> Downloads { get; } = new();
 
@@ -17,9 +17,18 @@ namespace PDownloader.ViewModels.Pages
         {
             DownloadsChannel.OnProgress += OnProgress;
             DownloadsChannel.OnList     += OnList;
+        }
 
+        public Task OnNavigatedToAsync()
+        {
             RequestRefresh();
 
+            return Task.CompletedTask;
+        }
+
+        public Task OnNavigatedFromAsync()
+        {
+            return Task.CompletedTask;
         }
 
         public void RequestRefresh()
