@@ -59,4 +59,3 @@ nunit-*.xml
 
 # Browser extension signing key - KHONG BAO GIO commit private key nay
 BrowserExtension/_packaging/signing-key.pem
-BrowserExtension/PDownloader.crx
