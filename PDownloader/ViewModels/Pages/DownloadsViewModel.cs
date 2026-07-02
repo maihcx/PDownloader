@@ -1,3 +1,5 @@
+using PDownloader.Services.DownloadServices;
+
 namespace PDownloader.ViewModels.Pages
 {
     public partial class DownloadsViewModel : ObservableObject, INavigationAware
@@ -13,10 +15,10 @@ namespace PDownloader.ViewModels.Pages
         [ObservableProperty]
         private string _statusText = "Ready";
 
-        public DownloadsViewModel()
+        public DownloadsViewModel(DownloadsChannelService downloadsChannelService)
         {
-            DownloadsChannel.OnProgress += OnProgress;
-            DownloadsChannel.OnList     += OnList;
+            downloadsChannelService.OnProgress += OnProgress;
+            downloadsChannelService.OnList     += OnList;
         }
 
         public Task OnNavigatedToAsync()

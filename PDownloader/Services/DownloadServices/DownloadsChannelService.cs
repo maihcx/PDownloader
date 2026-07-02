@@ -1,15 +1,15 @@
-namespace PDownloader.Services;
+namespace PDownloader.Services.DownloadServices;
 
 /// <summary>
 /// Receives CFS messages from Core and raises events for the ViewModel.
 /// Registered in Bootstrap.OnBeforeStartup via cfsMain.OnMessageReceived.
 /// </summary>
-public static class DownloadsChannel
+public class DownloadsChannelService
 {
-    public static event Action<List<DownloadItemDto>>? OnList;
-    public static event Action<DownloadItemDto>?       OnProgress;
+    public event Action<List<DownloadItemDto>>? OnList;
+    public event Action<DownloadItemDto>?       OnProgress;
 
-    public static void Handle(string name, string value)
+    public void Handle(string name, string value)
     {
         switch (name)
         {
@@ -23,7 +23,7 @@ public static class DownloadsChannel
         }
     }
 
-    private static void HandleList(string value)
+    private void HandleList(string value)
     {
         try
         {
@@ -34,7 +34,7 @@ public static class DownloadsChannel
         catch { }
     }
 
-    private static void HandleProgress(string value)
+    private void HandleProgress(string value)
     {
         try
         {

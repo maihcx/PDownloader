@@ -13,7 +13,8 @@
             INavigationService navigationService,
             IServiceProvider serviceProvider,
             ISnackbarService snackbarService,
-            PowerModeService powerModeService
+            PowerModeService powerModeService,
+            UpdateHostService updateHostService
         )
         {
             ViewModel = viewModel;
@@ -40,10 +41,10 @@
                 RootNavigation.UpdateBreadcrumbContents();
             };
 
-            //_ = updateHostService.CheckAsync(release =>
-            //{
-            //    ShowUpdateBanner(release.TagName);
-            //});
+            _ = updateHostService.CheckAsync(release =>
+            {
+                ShowUpdateBanner(release.TagName);
+            });
 
             ApplicationThemeManager.Changed += (currentApplicationTheme, systemAccent) =>
             {
@@ -55,6 +56,11 @@
             _powerModeService = powerModeService;
 
             RestoreWindow();
+        }
+
+        private void ShowUpdateBanner(string tagName)
+        {
+            MessengerService.ShowSnackbar("sys_notification_title", LanguageBase.GetLangValue("update_available_summary", tagName), ControlAppearance.Caution, new SymbolIcon(SymbolRegular.ArrowDownload24), TimeSpan.FromSeconds(15));
         }
 
         private void RootNavigation_Navigated(NavigationView sender, NavigatedEventArgs args)

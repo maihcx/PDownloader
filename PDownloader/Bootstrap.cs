@@ -1,3 +1,5 @@
+using PDownloader.Services.DownloadServices;
+
 namespace PDownloader
 {
     public static class Bootstrap
@@ -14,7 +16,6 @@ namespace PDownloader
         public static void OnBeforeStartup()
         {
             SharedMem.AppSettings = AppSettings.Load();
-            SharedMem.Launcher    = new DownloadLauncherService();
 
             #region Mutex checker
             try
@@ -68,7 +69,7 @@ namespace PDownloader
 
             ConfluxManager.cfsPDownloaderCore = cfsPDownloaderCore;
 
-            cfsPDownloaderCore.OnMessageReceived += DownloadsChannel.Handle;
+            cfsPDownloaderCore.OnMessageReceived += App.GetRequiredService<DownloadsChannelService>().Handle;
             cfsPDownloaderCore.OnMessageReceived += (name, value) =>
             {
                 App.Current.Dispatcher.Invoke(() =>
@@ -107,7 +108,7 @@ namespace PDownloader
                                 NavigationHandle.NavigationService?.Navigate(typeof(SettingsPage));
                                 break;
                             case "OnShowRunner":
-                                SharedMem.Launcher?.ShowRunner();
+                                App.GetRequiredService<DownloadLauncherService>().ShowRunner();
                                 break;
                         }
                     }

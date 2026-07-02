@@ -806,5 +806,14 @@ namespace PDownloader.Resources.Locales {
                 return ResourceManager.GetString("task_num_title", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to update_available_summary.
+        /// </summary>
+        internal static string update_available_summary {
+            get {
+                return ResourceManager.GetString("update_available_summary", resourceCulture);
+            }
+        }
     }
 }

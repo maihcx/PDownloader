@@ -1,3 +1,5 @@
+using PDownloader.Services.DownloadServices;
+
 namespace PDownloader.ViewModels.Pages
 {
     public partial class ConfigViewModel : ObservableObject
@@ -20,10 +22,10 @@ namespace PDownloader.ViewModels.Pages
         [ObservableProperty]
         private string _statusMessage = string.Empty;
 
-        public ConfigViewModel()
+        public ConfigViewModel(DownloadLauncherService launcher)
         {
             _settings = SharedMem.AppSettings ?? new AppSettings();
-            _launcher = SharedMem.Launcher    ?? new DownloadLauncherService();
+            _launcher = launcher;
             LoadFromSettings();
             IsDaemonRunning = _launcher.IsDaemonRunning;
             StatusMessage = IsDaemonRunning
@@ -41,14 +43,17 @@ namespace PDownloader.ViewModels.Pages
         [RelayCommand]
         private void BrowseDownloadFolder()
         {
-            using var dlg = new System.Windows.Forms.FolderBrowserDialog
+            var dialog = new OpenFolderDialog
             {
-                Description         = LanguageBase.GetLangValue("page_config_folder_title"),
-                SelectedPath        = DefaultDownloadFolder,
-                ShowNewFolderButton = true
+                Title = LanguageBase.GetLangValue("page_config_folder_title"),
+                InitialDirectory = DefaultDownloadFolder,
+                Multiselect = false
             };
-            if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                DefaultDownloadFolder = dlg.SelectedPath;
+
+            if (dialog.ShowDialog() == true)
+            {
+                DefaultDownloadFolder = dialog.FolderName;
+            }
         }
 
         [RelayCommand]

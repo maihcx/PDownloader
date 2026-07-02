@@ -6,8 +6,6 @@ namespace PDownloader.Services
     {
         public static AppSettings? AppSettings { get; set; }
 
-        public static DownloadLauncherService? Launcher { get; set; }
-
         private static bool _isScrollToUpdateCard = false;
         public static bool IsScrollToUpdateCard
         {

@@ -366,4 +366,7 @@
   <data name="download_status_queued_title" xml:space="preserve">
     <value>download_status_queued_title</value>
   </data>
+  <data name="update_available_summary" xml:space="preserve">
+    <value>update_available_summary</value>
+  </data>
 </root>

@@ -450,7 +450,7 @@ namespace PDownloader.Core.Download
             stallCts.CancelAfter(TimeSpan.FromSeconds(StallTimeoutSeconds));
 
             using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, stallCts.Token);
-            stallCts.CancelAfter(TimeSpan.FromSeconds(StallTimeoutSeconds));
+            stallCts.CancelAfter(TimeSpan.FromSeconds(StallTimeoutSeconds)); // reset sau khi nhận được header
 
             if (resp.StatusCode == System.Net.HttpStatusCode.RequestedRangeNotSatisfiable)
             {
@@ -541,17 +541,21 @@ namespace PDownloader.Core.Download
             {
                 foreach (var seg in segments.OrderBy(s => s.Index))
                 {
-                    await using var input = new FileStream(seg.TempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                    await input.CopyToAsync(output, _ct);
+                    await using (var input = new FileStream(seg.TempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        await input.CopyToAsync(output, _ct);
+                    }
+
+                    try { File.Delete(seg.TempFilePath); }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[Engine] Không thể xóa segment {seg.Index} ngay sau khi ghép: {ex.Message}");
+                    }
                 }
             }
 
             File.Move(mergingPath, finalPath, overwrite: true);
-
-            foreach (var seg in segments)
-            {
-                try { File.Delete(seg.TempFilePath); } catch { }
-            }
 
             _item.SavePath = finalPath;
         }

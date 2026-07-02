@@ -32,7 +32,7 @@
     <LangVersion>preview</LangVersion>
     <Company>SM SOFT</Company>
     <Authors>SM SOFT</Authors>
-    <UseWindowsForms>True</UseWindowsForms>
+    <UseWindowsForms>False</UseWindowsForms>
   </PropertyGroup>
 
   <ItemGroup>

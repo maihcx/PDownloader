@@ -72,10 +72,14 @@
             }
         }
 
-        public static string BuildDownloadArgs(string url, string formatId, string outputPath)
+        public static string BuildDownloadArgs(string url, string formatId, string outputPath, int threads = 8)
         {
+            int n = Math.Clamp(threads, 1, 16);
+
             return $"-f \"{EscapeArg(formatId)}\" " +
                    $"--no-warnings " +
+                   $"--concurrent-fragments {n} " +
+                   $"--http-chunk-size 10M " +
                    $"-o \"{EscapeArg(outputPath)}\" " +
                    $"-- \"{EscapeArg(url)}\"";
         }

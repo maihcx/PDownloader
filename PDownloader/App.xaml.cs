@@ -1,5 +1,3 @@
-using PDownloader.Services.HostServices;
-
 namespace PDownloader
 {
     public partial class App
@@ -50,10 +48,17 @@ namespace PDownloader
 
                 services.AddSingleton<PowerModeService>();
 
+                services.AddSingleton<DownloadLauncherService>();
+
+                services.AddSingleton<DownloadsChannelService>();
+
                 services.AddSingleton<IWindow, MainWindow>();
                 services.AddSingleton<MainWindowViewModel>();
                 services.AddSingleton<INavigationService, NavigationService>();
                 services.AddSingleton<ISnackbarService, SnackbarService>();
+
+                services.AddSingleton<UpdateService>();
+                services.AddSingleton<UpdateHostService>();
 
                 NavigationHandle.SetupPageViewModelPairs(services, "PDownloader.Views.Pages", "PDownloader.ViewModels.Pages");
                 NavigationHandle.SetupPageViewModelPairs(services, "PDownloader.Views.PagesBottom", "PDownloader.ViewModels.PagesBottom");
@@ -61,18 +66,22 @@ namespace PDownloader
 
         public static IServiceProvider Services => _host.Services;
 
-        private async void OnStartup(object sender, StartupEventArgs e)
+        private void OnStartup(object sender, StartupEventArgs e)
         {
             if (_isViewAtBoot)
-                _host?.StartAsync();
+            {
+                _host.StartAsync(CancellationToken.None).GetAwaiter().GetResult();
+            }
 
             Bootstrap.OnStartup();
         }
 
-        private async void OnExit(object sender, ExitEventArgs e)
+        private void OnExit(object sender, ExitEventArgs e)
         {
             if (_isViewAtBoot)
-                _host.StopAsync().Wait();
+            {
+                _host.StopAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
+            }
 
             Bootstrap.OnExit();
 
@@ -82,7 +91,10 @@ namespace PDownloader
 
         private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e) { }
 
-        public static T GetRequiredService<T>() where T : class
-            => _host.Services.GetRequiredService<T>();
+        public static T GetRequiredService<T>()
+            where T : class
+        {
+            return _host.Services.GetRequiredService<T>();
+        }
     }
 }

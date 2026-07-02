@@ -366,4 +366,7 @@
   <data name="download_status_queued_title" xml:space="preserve">
     <value>Pending</value>
   </data>
+  <data name="update_available_summary" xml:space="preserve">
+    <value>Version {0} is now available, please go to settings to proceed with the update!</value>
+  </data>
 </root>

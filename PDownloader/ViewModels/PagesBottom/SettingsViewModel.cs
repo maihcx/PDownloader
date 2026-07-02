@@ -11,43 +11,111 @@ namespace PDownloader.ViewModels.PagesBottom
 
         private static ApplicationThemeManagerService? ThemeManagerService = WindowHelper.ThemeManagerService;
 
-        private readonly UpdateService _updateService = new();
-        private CancellationTokenSource? _updateCts;
+        private readonly UpdateHostService updateHostService;
 
         private readonly NavigationPanelHostService navigationPanelHostService;
 
         [ObservableProperty] private string _appVersion = string.Empty;
 
         public SettingsViewModel(
-            //UpdateHostService updateHostService,
+            UpdateHostService updateHostService,
             NavigationPanelHostService navigationPanelHostService
         )
         {
+            this.updateHostService = updateHostService;
             this.navigationPanelHostService = navigationPanelHostService;
 
             _autoHideNavigationPanel = navigationPanelHostService.NaviPanelOpen == NaviPanelOpenState.Auto;
         }
 
-        // ── Update ─────────────────────────────────────────────────────────
-        [ObservableProperty] private UpdateStatus _updateStatus = UpdateStatus.Idle;
-        [ObservableProperty] private string _updateStatusText = string.Empty;
-        [ObservableProperty] private string _latestVersion = string.Empty;
-        [ObservableProperty] private string _releaseNotes = string.Empty;
-        [ObservableProperty] private double _downloadProgress = 0;
-        [ObservableProperty] private bool _isUpdateAvailable = false;
-        [ObservableProperty] private bool _isReadyToInstall = false;
-        [ObservableProperty] private bool _isDownloadReady = false;
-        [ObservableProperty] private bool _isChecking = false;
-        [ObservableProperty] private bool _isDownloading = false;
+        #region Update handling
+        [ObservableProperty]
+        private UpdateStatus _updateStatus = UpdateStatus.Idle;
+
+        [ObservableProperty]
+        private string _updateStatusText = string.Empty;
+
+        [ObservableProperty]
+        private string _latestVersion = string.Empty;
+
+        [ObservableProperty]
+        private string _releaseNotes = string.Empty;
+
+        [ObservableProperty]
+        private double _downloadProgress = 0;
+
+        [ObservableProperty]
+        private bool _isUpdateAvailable = false;
+
+        [ObservableProperty]
+        private bool _isReadyToInstall = false;
+
+        [ObservableProperty]
+        private bool _isDownloadReady = false;
+
+        [ObservableProperty]
+        private bool _isChecking = false;
+
+        [ObservableProperty]
+        private bool _isDownloading = false;
 
         partial void OnUpdateStatusChanged(UpdateStatus value)
         {
-            IsChecking      = value == UpdateStatus.Checking;
-            IsDownloading   = value == UpdateStatus.Downloading;
-            IsReadyToInstall = value == UpdateStatus.ReadyToInstall;
-            IsDownloadReady = value == UpdateStatus.UpdateAvailable;
-            IsUpdateAvailable = value == UpdateStatus.UpdateAvailable || value == UpdateStatus.Downloading || value == UpdateStatus.ReadyToInstall;
+            IsChecking        = value == UpdateStatus.Checking;
+            IsDownloading     = value == UpdateStatus.Downloading;
+            IsReadyToInstall  = value == UpdateStatus.ReadyToInstall;
+            IsDownloadReady   = value == UpdateStatus.UpdateAvailable;
+            IsUpdateAvailable = value is UpdateStatus.UpdateAvailable
+                                      or UpdateStatus.Downloading
+                                      or UpdateStatus.ReadyToInstall;
         }
+
+        private void OnHostPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                switch (e.PropertyName)
+                {
+                    case nameof(UpdateHostService.Status):
+                        SyncStatusFromHost();
+                        break;
+
+                    case nameof(UpdateHostService.DownloadProgress):
+                        DownloadProgress = updateHostService.DownloadProgress * 100;
+                        UpdateStatusText = string.Format(
+                            LanguageBase.GetLangValue("page_settings_update_downloading_progress"),
+                            (int)(updateHostService.DownloadProgress * 100));
+                        break;
+
+                    case nameof(UpdateHostService.LatestRelease):
+                        if (updateHostService.LatestRelease is { } release)
+                        {
+                            LatestVersion = release.TagName;
+                            ReleaseNotes  = release.Body;
+                        }
+                        break;
+                }
+            });
+        }
+
+        private void SyncStatusFromHost()
+        {
+            UpdateStatus = updateHostService.Status;
+
+            UpdateStatusText = updateHostService.Status switch
+            {
+                UpdateStatus.Idle => LanguageBase.GetLangValue("page_settings_update_idle"),
+                UpdateStatus.Checking => LanguageBase.GetLangValue("page_settings_update_checking"),
+                UpdateStatus.UpToDate => LanguageBase.GetLangValue("page_settings_update_uptodate"),
+                UpdateStatus.Downloading => LanguageBase.GetLangValue("page_settings_update_downloading"),
+                UpdateStatus.ReadyToInstall => LanguageBase.GetLangValue("page_settings_update_ready"),
+                UpdateStatus.UpdateAvailable => string.Format(LanguageBase.GetLangValue("page_settings_update_available", updateHostService.LatestRelease?.TagName ?? "0.0.0")),
+                UpdateStatus.Error => updateHostService.ErrorMessage
+                    ?? LanguageBase.GetLangValue("page_settings_update_error"),
+                _ => string.Empty
+            };
+        }
+        #endregion
 
         #region Navigation panel auto hide
         [ObservableProperty]
@@ -151,12 +219,15 @@ namespace PDownloader.ViewModels.PagesBottom
 
             ScrollToUpdateRequested?.Invoke();
 
+            updateHostService.PropertyChanged += OnHostPropertyChanged;
+
             return Task.CompletedTask;
         }
 
         public Task OnNavigatedFromAsync()
         {
-            _updateCts?.Cancel();
+            updateHostService.PropertyChanged -= OnHostPropertyChanged;
+
             return Task.CompletedTask;
         }
 
@@ -177,94 +248,24 @@ namespace PDownloader.ViewModels.PagesBottom
 
 
         [RelayCommand]
-        private async Task CheckForUpdateAsync()
+        private Task CheckForUpdateAsync()
         {
-            _updateCts?.Cancel();
-            _updateCts = new CancellationTokenSource();
-            var ct = _updateCts.Token;
-
-            UpdateStatus     = UpdateStatus.Checking;
-            UpdateStatusText = LanguageBase.GetLangValue("page_settings_update_checking");
             LatestVersion    = string.Empty;
             ReleaseNotes     = string.Empty;
             DownloadProgress = 0;
-
-            try
-            {
-                bool hasUpdate = await _updateService.CheckForUpdateAsync(ct);
-
-                if (ct.IsCancellationRequested) return;
-
-                if (hasUpdate && _updateService.LatestRelease is { } release)
-                {
-                    LatestVersion    = release.TagName;
-                    ReleaseNotes     = release.Body;
-                    UpdateStatus     = UpdateStatus.UpdateAvailable;
-                    UpdateStatusText = string.Format(
-                        LanguageBase.GetLangValue("page_settings_update_available"),
-                        release.TagName);
-                }
-                else
-                {
-                    UpdateStatus     = UpdateStatus.UpToDate;
-                    UpdateStatusText = LanguageBase.GetLangValue("page_settings_update_uptodate");
-                }
-            }
-            catch (OperationCanceledException) { }
-            catch
-            {
-                UpdateStatus     = UpdateStatus.Error;
-                UpdateStatusText = _updateService.ErrorMessage
-                    ?? LanguageBase.GetLangValue("page_settings_update_error");
-            }
+            return updateHostService.CheckAsync();
         }
 
         [RelayCommand]
-        private async Task DownloadAndInstallAsync()
+        private Task DownloadAndInstallAsync()
         {
-            if (!IsUpdateAvailable) return;
-
-            _updateCts?.Cancel();
-            _updateCts = new CancellationTokenSource();
-            var ct = _updateCts.Token;
-
-            UpdateStatus     = UpdateStatus.Downloading;
-            UpdateStatusText = LanguageBase.GetLangValue("page_settings_update_downloading");
-            DownloadProgress = 0;
-
-            var progress = new Progress<double>(p =>
-            {
-                DownloadProgress = p * 100;
-                UpdateStatusText = string.Format(
-                    LanguageBase.GetLangValue("page_settings_update_downloading_progress"),
-                    (int)(p * 100));
-            });
-
-            try
-            {
-                await _updateService.DownloadInstallerAsync(progress, ct);
-
-                if (ct.IsCancellationRequested) return;
-
-                UpdateStatus     = UpdateStatus.ReadyToInstall;
-                UpdateStatusText = LanguageBase.GetLangValue("page_settings_update_ready");
-            }
-            catch (OperationCanceledException) { }
-            catch
-            {
-                UpdateStatus     = UpdateStatus.Error;
-                UpdateStatusText = _updateService.ErrorMessage
-                    ?? LanguageBase.GetLangValue("page_settings_update_error");
-            }
+            return updateHostService.DownloadAsync();
         }
 
         [RelayCommand]
         private void InstallUpdate()
         {
-            try
-            {
-                _updateService.LaunchInstaller();
-            }
+            try { updateHostService.LaunchInstaller(); }
             catch (Exception ex)
             {
                 UpdateStatus     = UpdateStatus.Error;
@@ -275,9 +276,7 @@ namespace PDownloader.ViewModels.PagesBottom
         [RelayCommand]
         private void CancelUpdate()
         {
-            _updateCts?.Cancel();
-            UpdateStatus     = UpdateStatus.Idle;
-            UpdateStatusText = LanguageBase.GetLangValue("page_settings_update_idle");
+            updateHostService.Cancel();
             DownloadProgress = 0;
         }
     }
