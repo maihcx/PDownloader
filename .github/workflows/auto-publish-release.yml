@@ -1,0 +1,179 @@
+name: Auto publish release
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: auto-publish-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: |
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'dev' &&
+      github.event.pull_request.base.ref == 'main' &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-version-update')
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # ── Lấy version từ release-drafter (không publish) ──────────────────
+      - name: Draft release (get version only)
+        id: drafter
+        uses: release-drafter/release-drafter@v6
+        with:
+          publish: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract release info
+        shell: bash
+        run: |
+          VERSION="${{ steps.drafter.outputs.tag_name }}"
+          VERSION="${VERSION#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "BODY<<EOF" >> "$GITHUB_ENV"
+          echo "${{ steps.drafter.outputs.body }}" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+
+      # ── Cập nhật version trong tất cả .csproj ───────────────────────────
+      - name: Update AssemblyVersion in all .csproj files
+        shell: pwsh
+        run: |
+          $version = "$env:VERSION"
+          # AssemblyVersion cần 4 phần (x.y.z.0), FileVersion và Version dùng 3 phần
+          $version4 = "$version.0"
+
+          $csprojFiles = Get-ChildItem -Recurse -Filter "*.csproj" | Where-Object {
+            $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\"
+          }
+
+          foreach ($file in $csprojFiles) {
+            $content = Get-Content $file.FullName -Raw
+
+            $content = $content -replace '<AssemblyVersion>[^<]*</AssemblyVersion>', "<AssemblyVersion>$version4</AssemblyVersion>"
+            $content = $content -replace '<FileVersion>[^<]*</FileVersion>',         "<FileVersion>$version4</FileVersion>"
+            $content = $content -replace '<Version>[^<]*</Version>',                 "<Version>$version</Version>"
+
+            Set-Content $file.FullName $content -NoNewline
+            Write-Host "Updated $($file.Name) → $version4"
+          }
+
+      # ── Cập nhật CHANGELOG.md ────────────────────────────────────────────
+      - name: Update CHANGELOG.md
+        shell: bash
+        run: |
+          {
+            echo "## v$VERSION"
+            echo
+            echo "$BODY"
+            echo
+            echo "---"
+            echo
+            cat CHANGELOG.md 2>/dev/null || true
+          } > CHANGELOG.tmp
+          mv CHANGELOG.tmp CHANGELOG.md
+
+      # ── Build: tạo payload.zip rỗng → pass 1 → zip payload → pass 2 ─────
+      - name: Build installer
+        shell: cmd
+        run: |
+          set APP_PROJECTS=PDownloader PDownloader.Core PDownloader.Runner PDownloader.Tray
+          set INSTALLER_PROJECT=PDownloader.Installer\PDownloader.Installer.csproj
+          set OUTPUT_DIR=installer-output
+          set PAYLOAD_DIR=%OUTPUT_DIR%\publish
+          set PAYLOAD_ZIP=PDownloader.Installer\Resources\payload.zip
+
+          if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
+          
+          mkdir %OUTPUT_DIR%
+          mkdir %PAYLOAD_DIR%
+
+          for %%P in (%APP_PROJECTS%) do (
+            dotnet publish .\%%P\%%P.csproj -c Release -r win-x64 /p:DebugType=None /p:DebugSymbols=false -o "%PAYLOAD_DIR%" || exit /b 1
+          )
+
+          powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression; $ms = New-Object System.IO.MemoryStream; $za = New-Object System.IO.Compression.ZipArchive($ms, 'Create'); $za.Dispose(); [System.IO.File]::WriteAllBytes('%PAYLOAD_ZIP%', $ms.ToArray())"
+
+          dotnet publish "%INSTALLER_PROJECT%" -c Release -r win-x64 /p:DebugType=None /p:DebugSymbols=false -o "%OUTPUT_DIR%" || exit /b 1
+
+          copy /y "%OUTPUT_DIR%\PDownloader.Installer.exe" "%PAYLOAD_DIR%\PDownloader.Installer.exe"
+
+          if exist "LICENSE" copy /y "LICENSE" "%PAYLOAD_DIR%\LICENSE"
+          if exist "LICENSE.vi" copy /y "LICENSE.vi" "%PAYLOAD_DIR%\LICENSE.vi"
+
+          mkdir "%PAYLOAD_DIR%\BrowserExtension"
+          if exist ".\BrowserExtension\PDownloader.crx" copy /y ".\BrowserExtension\PDownloader.crx" "%PAYLOAD_DIR%\BrowserExtension\"
+          if exist ".\BrowserExtension\update.xml" copy /y ".\BrowserExtension\update.xml" "%PAYLOAD_DIR%\BrowserExtension\"
+
+          if exist "%PAYLOAD_ZIP%" del /f /q "%PAYLOAD_ZIP%"
+          powershell -NoProfile -Command "Compress-Archive -Path '%PAYLOAD_DIR%\*' -DestinationPath '%PAYLOAD_ZIP%' -Force"
+
+          dotnet publish "%INSTALLER_PROJECT%" -c Release -r win-x64 /p:DebugType=None /p:DebugSymbols=false -o "%OUTPUT_DIR%" || exit /b 1
+
+          rmdir /s /q "%PAYLOAD_DIR%"
+          del /f /q "%PAYLOAD_ZIP%"
+
+      - name: Verify installer size
+        shell: pwsh
+        run: |
+          $exe = "installer-output\PDownloader.Installer.exe"
+          $size = (Get-Item $exe).Length
+          Write-Host "Installer size: $([math]::Round($size / 1MB, 2)) MB"
+          if ($size -lt 1MB) {
+            Write-Error "Installer is too small ($size bytes) — payload was likely not embedded!"
+            exit 1
+          }
+
+      # ── Rename exe đính kèm version ─────────────────────────────────────
+      - name: Rename installer artifact
+        shell: pwsh
+        run: |
+          $src = "installer-output\PDownloader.Installer.exe"
+          $dst = "installer-output\PDownloader.Installer-v$env:VERSION.exe"
+          Move-Item $src $dst
+          Write-Host "Renamed to: $dst"
+
+      # ── Commit version bump + CHANGELOG ─────────────────────────────────
+      - name: Commit version bump
+        shell: bash
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+          git add CHANGELOG.md
+          git add "**/*.csproj"
+          git commit -m "chore(release): v$VERSION" || exit 0
+          git push origin HEAD:${{ github.event.repository.default_branch }}
+
+      # ── Publish release kèm file installer ──────────────────────────────
+      - name: Publish release with installer
+        uses: release-drafter/release-drafter@v6
+        with:
+          publish: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.drafter.outputs.tag_name }}
+          files: installer-output/PDownloader.Installer-v${{ env.VERSION }}.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
