@@ -119,7 +119,7 @@ namespace PDownloader.CFS
                     using var server = NamedPipeServerStreamAcl.Create(
                         PipeGet,
                         PipeDirection.In,
-                        1,
+                        2,
                         PipeTransmissionMode.Byte,
                         PipeOptions.Asynchronous,
                         inBufferSize: 0,
@@ -217,7 +217,7 @@ namespace PDownloader.CFS
                 using var responsePipe = NamedPipeServerStreamAcl.Create(
                     PipeGetReceive,
                     PipeDirection.Out,
-                    1,
+                    2,
                     PipeTransmissionMode.Byte,
                     PipeOptions.Asynchronous,
                     inBufferSize: 0,

@@ -168,7 +168,7 @@ namespace PDownloader.Core.Service
 
             var id = Guid.NewGuid().ToString();
 
-            CFSIncomingHandler.RegisterYoutubePending(id, payload.FormatId ?? "bestvideo+bestaudio/best");
+            CFSCommandHandler.RegisterYoutubePending(id, payload.FormatId ?? "bestvideo+bestaudio/best");
 
             var data = new FileTask
             {

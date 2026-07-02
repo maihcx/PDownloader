@@ -74,9 +74,7 @@
 
         public static string BuildDownloadArgs(string url, string formatId, string outputPath)
         {
-            // outputPath must include filename template, e.g. C:\Videos\%(title)s.%(ext)s
             return $"-f \"{EscapeArg(formatId)}\" " +
-                   $"--merge-output-format mp4 " +
                    $"--no-warnings " +
                    $"-o \"{EscapeArg(outputPath)}\" " +
                    $"-- \"{EscapeArg(url)}\"";

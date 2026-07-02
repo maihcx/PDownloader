@@ -10,7 +10,7 @@
         {
             DownloadManager.Instance.OnItemChanged += item =>
             {
-                CFSIncomingHandler.BroadcastItemChanged(item);
+                CFSCommandHandler.BroadcastItemChanged(item);
 
                 ScheduleSaveHistory();
             };

@@ -26,8 +26,6 @@ namespace PDownloader.ViewModels.PagesBottom
             this.navigationPanelHostService = navigationPanelHostService;
 
             _autoHideNavigationPanel = navigationPanelHostService.NaviPanelOpen == NaviPanelOpenState.Auto;
-
-            InitializeViewModel();
         }
 
         // ── Update ─────────────────────────────────────────────────────────
