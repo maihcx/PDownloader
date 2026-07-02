@@ -19,6 +19,10 @@ public interface IWindow
 
     WindowState WindowState { get; }
 
+    BreadcrumbBar BreadcrumbBar { get; }
+
+    BreadcrumbBar BreadcrumbBarHolder { get; }
+
     double Width { get; }
 
     void Show();

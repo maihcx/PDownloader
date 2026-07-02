@@ -6,15 +6,15 @@
 
         public ApplicationThemeManagerService ThemeManagerService { get; }
 
-        private PowerModeService _powerModeService { get; }
+        BreadcrumbBar IWindow.BreadcrumbBar => BreadcrumbBar;
+
+        BreadcrumbBar IWindow.BreadcrumbBarHolder => BreadcrumbBarHolder;
 
         public MainWindow(
             MainWindowViewModel viewModel,
             INavigationService navigationService,
             IServiceProvider serviceProvider,
-            ISnackbarService snackbarService,
-            PowerModeService powerModeService,
-            UpdateHostService updateHostService
+            ISnackbarService snackbarService
         )
         {
             ViewModel = viewModel;
@@ -31,63 +31,12 @@
             snackbarService.SetSnackbarPresenter(GlobalSnackbar);
             navigationService.SetNavigationControl(RootNavigation);
 
-            RootNavigation.Navigated += RootNavigation_Navigated;
-
-            this.Closing += MainWindow_Closing;
-
-            WindowHelper.GlobalSnackbar = snackbarService;
-
             TranslationSource.Instance.PropertyChanged += (s, e) =>
             {
                 RootNavigation.UpdateBreadcrumbContents();
             };
 
-            _ = updateHostService.CheckAsync(release =>
-            {
-                ShowUpdateBanner(release.TagName);
-            });
-
-            ApplicationThemeManager.Changed += (currentApplicationTheme, systemAccent) =>
-            {
-                _ = powerModeService.OptimizeAfterAsync(TimeSpan.FromSeconds(1));
-            };
-
-            _ = powerModeService.OptimizeAfterAsync(TimeSpan.FromSeconds(3));
-
-            _powerModeService = powerModeService;
-
-            RestoreWindow();
-        }
-
-        private void ShowUpdateBanner(string tagName)
-        {
-            MessengerService.ShowSnackbar("sys_notification_title", LanguageBase.GetLangValue("update_available_summary", tagName), ControlAppearance.Caution, new SymbolIcon(SymbolRegular.ArrowDownload24), TimeSpan.FromSeconds(15));
-        }
-
-        private void RootNavigation_Navigated(NavigationView sender, NavigatedEventArgs args)
-        {
-            if (args?.Page is not FrameworkElement page)
-            {
-                return;
-            }
-
-            var pageType = page.GetType();
-
-            var metaAttr = pageType.GetCustomAttributes(typeof(PageMetaAttribute), true)
-                                   .FirstOrDefault() as PageMetaAttribute;
-
-            if (metaAttr != null && metaAttr.IsShowPageTitle)
-            {
-                BreadcrumbBar.Visibility = Visibility.Visible;
-                BreadcrumbBarHolder.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                BreadcrumbBar.Visibility = Visibility.Collapsed;
-                BreadcrumbBarHolder.Visibility = Visibility.Visible;
-            }
-
-            _ = _powerModeService.OptimizeAsync();
+            SetupWindowSize();
         }
 
         public void ShowWithEffect()
@@ -127,7 +76,7 @@
             UserDataStore.SetValue("StartUpCode", "xv2");
         }
 
-        private void RestoreWindow()
+        private void SetupWindowSize()
         {
             string startUpCode = UserDataStore.GetValue<string>("StartUpCode");
             if (startUpCode != "xv1")
@@ -153,6 +102,8 @@
                 this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
             }
+
+            this.Closing += MainWindow_Closing;
         }
     }
 }

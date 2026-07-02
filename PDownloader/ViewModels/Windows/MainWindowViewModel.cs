@@ -26,7 +26,7 @@
         [ObservableProperty]
         private ObservableCollection<object> _footerMenuItems;
 
-        public MainWindowViewModel(INavigationService navigationService)
+        public MainWindowViewModel(INavigationService navigationService, UpdateHostService updateHostService)
         {
             NavigationHandle.NavigationService = navigationService;
             _navigationService = navigationService;
@@ -37,6 +37,11 @@
             {
                 ConfluxManager.cfsPDownloaderCore?.Send("main-event", "OnLanguageChanged");
             };
+
+            _ = updateHostService.CheckAsync(release =>
+            {
+                MessengerService.ShowSnackbar("sys_notification_title", LanguageBase.GetLangValue("update_available_summary", release.TagName), ControlAppearance.Caution, new SymbolIcon(SymbolRegular.ArrowDownload24), TimeSpan.FromSeconds(15));
+            });
         }
     }
 }

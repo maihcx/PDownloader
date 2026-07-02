@@ -12,6 +12,8 @@
 
         private readonly int _maxWindowsWidth = 900;
 
+        private PowerModeService? _powerModeService;
+
         [ObservableProperty]
         public NaviPanelOpenState _naviPanelOpen;
 
@@ -61,15 +63,45 @@
 
             _navigationView = _navigationService.GetNavigationControl();
 
+            _powerModeService = _serviceProvider.GetRequiredService<PowerModeService>();
+
             mainWindow.SizeChanged += MainWindow_SizeChanged;
 
             _navigationView.PaneOpened += _navigationView_PaneOpened;
 
             _navigationView.PaneClosed += _navigationView_PaneClosed;
 
+            _navigationView.Navigated += _navigationView_Navigated;
+
             NaviPanelOpen = GetNavOpenState();
 
             return Task.CompletedTask;
+        }
+
+        private void _navigationView_Navigated(NavigationView sender, NavigatedEventArgs args)
+        {
+            if (args?.Page is not FrameworkElement page)
+            {
+                return;
+            }
+
+            var pageType = page.GetType();
+
+            var metaAttr = pageType.GetCustomAttributes(typeof(PageMetaAttribute), true)
+                                   .FirstOrDefault() as PageMetaAttribute;
+
+            if (metaAttr != null && metaAttr.IsShowPageTitle)
+            {
+                mainWindow?.BreadcrumbBar?.Visibility = Visibility.Visible;
+                mainWindow?.BreadcrumbBarHolder.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                mainWindow?.BreadcrumbBar.Visibility = Visibility.Collapsed;
+                mainWindow?.BreadcrumbBarHolder.Visibility = Visibility.Visible;
+            }
+
+            _ = _powerModeService?.OptimizeAsync();
         }
 
         private void _navigationView_PaneClosed(NavigationView sender, RoutedEventArgs args)

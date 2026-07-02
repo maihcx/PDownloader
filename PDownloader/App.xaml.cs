@@ -48,8 +48,8 @@ namespace PDownloader
 
                 services.AddSingleton<PowerModeService>();
 
+                services.AddSingleton<DownloadConfigService>();
                 services.AddSingleton<DownloadLauncherService>();
-
                 services.AddSingleton<DownloadsChannelService>();
 
                 services.AddSingleton<IWindow, MainWindow>();

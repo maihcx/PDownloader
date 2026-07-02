@@ -18,9 +18,16 @@
 
         public bool IsWatcher {  get; set; }
 
+        private PowerModeService powerModeService = App.GetRequiredService<PowerModeService>();
+
         public ApplicationThemeManagerService(Window mainWindow)
         {
             MainWindowHandle = mainWindow;
+
+            ApplicationThemeManager.Changed += (currentApplicationTheme, systemAccent) =>
+            {
+                _ = powerModeService.OptimizeAfterAsync(TimeSpan.FromSeconds(1));
+            };
         }
 
         public void SetBackdropType(WindowBackdropType _WindowBackdropType)

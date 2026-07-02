@@ -6,8 +6,6 @@
 
         public static Window? MainWindow;
 
-        public static ISnackbarService? GlobalSnackbar;
-
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
 
