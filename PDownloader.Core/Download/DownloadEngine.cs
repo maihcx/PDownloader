@@ -399,6 +399,8 @@ namespace PDownloader.Core.Download
             await Task.WhenAll(tasks);
         }
 
+        private const int StallTimeoutSeconds = 20;
+
         private async Task DownloadSegmentWithRetryAsync(SegmentInfo seg, bool supportsRange)
         {
             int attempt = 0;
@@ -410,7 +412,10 @@ namespace PDownloader.Core.Download
                     await DownloadSegmentAsync(seg, supportsRange);
                     return;
                 }
-                catch (OperationCanceledException) { throw; }
+                catch (OperationCanceledException) when (_ct.IsCancellationRequested)
+                {
+                    throw;
+                }
                 catch (Exception ex) when (attempt < MaxRetries)
                 {
                     attempt++;
@@ -441,7 +446,11 @@ namespace PDownloader.Core.Download
             if (shouldSetRange)
                 req.Headers.Range = new RangeHeaderValue(resumeFrom, seg.RangeEnd);
 
-            using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, _ct);
+            using var stallCts = CancellationTokenSource.CreateLinkedTokenSource(_ct);
+            stallCts.CancelAfter(TimeSpan.FromSeconds(StallTimeoutSeconds));
+
+            using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, stallCts.Token);
+            stallCts.CancelAfter(TimeSpan.FromSeconds(StallTimeoutSeconds));
 
             if (resp.StatusCode == System.Net.HttpStatusCode.RequestedRangeNotSatisfiable)
             {
@@ -481,7 +490,9 @@ namespace PDownloader.Core.Download
             await using var stream = await resp.Content.ReadAsStreamAsync(_ct);
 
             byte[] buffer = new byte[BufferSize];
-            int firstRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), _ct);
+            int firstRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), stallCts.Token);
+            stallCts.CancelAfter(TimeSpan.FromSeconds(StallTimeoutSeconds));
+
             if (firstRead > 0 && seg.BytesWritten == 0 && seg.Index == 0)
             {
                 if (LooksLikeHtml(buffer, firstRead))
@@ -499,8 +510,9 @@ namespace PDownloader.Core.Download
             }
 
             int read;
-            while ((read = await stream.ReadAsync(buffer, _ct)) > 0)
+            while ((read = await stream.ReadAsync(buffer, stallCts.Token)) > 0)
             {
+                stallCts.CancelAfter(TimeSpan.FromSeconds(StallTimeoutSeconds));
                 _ct.ThrowIfCancellationRequested();
                 await fs.WriteAsync(buffer.AsMemory(0, read), _ct);
                 seg.BytesWritten += read;
