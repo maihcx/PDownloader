@@ -28,6 +28,47 @@ let interceptCount = 0;
 const cdCache = new Map(); // url → { filename, timestamp }
 
 // ============================================================
+// HLS/DASH MANIFEST CAPTURE (cho các site phát video qua blob: URL,
+// vd MediaSource Extensions — video.src không phải URL mạng thật nên
+// không tải trực tiếp được, phải "nghe lén" request mạng thật để tìm
+// URL manifest .m3u8/.mpd gốc trước khi nó bị gói thành blob).
+// ============================================================
+const MANIFEST_URL_PATTERN = /\.(m3u8|mpd)(\?|$)/i;
+const hlsManifestsByTab = new Map(); // tabId -> { url, referer, foundAt }
+
+chrome.webRequest.onBeforeSendHeaders.addListener(
+  (details) => {
+    if (details.tabId < 0) return; // request không thuộc tab nào (vd service worker riêng của site)
+    if (!MANIFEST_URL_PATTERN.test(details.url)) return;
+
+    const refererHeader = details.requestHeaders?.find(
+      h => h.name.toLowerCase() === 'referer'
+    );
+
+    hlsManifestsByTab.set(details.tabId, {
+      url:     details.url,
+      referer: refererHeader?.value || details.documentUrl || details.initiator || '',
+      foundAt: Date.now()
+    });
+  },
+  { urls: ['<all_urls>'] },
+  ['requestHeaders', 'extraHeaders']
+);
+
+// Xóa manifest cũ khi tab load trang mới, tránh lấy nhầm manifest của tập
+// phim trước đó.
+chrome.webRequest.onBeforeRequest.addListener(
+  (details) => {
+    if (details.type === 'main_frame') {
+      hlsManifestsByTab.delete(details.tabId);
+    }
+  },
+  { urls: ['<all_urls>'] }
+);
+
+chrome.tabs.onRemoved.addListener((tabId) => hlsManifestsByTab.delete(tabId));
+
+// ============================================================
 // INIT
 // ============================================================
 chrome.runtime.onInstalled.addListener(() => {
@@ -365,11 +406,19 @@ function matchMime(mime) {
 // YOUTUBE — analyze & download (forwarded to PDownloader.Core)
 // ============================================================
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'get_hls_manifest') {
+    const tabId = sender.tab?.id;
+    const found = tabId != null ? hlsManifestsByTab.get(tabId) : null;
+    sendResponse(found ? { url: found.url, referer: found.referer } : null);
+    return true;
+  }
+
   if (msg.action === 'download_via_ytdlp') {
     // Dùng lại pipeline yt-dlp (endpoint /youtube/*), nhưng thực ra hoàn toàn
     // tổng quát — yt-dlp tự hỗ trợ Facebook/TikTok/Instagram/Twitter/Vimeo/
-    // Twitch/Reddit/Bilibili/SoundCloud. Nút "Tải video này" là one-click nên
-    // không hỏi chất lượng, luôn lấy "bestvideo+bestaudio/best".
+    // Twitch/Reddit/Bilibili/SoundCloud, và cả raw .m3u8/.mpd URL bắt được
+    // qua webRequest. Nút "Tải video này" là one-click nên không hỏi chất
+    // lượng, luôn lấy "bestvideo+bestaudio/best".
     fetch(`${APP_URL}/youtube/download`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -378,7 +427,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         formatId: 'bestvideo+bestaudio/best',
         filename: msg.filename,
         title:    msg.title || msg.filename,
-        filesize: 0
+        filesize: 0,
+        // Nhiều CDN chặn request thiếu Referer đúng (403) — quan trọng với
+        // manifest HLS bắt qua webRequest, vì server phát segment thường
+        // kiểm tra Referer khớp đúng trang gốc.
+        headers:  msg.referer ? { Referer: msg.referer } : undefined
       })
     })
     .then(r => r.ok ? r.json() : { success: false, error: `Server ${r.status}` })

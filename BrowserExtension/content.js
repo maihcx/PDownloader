@@ -107,7 +107,24 @@ function getBtn() {
     // Site thường: video có src trực tiếp truy cập được trong DOM.
     url = _activeVideo.currentSrc || _activeVideo.src;
     if (!url || url.startsWith('blob:')) {
-      showBtnFeedback('⚠ Stream DRM không hỗ trợ', false);
+      // video.src là blob: (MediaSource Extensions) — không phải URL mạng
+      // thật, không tải trực tiếp được. Thử xin background.js manifest
+      // .m3u8/.mpd gốc mà nó đã "nghe lén" được qua webRequest trước khi bị
+      // gói thành blob (xem hlsManifestsByTab trong background.js).
+      const manifest = await chrome.runtime.sendMessage({ action: 'get_hls_manifest' });
+      if (manifest?.url) {
+        filename = sanitizeName(document.title) + '.mp4';
+        const resp = await chrome.runtime.sendMessage({
+          action:   'download_via_ytdlp',
+          url:      manifest.url,
+          filename,
+          title:    document.title,
+          referer:  manifest.referer
+        });
+        showBtnFeedback(resp?.success ? '✓ Đã thêm' : ('✗ ' + (resp?.error || 'Lỗi')), resp?.success);
+      } else {
+        showBtnFeedback('⚠ Stream DRM không hỗ trợ', false);
+      }
       return;
     }
     try {
