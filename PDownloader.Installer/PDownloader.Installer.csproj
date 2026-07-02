@@ -25,7 +25,7 @@
     <AssemblyName>PDownloader.Installer</AssemblyName>
     <RootNamespace>PDownloader.Installer</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Authors>SM SOFT</Authors>
+    <Authors>Song Mai Software</Authors>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
   </PropertyGroup>
 

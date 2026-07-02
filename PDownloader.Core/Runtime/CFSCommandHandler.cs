@@ -1,3 +1,4 @@
+using PDownloader.Core.Services.DownloadServices;
 using static PDownloader.Core.Runtime.CFSIncomingHandler;
 
 namespace PDownloader.Core.Runtime
@@ -7,6 +8,10 @@ namespace PDownloader.Core.Runtime
         public record YoutubePendingMeta(string FormatId);
 
         private static readonly ConcurrentDictionary<string, YoutubePendingMeta> _youtubePending = new();
+
+        private static DownloadConfigService _downloadConfigService { get; set; } = Program.GetRequiredService<DownloadConfigService>();
+
+        private static Action? mainAppAction { get; set; } = null;
 
         public static void Handle(string name, string value)
         {
@@ -27,6 +32,10 @@ namespace PDownloader.Core.Runtime
 
                 case "core-svc-state":
                     HandleCoreState(value);
+                    break;
+
+                case "core-event":
+                    HandleCoreEvent(value);
                     break;
 
                 case "downloader-svc-getlist":
@@ -59,9 +68,19 @@ namespace PDownloader.Core.Runtime
         private static void HandleMainEvent(string name, string value)
         {
             if (!AppRuntime.cfsMain!.IsAppStarted())
-                AppRuntime.cfsMain.StartApp();
+            {
+                mainAppAction = () =>
+                {
+                    AppRuntime.cfsMain.Send(name, value);
+                    mainAppAction = null;
+                };
 
-            AppRuntime.cfsMain.Send(name, value);
+                AppRuntime.cfsMain.StartApp();
+            }
+            else
+            {
+                AppRuntime.cfsMain.Send(name, value);
+            }
         }
 
         private static void HandleCoreState(string value)
@@ -74,6 +93,20 @@ namespace PDownloader.Core.Runtime
                 }
 
                 AppRuntime.bootstrap?.Shutdown();
+            }
+        }
+
+        private static void HandleCoreEvent(string value)
+        {
+            switch (value)
+            {
+                case "refresh-downloader-configs":
+                    _downloadConfigService.Reload();
+                    break;
+
+                case "ping":
+                    mainAppAction?.Invoke();
+                    break;
             }
         }
 
@@ -126,12 +159,14 @@ namespace PDownloader.Core.Runtime
                     if (customHeaders.Count == 0) customHeaders = null;
                 }
 
+                int defaultThreads = _downloadConfigService.DownloadConfigs?.DefaultThreadCount ?? 0;
+
                 var item = DownloadManager.Instance.Enqueue(
                     id: req.Id,
                     url: req.Url,
                     saveTo: req.SaveTo   ?? string.Empty,
                     fileName: req.FileName ?? string.Empty,
-                    threads: req.Threads > 0 ? req.Threads : 8,
+                    threads: req.Threads > 0 ? req.Threads : defaultThreads,
                     isYoutube: ytMeta != null,
                     formatId: ytMeta?.FormatId,
                     customHeaders: customHeaders);

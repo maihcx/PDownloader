@@ -24,6 +24,7 @@
             WindowHelper.ThemeManagerService = ThemeManagerService;
             ThemeManagerService.InitCornerRadius();
             ThemeManagerService.SetApplicationTheme(ThemeManagerService.GetApplicationTheme());
+            this.WindowBackdropType = ThemeManagerService.GetBackdropType();
 
             InitializeComponent();
 

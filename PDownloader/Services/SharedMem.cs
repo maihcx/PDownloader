@@ -4,7 +4,7 @@ namespace PDownloader.Services
 {
     public static class SharedMem
     {
-        public static AppSettings? AppSettings { get; set; }
+        public static DownloadConfigs? AppSettings { get; set; }
 
         private static bool _isScrollToUpdateCard = false;
         public static bool IsScrollToUpdateCard

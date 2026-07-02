@@ -16,7 +16,6 @@
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                 WindowBackdropType="Tabbed"
                  WindowCornerPreference="Round"
                  WindowStartupLocation="CenterScreen"
                  mc:Ignorable="d">

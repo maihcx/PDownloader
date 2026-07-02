@@ -13,7 +13,7 @@
     <FileVersion>0.0.0.0</FileVersion>
 
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <Authors>SM SOFT</Authors>
+    <Authors>Song Mai Software</Authors>
 	<AssemblyName>PDownloader Core</AssemblyName>
     <!--<PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>

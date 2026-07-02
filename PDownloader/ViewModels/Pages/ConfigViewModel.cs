@@ -1,20 +1,12 @@
-using PDownloader.Services.DownloadServices;
-
 namespace PDownloader.ViewModels.Pages
 {
     public partial class ConfigViewModel : ObservableObject
     {
-        private readonly AppSettings _settings;
+        private readonly DownloadConfigService _configService;
         private readonly DownloadLauncherService _launcher;
 
         [ObservableProperty] 
-        private string _defaultDownloadFolder  = string.Empty;
-
-        [ObservableProperty]
-        private int _defaultThreadCount = 8;
-
-        [ObservableProperty]
-        private int _maxConcurrentDownloads = 3;
+        private DownloadConfigs? _downloadConfigs;
 
         [ObservableProperty]
         private bool _isDaemonRunning;
@@ -22,22 +14,16 @@ namespace PDownloader.ViewModels.Pages
         [ObservableProperty]
         private string _statusMessage = string.Empty;
 
-        public ConfigViewModel(DownloadLauncherService launcher)
+        public ConfigViewModel(DownloadLauncherService launcher, DownloadConfigService configService)
         {
-            _settings = SharedMem.AppSettings ?? new AppSettings();
+            _configService = configService;
+            _downloadConfigs = configService.DownloadConfigs;
             _launcher = launcher;
-            LoadFromSettings();
+
             IsDaemonRunning = _launcher.IsDaemonRunning;
             StatusMessage = IsDaemonRunning
                 ? LanguageBase.GetLangValue("page_config_svc_active_title")
                 : LanguageBase.GetLangValue("page_config_svc_inactive_title");
-        }
-
-        private void LoadFromSettings()
-        {
-            DefaultDownloadFolder  = _settings.DefaultDownloadFolder;
-            DefaultThreadCount     = _settings.DefaultThreadCount;
-            MaxConcurrentDownloads = _settings.MaxConcurrentDownloads;
         }
 
         [RelayCommand]
@@ -46,33 +32,23 @@ namespace PDownloader.ViewModels.Pages
             var dialog = new OpenFolderDialog
             {
                 Title = LanguageBase.GetLangValue("page_config_folder_title"),
-                InitialDirectory = DefaultDownloadFolder,
+                InitialDirectory = DownloadConfigs?.DefaultDownloadFolder,
                 Multiselect = false
             };
 
             if (dialog.ShowDialog() == true)
             {
-                DefaultDownloadFolder = dialog.FolderName;
+                DownloadConfigs?.DefaultDownloadFolder = dialog.FolderName;
             }
         }
 
         [RelayCommand]
         private void SaveSettings()
         {
-            _settings.DefaultDownloadFolder  = DefaultDownloadFolder;
-            _settings.DefaultThreadCount     = DefaultThreadCount;
-            _settings.MaxConcurrentDownloads = MaxConcurrentDownloads;
-            _settings.Save();
+            _configService.Save();
 
-            _launcher.ApplySettings(_settings);
+            _launcher.RefreshConfigs();
             StatusMessage = LanguageBase.GetLangValue("page_config_save") + " ✓";
-        }
-
-        [RelayCommand]
-        private void OpenRunner()
-        {
-            _launcher.ShowRunner();
-            StatusMessage = LanguageBase.GetLangValue("page_config_open_runner") + "...";
         }
     }
 }

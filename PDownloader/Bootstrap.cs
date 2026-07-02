@@ -1,4 +1,5 @@
 using PDownloader.Services.DownloadServices;
+using System.Xml.Linq;
 
 namespace PDownloader
 {
@@ -15,8 +16,6 @@ namespace PDownloader
 
         public static void OnBeforeStartup()
         {
-            SharedMem.AppSettings = AppSettings.Load();
-
             #region Mutex checker
             try
             {
@@ -107,9 +106,6 @@ namespace PDownloader
                                     SharedMem.IsScrollToUpdateCard = true;
                                 NavigationHandle.NavigationService?.Navigate(typeof(SettingsPage));
                                 break;
-                            case "OnShowRunner":
-                                App.GetRequiredService<DownloadLauncherService>().ShowRunner();
-                                break;
                         }
                     }
                 });
@@ -152,6 +148,8 @@ namespace PDownloader
         {
             StartupManager.RefreshStartWithWin();
             SplashScreen?.Close(new TimeSpan(0));
+
+            ConfluxManager.cfsPDownloaderCore?.Send("core-event", "ping");
 
             if (!IsViewAtBoot)
                 App.Current.Shutdown();

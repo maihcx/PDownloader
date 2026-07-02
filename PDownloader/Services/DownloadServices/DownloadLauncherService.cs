@@ -18,14 +18,9 @@ namespace PDownloader.Services.DownloadServices
             ConfluxManager.cfsPDownloaderCore?.Send("download", payload);
         }
 
-        public void ShowRunner()
+        public void RefreshConfigs()
         {
-            ConfluxManager.cfsPDownloaderCore?.Send("show-runner", string.Empty);
-        }
-
-        public void ApplySettings(AppSettings settings)
-        {
-            ConfluxManager.cfsPDownloaderCore?.Send("app-settings", JsonSerializer.Serialize(settings));
+            ConfluxManager.cfsPDownloaderCore?.Send("core-event", "refresh-downloader-configs");
         }
     }
 }

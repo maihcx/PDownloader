@@ -21,20 +21,6 @@
         public ApplicationThemeManagerService(Window mainWindow)
         {
             MainWindowHandle = mainWindow;
-            //ApplicationThemeManager.Changed += (ThemeType currentTheme, System.Windows.Media.Color systemAccent) =>
-            //{
-            //ThemeType themeType = Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme();
-            //ApplicationSysTheme = themeService.GetTheme();
-
-            //if (ApplicationThemeManager.IsMatchedDark() || (!ApplicationThemeManager.IsMatchedLight() && currentTheme == ThemeType.Light))
-            //{
-            //    ApplicationSysTheme = ThemeType.Dark;
-            //}
-            //else if (ApplicationThemeManager.IsMatchedLight() || (!ApplicationThemeManager.IsMatchedDark() && currentTheme == ThemeType.Dark))
-            //{
-            //    ApplicationSysTheme = ThemeType.Light;
-            //}
-            //};
         }
 
         public void SetBackdropType(WindowBackdropType _WindowBackdropType)

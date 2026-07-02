@@ -12,10 +12,14 @@
     <Platforms>AnyCPU;x64</Platforms>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
     <AssemblyVersion>0.0.0.0</AssemblyVersion>
     <FileVersion>0.0.0.0</FileVersion>
+	<Authors>Song Mai Software</Authors>
+	<RepositoryUrl>https://github.com/maihcx/PDownloader.git</RepositoryUrl>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
 
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <!--<PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>-->
@@ -27,18 +31,6 @@
     <DebugType>none</DebugType>  
   </PropertyGroup>
 
-  <PropertyGroup>
-    <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
-    <LangVersion>preview</LangVersion>
-    <Company>SM SOFT</Company>
-    <Authors>SM SOFT</Authors>
-    <UseWindowsForms>False</UseWindowsForms>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <AdditionalFiles Remove="app.manifest" />
-  </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
@@ -47,6 +39,13 @@
   <ItemGroup>
     <None Remove="Assets\app-100.png" />
     <None Remove="Assets\app-256.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

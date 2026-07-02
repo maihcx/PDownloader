@@ -115,7 +115,8 @@ namespace PDownloader.Core.Download
             string args = YtDlpService.BuildDownloadArgs(
                 _item.Url,
                 _item.FormatId ?? "bestvideo+bestaudio/best",
-                outputTemplate);
+                outputTemplate,
+                _item.Threads);
 
             _item.Status    = DownloadStatus.Downloading;
             _item.StartTime = DateTime.Now;

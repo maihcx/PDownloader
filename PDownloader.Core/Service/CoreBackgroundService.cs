@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Hosting;
 
-namespace PDownloader.Core
+namespace PDownloader.Core.Service
 {
     public class CoreBackgroundService : BackgroundService
     {
         private readonly Bootstrap _bootstrap;
-        private readonly PDownloader.Core.Service.HttpBridgeService _httpBridge = new();
+        private readonly HttpBridgeService _httpBridge = new();
 
         public CoreBackgroundService(Bootstrap bootstrap)
         {

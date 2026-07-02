@@ -73,7 +73,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <ui:TextBox Grid.Column="0"
-                                    Text="{Binding ViewModel.DefaultDownloadFolder, UpdateSourceTrigger=PropertyChanged}"
+                                    Text="{Binding ViewModel.DownloadConfigs.DefaultDownloadFolder, Mode=TwoWay}"
                                     PlaceholderText="{utils:Localization page_config_folder_placeholder}"/>
                         <ui:Button Grid.Column="1" Margin="8,0,0,0"
                                    Icon="{ui:SymbolIcon FolderOpen24}"
@@ -96,9 +96,9 @@
                     </ui:CardExpander.Header>
                     <StackPanel Orientation="Horizontal">
                         <Slider Minimum="1" Maximum="32"
-                                Value="{Binding ViewModel.DefaultThreadCount}"
+                                Value="{Binding ViewModel.DownloadConfigs.DefaultThreadCount, Mode=TwoWay}"
                                 Width="240" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding ViewModel.DefaultThreadCount}"
+                        <TextBlock Text="{Binding ViewModel.DownloadConfigs.DefaultThreadCount, Mode=OneWay}"
                                    VerticalAlignment="Center" Margin="12,0,6,0"
                                    FontSize="15" FontWeight="SemiBold"/>
                         <TextBlock Text="{utils:Localization page_config_threads_unit}"
@@ -107,7 +107,7 @@
                 </ui:CardExpander>
 
                 <!-- Concurrent downloads -->
-                <ui:CardExpander Icon="{ui:SymbolIcon DocumentMultiple24}"
+                <!--<ui:CardExpander Icon="{ui:SymbolIcon DocumentMultiple24}"
                                  Margin="0,0,0,8" IsExpanded="True">
                     <ui:CardExpander.Header>
                         <StackPanel>
@@ -128,7 +128,7 @@
                         <TextBlock Text="{utils:Localization page_config_concurrent_unit}"
                                    VerticalAlignment="Center" Opacity="0.6" FontSize="12"/>
                     </StackPanel>
-                </ui:CardExpander>
+                </ui:CardExpander>-->
 
             </StackPanel>
         </ScrollViewer>
@@ -143,11 +143,8 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="{Binding ViewModel.StatusMessage}"
                            VerticalAlignment="Center" Opacity="0.7" FontSize="12"/>
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <ui:Button Content="{utils:Localization page_config_open_runner}"
-                               Icon="{ui:SymbolIcon ArrowDownload24}"
-                               Appearance="Secondary" Margin="0,0,8,0"
-                               Command="{Binding ViewModel.OpenRunnerCommand}"/>
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal">
                     <ui:Button Content="{utils:Localization page_config_save}"
                                Icon="{ui:SymbolIcon Save24}"
                                Appearance="Primary"
