@@ -365,6 +365,31 @@ function matchMime(mime) {
 // YOUTUBE — analyze & download (forwarded to PDownloader.Core)
 // ============================================================
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'download_via_ytdlp') {
+    // Dùng lại pipeline yt-dlp (endpoint /youtube/*), nhưng thực ra hoàn toàn
+    // tổng quát — yt-dlp tự hỗ trợ Facebook/TikTok/Instagram/Twitter/Vimeo/
+    // Twitch/Reddit/Bilibili/SoundCloud. Nút "Tải video này" là one-click nên
+    // không hỏi chất lượng, luôn lấy "bestvideo+bestaudio/best".
+    fetch(`${APP_URL}/youtube/download`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        url:      msg.url,
+        formatId: 'bestvideo+bestaudio/best',
+        filename: msg.filename,
+        title:    msg.title || msg.filename,
+        filesize: 0
+      })
+    })
+    .then(r => r.ok ? r.json() : { success: false, error: `Server ${r.status}` })
+    .catch(() => ({ success: false, error: 'Không thể kết nối đến PDownloader.' }))
+    .then(result => {
+      if (result.success) { interceptCount++; updateBadge(); notify(msg.filename || msg.title); }
+      sendResponse(result);
+    });
+    return true;
+  }
+
   if (msg.action === 'analyze_youtube') {
     fetch(`${APP_URL}/youtube/analyze`, {
       method:  'POST',

@@ -1,19 +1,7 @@
-using System.IO;
-using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text.Json;
-
 
 namespace PDownloader.Core.Download;
 
-/// <summary>
-/// IDM-style download engine:
-///  • HEAD request to check Content-Length and Accept-Ranges
-///  • Split into N segments and download in parallel
-///  • Resume each segment from its persisted offset (temp .part files)
-///  • Merge all segments into the final file
-///  • Auto-retry on transient errors with exponential back-off
-/// </summary>
 public class DownloadEngine
 {
     private const int MaxRetries = 5;
@@ -225,7 +213,12 @@ public class DownloadEngine
         {
             using var req = new HttpRequestMessage(HttpMethod.Head, url);
             using var resp = await _http.SendAsync(req, _ct);
-            resp.EnsureSuccessStatusCode();
+
+            bool headUnreliable = !resp.IsSuccessStatusCode
+                                   || resp.Content.Headers.ContentLength is null or 0;
+
+            if (headUnreliable)
+                return await ProbeViaRangedGetAsync(url);
 
             long total = resp.Content.Headers.ContentLength ?? 0;
             bool ranges = resp.Headers.AcceptRanges.Contains("bytes");
@@ -241,10 +234,36 @@ public class DownloadEngine
         }
         catch
         {
-            if (string.IsNullOrWhiteSpace(_item.FileName))
-                _item.FileName = SanitizeFileName(GuessFileName(_item.Url));
-            return (0, false);
+            try { return await ProbeViaRangedGetAsync(url); }
+            catch
+            {
+                if (string.IsNullOrWhiteSpace(_item.FileName))
+                    _item.FileName = SanitizeFileName(GuessFileName(_item.Url));
+                return (0, false);
+            }
         }
+    }
+
+    private async Task<(long totalBytes, bool supportsRange)> ProbeViaRangedGetAsync(string url)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Range = new RangeHeaderValue(0, 0);
+
+        using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, _ct);
+
+        bool supportsRange = resp.StatusCode == System.Net.HttpStatusCode.PartialContent;
+        long total = resp.Content.Headers.ContentRange?.Length
+                     ?? resp.Content.Headers.ContentLength
+                     ?? 0;
+
+        if (string.IsNullOrWhiteSpace(_item.FileName))
+        {
+            var cd = resp.Content.Headers.ContentDisposition;
+            _item.FileName = cd?.FileNameStar ?? cd?.FileName ?? GuessFileName(_item.Url);
+            _item.FileName = SanitizeFileName(_item.FileName);
+        }
+
+        return (total, supportsRange);
     }
 
     private List<SegmentInfo> BuildOrRestoreSegments(string tempDir, long totalBytes, int threadCount)
@@ -286,7 +305,7 @@ public class DownloadEngine
             {
                 Index        = 0,
                 RangeStart   = 0,
-                RangeEnd     = totalBytes > 0 ? totalBytes - 1 : -1, // -1 = không biết kích thước
+                RangeEnd     = totalBytes > 0 ? totalBytes - 1 : -1,
                 TempFilePath = Path.Combine(tempDir, "seg_0.part"),
                 BytesWritten = 0
             });

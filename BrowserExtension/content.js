@@ -91,18 +91,30 @@ function getBtn() {
     if (isSpecial) {
       url      = getSiteUrl(_activeVideo);
       filename = sanitizeName(document.title) + (hostname.includes('soundcloud.com') ? '.mp3' : '.mp4');
-    } else {
-      url = _activeVideo.currentSrc || _activeVideo.src;
-      if (!url || url.startsWith('blob:')) {
-        showBtnFeedback('⚠ Stream DRM không hỗ trợ', false);
-        return;
-      }
-      try {
-        const p = new URL(url).pathname;
-        const seg = p.substring(p.lastIndexOf('/') + 1);
-        filename = seg.includes('.') ? seg : sanitizeName(document.title) + '.mp4';
-      } catch (_) { filename = 'video.mp4'; }
+
+      // Các site này không expose URL file media thật trong DOM (Facebook,
+      // TikTok, Instagram... stream qua blob/DASH được ký/mã hoá theo session).
+      // "url" ở đây là URL TRANG, không phải file — phải đi qua pipeline
+      // yt-dlp (analyze rồi download) như YouTube, KHÔNG được gửi thẳng tới
+      // /download (endpoint đó chỉ tải URL file thật, sẽ nhận về HTML và báo lỗi).
+      const resp = await chrome.runtime.sendMessage({
+        action: 'download_via_ytdlp', url, filename, title: document.title
+      });
+      showBtnFeedback(resp?.success ? '✓ Đã thêm' : ('✗ ' + (resp?.error || 'Lỗi')), resp?.success);
+      return;
     }
+
+    // Site thường: video có src trực tiếp truy cập được trong DOM.
+    url = _activeVideo.currentSrc || _activeVideo.src;
+    if (!url || url.startsWith('blob:')) {
+      showBtnFeedback('⚠ Stream DRM không hỗ trợ', false);
+      return;
+    }
+    try {
+      const p = new URL(url).pathname;
+      const seg = p.substring(p.lastIndexOf('/') + 1);
+      filename = seg.includes('.') ? seg : sanitizeName(document.title) + '.mp4';
+    } catch (_) { filename = 'video.mp4'; }
 
     const resp = await chrome.runtime.sendMessage({
       action: 'download', url, filename, referer: location.href

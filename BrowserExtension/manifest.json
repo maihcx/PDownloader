@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PDownloader",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Tự động bắt link tải xuống và gửi tới PDownloader.",
   "permissions": [
     "downloads",
@@ -23,6 +23,7 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
+      "all_frames": true,
       "run_at": "document_end"
     },
     {
