@@ -1,6 +1,3 @@
-using PDownloader.Services.DownloadServices;
-using System.Xml.Linq;
-
 namespace PDownloader
 {
     public static class Bootstrap

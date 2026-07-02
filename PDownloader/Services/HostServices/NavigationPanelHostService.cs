@@ -101,7 +101,7 @@
                 mainWindow?.BreadcrumbBarHolder.Visibility = Visibility.Visible;
             }
 
-            _ = _powerModeService?.OptimizeAsync();
+            _ = _powerModeService?.OptimizeAfterAsync(TimeSpan.FromSeconds(2));
         }
 
         private void _navigationView_PaneClosed(NavigationView sender, RoutedEventArgs args)

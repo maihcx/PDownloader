@@ -3,8 +3,8 @@
     public static class UserDataStore
     {
         private static readonly string DataDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "PDownloader");
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
+            "SM SOFT", "PDownloader");
 
         private static readonly string DataFile = Path.Combine(DataDir, "userdata.json");
 

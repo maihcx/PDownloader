@@ -42,6 +42,124 @@
             return null;
         }
 
+        private string? _resolvedFfmpegPath;
+
+        public string? FindFfmpeg()
+        {
+            if (_resolvedFfmpegPath != null) return _resolvedFfmpegPath;
+
+            var candidates = new[]
+            {
+                Path.Combine(AppContext.BaseDirectory, "ffmpeg.exe"),
+                Path.Combine(AppContext.BaseDirectory, "ffmpeg"),
+
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PDownloader", "ffmpeg.exe"),
+            };
+
+            foreach (var c in candidates)
+                if (File.Exists(c)) return _resolvedFfmpegPath = c;
+
+            var fromPath = LocateOnPath("ffmpeg.exe") ?? LocateOnPath("ffmpeg");
+            if (fromPath != null) return _resolvedFfmpegPath = fromPath;
+
+            return null;
+        }
+
+        public sealed class ResolvedStream
+        {
+            public string Url { get; set; } = string.Empty;
+            public string Ext { get; set; } = "mp4";
+            public bool HasVideo { get; set; }
+            public bool HasAudio { get; set; }
+            public long FilesizeApprox { get; set; }
+        }
+
+        public async Task<List<ResolvedStream>> ResolveDirectUrlsAsync(
+            string pageUrl, string formatId, string? referer, CancellationToken ct = default)
+        {
+            var bin = FindYtDlp()
+                ?? throw new InvalidOperationException("yt-dlp không tìm thấy.");
+
+            string refererArg = string.IsNullOrWhiteSpace(referer)
+                ? ""
+                : $"--referer \"{EscapeArg(referer)}\" ";
+
+            string args = $"-f \"{EscapeArg(formatId)}\" -j --no-warnings --no-playlist " +
+                          refererArg +
+                          $"-- \"{EscapeArg(pageUrl)}\"";
+
+            var (stdout, stderr, exitCode) = await RunAsync(bin, args, ct);
+
+            if (exitCode != 0 || string.IsNullOrWhiteSpace(stdout))
+                throw new InvalidOperationException(ParseYtDlpError(stderr));
+
+            string? jsonLine = stdout
+                .Split('\n')
+                .Select(l => l.Trim())
+                .FirstOrDefault(l => l.StartsWith("{"));
+
+            if (jsonLine == null)
+                throw new InvalidOperationException("yt-dlp không trả về JSON hợp lệ.");
+
+            using var doc = JsonDocument.Parse(jsonLine);
+            var root = doc.RootElement;
+
+            var results = new List<ResolvedStream>();
+
+            if (root.TryGetProperty("requested_formats", out var rf) &&
+                rf.ValueKind == JsonValueKind.Array && rf.GetArrayLength() > 0)
+            {
+                foreach (var el in rf.EnumerateArray())
+                    results.Add(ParseResolvedStream(el));
+            }
+            else if (root.TryGetProperty("requested_downloads", out var rd) &&
+                rd.ValueKind == JsonValueKind.Array && rd.GetArrayLength() > 0)
+            {
+                foreach (var el in rd.EnumerateArray())
+                    results.Add(ParseResolvedStream(el));
+            }
+            else
+            {
+                results.Add(ParseResolvedStream(root));
+            }
+
+            results.RemoveAll(r => string.IsNullOrWhiteSpace(r.Url));
+
+            if (results.Count == 0)
+            {
+                string preview = jsonLine.Length > 300 ? jsonLine[..300] + "..." : jsonLine;
+                throw new InvalidOperationException(
+                    "Không tìm thấy URL trực tiếp trong JSON yt-dlp trả về. JSON (rút gọn): " + preview);
+            }
+
+            return results;
+        }
+
+        private static ResolvedStream ParseResolvedStream(JsonElement el)
+        {
+            string url = el.GetStringOrDefault("url") ?? "";
+            string ext = el.GetStringOrDefault("ext") ?? "mp4";
+            string vcodec = el.GetStringOrDefault("vcodec") ?? "none";
+            string acodec = el.GetStringOrDefault("acodec") ?? "none";
+
+            long filesize = 0;
+            if (el.TryGetProperty("filesize", out var fs) && fs.ValueKind == JsonValueKind.Number)
+                filesize = fs.GetInt64();
+            else if (el.TryGetProperty("filesize_approx", out var fsa) && fsa.ValueKind == JsonValueKind.Number)
+                filesize = fsa.GetInt64();
+
+            return new ResolvedStream
+            {
+                Url            = url,
+                Ext            = ext,
+                HasVideo       = !string.Equals(vcodec, "none", StringComparison.OrdinalIgnoreCase),
+                HasAudio       = !string.Equals(acodec, "none", StringComparison.OrdinalIgnoreCase),
+                FilesizeApprox = filesize,
+            };
+        }
+
         public async Task<YtAnalyzeResult> AnalyzeAsync(string url, CancellationToken ct = default)
         {
             var bin = FindYtDlp();
@@ -70,18 +188,6 @@
             {
                 return YtAnalyzeResult.Fail($"Lỗi parse JSON từ yt-dlp: {ex.Message}");
             }
-        }
-
-        public static string BuildDownloadArgs(string url, string formatId, string outputPath, int threads = 8)
-        {
-            int n = Math.Clamp(threads, 1, 16);
-
-            return $"-f \"{EscapeArg(formatId)}\" " +
-                   $"--no-warnings " +
-                   $"--concurrent-fragments {n} " +
-                   $"--http-chunk-size 10M " +
-                   $"-o \"{EscapeArg(outputPath)}\" " +
-                   $"-- \"{EscapeArg(url)}\"";
         }
 
         private static YtAnalyzeResult ParseFormats(JsonElement root)

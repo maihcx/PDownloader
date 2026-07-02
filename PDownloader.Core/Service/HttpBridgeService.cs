@@ -179,6 +179,7 @@ namespace PDownloader.Core.Service
                 fileName = payload.Filename ?? string.Empty,
                 title = payload.Title    ?? string.Empty,
                 filesize = payload.Filesize,
+                headers = payload.Headers,
             };
             Utils.AppRuntime.EnsureRunnerStarted(id, data);
 
@@ -267,6 +268,9 @@ namespace PDownloader.Core.Service
 
             [JsonPropertyName("filesize")]
             public long Filesize { get; set; }
+
+            [JsonPropertyName("headers")]
+            public Dictionary<string, string>? Headers { get; set; }
         }
     }
 }

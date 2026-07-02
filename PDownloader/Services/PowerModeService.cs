@@ -56,6 +56,8 @@
 
         private readonly SemaphoreSlim _lock = new(1, 1);
 
+        private CancellationTokenSource? _optimizeDelayCts;
+
         public void SetPowerMode(PowerModeState mode)
         {
             if (CurrentPowerModeState == mode)
@@ -125,13 +127,25 @@
 
         public async Task OptimizeAfterAsync(TimeSpan? delay = null)
         {
-            if (!delay.HasValue)
-            {
-                delay = TimeSpan.FromSeconds(5);
-            }
-            await Task.Delay((int)delay.Value.TotalMilliseconds);
+            delay ??= TimeSpan.FromSeconds(5);
 
-            await OptimizeAsync();
+            CancellationTokenSource cts;
+
+            lock (this)
+            {
+                _optimizeDelayCts?.Cancel();
+                _optimizeDelayCts?.Dispose();
+
+                _optimizeDelayCts = new CancellationTokenSource();
+                cts = _optimizeDelayCts;
+            }
+
+            try
+            {
+                await Task.Delay(delay.Value, cts.Token);
+                await OptimizeAsync();
+            }
+            catch (OperationCanceledException) { }
         }
     }
 }

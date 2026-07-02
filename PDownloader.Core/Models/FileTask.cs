@@ -18,6 +18,8 @@
 
         public string downloadRunner { get; set; } = string.Empty;
 
+        public int threads { get; set; } = 0;
+
         public Dictionary<string, string>? headers { get; set; }
     }
 }

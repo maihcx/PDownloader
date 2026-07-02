@@ -47,6 +47,11 @@
 
             mainWindow?.StateChanged += MainWindow_StateChanged;
 
+            ApplicationThemeManager.Changed += (currentApplicationTheme, systemAccent) =>
+            {
+                _ = powerModeService.OptimizeAfterAsync(TimeSpan.FromSeconds(2));
+            };
+
             return Task.CompletedTask;
         }
 

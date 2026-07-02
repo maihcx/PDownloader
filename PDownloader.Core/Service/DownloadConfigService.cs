@@ -15,6 +15,7 @@
         {
             try
             {
+                UserDataStore.Reload();
                 string? raw = UserDataStore.GetValue<string>(StoreKey);
                 if (string.IsNullOrWhiteSpace(raw))
                 {

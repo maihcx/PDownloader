@@ -1,5 +1,3 @@
-using PDownloader.Services.DownloadServices;
-
 namespace PDownloader.ViewModels.Pages
 {
     public partial class DownloadsViewModel : ObservableObject, INavigationAware

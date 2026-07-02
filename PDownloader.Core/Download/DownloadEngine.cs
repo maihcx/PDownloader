@@ -61,7 +61,7 @@ namespace PDownloader.Core.Download
                 };
                 speedTimer.Start();
 
-                await DownloadAllSegmentsAsync(segments, supportsRange);
+                await DownloadAllSegmentsAsync(segments, supportsRange, _item.Url);
 
                 speedTimer.Stop();
 
@@ -93,8 +93,7 @@ namespace PDownloader.Core.Download
 
         private async Task RunYtDlpAsync()
         {
-            var bin = YtDlpService.Instance.FindYtDlp();
-            if (bin == null)
+            if (YtDlpService.Instance.FindYtDlp() == null)
             {
                 _item.Status       = DownloadStatus.Error;
                 _item.ErrorMessage = "yt-dlp không tìm thấy.";
@@ -102,162 +101,160 @@ namespace PDownloader.Core.Download
             }
 
             string folder = string.IsNullOrWhiteSpace(_item.SavePath)
-                ? UserDataStore.GetDefaultDownloadFolder()
+                ? CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultDownloadFolder ?? Helpers.GetDefaultFolder()
                 : _item.SavePath;
 
             Directory.CreateDirectory(folder);
 
+            string? referer = _item.CustomHeaders?
+                .FirstOrDefault(kv => kv.Key.Equals("Referer", StringComparison.OrdinalIgnoreCase)).Value;
+
             string stem = string.IsNullOrWhiteSpace(_item.FileName)
-                ? "%(title)s"
+                ? SanitizeFileName(GuessFileName(_item.Url))
                 : SanitizeFileName(Path.GetFileNameWithoutExtension(_item.FileName));
 
-            string outputTemplate = Path.Combine(folder, $"{stem}.%(ext)s");
-            string args = YtDlpService.BuildDownloadArgs(
-                _item.Url,
-                _item.FormatId ?? "bestvideo+bestaudio/best",
-                outputTemplate,
-                _item.Threads);
+            _item.Status = DownloadStatus.Connecting;
 
-            _item.Status    = DownloadStatus.Downloading;
-            _item.StartTime = DateTime.Now;
+            List<YtDlpService.ResolvedStream> streams;
+            try
+            {
+                streams = await YtDlpService.Instance.ResolveDirectUrlsAsync(
+                    _item.Url, _item.FormatId ?? "bestvideo+bestaudio/best", referer, _ct);
+            }
+            catch (Exception ex)
+            {
+                _item.Status       = DownloadStatus.Error;
+                _item.ErrorMessage = "Không resolve được URL từ yt-dlp: " + ex.Message;
+                return;
+            }
 
-            string? finalOutputPath = null;
+            if (streams.Count == 0)
+            {
+                _item.Status       = DownloadStatus.Error;
+                _item.ErrorMessage = "yt-dlp không trả về stream nào để tải.";
+                return;
+            }
+
+            string tempDir = GetTempDir();
+            Directory.CreateDirectory(tempDir);
+
+            _item.TotalBytes = streams.Sum(s => s.FilesizeApprox);
+            _item.Status     = DownloadStatus.Downloading;
+            _item.StartTime  = DateTime.Now;
+
+            var rawFiles = new List<(YtDlpService.ResolvedStream stream, string path)>();
+
+            try
+            {
+                long progressBase = 0;
+                foreach (var stream in streams)
+                {
+                    string ext = string.IsNullOrWhiteSpace(stream.Ext) ? "bin" : stream.Ext;
+                    string rawPath = Path.Combine(
+                        tempDir, (stream.HasVideo ? "video" : "audio") + "." + ext);
+
+                    await DownloadUrlMultiSegmentAsync(stream.Url, rawPath, tempDir, progressBase, _ct);
+
+                    progressBase += File.Exists(rawPath) ? new FileInfo(rawPath).Length : 0;
+                    rawFiles.Add((stream, rawPath));
+                }
+
+                _ct.ThrowIfCancellationRequested();
+                _item.Status = DownloadStatus.Merging;
+
+                string finalPath;
+                if (rawFiles.Count == 1)
+                {
+                    string ext = string.IsNullOrWhiteSpace(rawFiles[0].stream.Ext) ? "mp4" : rawFiles[0].stream.Ext;
+                    finalPath = UniqueFilePath(folder, $"{stem}.{ext}");
+                    string? dir = Path.GetDirectoryName(finalPath);
+                    if (dir != null) Directory.CreateDirectory(dir);
+                    File.Move(rawFiles[0].path, finalPath, overwrite: true);
+                }
+                else
+                {
+                    finalPath = await MuxStreamsWithFfmpegAsync(rawFiles, folder, stem, _ct);
+                }
+
+                CleanupTemp(tempDir);
+
+                _item.FileName        = Path.GetFileName(finalPath);
+                _item.SavePath        = finalPath;
+                _item.DownloadedBytes = _item.TotalBytes;
+                _item.SpeedBps        = 0;
+                _item.Status          = DownloadStatus.Completed;
+                _item.EndTime         = DateTime.Now;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _item.Status       = DownloadStatus.Error;
+                _item.ErrorMessage = ex.Message;
+            }
+        }
+
+        private async Task<string> MuxStreamsWithFfmpegAsync(
+            List<(YtDlpService.ResolvedStream stream, string path)> rawFiles,
+            string folder, string stem, CancellationToken ct)
+        {
+            var ffmpeg = YtDlpService.Instance.FindFfmpeg();
+            if (ffmpeg == null)
+            {
+                throw new InvalidOperationException(
+                    "ffmpeg không tìm thấy — cần ffmpeg để ghép video+audio tải riêng thành 1 file. " +
+                    "Đặt ffmpeg.exe cạnh PDownloader.Core.exe hoặc thêm vào PATH.");
+            }
+
+            var video = rawFiles.FirstOrDefault(r => r.stream.HasVideo);
+            var audio = rawFiles.FirstOrDefault(r => r.stream.HasAudio && !r.stream.HasVideo);
+
+            if (video.path == null) video = rawFiles[0];
+
+            string videoExt = (video.stream?.Ext ?? "mp4").ToLowerInvariant();
+            string outExt = videoExt is "mp4" or "webm" or "mkv" ? videoExt : "mkv";
+
+            string finalPath = UniqueFilePath(folder, $"{stem}.{outExt}");
+            string? dir = Path.GetDirectoryName(finalPath);
+            if (dir != null) Directory.CreateDirectory(dir);
+
+            string args = $"-y -i \"{video.path}\" " +
+                          (audio.path != null ? $"-i \"{audio.path}\" " : "") +
+                          "-c copy " +
+                          $"\"{finalPath}\"";
 
             var psi = new ProcessStartInfo
             {
-                FileName               = bin,
+                FileName               = ffmpeg,
                 Arguments              = args,
                 UseShellExecute        = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError  = true,
                 CreateNoWindow         = true,
-                StandardOutputEncoding = System.Text.Encoding.UTF8,
-                StandardErrorEncoding  = System.Text.Encoding.UTF8,
             };
 
             using var proc = new Process { StartInfo = psi };
-
-            proc.OutputDataReceived += (_, e) =>
-            {
-                if (e.Data == null) return;
-                if (e.Data.StartsWith("[download]"))
-                    ParseYtDlpProgress(e.Data);
-
-                var path = TryParseYtDlpOutputPath(e.Data);
-                if (path != null) finalOutputPath = path;
-            };
-
-            proc.ErrorDataReceived += (_, e) =>
-            {
-                if (e.Data != null)
-                    System.Diagnostics.Debug.WriteLine("[yt-dlp] " + e.Data);
-            };
-
             proc.Start();
-            proc.BeginOutputReadLine();
-            proc.BeginErrorReadLine();
+            string stderr = await proc.StandardError.ReadToEndAsync(ct);
+            await proc.WaitForExitAsync(ct);
 
-            try { await proc.WaitForExitAsync(_ct); }
-            catch (OperationCanceledException)
+            if (proc.ExitCode != 0 || !File.Exists(finalPath))
             {
-                try { proc.Kill(entireProcessTree: true); } catch { }
-                throw;
+                string tail = stderr.Length > 500 ? stderr[^500..] : stderr;
+                throw new InvalidOperationException($"ffmpeg ghép thất bại (exit {proc.ExitCode}): {tail}");
             }
 
-            if (proc.ExitCode == 0)
+            foreach (var r in rawFiles)
             {
-                if (finalOutputPath != null && File.Exists(finalOutputPath))
-                {
-                    _item.FileName = Path.GetFileName(finalOutputPath);
-                    _item.SavePath = Path.GetDirectoryName(finalOutputPath) ?? folder;
-                }
-                else
-                {
-                    string? guessPath = null;
-                    try
-                    {
-                        guessPath = Directory.EnumerateFiles(folder, $"{stem}.*")
-                            .OrderByDescending(File.GetLastWriteTimeUtc)
-                            .FirstOrDefault();
-                    }
-                    catch { }
-
-                    if (guessPath != null)
-                    {
-                        _item.FileName = Path.GetFileName(guessPath);
-                        _item.SavePath = folder;
-                    }
-                }
-
-                _item.Status          = DownloadStatus.Completed;
-                _item.EndTime         = DateTime.Now;
-                _item.DownloadedBytes = _item.TotalBytes;
+                try { File.Delete(r.path); } catch { }
             }
-            else
-            {
-                _item.Status       = DownloadStatus.Error;
-                _item.ErrorMessage = "yt-dlp thất bại (exit code " + proc.ExitCode + ")";
-            }
+
+            return finalPath;
         }
 
-        private static string? TryParseYtDlpOutputPath(string line)
-        {
-            var mergeMatch = System.Text.RegularExpressions.Regex.Match(
-                line, @"\[Merger\]\s+Merging formats into\s+""(.+)""");
-            if (mergeMatch.Success) return mergeMatch.Groups[1].Value;
-
-            var destMatch = System.Text.RegularExpressions.Regex.Match(
-                line, @"^\[download\]\s+Destination:\s+(.+)$");
-            if (destMatch.Success) return destMatch.Groups[1].Value.Trim();
-
-            var alreadyMatch = System.Text.RegularExpressions.Regex.Match(
-                line, @"^\[download\]\s+(.+)\s+has already been downloaded$");
-            if (alreadyMatch.Success) return alreadyMatch.Groups[1].Value.Trim();
-
-            return null;
-        }
-
-        private void ParseYtDlpProgress(string line)
-        {
-            try
-            {
-                var pctMatch = System.Text.RegularExpressions.Regex.Match(line, @"([\d.]+)%");
-                if (!pctMatch.Success) return;
-                double pct = double.Parse(pctMatch.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
-
-                var sizeMatch = System.Text.RegularExpressions.Regex.Match(line, @"of\s+([\d.]+)(MiB|GiB|KiB)");
-                if (sizeMatch.Success)
-                {
-                    double val = double.Parse(sizeMatch.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
-                    _item.TotalBytes = sizeMatch.Groups[2].Value switch
-                    {
-                        "GiB" => (long)(val * 1024 * 1024 * 1024),
-                        "MiB" => (long)(val * 1024 * 1024),
-                        "KiB" => (long)(val * 1024),
-                        _ => 0
-                    };
-                }
-
-                if (_item.TotalBytes > 0)
-                    _item.DownloadedBytes = (long)(_item.TotalBytes * pct / 100.0);
-
-                var speedMatch = System.Text.RegularExpressions.Regex.Match(line, @"at\s+([\d.]+)(MiB|KiB|GiB)/s");
-                if (speedMatch.Success)
-                {
-                    double val = double.Parse(speedMatch.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
-                    _item.SpeedBps = speedMatch.Groups[2].Value switch
-                    {
-                        "GiB" => val * 1024 * 1024 * 1024,
-                        "MiB" => val * 1024 * 1024,
-                        "KiB" => val * 1024,
-                        _ => 0
-                    };
-                }
-            }
-            catch { }
-        }
-
-        private async Task<(long totalBytes, bool supportsRange)> ProbeAsync(string url)
+        private async Task<(long totalBytes, bool supportsRange)> ProbeAsync(string url, bool assignItemFileName = true)
         {
             try
             {
@@ -268,12 +265,12 @@ namespace PDownloader.Core.Download
                                        || resp.Content.Headers.ContentLength is null or 0;
 
                 if (headUnreliable)
-                    return await ProbeViaRangedGetAsync(url);
+                    return await ProbeViaRangedGetAsync(url, assignItemFileName);
 
                 long total = resp.Content.Headers.ContentLength ?? 0;
                 bool ranges = resp.Headers.AcceptRanges.Contains("bytes");
 
-                if (string.IsNullOrWhiteSpace(_item.FileName))
+                if (assignItemFileName && string.IsNullOrWhiteSpace(_item.FileName))
                 {
                     var cd = resp.Content.Headers.ContentDisposition;
                     _item.FileName = cd?.FileNameStar ?? cd?.FileName ?? GuessFileName(_item.Url);
@@ -284,17 +281,17 @@ namespace PDownloader.Core.Download
             }
             catch
             {
-                try { return await ProbeViaRangedGetAsync(url); }
+                try { return await ProbeViaRangedGetAsync(url, assignItemFileName); }
                 catch
                 {
-                    if (string.IsNullOrWhiteSpace(_item.FileName))
+                    if (assignItemFileName && string.IsNullOrWhiteSpace(_item.FileName))
                         _item.FileName = SanitizeFileName(GuessFileName(_item.Url));
                     return (0, false);
                 }
             }
         }
 
-        private async Task<(long totalBytes, bool supportsRange)> ProbeViaRangedGetAsync(string url)
+        private async Task<(long totalBytes, bool supportsRange)> ProbeViaRangedGetAsync(string url, bool assignItemFileName = true)
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Range = new RangeHeaderValue(0, 0);
@@ -306,7 +303,7 @@ namespace PDownloader.Core.Download
                          ?? resp.Content.Headers.ContentLength
                          ?? 0;
 
-            if (string.IsNullOrWhiteSpace(_item.FileName))
+            if (assignItemFileName && string.IsNullOrWhiteSpace(_item.FileName))
             {
                 var cd = resp.Content.Headers.ContentDisposition;
                 _item.FileName = cd?.FileNameStar ?? cd?.FileName ?? GuessFileName(_item.Url);
@@ -391,18 +388,18 @@ namespace PDownloader.Core.Download
             catch { }
         }
 
-        private async Task DownloadAllSegmentsAsync(List<SegmentInfo> segments, bool supportsRange)
+        private async Task DownloadAllSegmentsAsync(List<SegmentInfo> segments, bool supportsRange, string url)
         {
             var tasks = segments
                 .Where(s => !s.IsCompleted)
-                .Select(seg => DownloadSegmentWithRetryAsync(seg, supportsRange));
+                .Select(seg => DownloadSegmentWithRetryAsync(seg, supportsRange, url));
 
             await Task.WhenAll(tasks);
         }
 
         private const int StallTimeoutSeconds = 20;
 
-        private async Task DownloadSegmentWithRetryAsync(SegmentInfo seg, bool supportsRange)
+        private async Task DownloadSegmentWithRetryAsync(SegmentInfo seg, bool supportsRange, string url)
         {
             int attempt = 0;
             while (true)
@@ -410,7 +407,7 @@ namespace PDownloader.Core.Download
                 _ct.ThrowIfCancellationRequested();
                 try
                 {
-                    await DownloadSegmentAsync(seg, supportsRange);
+                    await DownloadSegmentAsync(seg, supportsRange, url);
                     return;
                 }
                 catch (OperationCanceledException) when (_ct.IsCancellationRequested)
@@ -428,7 +425,7 @@ namespace PDownloader.Core.Download
             }
         }
 
-        private async Task DownloadSegmentAsync(SegmentInfo seg, bool supportsRange)
+        private async Task DownloadSegmentAsync(SegmentInfo seg, bool supportsRange, string url)
         {
             long actualLen = File.Exists(seg.TempFilePath)
                 ? new FileInfo(seg.TempFilePath).Length
@@ -436,7 +433,7 @@ namespace PDownloader.Core.Download
             if (actualLen != seg.BytesWritten)
                 seg.BytesWritten = actualLen;
 
-            using var req = new HttpRequestMessage(HttpMethod.Get, _item.Url);
+            using var req = new HttpRequestMessage(HttpMethod.Get, url);
 
             long resumeFrom = seg.RangeStart + seg.BytesWritten;
 
@@ -451,7 +448,7 @@ namespace PDownloader.Core.Download
             stallCts.CancelAfter(TimeSpan.FromSeconds(StallTimeoutSeconds));
 
             using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, stallCts.Token);
-            stallCts.CancelAfter(TimeSpan.FromSeconds(StallTimeoutSeconds)); // reset sau khi nhận được header
+            stallCts.CancelAfter(TimeSpan.FromSeconds(StallTimeoutSeconds));
 
             if (resp.StatusCode == System.Net.HttpStatusCode.RequestedRangeNotSatisfiable)
             {
@@ -522,6 +519,7 @@ namespace PDownloader.Core.Download
             seg.IsCompleted = true;
         }
 
+
         private async Task MergeSegmentsAsync(List<SegmentInfo> segments)
         {
             var missing = segments.Where(s => !File.Exists(s.TempFilePath)).ToList();
@@ -533,10 +531,16 @@ namespace PDownloader.Core.Download
             }
 
             string finalPath = GetFinalPath();
-            string? dir = Path.GetDirectoryName(finalPath);
+            await MergeSegmentsToRawFileAsync(segments, finalPath, _ct);
+            _item.SavePath = finalPath;
+        }
+
+        private async Task MergeSegmentsToRawFileAsync(List<SegmentInfo> segments, string destPath, CancellationToken ct)
+        {
+            string? dir = Path.GetDirectoryName(destPath);
             if (dir != null) Directory.CreateDirectory(dir);
 
-            string mergingPath = finalPath + ".merging";
+            string mergingPath = destPath + ".merging";
 
             await using (var output = new FileStream(mergingPath, FileMode.Create, FileAccess.Write, FileShare.None))
             {
@@ -544,7 +548,7 @@ namespace PDownloader.Core.Download
                 {
                     await using (var input = new FileStream(seg.TempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
-                        await input.CopyToAsync(output, _ct);
+                        await input.CopyToAsync(output, ct);
                     }
 
                     try { File.Delete(seg.TempFilePath); }
@@ -556,9 +560,57 @@ namespace PDownloader.Core.Download
                 }
             }
 
-            File.Move(mergingPath, finalPath, overwrite: true);
+            File.Move(mergingPath, destPath, overwrite: true);
+        }
 
-            _item.SavePath = finalPath;
+        private async Task DownloadUrlMultiSegmentAsync(
+            string url, string destPath, string tempDirRoot, long progressBaseOffset, CancellationToken ct)
+        {
+            string subTempDir = Path.Combine(tempDirRoot, Path.GetFileNameWithoutExtension(destPath) + "_segs");
+            Directory.CreateDirectory(subTempDir);
+
+            var (totalBytes, supportsRange) = await ProbeAsync(url, assignItemFileName: false);
+
+            bool useMultiSegment = supportsRange && totalBytes >= MinSizeForMultiSegment;
+            int threadCount = useMultiSegment ? _item.Threads : 1;
+
+            var segments = BuildOrRestoreSegments(subTempDir, totalBytes, threadCount);
+
+            using var speedTimer = new System.Timers.Timer(1000);
+            long lastReported = segments.Sum(s => s.BytesWritten);
+            speedTimer.Elapsed += (_, _) =>
+            {
+                long current = segments.Sum(s => s.BytesWritten);
+                double speed = current - lastReported;
+                lastReported = current;
+                _item.DownloadedBytes = progressBaseOffset + current;
+                _item.SpeedBps        = speed;
+                PersistState(subTempDir, segments);
+            };
+            speedTimer.Start();
+
+            try
+            {
+                await DownloadAllSegmentsAsync(segments, supportsRange, url);
+            }
+            finally
+            {
+                speedTimer.Stop();
+            }
+
+            ct.ThrowIfCancellationRequested();
+
+            var incomplete = segments.Where(s => !s.IsCompleted).ToList();
+            if (incomplete.Count > 0)
+            {
+                string ids = string.Join(", ", incomplete.Select(s => s.Index));
+                throw new InvalidOperationException(
+                    $"Tải chưa hoàn tất: {incomplete.Count} segment chưa xong (index: {ids}).");
+            }
+
+            await MergeSegmentsToRawFileAsync(segments, destPath, ct);
+
+            CleanupTemp(subTempDir);
         }
 
         private static void CleanupTemp(string tempDir)
@@ -598,7 +650,7 @@ namespace PDownloader.Core.Download
             try
             {
                 string folder = string.IsNullOrWhiteSpace(savePath)
-                    ? UserDataStore.GetDefaultDownloadFolder()
+                    ? CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultDownloadFolder ?? Helpers.GetDefaultFolder()
                     : savePath;
                 string name = string.IsNullOrWhiteSpace(fileName) ? "download" : fileName;
                 string mergingPath = Path.Combine(folder, name) + ".merging";
@@ -610,7 +662,7 @@ namespace PDownloader.Core.Download
         private string GetFinalPath()
         {
             string folder = string.IsNullOrWhiteSpace(_item.SavePath)
-                ? UserDataStore.GetDefaultDownloadFolder()
+                ? CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultDownloadFolder ?? Helpers.GetDefaultFolder()
                 : _item.SavePath;
             string name = string.IsNullOrWhiteSpace(_item.FileName)
                 ? "download"

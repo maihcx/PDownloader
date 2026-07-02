@@ -9,7 +9,7 @@ namespace PDownloader.Core.Runtime
 
         private static readonly ConcurrentDictionary<string, YoutubePendingMeta> _youtubePending = new();
 
-        private static DownloadConfigService _downloadConfigService { get; set; } = Program.GetRequiredService<DownloadConfigService>();
+        public static DownloadConfigService DownloadConfigService { get; set; } = Program.GetRequiredService<DownloadConfigService>();
 
         private static Action? mainAppAction { get; set; } = null;
 
@@ -101,7 +101,7 @@ namespace PDownloader.Core.Runtime
             switch (value)
             {
                 case "refresh-downloader-configs":
-                    _downloadConfigService.Reload();
+                    DownloadConfigService.Reload();
                     break;
 
                 case "ping":
@@ -128,6 +128,7 @@ namespace PDownloader.Core.Runtime
                     saveTo = downloadItem.SavePath,
                     url = downloadItem.Url,
                     downloadRunner = "runner",
+                    threads = downloadItem.Threads
                 });
             }
         }
@@ -159,7 +160,7 @@ namespace PDownloader.Core.Runtime
                     if (customHeaders.Count == 0) customHeaders = null;
                 }
 
-                int defaultThreads = _downloadConfigService.DownloadConfigs?.DefaultThreadCount ?? 0;
+                int defaultThreads = DownloadConfigService.DownloadConfigs?.DefaultThreadCount ?? 0;
 
                 var item = DownloadManager.Instance.Enqueue(
                     id: req.Id,

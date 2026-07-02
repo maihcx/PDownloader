@@ -2,8 +2,8 @@ namespace PDownloader.Core
 {
     public partial class DownloadConfigs
     {
-        public string DefaultDownloadFolder = string.Empty;
+        public string DefaultDownloadFolder { get; set; } = string.Empty;
 
-        public int DefaultThreadCount = 8;
+        public int DefaultThreadCount { get; set; }
     }
 }
