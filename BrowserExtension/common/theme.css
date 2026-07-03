@@ -19,7 +19,7 @@
   --pd-text:      #e6edf3;
   --pd-muted:     #8b949e;
   --pd-accent:    #4FC3F7;
-  --pd-accent-bg: rgba(79, 195, 247, 0.15);
+  --pd-accent-bg: rgb(213 239 255);
   --pd-green:     #4CAF50;
   --pd-green-bg:  rgba(76, 175, 80, 0.15);
   --pd-red:       #f44336;
@@ -37,7 +37,7 @@
     --pd-text:      #1b2530;
     --pd-muted:     #5b6572;
     --pd-accent:    #0277BD;
-    --pd-accent-bg: rgba(2, 119, 189, 0.12);
+    --pd-accent-bg: rgb(0, 30, 48);
     --pd-green:     #2E7D32;
     --pd-green-bg:  rgba(46, 125, 50, 0.14);
     --pd-red:       #C62828;
