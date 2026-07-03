@@ -42,9 +42,8 @@ public static class BrowserExtensionInstallerService
 
         string extensionDir = Path.Combine(installDir, "BrowserExtension");
         string updateManifestPath = Path.Combine(extensionDir, "update.xml");
-        string crxPath = Path.Combine(extensionDir, "PDownloader.crx");
 
-        if (!File.Exists(updateManifestPath) || !File.Exists(crxPath))
+        if (!File.Exists(updateManifestPath))
         {
             return;
         }
