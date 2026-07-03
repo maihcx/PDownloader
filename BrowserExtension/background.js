@@ -23,22 +23,15 @@ const DEFAULT_EXTENSIONS = [
   'torrent','img','bin','dat','iso'
 ];
 
-// === STATE ===
 let interceptCount = 0;
 const cdCache = new Map(); // url → { filename, timestamp }
 
-// ============================================================
-// HLS/DASH MANIFEST CAPTURE (cho các site phát video qua blob: URL,
-// vd MediaSource Extensions — video.src không phải URL mạng thật nên
-// không tải trực tiếp được, phải "nghe lén" request mạng thật để tìm
-// URL manifest .m3u8/.mpd gốc trước khi nó bị gói thành blob).
-// ============================================================
 const MANIFEST_URL_PATTERN = /\.(m3u8|mpd)(\?|$)/i;
 const hlsManifestsByTab = new Map(); // tabId -> { url, referer, foundAt }
 
 chrome.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
-    if (details.tabId < 0) return; // request không thuộc tab nào (vd service worker riêng của site)
+    if (details.tabId < 0) return;
     if (!MANIFEST_URL_PATTERN.test(details.url)) return;
 
     const refererHeader = details.requestHeaders?.find(
@@ -55,8 +48,6 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
   ['requestHeaders', 'extraHeaders']
 );
 
-// Xóa manifest cũ khi tab load trang mới, tránh lấy nhầm manifest của tập
-// phim trước đó.
 chrome.webRequest.onBeforeRequest.addListener(
   (details) => {
     if (details.type === 'main_frame') {
@@ -68,9 +59,6 @@ chrome.webRequest.onBeforeRequest.addListener(
 
 chrome.tabs.onRemoved.addListener((tabId) => hlsManifestsByTab.delete(tabId));
 
-// ============================================================
-// INIT
-// ============================================================
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.set({
     autoIntercept:      true,
@@ -84,9 +72,6 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.runtime.onStartup.addListener(createContextMenus);
 
-// ============================================================
-// CONTEXT MENUS
-// ============================================================
 function createContextMenus() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: 'pd-link',      title: 'Tải link này với PDownloader',   contexts: ['link'] });
@@ -111,9 +96,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (ok) { interceptCount++; updateBadge(); await notify(filename || url); }
 });
 
-// ============================================================
-// CONTENT-DISPOSITION CACHE (webRequest)
-// ============================================================
 chrome.webRequest.onHeadersReceived.addListener(
   (details) => {
     if (!details.responseHeaders) return;
@@ -129,10 +111,6 @@ chrome.webRequest.onHeadersReceived.addListener(
   },
   {
     urls: ['<all_urls>'],
-    // Content-Disposition chỉ thực sự có ý nghĩa trên các loại request có khả
-    // năng là một file tải xuống. Image/stylesheet/font/script/media-streaming
-    // gần như không bao giờ có header này, nên loại chúng ra giúp giảm đáng kể
-    // số lần callback phải chạy trên mỗi trang (đặc biệt trang nhiều ảnh/asset).
     types: ['main_frame', 'sub_frame', 'xmlhttprequest', 'object', 'other']
   },
   ['responseHeaders']
@@ -155,9 +133,6 @@ function pruneCache() {
   }
 }
 
-// ============================================================
-// DOWNLOAD INTERCEPT (chrome.downloads)
-// ============================================================
 chrome.downloads.onCreated.addListener(async (item) => {
   const settings = await chrome.storage.local.get(['autoIntercept','extensions','minInterceptSizeMb','blacklistedDomains']);
   if (!settings.autoIntercept) return;
@@ -166,15 +141,8 @@ chrome.downloads.onCreated.addListener(async (item) => {
   if (!url || url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('chrome-extension:')) return;
   if (await isBlacklisted(url, settings.blacklistedDomains || [])) return;
 
-  // URL cuối cùng sau khi đi hết chuỗi redirect. Nhiều CDN (Cloudflare, S3, ...)
-  // chỉ trả header Content-Disposition trên response CUỐI, không phải trên URL
-  // gốc mà trang web trỏ tới (vd https://1111-releases.cloudflareclient.com/win/latest
-  // redirect sang một URL file .msi thật). cdCache lại được ghi theo URL của
-  // đúng request đã nhận header đó, nên phải tra cứu cả finalUrl lẫn url gốc,
-  // không chỉ url gốc như trước (đó là lý do tên file bị rỗng).
   const finalUrl = item.finalUrl || url;
 
-  // Resolve filename (Content-Disposition wins)
   let filename = item.filename || '';
   for (const candidate of new Set([finalUrl, url])) {
     const cached = cdCache.get(candidate);
@@ -185,8 +153,6 @@ chrome.downloads.onCreated.addListener(async (item) => {
     }
   }
 
-  // Tương tự, thử đoán phần mở rộng từ finalUrl trước (thường có tên file thật)
-  // rồi mới fallback về url gốc.
   const ext  = extractExt(finalUrl, filename) || extractExt(url, filename);
   const exts = settings.extensions || DEFAULT_EXTENSIONS;
   const minBytes = ((settings.minInterceptSizeMb ?? 2)) * 1024 * 1024;
@@ -197,7 +163,6 @@ chrome.downloads.onCreated.addListener(async (item) => {
 
   if (!byExt && !bySize && !byMime) return;
 
-  // Cancel browser download
   chrome.downloads.cancel(item.id);
   chrome.downloads.erase({ id: item.id });
 
@@ -207,8 +172,6 @@ chrome.downloads.onCreated.addListener(async (item) => {
     referer = tab?.url || '';
   } catch (_) {}
 
-  // Nếu vẫn không có Content-Disposition, thử đoán tên từ path của finalUrl
-  // (thường mang tên file thật) trước khi fallback về url gốc.
   const displayName = filename
     ? filename.split(/[/\\]/).pop()
     : (getFilenameFromUrl(finalUrl) || getFilenameFromUrl(url) || null);
@@ -216,9 +179,6 @@ chrome.downloads.onCreated.addListener(async (item) => {
   if (ok) { interceptCount++; updateBadge(); await notify(displayName || getFilenameFromUrl(url)); }
 });
 
-// ============================================================
-// SEND TO PDOWNLOADER
-// ============================================================
 async function sendToPDownloader(url, filename, referer) {
   let cookies = '';
   try {
@@ -249,9 +209,6 @@ async function sendToPDownloader(url, filename, referer) {
   }
 }
 
-// ============================================================
-// PING — check app status
-// ============================================================
 async function pingApp() {
   try {
     const res = await fetch(PING_URL, { signal: AbortSignal.timeout(2000) });
@@ -259,9 +216,6 @@ async function pingApp() {
   } catch (_) { return false; }
 }
 
-// ============================================================
-// BADGE
-// ============================================================
 function updateBadge() {
   if (interceptCount > 0) {
     chrome.action.setBadgeText({ text: String(interceptCount) });
@@ -271,9 +225,6 @@ function updateBadge() {
   }
 }
 
-// ============================================================
-// NOTIFICATIONS
-// ============================================================
 async function notify(label) {
   const s = await chrome.storage.local.get(['showNotifications']);
   if (s.showNotifications === false) return;
@@ -292,9 +243,6 @@ async function notify(label) {
   setTimeout(() => chrome.notifications.clear(id), 4000);
 }
 
-// ============================================================
-// BLACKLIST HELPERS
-// ============================================================
 async function isBlacklisted(url, list) {
   try {
     const d = getDomain(url);
@@ -302,9 +250,6 @@ async function isBlacklisted(url, list) {
   } catch (_) { return false; }
 }
 
-// ============================================================
-// MESSAGE HANDLER (popup + content scripts)
-// ============================================================
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   switch (msg.action) {
     case 'ping_app':
@@ -340,10 +285,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       );
       return true;
 
-    // Gộp 3 lệnh (ping app, đếm intercept, lấy settings) thành 1 round-trip
-    // message duy nhất cho popup lúc mở lên — thay vì popup.js gọi sendMessage
-    // 3 lần tuần tự, mỗi lần đều phải đánh thức service worker MV3 (có thể đang
-    // "ngủ"), gây trễ cộng dồn không cần thiết.
     case 'get_popup_init':
       Promise.all([
         pingApp(),
@@ -376,9 +317,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-// ============================================================
-// UTILITIES
-// ============================================================
 function getDomain(url) {
   try { return new URL(url).hostname; } catch (_) { return ''; }
 }
@@ -419,9 +357,6 @@ function matchMime(mime) {
           'video/','audio/'].some(t => m.startsWith(t));
 }
 
-// ============================================================
-// YOUTUBE — analyze & download (forwarded to PDownloader.Core)
-// ============================================================
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'get_hls_manifest') {
     const tabId = sender.tab?.id;
@@ -431,11 +366,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.action === 'download_via_ytdlp') {
-    // Dùng lại pipeline yt-dlp (endpoint /youtube/*), nhưng thực ra hoàn toàn
-    // tổng quát — yt-dlp tự hỗ trợ Facebook/TikTok/Instagram/Twitter/Vimeo/
-    // Twitch/Reddit/Bilibili/SoundCloud, và cả raw .m3u8/.mpd URL bắt được
-    // qua webRequest. Nút "Tải video này" là one-click nên không hỏi chất
-    // lượng, luôn lấy "bestvideo+bestaudio/best".
     fetch(`${APP_URL}/youtube/download`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -445,9 +375,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         filename: msg.filename,
         title:    msg.title || msg.filename,
         filesize: 0,
-        // Nhiều CDN chặn request thiếu Referer đúng (403) — quan trọng với
-        // manifest HLS bắt qua webRequest, vì server phát segment thường
-        // kiểm tra Referer khớp đúng trang gốc.
         headers:  msg.referer ? { Referer: msg.referer } : undefined
       })
     })

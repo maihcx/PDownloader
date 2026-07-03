@@ -5,7 +5,6 @@
 // - Excludes YouTube watch pages (handled by youtube_content.js)
 // ============================================================
 
-// ── Floating button styles ────────────────────────────────────────────────────
 const _style = document.createElement('style');
 _style.textContent = `
 .pd-grab-btn {
@@ -55,17 +54,14 @@ _style.textContent = `
 `;
 document.head.appendChild(_style);
 
-// ── State ─────────────────────────────────────────────────────────────────────
 let _activeVideo  = null;
 let _btn          = null;
 let _hideTimer    = null;
 
-// ── Skip YouTube watch (youtube_content.js handles it) ───────────────────────
 function isYouTubeWatch() {
   return location.hostname.includes('youtube.com') && !location.pathname.startsWith('/shorts/');
 }
 
-// ── Build / reuse button ─────────────────────────────────────────────────────
 function getBtn() {
   if (_btn) return _btn;
   _btn = document.createElement('div');
@@ -92,11 +88,6 @@ function getBtn() {
       url      = getSiteUrl(_activeVideo);
       filename = sanitizeName(document.title) + (hostname.includes('soundcloud.com') ? '.mp3' : '.mp4');
 
-      // Các site này không expose URL file media thật trong DOM (Facebook,
-      // TikTok, Instagram... stream qua blob/DASH được ký/mã hoá theo session).
-      // "url" ở đây là URL TRANG, không phải file — phải đi qua pipeline
-      // yt-dlp (analyze rồi download) như YouTube, KHÔNG được gửi thẳng tới
-      // /download (endpoint đó chỉ tải URL file thật, sẽ nhận về HTML và báo lỗi).
       const resp = await chrome.runtime.sendMessage({
         action: 'download_via_ytdlp', url, filename, title: document.title
       });
@@ -104,13 +95,8 @@ function getBtn() {
       return;
     }
 
-    // Site thường: video có src trực tiếp truy cập được trong DOM.
     url = _activeVideo.currentSrc || _activeVideo.src;
     if (!url || url.startsWith('blob:')) {
-      // video.src là blob: (MediaSource Extensions) — không phải URL mạng
-      // thật, không tải trực tiếp được. Thử xin background.js manifest
-      // .m3u8/.mpd gốc mà nó đã "nghe lén" được qua webRequest trước khi bị
-      // gói thành blob (xem hlsManifestsByTab trong background.js).
       const manifest = await chrome.runtime.sendMessage({ action: 'get_hls_manifest' });
       if (manifest?.url) {
         filename = sanitizeName(document.title) + '.mp4';
@@ -188,7 +174,6 @@ function clearHide() {
   if (_hideTimer) { clearTimeout(_hideTimer); _hideTimer = null; }
 }
 
-// ── Site-specific URL resolution ─────────────────────────────────────────────
 function getSiteUrl(video) {
   const sites = [
     { domains: ['tiktok.com'],               attr: 'href', pattern: /\/video\// },
@@ -212,18 +197,10 @@ function sanitizeName(name) {
   return name.replace(/[\\/:*?"<>|]/g, '_').slice(0, 80);
 }
 
-// ── Mouse listeners ───────────────────────────────────────────────────────────
 function initListeners() {
   if (isYouTubeWatch()) return;
 
-  // Tránh gắn listener toàn cục (capture: true trên document) nếu trang không
-  // có video nào ngay từ đầu — phần lớn trang web (text, ảnh, form...) không
-  // cần overlay này, nên không có lý do để mouseover/mouseout chạy qua mọi
-  // pixel di chuột trên các trang đó.
   if (!document.querySelector('video')) {
-    // Một số trang load video bằng JS sau khi DOMContentLoaded (lazy load,
-    // SPA...). Theo dõi DOM một lần để bật listener khi video xuất hiện,
-    // rồi ngắt observer ngay — không cần observer chạy mãi mãi.
     const lateObserver = new MutationObserver(() => {
       if (document.querySelector('video')) {
         lateObserver.disconnect();
@@ -267,7 +244,6 @@ function attachVideoListeners() {
 
 initListeners();
 
-// ── Magnet links ──────────────────────────────────────────────────────────────
 document.addEventListener('click', (e) => {
   let t = e.target;
   while (t && t.tagName !== 'A') t = t.parentElement;
