@@ -1,0 +1,37 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:PDownloader.Controls"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+
+    <Style TargetType="{x:Type controls:AcrylicPanel}">
+        <Setter Property="Background"
+                Value="Transparent" />
+        <Setter Property="BlurRadius"
+                Value="24" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:AcrylicPanel}">
+                    <Border Background="Transparent"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+
+                        <Grid x:Name="PART_RootGrid">
+                            <Rectangle Fill="{TemplateBinding BlurBrush}">
+                                <Rectangle.Effect>
+                                    <BlurEffect Radius="{TemplateBinding BlurRadius}" />
+                                </Rectangle.Effect>
+                            </Rectangle>
+
+                            <Rectangle Fill="{TemplateBinding TintBrush}" />
+
+                            <Border Background="{TemplateBinding Background}"
+                                    CornerRadius="{TemplateBinding CornerRadius}" />
+
+                            <ContentPresenter Margin="{TemplateBinding Padding}" />
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

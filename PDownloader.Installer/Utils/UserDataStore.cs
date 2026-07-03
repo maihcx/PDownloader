@@ -28,8 +28,6 @@ public static class UserDataStore
 
     private static Dictionary<string, object> _data = new();
 
-    private static Dictionary<string, string> _passCaching = new();
-
     static UserDataStore()
     {
         try
@@ -93,41 +91,11 @@ public static class UserDataStore
         }
     }
 
-    public static string GetValuePass(string key)
-    {
-        try
-        {
-            _passCaching.TryGetValue(key, out var result);
-            if (string.IsNullOrEmpty(result))
-            {
-                result = GetValue<string>(key);
-
-                if (!string.IsNullOrEmpty(result))
-                {
-                    result = PasswordEncryptor.Decrypt(result);
-                    _passCaching[key] = result;
-                }
-            }
-
-            return result;
-        }
-        catch
-        {
-            return string.Empty;
-        }
-    }
-
     public static bool SetValue<T>(string key, T value)
     {
         _data[key] = value!;
         SaveData();
         return true;
-    }
-
-    public static bool SetValuePass(string key, string value)
-    {
-        _passCaching[key] = value;
-        return SetValue(key, PasswordEncryptor.Encrypt(value));
     }
 
     public static void Reset()

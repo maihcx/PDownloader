@@ -61,7 +61,6 @@
                                             Text="{Binding Name, Mode=OneWay}"
                                             TextWrapping="Wrap" />
                                         <ui:TextBlock
-                                            Appearance="Secondary"
                                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                             Text="{Binding Description, Mode=OneWay}"
                                             TextWrapping="Wrap" />

@@ -12,7 +12,7 @@ namespace PDownloader.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "18.5.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "18.7.0.0")]
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -73,7 +73,7 @@ namespace PDownloader.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("500")]
+        [global::System.Configuration.DefaultSettingValueAttribute("719")]
         public double Window_Width {
             get {
                 return ((double)(this["Window_Width"]));
@@ -85,7 +85,7 @@ namespace PDownloader.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("350")]
+        [global::System.Configuration.DefaultSettingValueAttribute("556")]
         public double Window_Height {
             get {
                 return ((double)(this["Window_Height"]));
@@ -121,7 +121,7 @@ namespace PDownloader.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool IsAutoHideNavPanel {
             get {
                 return ((bool)(this["IsAutoHideNavPanel"]));
@@ -164,6 +164,18 @@ namespace PDownloader.Properties {
             }
             set {
                 this["IsViewAtBoot"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool IsNavPaneOpen {
+            get {
+                return ((bool)(this["IsNavPaneOpen"]));
+            }
+            set {
+                this["IsNavPaneOpen"] = value;
             }
         }
     }

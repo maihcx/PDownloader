@@ -19,6 +19,8 @@ public static class AppInfoHelper
 {
     public static readonly string AppName = Assembly.GetExecutingAssembly().GetName().Name ?? string.Empty;
     public static string Author = "Song Mai Software";
+    public static string Slogan = "Download any file with speed and ease";
+    public static string SortSlogan = "Fast. Simple. Reliable";
     public static string SortAuthor = "SM SOFT";
     public static string AuthorCreated = "Created by SM SOFT";
     public static string AppDescription = "A fast, lightweight download manager for Windows.";

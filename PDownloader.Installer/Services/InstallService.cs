@@ -354,7 +354,7 @@ public static class InstallService
                 try { p.Kill(entireProcessTree: true); } catch { }
             }
 
-            foreach (Process p in Process.GetProcessesByName("PDownloader Overlay"))
+            foreach (Process p in Process.GetProcessesByName("PDownloader Runner"))
             {
                 try { p.Kill(entireProcessTree: true); } catch { }
             }

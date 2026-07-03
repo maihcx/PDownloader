@@ -17,6 +17,7 @@
                  ExtendsContentIntoTitleBar="True"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  WindowCornerPreference="Round"
+                 WindowBackdropType="Mica"
                  WindowStartupLocation="CenterScreen"
                  mc:Ignorable="d">
     <ui:FluentWindow.InputBindings>

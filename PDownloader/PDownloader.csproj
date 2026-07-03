@@ -69,6 +69,8 @@
     <Resource Include="Assets\app-100.png" />
     <Resource Include="Assets\app.ico" />
     <Resource Include="Assets\app-256.png" />
+    <Resource Include="Assets\banner4.1.png" />
+    <Resource Include="Assets\banner.png" />
   </ItemGroup>
 
   <ItemGroup>

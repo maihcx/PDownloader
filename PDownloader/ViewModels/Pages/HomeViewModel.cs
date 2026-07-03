@@ -43,7 +43,10 @@ public partial class HomeViewModel : ObservableObject
     private string _appName = AppInfoHelper.AppName;
 
     [ObservableProperty]
-    private string _author = AppInfoHelper.Author;
+    private string _slogan = AppInfoHelper.Slogan;
+
+    [ObservableProperty]
+    private string _sortSlogan = AppInfoHelper.SortSlogan;
 
     [ObservableProperty]
     private string _sortAuthor = AppInfoHelper.SortAuthor;

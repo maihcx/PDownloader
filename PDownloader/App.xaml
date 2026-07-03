@@ -1,4 +1,4 @@
-﻿<Application
+<Application
   x:Class="PDownloader.App"
   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -17,6 +17,7 @@
         <ResourceDictionary Source="Controls/ReferralCard.xaml" />
         <ResourceDictionary Source="Controls/GalleryNavigationPresenter.xaml" />
         <ResourceDictionary Source="Controls/FormFieldCard.xaml" />
+        <ResourceDictionary Source="Controls/AcrylicPanel.xaml" />
       </ResourceDictionary.MergedDictionaries>
 
       <helpers:BoolToGreenRedBrush x:Key="BoolToGreenRedBrush" />
