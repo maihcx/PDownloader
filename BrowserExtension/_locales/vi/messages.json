@@ -1,0 +1,48 @@
+{
+  "extName":                  { "message": "PDownloader" },
+  "extDescription":           { "message": "Tự động bắt link tải xuống và gửi tới PDownloader." },
+
+  "contextMenuLink":          { "message": "Tải link này với PDownloader" },
+  "contextMenuImage":         { "message": "Tải ảnh này với PDownloader" },
+  "contextMenuMedia":         { "message": "Tải media này với PDownloader" },
+  "contextMenuPage":          { "message": "Tải trang này với PDownloader" },
+
+  "notifTitle":                { "message": "PDownloader — Đã bắt link" },
+  "notifDefaultLabel":         { "message": "Download" },
+
+  "connErrorGeneric":          { "message": "Không thể kết nối đến PDownloader." },
+  "genericError":              { "message": "Lỗi" },
+
+  "popupStatusChecking":       { "message": "Đang kiểm tra\u2026" },
+  "popupStatusConnected":      { "message": "\u2713 Đang kết nối với PDownloader" },
+  "popupStatusDisconnected":   { "message": "\u2717 Chưa kết nối — hãy mở ứng dụng" },
+  "popupBadgeCaught":          { "message": "$COUNT$ đã bắt", "placeholders": { "count": { "content": "$1" } } },
+  "popupSessionLabel":         { "message": "Phiên này" },
+
+  "popupSectionInterceptSettings": { "message": "Cài đặt bắt link" },
+  "popupToggleAutoIntercept":      { "message": "Tự động bắt link" },
+  "popupToggleAutoInterceptSub":   { "message": "Chặn tải của trình duyệt, chuyển sang PDownloader" },
+  "popupToggleShowNotif":          { "message": "Hiện thông báo" },
+  "popupToggleShowNotifSub":       { "message": "Thông báo khi bắt được link" },
+
+  "popupSectionBlacklist":     { "message": "Trang bị chặn" },
+  "popupBlacklistEmpty":       { "message": "Không có trang bị chặn" },
+  "popupBlacklistRemoveTitle": { "message": "Xóa" },
+
+  "ytDownloadThisVideo":       { "message": "Tải video này" },
+  "ytClose":                   { "message": "Đóng" },
+  "ytAnalyzing":                { "message": "Đang phân tích\u2026" },
+  "ytAdded":                    { "message": "\u2713 Đã thêm" },
+  "ytAddedToQueue":             { "message": "\u2713 Đã thêm vào hàng chờ" },
+  "ytDownloadError":            { "message": "\u2717 Lỗi tải xuống" },
+  "ytCannotAnalyze":            { "message": "\u2717 Không thể phân tích video" },
+  "ytSearchPlaceholder":        { "message": "Tìm: 1080p, mp4, audio..." },
+  "ytFilterAll":                { "message": "Tất cả" },
+  "ytFilterMuxed":              { "message": "Video + Audio" },
+  "ytFilterVideo":              { "message": "Chỉ Video" },
+  "ytFilterAudio":              { "message": "Chỉ Audio" },
+  "ytNoFormats":                { "message": "Không có định dạng phù hợp" },
+
+  "contentDrmUnsupported":      { "message": "\u26a0 Stream DRM không hỗ trợ" },
+  "contentConnError":           { "message": "\u2717 Lỗi kết nối" }
+}

@@ -5,6 +5,13 @@
 // - Excludes YouTube watch pages (handled by youtube_content.js)
 // ============================================================
 
+// ── Nạp theme token dùng chung (sáng/tối tự động theo prefers-color-scheme) ──
+const _themeLink = document.createElement('link');
+_themeLink.rel  = 'stylesheet';
+_themeLink.href = chrome.runtime.getURL('common/theme.css');
+document.head.appendChild(_themeLink);
+
+// ── Floating button styles ────────────────────────────────────────────────────
 const _style = document.createElement('style');
 _style.textContent = `
 .pd-grab-btn {
@@ -12,12 +19,12 @@ _style.textContent = `
   z-index: 2147483647;
   font-family: 'Segoe UI', system-ui, sans-serif;
   user-select: none;
-  background: rgba(13, 17, 23, 0.88);
+  background: var(--pd-bg);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(79, 195, 247, 0.25);
+  border: 1px solid var(--pd-border);
   border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.45),
+  box-shadow: 0 4px 20px var(--pd-shadow),
               0 0 0 1px rgba(79,195,247,0.08);
   padding: 5px 12px;
   display: flex;
@@ -25,48 +32,51 @@ _style.textContent = `
   gap: 7px;
   font-size: 12px;
   font-weight: 600;
-  color: #e6edf3;
+  color: var(--pd-text);
   cursor: pointer;
   opacity: 0;
   transition: opacity .18s, transform .1s, border-color .15s;
   pointer-events: auto;
 }
 .pd-grab-btn:hover {
-  background: rgba(79,195,247,0.15);
-  border-color: rgba(79,195,247,0.55);
-  color: #fff;
+  background: var(--pd-accent-bg);
+  border-color: var(--pd-accent);
+  color: var(--pd-text);
 }
 .pd-grab-btn:active { transform: scale(0.96); }
 .pd-grab-icon {
   width: 0; height: 0;
-  border-left: 9px solid #4FC3F7;
+  border-left: 9px solid var(--pd-accent);
   border-top: 5px solid transparent;
   border-bottom: 5px solid transparent;
   display: inline-block;
 }
 .pd-grab-btn.success {
-  border-color: rgba(76,175,80,0.6);
-  background: rgba(76,175,80,0.15);
+  border-color: var(--pd-green);
+  background: var(--pd-green-bg);
 }
 .pd-grab-btn.success .pd-grab-icon {
-  border-left-color: #4CAF50;
+  border-left-color: var(--pd-green);
 }
 `;
 document.head.appendChild(_style);
 
+// ── State ─────────────────────────────────────────────────────────────────────
 let _activeVideo  = null;
 let _btn          = null;
 let _hideTimer    = null;
 
+// ── Skip YouTube watch (youtube_content.js handles it) ───────────────────────
 function isYouTubeWatch() {
   return location.hostname.includes('youtube.com') && !location.pathname.startsWith('/shorts/');
 }
 
+// ── Build / reuse button ─────────────────────────────────────────────────────
 function getBtn() {
   if (_btn) return _btn;
   _btn = document.createElement('div');
-  _btn.className = 'pd-grab-btn';
-  _btn.innerHTML = '<span class="pd-grab-icon"></span><span class="pd-grab-label">Tải video này</span>';
+  _btn.className = 'pd-grab-btn pd-theme-root';
+  _btn.innerHTML = `<span class="pd-grab-icon"></span><span class="pd-grab-label">${PD.I18n.t('ytDownloadThisVideo')}</span>`;
 
   _btn.addEventListener('mouseenter', () => { clearHide(); _btn.style.opacity = '1'; });
   _btn.addEventListener('mouseleave', scheduleHide);
@@ -88,15 +98,25 @@ function getBtn() {
       url      = getSiteUrl(_activeVideo);
       filename = sanitizeName(document.title) + (hostname.includes('soundcloud.com') ? '.mp3' : '.mp4');
 
+      // Các site này không expose URL file media thật trong DOM (Facebook,
+      // TikTok, Instagram... stream qua blob/DASH được ký/mã hoá theo session).
+      // "url" ở đây là URL TRANG, không phải file — phải đi qua pipeline
+      // yt-dlp (analyze rồi download) như YouTube, KHÔNG được gửi thẳng tới
+      // /download (endpoint đó chỉ tải URL file thật, sẽ nhận về HTML và báo lỗi).
       const resp = await chrome.runtime.sendMessage({
         action: 'download_via_ytdlp', url, filename, title: document.title
       });
-      showBtnFeedback(resp?.success ? '✓ Đã thêm' : ('✗ ' + (resp?.error || 'Lỗi')), resp?.success);
+      showBtnFeedback(resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))), resp?.success);
       return;
     }
 
+    // Site thường: video có src trực tiếp truy cập được trong DOM.
     url = _activeVideo.currentSrc || _activeVideo.src;
     if (!url || url.startsWith('blob:')) {
+      // video.src là blob: (MediaSource Extensions) — không phải URL mạng
+      // thật, không tải trực tiếp được. Thử xin background.js manifest
+      // .m3u8/.mpd gốc mà nó đã "nghe lén" được qua webRequest trước khi bị
+      // gói thành blob (xem hlsManifestsByTab trong background.js).
       const manifest = await chrome.runtime.sendMessage({ action: 'get_hls_manifest' });
       if (manifest?.url) {
         filename = sanitizeName(document.title) + '.mp4';
@@ -107,9 +127,9 @@ function getBtn() {
           title:    document.title,
           referer:  manifest.referer
         });
-        showBtnFeedback(resp?.success ? '✓ Đã thêm' : ('✗ ' + (resp?.error || 'Lỗi')), resp?.success);
+        showBtnFeedback(resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))), resp?.success);
       } else {
-        showBtnFeedback('⚠ Stream DRM không hỗ trợ', false);
+        showBtnFeedback(PD.I18n.t('contentDrmUnsupported'), false);
       }
       return;
     }
@@ -122,7 +142,7 @@ function getBtn() {
     const resp = await chrome.runtime.sendMessage({
       action: 'download', url, filename, referer: location.href
     });
-    showBtnFeedback(resp?.success ? '✓ Đã thêm' : '✗ Lỗi kết nối', resp?.success);
+    showBtnFeedback(resp?.success ? PD.I18n.t('ytAdded') : PD.I18n.t('contentConnError'), resp?.success);
   });
 
   document.body.appendChild(_btn);
@@ -133,7 +153,7 @@ function showBtnFeedback(text, ok) {
   const btn = getBtn();
   const lbl = btn.querySelector('.pd-grab-label');
   const ico = btn.querySelector('.pd-grab-icon');
-  const origText = 'Tải video này';
+  const origText = PD.I18n.t('ytDownloadThisVideo');
   lbl.textContent = text;
   btn.classList.toggle('success', !!ok);
   setTimeout(() => {
@@ -174,6 +194,7 @@ function clearHide() {
   if (_hideTimer) { clearTimeout(_hideTimer); _hideTimer = null; }
 }
 
+// ── Site-specific URL resolution ─────────────────────────────────────────────
 function getSiteUrl(video) {
   const sites = [
     { domains: ['tiktok.com'],               attr: 'href', pattern: /\/video\// },
@@ -197,10 +218,18 @@ function sanitizeName(name) {
   return name.replace(/[\\/:*?"<>|]/g, '_').slice(0, 80);
 }
 
+// ── Mouse listeners ───────────────────────────────────────────────────────────
 function initListeners() {
   if (isYouTubeWatch()) return;
 
+  // Tránh gắn listener toàn cục (capture: true trên document) nếu trang không
+  // có video nào ngay từ đầu — phần lớn trang web (text, ảnh, form...) không
+  // cần overlay này, nên không có lý do để mouseover/mouseout chạy qua mọi
+  // pixel di chuột trên các trang đó.
   if (!document.querySelector('video')) {
+    // Một số trang load video bằng JS sau khi DOMContentLoaded (lazy load,
+    // SPA...). Theo dõi DOM một lần để bật listener khi video xuất hiện,
+    // rồi ngắt observer ngay — không cần observer chạy mãi mãi.
     const lateObserver = new MutationObserver(() => {
       if (document.querySelector('video')) {
         lateObserver.disconnect();
@@ -244,6 +273,7 @@ function attachVideoListeners() {
 
 initListeners();
 
+// ── Magnet links ──────────────────────────────────────────────────────────────
 document.addEventListener('click', (e) => {
   let t = e.target;
   while (t && t.tagName !== 'A') t = t.parentElement;

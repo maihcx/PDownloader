@@ -1,419 +1,53 @@
 // ============================================================
-// PDownloader Extension — Background Service Worker
-// Port: localhost:6287  (PDownloader.Core HttpBridgeService)
+// PDownloader Extension — Background Service Worker (entry point)
+// Port: localhost:6287 (PDownloader.Core HttpBridgeService)
+//
+// File này CHỈ làm 2 việc: nạp các module (importScripts, service worker
+// classic type nên importScripts dùng được — không cần "type":"module")
+// và khởi tạo chúng. Toàn bộ logic thật nằm trong common/ và background/,
+// mỗi file 1 trách nhiệm rõ ràng, gắn vào namespace chung `self.PD` (xem
+// PD.Constants, PD.State, PD.Utils, PD.Storage, PD.Api, PD.Badge,
+// PD.Notify, PD.ContextMenu, PD.HlsCapture, PD.ContentDisposition,
+// PD.DownloadIntercept, PD.MessageRouter).
+//
+// Thứ tự nạp quan trọng: file sau có thể dùng PD.<x> do file trước định
+// nghĩa (vd storage.js cần Constants, downloadIntercept.js cần Utils +
+// ContentDisposition + Storage + Api + Badge + Notify).
 // ============================================================
+importScripts(
+  'common/i18n.js',
 
-const APP_URL     = 'http://localhost:6287';
-const PING_URL    = `${APP_URL}/ping`;
-const DOWNLOAD_URL= `${APP_URL}/download`;
-const CACHE_TTL   = 30000; // 30s
+  'background/constants.js',
+  'background/state.js',
+  'background/utils.js',
+  'background/storage.js',
 
-const DEFAULT_EXTENSIONS = [
-  // Archives
-  'zip','rar','7z','tar','gz','bz2','xz','iso','cab','lzh','gzip','z',
-  // Installers
-  'exe','msi','msu','apk','dmg','pkg','deb','rpm','appimage',
-  // Video
-  'mp4','mkv','avi','mov','wmv','webm','flv','ts','m4v','3gp','mpeg','mpg','ogv','rm','rmvb',
-  // Audio
-  'mp3','wav','flac','ogg','m4a','aac','wma','opus',
-  // Documents
-  'pdf','epub','doc','docx','xls','xlsx','ppt','pptx',
-  // Other
-  'torrent','img','bin','dat','iso'
-];
+  'background/badge.js',
+  'background/notifications.js',
+  'background/api.js',
 
-let interceptCount = 0;
-const cdCache = new Map(); // url → { filename, timestamp }
-
-const MANIFEST_URL_PATTERN = /\.(m3u8|mpd)(\?|$)/i;
-const hlsManifestsByTab = new Map(); // tabId -> { url, referer, foundAt }
-
-chrome.webRequest.onBeforeSendHeaders.addListener(
-  (details) => {
-    if (details.tabId < 0) return;
-    if (!MANIFEST_URL_PATTERN.test(details.url)) return;
-
-    const refererHeader = details.requestHeaders?.find(
-      h => h.name.toLowerCase() === 'referer'
-    );
-
-    hlsManifestsByTab.set(details.tabId, {
-      url:     details.url,
-      referer: refererHeader?.value || details.documentUrl || details.initiator || '',
-      foundAt: Date.now()
-    });
-  },
-  { urls: ['<all_urls>'] },
-  ['requestHeaders', 'extraHeaders']
+  'background/contextMenu.js',
+  'background/hlsCapture.js',
+  'background/contentDisposition.js',
+  'background/downloadIntercept.js',
+  'background/messageRouter.js'
 );
 
-chrome.webRequest.onBeforeRequest.addListener(
-  (details) => {
-    if (details.type === 'main_frame') {
-      hlsManifestsByTab.delete(details.tabId);
-    }
-  },
-  { urls: ['<all_urls>'] }
-);
-
-chrome.tabs.onRemoved.addListener((tabId) => hlsManifestsByTab.delete(tabId));
-
+// ============================================================
+// INIT
+// ============================================================
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.set({
-    autoIntercept:      true,
-    extensions:         DEFAULT_EXTENSIONS,
-    showNotifications:  true,
-    blacklistedDomains: [],
-    minInterceptSizeMb: 2
-  });
-  createContextMenus();
+  self.PD.Storage.seedDefaultsOnInstall();
+  self.PD.ContextMenu.createMenus();
 });
 
-chrome.runtime.onStartup.addListener(createContextMenus);
+chrome.runtime.onStartup.addListener(() => self.PD.ContextMenu.createMenus());
 
-function createContextMenus() {
-  chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({ id: 'pd-link',      title: 'Tải link này với PDownloader',   contexts: ['link'] });
-    chrome.contextMenus.create({ id: 'pd-image',     title: 'Tải ảnh này với PDownloader',    contexts: ['image'] });
-    chrome.contextMenus.create({ id: 'pd-media',     title: 'Tải media này với PDownloader',  contexts: ['video','audio'] });
-    chrome.contextMenus.create({ id: 'pd-separator', type: 'separator',                        contexts: ['link','image','video','audio','page'] });
-    chrome.contextMenus.create({ id: 'pd-page',      title: 'Tải trang này với PDownloader',  contexts: ['page'] });
-  });
-}
-
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  let url = '';
-  if      (info.menuItemId === 'pd-link')  url = info.linkUrl  || '';
-  else if (info.menuItemId === 'pd-image') url = info.srcUrl   || '';
-  else if (info.menuItemId === 'pd-media') url = info.srcUrl   || info.linkUrl || '';
-  else if (info.menuItemId === 'pd-page')  url = info.pageUrl  || tab?.url || '';
-  if (!url) return;
-
-  const filename = getFilenameFromUrl(url);
-  const referer  = tab?.url || '';
-  const ok = await sendToPDownloader(url, filename, referer);
-  if (ok) { interceptCount++; updateBadge(); await notify(filename || url); }
-});
-
-chrome.webRequest.onHeadersReceived.addListener(
-  (details) => {
-    if (!details.responseHeaders) return;
-    for (const h of details.responseHeaders) {
-      if (h.name.toLowerCase() === 'content-disposition') {
-        const fn = parseContentDisposition(h.value || '');
-        if (fn) {
-          cdCache.set(details.url, { filename: fn, timestamp: Date.now() });
-          pruneCache();
-        }
-      }
-    }
-  },
-  {
-    urls: ['<all_urls>'],
-    types: ['main_frame', 'sub_frame', 'xmlhttprequest', 'object', 'other']
-  },
-  ['responseHeaders']
-);
-
-function parseContentDisposition(val) {
-  let m = val.match(/filename\*\s*=\s*(?:UTF-8''|utf-8'')([^;\s]+)/i);
-  if (m) return decodeURIComponent(m[1]);
-  m = val.match(/filename\s*=\s*"([^"]+)"/i);
-  if (m) return m[1];
-  m = val.match(/filename\s*=\s*([^;\s]+)/i);
-  if (m) return m[1].replace(/^['"]|['"]$/g, '');
-  return '';
-}
-
-function pruneCache() {
-  const now = Date.now();
-  for (const [u, d] of cdCache) {
-    if (now - d.timestamp > CACHE_TTL) cdCache.delete(u);
-  }
-}
-
-chrome.downloads.onCreated.addListener(async (item) => {
-  const settings = await chrome.storage.local.get(['autoIntercept','extensions','minInterceptSizeMb','blacklistedDomains']);
-  if (!settings.autoIntercept) return;
-
-  const url = item.url || '';
-  if (!url || url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('chrome-extension:')) return;
-  if (await isBlacklisted(url, settings.blacklistedDomains || [])) return;
-
-  const finalUrl = item.finalUrl || url;
-
-  let filename = item.filename || '';
-  for (const candidate of new Set([finalUrl, url])) {
-    const cached = cdCache.get(candidate);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      filename = cached.filename;
-      cdCache.delete(candidate);
-      break;
-    }
-  }
-
-  const ext  = extractExt(finalUrl, filename) || extractExt(url, filename);
-  const exts = settings.extensions || DEFAULT_EXTENSIONS;
-  const minBytes = ((settings.minInterceptSizeMb ?? 2)) * 1024 * 1024;
-
-  const byExt  = ext && exts.some(p => matchExt(p, ext));
-  const bySize = minBytes > 0 && item.fileSize > 0 && item.fileSize >= minBytes;
-  const byMime = matchMime(item.mime || '');
-
-  if (!byExt && !bySize && !byMime) return;
-
-  chrome.downloads.cancel(item.id);
-  chrome.downloads.erase({ id: item.id });
-
-  let referer = '';
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    referer = tab?.url || '';
-  } catch (_) {}
-
-  const displayName = filename
-    ? filename.split(/[/\\]/).pop()
-    : (getFilenameFromUrl(finalUrl) || getFilenameFromUrl(url) || null);
-  const ok = await sendToPDownloader(url, displayName, referer);
-  if (ok) { interceptCount++; updateBadge(); await notify(displayName || getFilenameFromUrl(url)); }
-});
-
-async function sendToPDownloader(url, filename, referer) {
-  let cookies = '';
-  try {
-    const all = await chrome.cookies.getAll({ url });
-    cookies = all.map(c => `${c.name}=${c.value}`).join('; ');
-  } catch (_) {}
-
-  const payload = {
-    url,
-    fileName: filename || null,
-    saveTo:   '',
-    headers: {
-      Cookie:     cookies,
-      Referer:    referer || '',
-      'User-Agent': navigator.userAgent
-    }
-  };
-
-  try {
-    const res = await fetch(DOWNLOAD_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload)
-    });
-    return res.ok;
-  } catch (_) {
-    return false;
-  }
-}
-
-async function pingApp() {
-  try {
-    const res = await fetch(PING_URL, { signal: AbortSignal.timeout(2000) });
-    return res.ok;
-  } catch (_) { return false; }
-}
-
-function updateBadge() {
-  if (interceptCount > 0) {
-    chrome.action.setBadgeText({ text: String(interceptCount) });
-    chrome.action.setBadgeBackgroundColor({ color: '#4FC3F7' });
-  } else {
-    chrome.action.setBadgeText({ text: '' });
-  }
-}
-
-async function notify(label) {
-  const s = await chrome.storage.local.get(['showNotifications']);
-  if (s.showNotifications === false) return;
-
-  const display = label && label.length > 55 ? label.slice(0, 52) + '…' : label || 'Download';
-  const id = `pd-${Date.now()}`;
-
-  chrome.notifications.create(id, {
-    type:    'basic',
-    iconUrl: 'icons/icon128.png',
-    title:   'PDownloader — Đã bắt link',
-    message: display,
-    priority: 1
-  });
-
-  setTimeout(() => chrome.notifications.clear(id), 4000);
-}
-
-async function isBlacklisted(url, list) {
-  try {
-    const d = getDomain(url);
-    return list.some(b => d === b || d.endsWith('.' + b));
-  } catch (_) { return false; }
-}
-
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  switch (msg.action) {
-    case 'ping_app':
-      pingApp().then(ok => sendResponse({ connected: ok }));
-      return true;
-
-    case 'download':
-      sendToPDownloader(msg.url, msg.filename || null, msg.referer || '')
-        .then(ok => {
-          if (ok) { interceptCount++; updateBadge(); notify(msg.filename || msg.url); }
-          sendResponse({ success: ok });
-        });
-      return true;
-
-    case 'download_magnet':
-      sendToPDownloader(msg.url, null, '').then(() => {});
-      return false;
-
-    case 'get_intercept_count':
-      sendResponse({ count: interceptCount });
-      return false;
-
-    case 'reset_badge':
-      interceptCount = 0;
-      updateBadge();
-      sendResponse({ success: true });
-      return false;
-
-    case 'get_settings':
-      chrome.storage.local.get(
-        ['autoIntercept','extensions','showNotifications','blacklistedDomains','minInterceptSizeMb'],
-        data => sendResponse(data)
-      );
-      return true;
-
-    case 'get_popup_init':
-      Promise.all([
-        pingApp(),
-        chrome.storage.local.get(
-          ['autoIntercept','extensions','showNotifications','blacklistedDomains','minInterceptSizeMb']
-        )
-      ]).then(([connected, settings]) => {
-        sendResponse({ connected, interceptCount, settings });
-      });
-      return true;
-
-    case 'save_settings':
-      chrome.storage.local.set(msg.settings, () => sendResponse({ success: true }));
-      return true;
-
-    case 'add_blacklist':
-      chrome.storage.local.get(['blacklistedDomains'], d => {
-        const list = d.blacklistedDomains || [];
-        if (!list.includes(msg.domain)) list.push(msg.domain);
-        chrome.storage.local.set({ blacklistedDomains: list }, () => sendResponse({ success: true }));
-      });
-      return true;
-
-    case 'remove_blacklist':
-      chrome.storage.local.get(['blacklistedDomains'], d => {
-        const list = (d.blacklistedDomains || []).filter(x => x !== msg.domain);
-        chrome.storage.local.set({ blacklistedDomains: list }, () => sendResponse({ success: true }));
-      });
-      return true;
-  }
-});
-
-function getDomain(url) {
-  try { return new URL(url).hostname; } catch (_) { return ''; }
-}
-
-function getFilenameFromUrl(url) {
-  try {
-    const p = new URL(url).pathname;
-    const s = p.substring(p.lastIndexOf('/') + 1);
-    return s.includes('.') ? decodeURIComponent(s) : '';
-  } catch (_) { return ''; }
-}
-
-function extractExt(url, filename) {
-  if (filename) {
-    const clean = filename.split(/[?#]/)[0];
-    const parts = clean.split('.');
-    if (parts.length > 1) { const e = parts.at(-1).toLowerCase().trim(); if (e.length <= 10) return e; }
-  }
-  try {
-    const p = decodeURIComponent(new URL(url).pathname);
-    const s = p.substring(p.lastIndexOf('/') + 1);
-    const parts = s.split('.');
-    if (parts.length > 1) { const e = parts.at(-1).toLowerCase().trim(); if (e.length <= 10) return e; }
-  } catch (_) {}
-  return '';
-}
-
-function matchExt(pattern, ext) {
-  const p = pattern.trim().toLowerCase();
-  if (p.includes('*')) return new RegExp('^' + p.replace(/\*/g, '.*') + '$').test(ext);
-  return p === ext;
-}
-
-function matchMime(mime) {
-  const m = mime.toLowerCase();
-  return ['application/octet-stream','application/zip','application/x-rar',
-          'application/x-7z','application/pdf','application/x-bittorrent',
-          'video/','audio/'].some(t => m.startsWith(t));
-}
-
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.action === 'get_hls_manifest') {
-    const tabId = sender.tab?.id;
-    const found = tabId != null ? hlsManifestsByTab.get(tabId) : null;
-    sendResponse(found ? { url: found.url, referer: found.referer } : null);
-    return true;
-  }
-
-  if (msg.action === 'download_via_ytdlp') {
-    fetch(`${APP_URL}/youtube/download`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        url:      msg.url,
-        formatId: 'bestvideo+bestaudio/best',
-        filename: msg.filename,
-        title:    msg.title || msg.filename,
-        filesize: 0,
-        headers:  msg.referer ? { Referer: msg.referer } : undefined
-      })
-    })
-    .then(r => r.ok ? r.json() : { success: false, error: `Server ${r.status}` })
-    .catch(() => ({ success: false, error: 'Không thể kết nối đến PDownloader.' }))
-    .then(result => {
-      if (result.success) { interceptCount++; updateBadge(); notify(msg.filename || msg.title); }
-      sendResponse(result);
-    });
-    return true;
-  }
-
-  if (msg.action === 'analyze_youtube') {
-    fetch(`${APP_URL}/youtube/analyze`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ url: msg.url })
-    })
-    .then(r => r.ok ? r.json() : { success: false, error: `Server ${r.status}` })
-    .catch(() => ({ success: false, error: 'Không thể kết nối đến PDownloader.' }))
-    .then(sendResponse);
-    return true;
-  }
-
-  if (msg.action === 'download_youtube') {
-    fetch(`${APP_URL}/youtube/download`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        url:      msg.url,
-        formatId: msg.formatId,
-        filename: msg.filename,
-        title:    msg.title,
-        filesize: msg.filesize || 0
-      })
-    })
-    .then(r => r.ok ? r.json() : { success: false, error: `Server ${r.status}` })
-    .catch(() => ({ success: false, error: 'Không thể kết nối đến PDownloader.' }))
-    .then(sendResponse);
-    return true;
-  }
-});
+// Các listener sau đều PHẢI đăng ký đồng bộ ở top-level (không lồng trong
+// onInstalled/onStartup) để MV3 luôn đánh thức lại được service worker khi
+// có sự kiện tương ứng, kể cả sau khi nó đã bị idle-unload.
+self.PD.ContextMenu.init();
+self.PD.HlsCapture.init();
+self.PD.ContentDisposition.init();
+self.PD.DownloadIntercept.init();
+self.PD.MessageRouter.init();

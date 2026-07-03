@@ -1,0 +1,48 @@
+{
+  "extName":                  { "message": "PDownloader" },
+  "extDescription":           { "message": "Automatically catches download links and sends them to PDownloader." },
+
+  "contextMenuLink":          { "message": "Download this link with PDownloader" },
+  "contextMenuImage":         { "message": "Download this image with PDownloader" },
+  "contextMenuMedia":         { "message": "Download this media with PDownloader" },
+  "contextMenuPage":          { "message": "Download this page with PDownloader" },
+
+  "notifTitle":                { "message": "PDownloader — Link caught" },
+  "notifDefaultLabel":         { "message": "Download" },
+
+  "connErrorGeneric":          { "message": "Could not connect to PDownloader." },
+  "genericError":              { "message": "Error" },
+
+  "popupStatusChecking":       { "message": "Checking\u2026" },
+  "popupStatusConnected":      { "message": "\u2713 Connected to PDownloader" },
+  "popupStatusDisconnected":   { "message": "\u2717 Not connected — please open the app" },
+  "popupBadgeCaught":          { "message": "$COUNT$ caught", "placeholders": { "count": { "content": "$1" } } },
+  "popupSessionLabel":         { "message": "This session" },
+
+  "popupSectionInterceptSettings": { "message": "Interception settings" },
+  "popupToggleAutoIntercept":      { "message": "Auto-catch links" },
+  "popupToggleAutoInterceptSub":   { "message": "Block the browser's own download, hand it to PDownloader" },
+  "popupToggleShowNotif":          { "message": "Show notifications" },
+  "popupToggleShowNotifSub":       { "message": "Notify when a link is caught" },
+
+  "popupSectionBlacklist":     { "message": "Blocked sites" },
+  "popupBlacklistEmpty":       { "message": "No blocked sites" },
+  "popupBlacklistRemoveTitle": { "message": "Remove" },
+
+  "ytDownloadThisVideo":       { "message": "Download this video" },
+  "ytClose":                   { "message": "Close" },
+  "ytAnalyzing":                { "message": "Analyzing\u2026" },
+  "ytAdded":                    { "message": "\u2713 Added" },
+  "ytAddedToQueue":             { "message": "\u2713 Added to queue" },
+  "ytDownloadError":            { "message": "\u2717 Download error" },
+  "ytCannotAnalyze":            { "message": "\u2717 Could not analyze video" },
+  "ytSearchPlaceholder":        { "message": "Search: 1080p, mp4, audio\u2026" },
+  "ytFilterAll":                { "message": "All" },
+  "ytFilterMuxed":              { "message": "Video + Audio" },
+  "ytFilterVideo":              { "message": "Video only" },
+  "ytFilterAudio":              { "message": "Audio only" },
+  "ytNoFormats":                { "message": "No matching format" },
+
+  "contentDrmUnsupported":      { "message": "\u26a0 Unsupported DRM stream" },
+  "contentConnError":           { "message": "\u2717 Connection error" }
+}

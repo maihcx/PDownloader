@@ -1,0 +1,47 @@
+/* ============================================================
+ * PD theme tokens — dùng chung cho các UI được content script chèn vào
+ * trang (nút nổi trên video, panel YouTube). Tự đổi sáng/tối theo
+ * `prefers-color-scheme`, tức theo cấu hình hệ thống/trình duyệt của
+ * người dùng — không cần JS để dò theme.
+ *
+ * Lưu ý: các UI này nằm TRONG trang web (không phải trong popup của
+ * extension), nên không dùng `:root` của trang (dễ đụng độ với CSS của
+ * trang) mà định nghĩa biến ngay trên chính từng element gốc (.pd-grab-btn,
+ * .pd-yt-panel) bằng cách nối chuỗi này lên trước phần CSS gốc của mỗi file.
+ * ============================================================ */
+
+.pd-theme-root {
+  --pd-bg:        rgba(13, 17, 23, 0.88);
+  --pd-bg-solid:  #0d1117;
+  --pd-dropdown:  rgba(13, 17, 23, 0.95);
+  --pd-border:    rgba(79, 195, 247, 0.25);
+  --pd-border2:   rgba(255, 255, 255, 0.08);
+  --pd-text:      #e6edf3;
+  --pd-muted:     #8b949e;
+  --pd-accent:    #4FC3F7;
+  --pd-accent-bg: rgba(79, 195, 247, 0.15);
+  --pd-green:     #4CAF50;
+  --pd-green-bg:  rgba(76, 175, 80, 0.15);
+  --pd-red:       #f44336;
+  --pd-red-bg:    rgba(244, 67, 54, 0.92);
+  --pd-shadow:    rgba(0, 0, 0, 0.45);
+}
+
+@media (prefers-color-scheme: light) {
+  .pd-theme-root {
+    --pd-bg:        rgba(255, 255, 255, 0.92);
+    --pd-bg-solid:  #ffffff;
+    --pd-dropdown:  rgba(255, 255, 255, 0.97);
+    --pd-border:    rgba(2, 119, 189, 0.28);
+    --pd-border2:   rgba(0, 0, 0, 0.08);
+    --pd-text:      #1b2530;
+    --pd-muted:     #5b6572;
+    --pd-accent:    #0277BD;
+    --pd-accent-bg: rgba(2, 119, 189, 0.12);
+    --pd-green:     #2E7D32;
+    --pd-green-bg:  rgba(46, 125, 50, 0.14);
+    --pd-red:       #C62828;
+    --pd-red-bg:    rgba(198, 40, 40, 0.92);
+    --pd-shadow:    rgba(0, 0, 0, 0.18);
+  }
+}

@@ -3,6 +3,12 @@
 // Injects an IDM-style panel on youtube.com/watch & /shorts/
 // ============================================================
 
+// ── Nạp theme token dùng chung (sáng/tối tự động theo prefers-color-scheme) ──
+const _yt_themeLink = document.createElement('link');
+_yt_themeLink.rel  = 'stylesheet';
+_yt_themeLink.href = chrome.runtime.getURL('common/theme.css');
+document.head.appendChild(_yt_themeLink);
+
 const _yt_style = document.createElement('style');
 _yt_style.textContent = `
 .pd-yt-panel {
@@ -11,12 +17,12 @@ _yt_style.textContent = `
   z-index: 99999;
   font-family: 'Segoe UI', system-ui, sans-serif;
   user-select: none;
-  background: rgba(13, 17, 23, 0.88);
+  background: var(--pd-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(79,195,247,0.22);
+  border: 1px solid var(--pd-border);
   border-radius: 10px;
-  box-shadow: 0 6px 28px rgba(0,0,0,0.5),
+  box-shadow: 0 6px 28px var(--pd-shadow),
               0 0 0 1px rgba(79,195,247,0.07);
   padding: 4px 6px;
   display: flex;
@@ -30,18 +36,18 @@ _yt_style.textContent = `
 .pd-yt-main-btn {
   display: flex; align-items: center; gap: 8px;
   background: transparent; border: none;
-  color: #e6edf3; font-size: 13px; font-weight: 600;
+  color: var(--pd-text); font-size: 13px; font-weight: 600;
   font-family: inherit; padding: 0 10px;
   cursor: pointer; height: 100%;
   border-radius: 7px; transition: background .18s, color .15s;
   box-sizing: border-box;
 }
-.pd-yt-main-btn:hover  { background: rgba(79,195,247,0.15); color:#fff; }
+.pd-yt-main-btn:hover  { background: var(--pd-accent-bg); color: var(--pd-text); }
 .pd-yt-main-btn:active { transform: scale(0.97); }
 
 .pd-yt-icon {
   width: 0; height: 0;
-  border-left: 10px solid #4FC3F7;
+  border-left: 10px solid var(--pd-accent);
   border-top: 6px solid transparent;
   border-bottom: 6px solid transparent;
   display: inline-block;
@@ -50,29 +56,29 @@ _yt_style.textContent = `
 
 .pd-yt-sep {
   width: 1px; height: 18px;
-  background: rgba(255,255,255,0.12); margin: 0 2px;
+  background: var(--pd-border2); margin: 0 2px;
 }
 
 .pd-yt-ctrl-btn {
   background: transparent; border: none;
-  color: #8b949e; font-size: 13px; padding: 0 8px;
+  color: var(--pd-muted); font-size: 13px; padding: 0 8px;
   cursor: pointer; display: flex; align-items: center;
   justify-content: center; height: 100%;
   border-radius: 7px; transition: background .18s, color .15s;
   font-weight: 600; box-sizing: border-box;
 }
-.pd-yt-ctrl-btn:hover { background: rgba(255,255,255,0.08); color: #e6edf3; }
+.pd-yt-ctrl-btn:hover { background: var(--pd-border2); color: var(--pd-text); }
 
 /* Dropdown */
 .pd-yt-dropdown {
   position: absolute;
   top: calc(100% + 8px); right: 0;
   width: 460px; max-height: 380px;
-  background: rgba(13,17,23,0.95);
+  background: var(--pd-dropdown);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(79,195,247,0.18);
+  border: 1px solid var(--pd-border);
   border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.7);
+  box-shadow: 0 16px 48px var(--pd-shadow);
   padding: 10px; display: none;
   flex-direction: column; gap: 6px;
   z-index: 100000; overflow: hidden;
@@ -82,15 +88,15 @@ _yt_style.textContent = `
 
 .pd-yt-search {
   width: 100%; background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(79,195,247,0.2);
-  color: #e6edf3; padding: 7px 12px;
+  border: 1px solid var(--pd-border);
+  color: var(--pd-text); padding: 7px 12px;
   border-radius: 8px; font-size: 13px;
   font-family: inherit; outline: none;
   transition: border-color .2s;
   box-sizing: border-box;
 }
-.pd-yt-search:focus { border-color: #4FC3F7; background: rgba(79,195,247,0.06); }
-.pd-yt-search::placeholder { color: #8b949e; }
+.pd-yt-search:focus { border-color: var(--pd-accent); background: var(--pd-accent-bg); }
+.pd-yt-search::placeholder { color: var(--pd-muted); }
 
 .pd-yt-filters {
   display: flex; gap: 6px;
@@ -101,32 +107,34 @@ _yt_style.textContent = `
 .pd-yt-filter-btn {
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.1);
-  color: #8b949e; padding: 5px 12px;
+  color: var(--pd-muted); padding: 5px 12px;
   border-radius: 6px; font-size: 12px; font-weight: 600;
   cursor: pointer; font-family: inherit; transition: all .18s;
 }
-.pd-yt-filter-btn:hover { border-color: rgba(79,195,247,0.4); color: #e6edf3; }
+.pd-yt-filter-btn:hover { border-color: var(--pd-accent); color: var(--pd-text); }
 .pd-yt-filter-btn.active {
-  background: rgba(79,195,247,0.15);
-  border-color: #4FC3F7; color: #fff;
+  background: var(--pd-accent-bg);
+  border-color: var(--pd-accent); color: var(--pd-text);
 }
 
 .pd-yt-list { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; flex: 1; }
 
+.pd-yt-empty { color: var(--pd-muted); font-size: 13px; padding: 20px; text-align: center; }
+
 .pd-yt-item {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 14px; color: #c9d1d9; font-size: 13px;
+  padding: 8px 14px; color: var(--pd-text); font-size: 13px;
   cursor: pointer; border-radius: 8px; transition: background .15s;
 }
-.pd-yt-item:hover { background: rgba(79,195,247,0.1); color: #fff; }
+.pd-yt-item:hover { background: var(--pd-accent-bg); color: var(--pd-text); }
 .pd-yt-item .pd-yt-size {
-  color: #4FC3F7; font-size: 12px; font-weight: 700; margin-left: 12px; flex-shrink: 0;
+  color: var(--pd-accent); font-size: 12px; font-weight: 700; margin-left: 12px; flex-shrink: 0;
 }
 
 .pd-yt-spinner {
   width: 14px; height: 14px;
   border: 2px solid rgba(255,255,255,0.15);
-  border-top-color: #4FC3F7;
+  border-top-color: var(--pd-accent);
   border-radius: 50%;
   animation: pd-spin .6s linear infinite; display: inline-block;
 }
@@ -134,14 +142,14 @@ _yt_style.textContent = `
 
 .pd-yt-toast {
   position: absolute; top: calc(100% + 8px); right: 0;
-  background: rgba(76,175,80,0.92);
-  border: 1px solid rgba(76,175,80,0.3);
-  color: #fff; font-size: 13px; padding: 7px 16px;
+  background: var(--pd-green-bg); color: var(--pd-green);
+  border: 1px solid var(--pd-green);
+  font-size: 13px; padding: 7px 16px;
   border-radius: 8px; white-space: nowrap;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  box-shadow: 0 6px 20px var(--pd-shadow);
   animation: pd-toast-in 2.8s forwards; pointer-events: none; z-index: 100001;
 }
-.pd-yt-toast.err { background: rgba(244,67,54,0.92); border-color: rgba(244,67,54,0.3); }
+.pd-yt-toast.err { background: var(--pd-red-bg); color: #fff; border-color: var(--pd-red); }
 @keyframes pd-toast-in {
   0%   { opacity:0; transform: translateY(-4px); }
   10%  { opacity:1; transform: translateY(0); }
@@ -194,17 +202,17 @@ function renderDropdown(dd, data) {
 
   const search = document.createElement('input');
   search.className = 'pd-yt-search';
-  search.placeholder = 'Tìm: 1080p, mp4, audio...';
+  search.placeholder = PD.I18n.t('ytSearchPlaceholder');
   search.addEventListener('input', e => { query = e.target.value.toLowerCase(); draw(); });
   dd.appendChild(search);
 
   const filterBar = document.createElement('div');
   filterBar.className = 'pd-yt-filters';
   filterBar.innerHTML = `
-    <button class="pd-yt-filter-btn active" data-f="all">Tất cả</button>
-    <button class="pd-yt-filter-btn" data-f="muxed">Video + Audio</button>
-    <button class="pd-yt-filter-btn" data-f="video">Chỉ Video</button>
-    <button class="pd-yt-filter-btn" data-f="audio">Chỉ Audio</button>`;
+    <button class="pd-yt-filter-btn active" data-f="all">${PD.I18n.t('ytFilterAll')}</button>
+    <button class="pd-yt-filter-btn" data-f="muxed">${PD.I18n.t('ytFilterMuxed')}</button>
+    <button class="pd-yt-filter-btn" data-f="video">${PD.I18n.t('ytFilterVideo')}</button>
+    <button class="pd-yt-filter-btn" data-f="audio">${PD.I18n.t('ytFilterAudio')}</button>`;
   filterBar.querySelectorAll('.pd-yt-filter-btn').forEach(b => {
     b.addEventListener('click', e => {
       e.stopPropagation();
@@ -236,7 +244,7 @@ function renderDropdown(dd, data) {
     });
 
     if (!items.length) {
-      list.innerHTML = '<div style="color:#8b949e;font-size:13px;padding:20px;text-align:center">Không có định dạng phù hợp</div>';
+      list.innerHTML = `<div class="pd-yt-empty">${PD.I18n.t('ytNoFormats')}</div>`;
       return;
     }
 
@@ -246,7 +254,7 @@ function renderDropdown(dd, data) {
       const quality = f.height ? `${f.height}p` : 'Audio';
       const ext     = (f.ext || 'mp4').toUpperCase();
       let   note    = f.note ? ` · ${f.note}` : '';
-      if (f.note === 'Video Only' && filter !== 'video') note = ' · Video + Audio';
+      if (f.note === 'Video Only' && filter !== 'video') note = ' · ' + PD.I18n.t('ytFilterMuxed');
 
       const lbl  = document.createElement('span');
       lbl.textContent = `${quality} ${ext}${note}`;
@@ -272,7 +280,7 @@ function renderDropdown(dd, data) {
         });
 
         showToast(dd.parentElement,
-          resp?.success ? '✓ Đã thêm vào hàng chờ' : (resp?.error || '✗ Lỗi tải xuống'),
+          resp?.success ? PD.I18n.t('ytAddedToQueue') : (resp?.error || PD.I18n.t('ytDownloadError')),
           !resp?.success);
       });
       list.appendChild(item);
@@ -307,15 +315,15 @@ function injectPanel() {
   if (!player || player.querySelector('.pd-yt-panel')) return;
 
   const panel = document.createElement('div');
-  panel.className = 'pd-yt-panel' + (isS ? ' shorts' : '');
+  panel.className = 'pd-yt-panel pd-theme-root' + (isS ? ' shorts' : '');
 
   panel.innerHTML = `
     <button class="pd-yt-main-btn" id="pd-dl-btn">
       <span class="pd-yt-icon"></span>
-      <span>Tải video này</span>
+      <span>${PD.I18n.t('ytDownloadThisVideo')}</span>
     </button>
     <div class="pd-yt-sep"></div>
-    <button class="pd-yt-ctrl-btn" id="pd-close-btn" title="Đóng">✕</button>
+    <button class="pd-yt-ctrl-btn" id="pd-close-btn" title="${PD.I18n.t('ytClose')}">✕</button>
   `;
 
   const dd = document.createElement('div');
@@ -347,7 +355,7 @@ function injectPanel() {
 
     // Waiting for analysis
     const origHtml = mainBtn.innerHTML;
-    mainBtn.innerHTML = '<div class="pd-yt-spinner"></div> <span>Đang phân tích...</span>';
+    mainBtn.innerHTML = `<div class="pd-yt-spinner"></div> <span>${PD.I18n.t('ytAnalyzing')}</span>`;
     mainBtn.disabled = true;
 
     const analyzeUrl = isS
@@ -367,7 +375,7 @@ function injectPanel() {
       dd.classList.add('open');
       document.addEventListener('click', closeOnOutside);
     } else {
-      showToast(panel, resp?.error || '✗ Không thể phân tích video', true);
+      showToast(panel, resp?.error || PD.I18n.t('ytCannotAnalyze'), true);
     }
   });
 

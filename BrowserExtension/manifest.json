@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "PDownloader",
-  "version": "0.0.3",
-  "description": "Tự động bắt link tải xuống và gửi tới PDownloader.",
+  "name": "__MSG_extName__",
+  "version": "0.1.0",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
   "permissions": [
     "downloads",
     "storage",
@@ -22,14 +23,20 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "js": ["common/i18n.js", "content/content.js"],
       "all_frames": true,
       "run_at": "document_end"
     },
     {
       "matches": ["*://*.youtube.com/watch*", "*://*.youtube.com/shorts/*"],
-      "js": ["youtube_content.js"],
+      "js": ["common/i18n.js", "content/youtube_content.js"],
       "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["common/theme.css"],
+      "matches": ["<all_urls>"]
     }
   ],
   "icons": {
@@ -39,7 +46,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "popup/popup.html",
     "default_icon": {
       "16":  "icons/icon16.png",
       "32":  "icons/icon32.png",
