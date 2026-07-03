@@ -166,15 +166,28 @@ chrome.downloads.onCreated.addListener(async (item) => {
   if (!url || url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('chrome-extension:')) return;
   if (await isBlacklisted(url, settings.blacklistedDomains || [])) return;
 
+  // URL cuối cùng sau khi đi hết chuỗi redirect. Nhiều CDN (Cloudflare, S3, ...)
+  // chỉ trả header Content-Disposition trên response CUỐI, không phải trên URL
+  // gốc mà trang web trỏ tới (vd https://1111-releases.cloudflareclient.com/win/latest
+  // redirect sang một URL file .msi thật). cdCache lại được ghi theo URL của
+  // đúng request đã nhận header đó, nên phải tra cứu cả finalUrl lẫn url gốc,
+  // không chỉ url gốc như trước (đó là lý do tên file bị rỗng).
+  const finalUrl = item.finalUrl || url;
+
   // Resolve filename (Content-Disposition wins)
   let filename = item.filename || '';
-  const cached = cdCache.get(url);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    filename = cached.filename;
-    cdCache.delete(url);
+  for (const candidate of new Set([finalUrl, url])) {
+    const cached = cdCache.get(candidate);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      filename = cached.filename;
+      cdCache.delete(candidate);
+      break;
+    }
   }
 
-  const ext  = extractExt(url, filename);
+  // Tương tự, thử đoán phần mở rộng từ finalUrl trước (thường có tên file thật)
+  // rồi mới fallback về url gốc.
+  const ext  = extractExt(finalUrl, filename) || extractExt(url, filename);
   const exts = settings.extensions || DEFAULT_EXTENSIONS;
   const minBytes = ((settings.minInterceptSizeMb ?? 2)) * 1024 * 1024;
 
@@ -194,7 +207,11 @@ chrome.downloads.onCreated.addListener(async (item) => {
     referer = tab?.url || '';
   } catch (_) {}
 
-  const displayName = filename ? filename.split(/[/\\]/).pop() : null;
+  // Nếu vẫn không có Content-Disposition, thử đoán tên từ path của finalUrl
+  // (thường mang tên file thật) trước khi fallback về url gốc.
+  const displayName = filename
+    ? filename.split(/[/\\]/).pop()
+    : (getFilenameFromUrl(finalUrl) || getFilenameFromUrl(url) || null);
   const ok = await sendToPDownloader(url, displayName, referer);
   if (ok) { interceptCount++; updateBadge(); await notify(displayName || getFilenameFromUrl(url)); }
 });
