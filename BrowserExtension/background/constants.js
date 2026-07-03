@@ -1,6 +1,3 @@
-// ============================================================
-// PD.Constants — hằng số dùng chung trong background service worker.
-// ============================================================
 (function (root) {
   const PD = root.PD || (root.PD = {});
 

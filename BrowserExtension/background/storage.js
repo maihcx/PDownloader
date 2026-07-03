@@ -1,7 +1,3 @@
-// ============================================================
-// PD.Storage — đọc/ghi chrome.storage.local, gói thành Promise thay vì
-// callback rải rác khắp nơi như bản gốc.
-// ============================================================
 (function (root) {
   const PD = root.PD || (root.PD = {});
   const { SETTINGS_KEYS, DEFAULT_SETTINGS, DEFAULT_EXTENSIONS } = PD.Constants;

@@ -1,9 +1,3 @@
-// ============================================================
-// PDownloader Extension — YouTube Content Script
-// Injects an IDM-style panel on youtube.com/watch & /shorts/
-// ============================================================
-
-// ── Nạp theme token dùng chung (sáng/tối tự động theo prefers-color-scheme) ──
 const _yt_themeLink = document.createElement('link');
 _yt_themeLink.rel  = 'stylesheet';
 _yt_themeLink.href = chrome.runtime.getURL('common/theme.css');
@@ -159,12 +153,10 @@ _yt_style.textContent = `
 `;
 document.head.appendChild(_yt_style);
 
-// ── State ─────────────────────────────────────────────────────────────────────
 let _formatsCache = {};
 let _currentVid   = '';
 let _prefetchProm = null;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function getVideoId() {
   if (location.pathname.startsWith('/shorts/')) return location.pathname.split('/')[2] || '';
   return new URLSearchParams(location.search).get('v') || '';
@@ -195,7 +187,6 @@ function showToast(parent, msg, err = false) {
   setTimeout(() => t.remove(), 2800);
 }
 
-// ── Render dropdown ───────────────────────────────────────────────────────────
 function renderDropdown(dd, data) {
   dd.innerHTML = '';
   let filter = 'all', query = '';
@@ -289,7 +280,6 @@ function renderDropdown(dd, data) {
   draw();
 }
 
-// ── Inject panel ──────────────────────────────────────────────────────────────
 function injectPanel() {
   const vid = getVideoId();
   if (!vid) { removePanel(); return; }
@@ -302,7 +292,6 @@ function injectPanel() {
     removePanel();
     prefetchFormats(vid);
   } else if (document.querySelector('.pd-yt-panel')) {
-    // Cùng video, panel đã có sẵn — không cần query lại player.
     return;
   }
 
@@ -386,24 +375,11 @@ function removePanel() {
   document.querySelectorAll('.pd-yt-panel').forEach(p => p.remove());
 }
 
-// Note: analyze_youtube & download_youtube are forwarded to background.js
-// which will call PDownloader.Core HTTP bridge (localhost:6287)
-// Background.js already handles these message actions — 
-// here we just send messages and it handles the HTTP calls.
-
-// ── Trigger re-inject on YouTube SPA navigation & player DOM changes ─────────
-// YouTube là single-page app: URL đổi không reload trang, và player có thể
-// được re-render. Thay vì poll mỗi 1.5s vô thời hạn (tốn CPU liên tục kể cả
-// khi không có gì thay đổi), ta lắng nghe đúng các sự kiện liên quan:
-//  - yt-navigate-finish: YouTube tự fire khi điều hướng SPA hoàn tất.
-//  - MutationObserver trên #content (vùng chứa chính) để bắt trường hợp
-//    player bị YouTube re-render mà không đổi URL (hiếm nhưng có thể xảy ra).
 let _injectScheduled = false;
 function scheduleInject() {
   if (_injectScheduled) return;
   _injectScheduled = true;
-  // requestAnimationFrame: gộp nhiều mutation liên tiếp thành một lần inject,
-  // tránh chạy injectPanel nhiều lần dồn dập khi YouTube re-render hàng loạt node.
+
   requestAnimationFrame(() => {
     _injectScheduled = false;
     injectPanel();
@@ -415,7 +391,5 @@ document.addEventListener('yt-navigate-finish', scheduleInject);
 const _ytObserver = new MutationObserver(scheduleInject);
 _ytObserver.observe(document.documentElement, { childList: true, subtree: true });
 
-// Fallback: nếu vì lý do nào đó không init kịp lúc trang load xong, vẫn thử lại
-// sau một khoảng ngắn — nhưng không lặp lại vô thời hạn như setInterval cũ.
 setTimeout(injectPanel, 500);
 injectPanel();

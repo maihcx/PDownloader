@@ -13,8 +13,6 @@
   --red-bg:  rgba(244,67,54,0.12);
 }
 
-/* Tự đổi sang bảng màu sáng khi hệ thống/trình duyệt đang ở chế độ sáng —
-   không cần JS để dò theme, trình duyệt tự áp dụng media query phù hợp. */
 @media (prefers-color-scheme: light) {
   :root {
     --bg:      #f6f8fa;
@@ -47,7 +45,6 @@ body {
   overflow: hidden;
 }
 
-/* ── Header ──────────────────────────────────────────────── */
 .header {
   display: flex; align-items: center; gap: 10px;
   padding-bottom: 10px;
@@ -79,7 +76,6 @@ body {
   letter-spacing: .3px;
 }
 
-/* ── Status card ─────────────────────────────────────────── */
 .status-card {
   display: flex; align-items: center; gap: 10px;
   border-radius: 10px; padding: 10px 12px;
@@ -109,7 +105,6 @@ body {
 .ok  .status-text { color: var(--green); }
 .err .status-text { color: var(--red); }
 
-/* ── Stat row ────────────────────────────────────────────── */
 .stat-row {
   display: flex; gap: 8px; margin-bottom: 10px;
 }
@@ -121,7 +116,6 @@ body {
 .stat-val { font-size: 20px; font-weight: 700; color: var(--accent); line-height: 1; }
 .stat-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; font-weight: 600; letter-spacing: .5px; margin-top: 3px; }
 
-/* ── Section ─────────────────────────────────────────────── */
 .section-hd {
   font-size: 10px; font-weight: 700; color: var(--muted);
   text-transform: uppercase; letter-spacing: .5px;
@@ -130,7 +124,6 @@ body {
   margin-top: 2px;
 }
 
-/* ── Toggle row ──────────────────────────────────────────── */
 .toggle-row {
   display: flex; align-items: center; justify-content: space-between;
   padding: 6px 0;
@@ -153,7 +146,6 @@ body {
 .sw input:checked + .sw-track { background: var(--accent); }
 .sw input:checked + .sw-track::before { transform: translateX(16px); }
 
-/* ── Blacklist ───────────────────────────────────────────── */
 .bl-list {
   display: flex; flex-direction: column; gap: 4px;
   max-height: 110px; overflow-y: auto; margin-top: 4px;

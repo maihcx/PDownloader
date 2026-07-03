@@ -1,15 +1,3 @@
-/* ============================================================
- * PD theme tokens — dùng chung cho các UI được content script chèn vào
- * trang (nút nổi trên video, panel YouTube). Tự đổi sáng/tối theo
- * `prefers-color-scheme`, tức theo cấu hình hệ thống/trình duyệt của
- * người dùng — không cần JS để dò theme.
- *
- * Lưu ý: các UI này nằm TRONG trang web (không phải trong popup của
- * extension), nên không dùng `:root` của trang (dễ đụng độ với CSS của
- * trang) mà định nghĩa biến ngay trên chính từng element gốc (.pd-grab-btn,
- * .pd-yt-panel) bằng cách nối chuỗi này lên trước phần CSS gốc của mỗi file.
- * ============================================================ */
-
 .pd-theme-root {
   --pd-bg:        rgba(13, 17, 23, 0.88);
   --pd-bg-solid:  #0d1117;

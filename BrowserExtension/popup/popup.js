@@ -10,10 +10,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const notifChk      = document.getElementById('showNotifications');
   const blList        = document.getElementById('blList');
 
-  // ── Khởi tạo popup: 1 round-trip duy nhất thay vì 3 lệnh tuần tự ─────────────
-  // (ping_app + get_intercept_count + get_settings trước đây gọi riêng lẻ,
-  // mỗi lần đều phải đánh thức service worker MV3 nếu nó đang ở trạng thái
-  // ngủ — gộp lại giúp popup hiển thị nhanh hơn đáng kể, nhất là lần mở đầu.)
   chrome.runtime.sendMessage({ action: 'get_popup_init' }, res => {
     const ok = res?.connected;
     statusCard.className = 'status-card ' + (ok ? 'ok' : 'err');
@@ -29,11 +25,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderBlacklist(data.blacklistedDomains || []);
   });
 
-  // reset_badge vẫn là lệnh riêng vì nó có side-effect (xóa số đếm badge),
-  // không nên gộp chung với lệnh chỉ đọc dữ liệu ở trên.
   chrome.runtime.sendMessage({ action: 'reset_badge' });
 
-  // ── Toggle handlers ─────────────────────────────────────────────────────────
   autoChk.addEventListener('change', () => save());
   notifChk.addEventListener('change', () => save());
 
@@ -47,7 +40,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // ── Blacklist ────────────────────────────────────────────────────────────────
   function renderBlacklist(domains) {
     blList.innerHTML = '';
     if (!domains.length) {

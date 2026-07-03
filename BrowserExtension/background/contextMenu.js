@@ -1,6 +1,3 @@
-// ============================================================
-// PD.ContextMenu — menu chuột phải "Tải ... với PDownloader".
-// ============================================================
 (function (root) {
   const PD = root.PD || (root.PD = {});
 
@@ -14,13 +11,6 @@
     });
   }
 
-  // QUAN TRỌNG: onClicked phải được đăng ký ĐỒNG BỘ ở top-level mỗi lần
-  // service worker khởi động lại (không đặt trong nhánh chỉ chạy lúc
-  // onInstalled/onStartup) — đây là yêu cầu bắt buộc của MV3 để Chrome có
-  // thể "đánh thức" lại service worker khi người dùng click menu, kể cả sau
-  // khi nó đã bị idle-unload. Việc TẠO menu (createMenus, có side-effect
-  // removeAll+create) thì vẫn chỉ cần chạy lúc cài đặt/khởi động trình
-  // duyệt như bản gốc.
   function init() {
     chrome.contextMenus.onClicked.addListener(handleClick);
   }

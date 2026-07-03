@@ -1,6 +1,3 @@
-// ============================================================
-// PD.Utils — các hàm thuần (pure functions), không phụ thuộc state/API.
-// ============================================================
 (function (root) {
   const PD = root.PD || (root.PD = {});
 

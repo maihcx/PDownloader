@@ -1,8 +1,3 @@
-// ============================================================
-// PD.HlsCapture — "nghe lén" request mạng để tìm URL manifest .m3u8/.mpd
-// gốc, dùng cho các site phát video qua blob: URL (MediaSource Extensions
-// — video.src không phải URL mạng thật nên không tải trực tiếp được).
-// ============================================================
 (function (root) {
   const PD = root.PD || (root.PD = {});
   const MANIFEST_URL_PATTERN = /\.(m3u8|mpd)(\?|$)/i;
@@ -10,7 +5,7 @@
   function init() {
     chrome.webRequest.onBeforeSendHeaders.addListener(
       (details) => {
-        if (details.tabId < 0) return; // request không thuộc tab nào (vd service worker riêng của site)
+        if (details.tabId < 0) return;
         if (!MANIFEST_URL_PATTERN.test(details.url)) return;
 
         const refererHeader = details.requestHeaders?.find(
@@ -27,8 +22,6 @@
       ['requestHeaders', 'extraHeaders']
     );
 
-    // Xóa manifest cũ khi tab load trang mới, tránh lấy nhầm manifest của
-    // tập phim trước đó.
     chrome.webRequest.onBeforeRequest.addListener(
       (details) => {
         if (details.type === 'main_frame') {

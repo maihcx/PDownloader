@@ -1,6 +1,3 @@
-// ============================================================
-// PD.Api — mọi request HTTP tới PDownloader.Core (localhost:6287).
-// ============================================================
 (function (root) {
   const PD = root.PD || (root.PD = {});
   const C = PD.Constants;
@@ -66,9 +63,6 @@
       filename,
       title:    title || filename,
       filesize: filesize || 0,
-      // Nhiều CDN chặn request thiếu Referer đúng (403) — quan trọng với
-      // manifest HLS bắt qua webRequest, vì server phát segment thường
-      // kiểm tra Referer khớp đúng trang gốc.
       headers:  referer ? { Referer: referer } : undefined
     });
   }

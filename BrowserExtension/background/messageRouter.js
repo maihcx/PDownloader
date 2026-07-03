@@ -1,8 +1,3 @@
-// ============================================================
-// PD.MessageRouter — 1 điểm vào duy nhất xử lý mọi message từ popup và
-// content script (trước đây tách thành 2 listener riêng trong background.js
-// gốc, gộp lại đây cho rõ luồng).
-// ============================================================
 (function (root) {
   const PD = root.PD || (root.PD = {});
   const { Api, Badge, Notify, State, Storage, HlsCapture } = PD;
@@ -47,9 +42,6 @@
       return true;
     },
 
-    // Gộp 3 lệnh (ping app, đếm intercept, lấy settings) thành 1 round-trip
-    // message duy nhất cho popup lúc mở lên — tránh phải đánh thức service
-    // worker MV3 (có thể đang "ngủ") nhiều lần liên tiếp.
     get_popup_init(_msg, _sender, sendResponse) {
       Promise.all([Api.ping(), Storage.getSettings()]).then(([connected, settings]) => {
         sendResponse({ connected, interceptCount: State.getInterceptCount(), settings });
@@ -78,11 +70,6 @@
       return true;
     },
 
-    // Dùng lại pipeline yt-dlp (endpoint /youtube/*), nhưng thực ra hoàn toàn
-    // tổng quát — yt-dlp tự hỗ trợ Facebook/TikTok/Instagram/Twitter/Vimeo/
-    // Twitch/Reddit/Bilibili/SoundCloud, và cả raw .m3u8/.mpd URL bắt được
-    // qua webRequest. Nút "Tải video này" là one-click nên không hỏi chất
-    // lượng, luôn lấy "bestvideo+bestaudio/best".
     download_via_ytdlp(msg, _sender, sendResponse) {
       Api.ytDownload({
         url: msg.url, formatId: 'bestvideo+bestaudio/best',
