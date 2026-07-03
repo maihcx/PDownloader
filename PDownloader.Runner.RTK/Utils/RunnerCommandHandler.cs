@@ -25,7 +25,10 @@ public static class RunnerCommandHandler
 
                 case "state":
                     if (value == "shutdown")
+                    {
                         System.Windows.Application.Current?.Shutdown();
+                    }
+
                     break;
             }
         });
@@ -37,16 +40,22 @@ public static class RunnerCommandHandler
         try
         {
             using var doc = JsonDocument.Parse(value);
-            var root = doc.RootElement;
+            JsonElement root = doc.RootElement;
 
-            string url      = root.TryGetProperty("url",      out var u) ? u.GetString() ?? "" : "";
-            string saveTo   = root.TryGetProperty("saveTo",   out var s) ? s.GetString() ?? "" : "";
-            string fileName = root.TryGetProperty("fileName", out var f) ? f.GetString() ?? "" : "";
+            string url      = root.TryGetProperty("url",      out JsonElement u) ? u.GetString() ?? "" : "";
+            string saveTo   = root.TryGetProperty("saveTo",   out JsonElement s) ? s.GetString() ?? "" : "";
+            string fileName = root.TryGetProperty("fileName", out JsonElement f) ? f.GetString() ?? "" : "";
 
-            if (string.IsNullOrWhiteSpace(url)) return;
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return;
+            }
 
-            var win = AppRuntime.MainWindow;
-            if (win == null) return;
+            RunnerWindow? win = AppRuntime.MainWindow;
+            if (win == null)
+            {
+                return;
+            }
 
             win.ShowForDownload(url, saveTo, fileName);
         }

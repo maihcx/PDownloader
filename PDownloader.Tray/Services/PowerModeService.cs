@@ -1,140 +1,168 @@
-﻿using System.Diagnostics;
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
+
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace PDownloader.Tray.Services
+namespace PDownloader.Tray.Services;
+
+public class PowerModeService : IDisposable
 {
-    public class PowerModeService
+    public enum PowerModeState
     {
-        [DllImport("psapi.dll")]
-        static extern bool EmptyWorkingSet(IntPtr hProcess);
+        /// <summary>
+        /// Full refresh rate, no throttling. App is in foreground and active.
+        /// </summary>
+        Normal,
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool SetProcessInformation(
-            IntPtr hProcess,
-            PROCESS_INFORMATION_CLASS processInformationClass,
-            ref PROCESS_POWER_THROTTLING_STATE processInformation,
-            uint processInformationSize);
+        /// <summary>
+        /// Reduced refresh rate, EcoQoS enabled. App is minimized or in background.
+        /// </summary>
+        Efficiency,
 
-        private enum PROCESS_INFORMATION_CLASS
+        /// <summary>
+        /// Minimal refresh rate, EcoQoS + lower process priority.
+        /// App has been idle/background for an extended period, or system is on battery saver.
+        /// </summary>
+        EfficiencyAdvanced
+    }
+
+    public delegate void PowerModeChangedEventHandler(PowerModeState oldMode, PowerModeState newMode);
+
+    public event PowerModeChangedEventHandler? PowerModeChanged;
+
+    public PowerModeState CurrentPowerModeState = PowerModeState.Normal;
+
+    private readonly SemaphoreSlim optimizeLock = new(1, 1);
+
+    private CancellationTokenSource? _optimizeDelayCts;
+
+    private readonly object _syncRoot = new();
+
+    private bool _disposed;
+
+    public void SetPowerMode(PowerModeState mode)
+    {
+        if (CurrentPowerModeState == mode)
         {
-            ProcessPowerThrottling = 4
+            return;
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct PROCESS_POWER_THROTTLING_STATE
+        PowerModeState oldMode = CurrentPowerModeState;
+        CurrentPowerModeState = mode;
+
+        var throttlingFlags = NativeMethods.PROCESS_POWER_THROTTLING_EXECUTION_SPEED | NativeMethods.PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION;
+
+        var state = new NativeMethods.PROCESS_POWER_THROTTLING_STATE
         {
-            public uint Version;
-            public uint ControlMask;
-            public uint StateMask;
+            Version = NativeMethods.PROCESS_POWER_THROTTLING_CURRENT_VERSION,
+            ControlMask = throttlingFlags,
+            StateMask = mode != PowerModeState.Normal ? throttlingFlags : 0
+        };
+
+        using var process = Process.GetCurrentProcess();
+        process.PriorityClass = mode switch
+        {
+            PowerModeState.Normal => ProcessPriorityClass.Normal,
+            PowerModeState.Efficiency => ProcessPriorityClass.BelowNormal,
+            PowerModeState.EfficiencyAdvanced => ProcessPriorityClass.Idle,
+            _ => ProcessPriorityClass.Normal
+        };
+
+        NativeMethods.SetProcessInformation(
+            process.Handle,
+            NativeMethods.PROCESS_INFORMATION_CLASS.ProcessPowerThrottling,
+            ref state,
+            (uint)Marshal.SizeOf(state));
+
+        if (mode != PowerModeState.Normal)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            NativeMethods.EmptyWorkingSet(Process.GetCurrentProcess().Handle);
         }
 
-        private const uint PROCESS_POWER_THROTTLING_CURRENT_VERSION = 1;
-        private const uint PROCESS_POWER_THROTTLING_EXECUTION_SPEED = 0x1;
-        private const uint PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION = 0x4;
+        PowerModeChanged?.Invoke(oldMode, mode);
+    }
 
-        public enum PowerModeState
+    public async Task OptimizeAsync()
+    {
+        await optimizeLock.WaitAsync();
+
+        try
         {
-            /// <summary>
-            /// Full refresh rate, no throttling. App is in foreground and active.
-            /// </summary>
-            Normal,
-
-            /// <summary>
-            /// Reduced refresh rate, EcoQoS enabled. App is minimized or in background.
-            /// </summary>
-            Efficiency,
-
-            /// <summary>
-            /// Minimal refresh rate, EcoQoS + lower process priority.
-            /// App has been idle/background for an extended period, or system is on battery saver.
-            /// </summary>
-            EfficiencyAdvanced
-        }
-
-        public delegate void PowerModeChangedEventHandler(PowerModeState oldMode, PowerModeState newMode);
-
-        public event PowerModeChangedEventHandler? PowerModeChanged;
-
-        public PowerModeState CurrentPowerModeState = PowerModeState.Normal;
-
-        private readonly SemaphoreSlim _lock = new(1, 1);
-
-        public void SetPowerMode(PowerModeState mode)
-        {
-            if (CurrentPowerModeState == mode)
-            {
-                return;
-            }
-
-            var oldMode = CurrentPowerModeState;
-            CurrentPowerModeState = mode;
-
-            var throttlingFlags = PROCESS_POWER_THROTTLING_EXECUTION_SPEED | PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION;
-
-            var state = new PROCESS_POWER_THROTTLING_STATE
-            {
-                Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION,
-                ControlMask = throttlingFlags,
-                StateMask = mode != PowerModeState.Normal ? throttlingFlags : 0
-            };
-
-            using var process = Process.GetCurrentProcess();
-            process.PriorityClass = mode switch
-            {
-                PowerModeState.Normal => ProcessPriorityClass.Normal,
-                PowerModeState.Efficiency => ProcessPriorityClass.BelowNormal,
-                PowerModeState.EfficiencyAdvanced => ProcessPriorityClass.Idle,
-                _ => ProcessPriorityClass.Normal
-            };
-
-            SetProcessInformation(
-                process.Handle,
-                PROCESS_INFORMATION_CLASS.ProcessPowerThrottling,
-                ref state,
-                (uint)Marshal.SizeOf(state));
-
-            if (mode != PowerModeState.Normal)
+            await Task.Run(() =>
             {
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
                 GC.Collect();
 
-                EmptyWorkingSet(Process.GetCurrentProcess().Handle);
-            }
+                NativeMethods.EmptyWorkingSet(Process.GetCurrentProcess().Handle);
+            });
+        }
+        finally
+        {
+            optimizeLock.Release();
+        }
+    }
 
-            PowerModeChanged?.Invoke(oldMode, mode);
+    public async Task OptimizeAfterAsync(TimeSpan? delay = null)
+    {
+        delay ??= TimeSpan.FromSeconds(5);
+
+        CancellationTokenSource cts;
+
+        lock (_syncRoot)
+        {
+            _optimizeDelayCts?.Cancel();
+            _optimizeDelayCts?.Dispose();
+
+            _optimizeDelayCts = new CancellationTokenSource();
+            cts = _optimizeDelayCts;
         }
 
-        public async Task OptimizeAsync()
+        try
         {
-            await _lock.WaitAsync();
-
-            try
-            {
-                await Task.Run(() =>
-                {
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                    GC.Collect();
-
-                    EmptyWorkingSet(Process.GetCurrentProcess().Handle);
-                });
-            }
-            finally
-            {
-                _lock.Release();
-            }
-        }
-
-        public async Task OptimizeAfterAsync(TimeSpan? delay = null)
-        {
-            if (!delay.HasValue)
-            {
-                delay = TimeSpan.FromSeconds(5);
-            }
-            await Task.Delay((int)delay.Value.TotalMilliseconds);
-
+            await Task.Delay(delay.Value, cts.Token);
             await OptimizeAsync();
         }
+        catch (OperationCanceledException) { }
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (disposing)
+        {
+            optimizeLock.Dispose();
+            _optimizeDelayCts?.Dispose();
+
+            GC.SuppressFinalize(this);
+        }
+
+        _disposed = true;
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
     }
 }

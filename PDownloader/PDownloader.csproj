@@ -19,6 +19,7 @@
 	<Authors>Song Mai Software</Authors>
 	<RepositoryUrl>https://github.com/maihcx/PDownloader.git</RepositoryUrl>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
     <!--<PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>

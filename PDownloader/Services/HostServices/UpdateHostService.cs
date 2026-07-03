@@ -1,147 +1,161 @@
-﻿namespace PDownloader.Services.HostServices
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
+
+namespace PDownloader.Services.HostServices;
+
+public sealed class UpdateHostService : INotifyPropertyChanged, IDisposable
 {
-    public sealed class UpdateHostService : INotifyPropertyChanged, IDisposable
+    private readonly UpdateService _update;
+    private CancellationTokenSource? _cts;
+
+    private UpdateStatus _status = UpdateStatus.Idle;
+    public UpdateStatus Status
     {
-        private readonly UpdateService _update;
-        private CancellationTokenSource? _cts;
+        get => _status;
+        private set => SetField(ref _status, value);
+    }
 
-        private UpdateStatus _status = UpdateStatus.Idle;
-        public UpdateStatus Status
+    private double _downloadProgress;
+    public double DownloadProgress
+    {
+        get => _downloadProgress;
+        private set => SetField(ref _downloadProgress, value);
+    }
+
+    public GitHubRelease? LatestRelease => _update.LatestRelease;
+    public string? ErrorMessage => _update.ErrorMessage;
+    public long InstallerSize => _update.InstallerSize;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public UpdateHostService(UpdateService update)
+    {
+        _update = update;
+    }
+
+    public async Task CheckAsync(Action<GitHubRelease>? onUpdateFound = null)
+    {
+        if (Status is UpdateStatus.Checking or UpdateStatus.Downloading)
         {
-            get => _status;
-            private set => SetField(ref _status, value);
+            return;
         }
 
-        private double _downloadProgress;
-        public double DownloadProgress
+        Cancel();
+        _cts = new CancellationTokenSource();
+
+        Status = UpdateStatus.Checking;
+
+        try
         {
-            get => _downloadProgress;
-            private set => SetField(ref _downloadProgress, value);
-        }
+            bool hasUpdate = await _update.CheckForUpdateAsync(_cts.Token);
 
-        public GitHubRelease? LatestRelease => _update.LatestRelease;
-        public string? ErrorMessage => _update.ErrorMessage;
-        public long InstallerSize => _update.InstallerSize;
+            OnPropertyChanged(nameof(LatestRelease));
+            OnPropertyChanged(nameof(InstallerSize));
 
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        public UpdateHostService(UpdateService update)
-        {
-            _update = update;
-        }
-
-        public async Task CheckAsync(Action<GitHubRelease>? onUpdateFound = null)
-        {
-            if (Status is UpdateStatus.Checking or UpdateStatus.Downloading)
+            if (hasUpdate)
             {
-                return;
-            }
-
-            Cancel();
-            _cts = new CancellationTokenSource();
-
-            Status = UpdateStatus.Checking;
-
-            try
-            {
-                bool hasUpdate = await _update.CheckForUpdateAsync(_cts.Token);
-
-                OnPropertyChanged(nameof(LatestRelease));
-                OnPropertyChanged(nameof(InstallerSize));
-
-                if (hasUpdate)
-                {
-                    Status = UpdateStatus.UpdateAvailable;
-                    onUpdateFound?.Invoke(_update.LatestRelease!);
-                }
-                else
-                {
-                    Status = UpdateStatus.UpToDate;
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                Status = UpdateStatus.Idle;
-            }
-            catch
-            {
-                OnPropertyChanged(nameof(ErrorMessage));
-                Status = UpdateStatus.Error;
-            }
-        }
-
-        public async Task DownloadAsync()
-        {
-            if (Status is not UpdateStatus.UpdateAvailable)
-            {
-                return;
-            }
-
-            Cancel();
-            _cts = new CancellationTokenSource();
-
-            DownloadProgress = 0;
-            Status = UpdateStatus.Downloading;
-
-            var progress = new Progress<double>(p =>
-            {
-                DownloadProgress = p;
-            });
-
-            try
-            {
-                await _update.DownloadInstallerAsync(progress, _cts.Token);
-                DownloadProgress = 1.0;
-                Status = UpdateStatus.ReadyToInstall;
-            }
-            catch (OperationCanceledException)
-            {
-                DownloadProgress = 0;
                 Status = UpdateStatus.UpdateAvailable;
+                onUpdateFound?.Invoke(_update.LatestRelease!);
             }
-            catch
+            else
             {
-                OnPropertyChanged(nameof(ErrorMessage));
-                Status = UpdateStatus.Error;
+                Status = UpdateStatus.UpToDate;
             }
         }
-
-        public void LaunchInstaller()
+        catch (OperationCanceledException)
         {
-            if (Status is not UpdateStatus.ReadyToInstall)
-            {
-                return;
-            }
+            Status = UpdateStatus.Idle;
+        }
+        catch
+        {
+            OnPropertyChanged(nameof(ErrorMessage));
+            Status = UpdateStatus.Error;
+        }
+    }
 
-            _update.LaunchInstaller();
+    public async Task DownloadAsync()
+    {
+        if (Status is not UpdateStatus.UpdateAvailable)
+        {
+            return;
         }
 
-        public void Cancel()
+        Cancel();
+        _cts = new CancellationTokenSource();
+
+        DownloadProgress = 0;
+        Status = UpdateStatus.Downloading;
+
+        var progress = new Progress<double>(p =>
         {
-            _cts?.Cancel();
-            _cts?.Dispose();
-            _cts = null;
+            DownloadProgress = p;
+        });
+
+        try
+        {
+            await _update.DownloadInstallerAsync(progress, _cts.Token);
+            DownloadProgress = 1.0;
+            Status = UpdateStatus.ReadyToInstall;
+        }
+        catch (OperationCanceledException)
+        {
+            DownloadProgress = 0;
+            Status = UpdateStatus.UpdateAvailable;
+        }
+        catch
+        {
+            OnPropertyChanged(nameof(ErrorMessage));
+            Status = UpdateStatus.Error;
+        }
+    }
+
+    public void LaunchInstaller()
+    {
+        if (Status is not UpdateStatus.ReadyToInstall)
+        {
+            return;
         }
 
-        private void OnPropertyChanged([CallerMemberName] string? name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        _update.LaunchInstaller();
+    }
 
-        private bool SetField<T>(ref T field, T value, [CallerMemberName] string? name = null)
+    public void Cancel()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
+    }
+
+    private void OnPropertyChanged([CallerMemberName] string? name = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    private bool SetField<T>(ref T field, T value, [CallerMemberName] string? name = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value))
         {
-            if (EqualityComparer<T>.Default.Equals(field, value))
-            {
-                return false;
-            }
-
-            field = value;
-            OnPropertyChanged(name);
-            return true;
+            return false;
         }
 
-        public void Dispose()
-        {
-            Cancel();
-            PropertyChanged = null;
-        }
+        field = value;
+        OnPropertyChanged(name);
+        return true;
+    }
+
+    public void Dispose()
+    {
+        Cancel();
+        PropertyChanged = null;
     }
 }

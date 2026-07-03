@@ -1,29 +1,38 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using static System.Net.Mime.MediaTypeNames;
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
 
-namespace PDownloader.Runner.Utils
+namespace PDownloader.Runner.Utils;
+
+public class Helpers
 {
-    public class Helpers
+    public static string Base64Encode(string plainText)
     {
-        public static string Base64Encode(string plainText)
-        {
-            var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
-            return System.Convert.ToBase64String(plainTextBytes);
-        }
+        var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
+        return System.Convert.ToBase64String(plainTextBytes);
+    }
 
-        public static string Base64Decode(string base64EncodedData)
+    public static string Base64Decode(string base64EncodedData)
+    {
+        try
         {
-            try
-            {
-                return Encoding.UTF8.GetString(Convert.FromBase64String(base64EncodedData));
-            }
-            catch (FormatException)
-            {
-                // Không phải Base64
-                return base64EncodedData;
-            }
+            return Encoding.UTF8.GetString(Convert.FromBase64String(base64EncodedData));
+        }
+        catch (FormatException)
+        {
+            // Không phải Base64
+            return base64EncodedData;
         }
     }
 }

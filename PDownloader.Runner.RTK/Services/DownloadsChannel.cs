@@ -22,9 +22,12 @@ public static class DownloadsChannel
     {
         try
         {
-            var dto = JsonSerializer.Deserialize<DownloadItemDto>(value,
+            DownloadItemDto? dto = JsonSerializer.Deserialize<DownloadItemDto>(value,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (dto != null) OnProgress?.Invoke(dto);
+            if (dto != null)
+            {
+                OnProgress?.Invoke(dto);
+            }
         }
         catch { }
     }

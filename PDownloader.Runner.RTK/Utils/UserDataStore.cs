@@ -16,10 +16,13 @@ public static class UserDataStore
         try
         {
             if (File.Exists(_path))
+            {
                 return JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(_path))
                        ?? new();
+            }
         }
         catch { }
+
         return new();
     }
 
@@ -39,6 +42,7 @@ public static class UserDataStore
         {
             try { return JsonSerializer.Deserialize<T>(val); } catch { }
         }
+
         return default;
     }
 

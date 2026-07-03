@@ -85,7 +85,6 @@ public partial class RunnerViewModel : ObservableObject
     }
     #endregion
 
-
     public RunnerViewModel()
     {
         _saveTo  = GetDefaultFolder();
@@ -135,7 +134,9 @@ public partial class RunnerViewModel : ObservableObject
             ShowNewFolderButton = true
         };
         if (dlg.ShowDialog() == DialogResult.OK)
+        {
             SaveTo = dlg.SelectedPath;
+        }
     }
 
     [RelayCommand]
@@ -147,6 +148,7 @@ public partial class RunnerViewModel : ObservableObject
             HasError  = true;
             return;
         }
+
         if (string.IsNullOrWhiteSpace(SaveTo) || !Directory.Exists(SaveTo))
         {
             ErrorText = "Thư mục lưu không tồn tại.";
@@ -217,7 +219,11 @@ public partial class RunnerViewModel : ObservableObject
     [RelayCommand]
     private void OpenFile()
     {
-        if (!File.Exists(CompletedFilePath)) return;
+        if (!File.Exists(CompletedFilePath))
+        {
+            return;
+        }
+
         Process.Start(new ProcessStartInfo(CompletedFilePath) { UseShellExecute = true });
     }
 
@@ -225,7 +231,10 @@ public partial class RunnerViewModel : ObservableObject
     private void OpenFolder()
     {
         var folder = Path.GetDirectoryName(CompletedFilePath);
-        if (folder is null || !Directory.Exists(folder)) return;
+        if (folder is null || !Directory.Exists(folder))
+        {
+            return;
+        }
         // Mở Explorer và highlight file
         Process.Start("explorer.exe", $"/select,\"{CompletedFilePath}\"");
     }
@@ -241,7 +250,10 @@ public partial class RunnerViewModel : ObservableObject
             try
             {
                 bool ok = AppRuntime.Cfs?.Send("runner-start-download", payload) ?? false;
-                if (ok) return true;
+                if (ok)
+                {
+                    return true;
+                }
             }
             catch (Exception ex)
             {
@@ -249,15 +261,22 @@ public partial class RunnerViewModel : ObservableObject
             }
 
             if (i < retries - 1)
+            {
                 Thread.Sleep(500);
+            }
         }
+
         return false;
     }
 
     private static string GetDefaultFolder()
     {
         string? saved = UserDataStore.GetValue<string>("DefaultDownloadFolder");
-        if (!string.IsNullOrWhiteSpace(saved) && Directory.Exists(saved)) return saved;
+        if (!string.IsNullOrWhiteSpace(saved) && Directory.Exists(saved))
+        {
+            return saved;
+        }
+
         return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + @"\Downloads";
     }
 

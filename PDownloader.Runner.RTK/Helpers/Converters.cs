@@ -48,7 +48,9 @@ public class BoolToVisibilityConverter : IValueConverter
     {
         // If parameter is a status string like "Completed", compare status
         if (value is DownloadStatus status && parameter is string s)
+        {
             return status.ToString() == s ? Visibility.Visible : Visibility.Collapsed;
+        }
 
         return value is true ? Visibility.Visible : Visibility.Collapsed;
     }
@@ -62,7 +64,9 @@ public class InverseBoolToVisibility : IValueConverter
     {
         // Also support Count == 0 comparison for empty state
         if (value is int count && parameter is string s && int.TryParse(s, out int zero))
+        {
             return count == zero ? Visibility.Visible : Visibility.Collapsed;
+        }
 
         return value is true ? Visibility.Collapsed : Visibility.Visible;
     }
@@ -75,7 +79,10 @@ public class ProgressToWidthConverter : IMultiValueConverter
     public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
     {
         if (values[0] is double pct && values[1] is double total)
+        {
             return Math.Max(0, pct / 100.0 * total);
+        }
+
         return 0.0;
     }
     public object[] ConvertBack(object v, Type[] t, object p, CultureInfo c) => Array.Empty<object>();
@@ -100,7 +107,10 @@ public class PercentToWidthConverter : IMultiValueConverter
                           object parameter, CultureInfo culture)
     {
         if (values[0] is double pct && values[1] is double w)
+        {
             return Math.Max(0, Math.Min(w, w * pct / 100.0));
+        }
+
         return 0.0;
     }
 

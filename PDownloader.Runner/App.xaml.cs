@@ -1,83 +1,97 @@
-﻿namespace PDownloader.Runner
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
+
+namespace PDownloader.Runner;
+
+/// <summary>
+/// Interaction logic for App.xaml
+/// </summary>
+public partial class App
 {
-    /// <summary>
-    /// Interaction logic for App.xaml
-    /// </summary>
-    public partial class App
+    // The.NET Generic Host provides dependency injection, configuration, logging, and other services.
+    // https://docs.microsoft.com/dotnet/core/extensions/generic-host
+    // https://docs.microsoft.com/dotnet/core/extensions/dependency-injection
+    // https://docs.microsoft.com/dotnet/core/extensions/configuration
+    // https://docs.microsoft.com/dotnet/core/extensions/logging
+    private static readonly IHost _host;
+
+    private static readonly string[] _args;
+
+    static App()
     {
-        // The.NET Generic Host provides dependency injection, configuration, logging, and other services.
-        // https://docs.microsoft.com/dotnet/core/extensions/generic-host
-        // https://docs.microsoft.com/dotnet/core/extensions/dependency-injection
-        // https://docs.microsoft.com/dotnet/core/extensions/configuration
-        // https://docs.microsoft.com/dotnet/core/extensions/logging
-        private static readonly IHost _host;
+        _args = Environment.GetCommandLineArgs().Skip(1).ToArray();
 
-        private static readonly string[] _args;
+        _host = Host
+            .CreateDefaultBuilder()
+            .ConfigureAppConfiguration(c => { c.SetBasePath(Path.GetDirectoryName(AppContext.BaseDirectory) ?? string.Empty); })
+            .ConfigureServices((context, services) =>
+            {
+                services.AddSingleton(RunnerConfig.ParseArgs(_args));
+                services.AddSingleton<PowerModeService>();
+                services.AddHostedService<ApplicationHostService>();
+                services.AddSingleton<DownloaderService>();
 
-        static App()
-        {
-            _args = Environment.GetCommandLineArgs().Skip(1).ToArray();
+                services.AddHostedService(sp =>
+                    sp.GetRequiredService<DownloaderService>());
 
-            _host = Host
-                .CreateDefaultBuilder()
-                .ConfigureAppConfiguration(c => { c.SetBasePath(Path.GetDirectoryName(AppContext.BaseDirectory) ?? string.Empty); })
-                .ConfigureServices((context, services) =>
-                {
-                    services.AddSingleton(RunnerConfig.ParseArgs(_args));
-                    services.AddSingleton<PowerModeService>();
-                    services.AddHostedService<ApplicationHostService>();
-                    services.AddSingleton<DownloaderService>();
+                services.AddSingleton<Services.INavigationService, Services.NavigationService>();
 
-                    services.AddHostedService(sp =>
-                        sp.GetRequiredService<DownloaderService>());
+                services.AddSingleton<IWindow, MainWindow>();
+                services.AddSingleton<MainWindowViewModel>();
 
-                    services.AddSingleton<Services.INavigationService, Services.NavigationService>();
+                services.AddSingleton<DownloaderPage>();
+                services.AddSingleton<DownloaderViewModel>();
 
-                    services.AddSingleton<IWindow, MainWindow>();
-                    services.AddSingleton<MainWindowViewModel>();
+                services.AddSingleton<DownloaderProgressPage>();
+                services.AddSingleton<DownloaderProgressViewModel>();
+            }).Build();
+    }
 
-                    services.AddSingleton<DownloaderPage>();
-                    services.AddSingleton<DownloaderViewModel>();
+    /// <summary>
+    /// Gets services.
+    /// </summary>
+    public static IServiceProvider Services
+    {
+        get { return _host.Services; }
+    }
 
-                    services.AddSingleton<DownloaderProgressPage>();
-                    services.AddSingleton<DownloaderProgressViewModel>();
-                }).Build();
-        }
+    /// <summary>
+    /// Occurs when the application is loading.
+    /// </summary>
+    private async void OnStartup(object sender, StartupEventArgs e)
+    {
+        await _host.StartAsync();
 
-        /// <summary>
-        /// Gets services.
-        /// </summary>
-        public static IServiceProvider Services
-        {
-            get { return _host.Services; }
-        }
+        TranslationSource.Instance.CurrentCulture = LanguageBase.GetSetupLanguage();
+    }
 
-        /// <summary>
-        /// Occurs when the application is loading.
-        /// </summary>
-        private async void OnStartup(object sender, StartupEventArgs e)
-        {
-            await _host.StartAsync();
+    /// <summary>
+    /// Occurs when the application is closing.
+    /// </summary>
+    private async void OnExit(object sender, ExitEventArgs e)
+    {
+        await _host.StopAsync();
 
-            TranslationSource.Instance.CurrentCulture = LanguageBase.GetSetupLanguage();
-        }
+        _host.Dispose();
+    }
 
-        /// <summary>
-        /// Occurs when the application is closing.
-        /// </summary>
-        private async void OnExit(object sender, ExitEventArgs e)
-        {
-            await _host.StopAsync();
-
-            _host.Dispose();
-        }
-
-        /// <summary>
-        /// Occurs when an exception is thrown by an application but not handled.
-        /// </summary>
-        private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
-        {
-            // For more info see https://docs.microsoft.com/en-us/dotnet/api/system.windows.application.dispatcherunhandledexception?view=windowsdesktop-6.0
-        }
+    /// <summary>
+    /// Occurs when an exception is thrown by an application but not handled.
+    /// </summary>
+    private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        // For more info see https://docs.microsoft.com/en-us/dotnet/api/system.windows.application.dispatcherunhandledexception?view=windowsdesktop-6.0
     }
 }

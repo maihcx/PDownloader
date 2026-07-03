@@ -1,170 +1,190 @@
-﻿using System.Collections;
-using System.Drawing.Printing;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
 
-namespace PDownloader.Runner.ViewModels.Windows
+namespace PDownloader.Runner.ViewModels.Windows;
+
+public partial class DownloaderProgressViewModel : ObservableObject
 {
-    public partial class DownloaderProgressViewModel : ObservableObject
+    private bool _isInitialized = false;
+
+    private DownloaderService _downloaderService;
+
+    [ObservableProperty]
+    private RunnerConfig _runnerConfig;
+
+    [ObservableProperty]
+    private DownloaderServiceStatus _downloaderStatus;
+
+    [ObservableProperty]
+    private double _progressPercent;
+
+    [ObservableProperty]
+    private double _progressRatio;
+
+    [ObservableProperty]
+    private string _ProgressText = string.Empty;
+
+    [ObservableProperty]
+    private string _SpeedText = string.Empty;
+
+    [ObservableProperty]
+    private string _etaText = string.Empty;
+
+    [ObservableProperty]
+    private string _downloadedText = string.Empty;
+
+    [ObservableProperty]
+    private string _totalText = string.Empty;
+
+    [ObservableProperty]
+    private string _statusText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isActionButtonEnabled = true;
+
+    private string CompletedFilePath = string.Empty;
+
+    partial void OnProgressPercentChanged(double value)
     {
-        private bool _isInitialized = false;
+        ProgressRatio = ProgressPercent / 100.0;
+    }
 
-        private DownloaderService _downloaderService;
+    public DownloaderProgressViewModel(RunnerConfig runnerConfig, DownloaderService downloaderService)
+    {
+        RunnerConfig = runnerConfig;
+        _downloaderService = downloaderService;
+        _downloaderStatus = downloaderService.DownloaderStatus;
 
-        [ObservableProperty]
-        private RunnerConfig _runnerConfig;
-
-        [ObservableProperty]
-        private DownloaderServiceStatus _downloaderStatus;
-
-        [ObservableProperty]
-        private double _progressPercent;
-
-        [ObservableProperty]
-        private double _progressRatio;
-
-        [ObservableProperty]
-        private string _ProgressText = string.Empty;
-
-        [ObservableProperty]
-        private string _SpeedText = string.Empty;
-
-        [ObservableProperty]
-        private string _etaText = string.Empty;
-
-        [ObservableProperty]
-        private string _downloadedText = string.Empty;
-
-        [ObservableProperty]
-        private string _totalText = string.Empty;
-
-        [ObservableProperty]
-        private string _statusText = string.Empty;
-
-        [ObservableProperty]
-        private bool _isActionButtonEnabled = true;
-
-        private string CompletedFilePath = string.Empty;
-
-        partial void OnProgressPercentChanged(double value)
+        if (!_isInitialized)
         {
-            ProgressRatio = ProgressPercent / 100.0;
+            InitializeViewModel();
         }
+    }
 
-        public DownloaderProgressViewModel(RunnerConfig runnerConfig, DownloaderService downloaderService)
+    private void InitializeViewModel()
+    {
+        _isInitialized = true;
+
+        DownloaderStatus.State = RunnerState.Downloading;
+        _downloaderService.OnProgress += _downloaderService_OnProgress;
+    }
+
+    private void _downloaderService_OnProgress(DownloadItemDto obj)
+    {
+        System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
         {
-            RunnerConfig = runnerConfig;
-            _downloaderService = downloaderService;
-            _downloaderStatus = downloaderService.DownloaderStatus;
+            ProgressPercent = obj.Progress;
+            ProgressText = $"{ProgressPercent:F0}%";
+            SpeedText = obj.SpeedFormatted;
+            EtaText = obj.EtaFormatted;
+            DownloadedText = obj.DownloadedFormatted;
+            TotalText = obj.TotalFormatted;
 
-            if (!_isInitialized)
-                InitializeViewModel();
-        }
-
-        private void InitializeViewModel()
-        {
-            _isInitialized = true;
-
-            DownloaderStatus.State = RunnerState.Downloading;
-            _downloaderService.OnProgress += _downloaderService_OnProgress;
-        }
-
-        private void _downloaderService_OnProgress(DownloadItemDto obj)
-        {
-            System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            Enum.TryParse(obj.Status, out DownloadStatus Status);
+            switch (Status)
             {
-                ProgressPercent  = obj.Progress;
-                ProgressText     = $"{ProgressPercent:F0}%";
-                SpeedText        = obj.SpeedFormatted;
-                EtaText          = obj.EtaFormatted;
-                DownloadedText   = obj.DownloadedFormatted;
-                TotalText        = obj.TotalFormatted;
+                case DownloadStatus.Queued:
+                    StatusText = LanguageBase.GetLangValue("download_status_queued_title");
+                    DownloaderStatus.State = RunnerState.Form;
+                    IsActionButtonEnabled = false;
+                    break;
 
-                Enum.TryParse(obj.Status, out DownloadStatus Status);
-                switch (Status)
-                {
-                    case DownloadStatus.Queued:
-                        StatusText = LanguageBase.GetLangValue("download_status_queued_title");
-                        DownloaderStatus.State = RunnerState.Form;
-                        IsActionButtonEnabled = false;
-                        break;
+                case DownloadStatus.Connecting:
+                    StatusText = LanguageBase.GetLangValue("download_status_connecting_title");
+                    IsActionButtonEnabled = false;
+                    break;
 
-                    case DownloadStatus.Connecting:
-                        StatusText = LanguageBase.GetLangValue("download_status_connecting_title");
-                        IsActionButtonEnabled = false;
-                        break;
+                case DownloadStatus.Downloading:
+                    StatusText = LanguageBase.GetLangValue("download_status_downloading_title");
+                    DownloaderStatus.State = RunnerState.Downloading;
+                    IsActionButtonEnabled = true;
+                    break;
 
-                    case DownloadStatus.Downloading:
-                        StatusText = LanguageBase.GetLangValue("download_status_downloading_title");
-                        DownloaderStatus.State = RunnerState.Downloading;
-                        IsActionButtonEnabled = true;
-                        break;
+                case DownloadStatus.Paused:
+                    StatusText = LanguageBase.GetLangValue("download_status_paused_title");
+                    IsActionButtonEnabled = true;
+                    break;
 
-                    case DownloadStatus.Paused:
-                        StatusText = LanguageBase.GetLangValue("download_status_paused_title");
-                        IsActionButtonEnabled = true;
-                        break;
+                case DownloadStatus.Merging:
+                    StatusText = LanguageBase.GetLangValue("download_status_merging_title");
+                    IsActionButtonEnabled = false;
+                    break;
 
-                    case DownloadStatus.Merging:
-                        StatusText = LanguageBase.GetLangValue("download_status_merging_title");
-                        IsActionButtonEnabled = false;
-                        break;
+                case DownloadStatus.Completed:
+                    StatusText = LanguageBase.GetLangValue("download_status_completed_title");
+                    CompletedFilePath = obj.SavePath;
+                    DownloaderStatus.State = RunnerState.Completed;
+                    break;
 
-                    case DownloadStatus.Completed:
-                        StatusText = LanguageBase.GetLangValue("download_status_completed_title");
-                        CompletedFilePath = obj.SavePath;
-                        DownloaderStatus.State = RunnerState.Completed;
-                        break;
+                case DownloadStatus.Cancelled:
+                    StatusText = LanguageBase.GetLangValue("download_status_cancelled_title");
+                    DownloaderStatus.State = RunnerState.Cancelled;
+                    Application.Current.Shutdown();
+                    IsActionButtonEnabled = false;
+                    break;
 
-                    case DownloadStatus.Cancelled:
-                        StatusText = LanguageBase.GetLangValue("download_status_cancelled_title");
-                        DownloaderStatus.State = RunnerState.Cancelled;
-                        Application.Current.Shutdown();
-                        IsActionButtonEnabled = false;
-                        break;
+                case DownloadStatus.Error:
+                    StatusText = LanguageBase.GetLangValue("download_status_error_title", obj.ErrorMessage);
+                    IsActionButtonEnabled = false;
+                    break;
+            }
 
-                    case DownloadStatus.Error:
-                        StatusText = LanguageBase.GetLangValue("download_status_error_title", obj.ErrorMessage);
-                        IsActionButtonEnabled = false;
-                        break;
-                }
+        }, System.Windows.Threading.DispatcherPriority.Background);
+    }
 
-            }, System.Windows.Threading.DispatcherPriority.Background);
-        }
+    [RelayCommand]
+    private void CancelDownload()
+    {
+        IsActionButtonEnabled = false;
+        _downloaderService.CancelDownload();
+    }
 
-        [RelayCommand]
-        private void CancelDownload()
+    [RelayCommand]
+    private void OpenFile()
+    {
+        if (!File.Exists(CompletedFilePath))
         {
-            IsActionButtonEnabled = false;
-            _downloaderService.CancelDownload();
+            return;
         }
 
-        [RelayCommand]
-        private void OpenFile()
+        Process.Start(new ProcessStartInfo(CompletedFilePath) { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    private void OpenFolder()
+    {
+        var folder = Path.GetDirectoryName(CompletedFilePath);
+        if (folder is null || !Directory.Exists(folder))
         {
-            if (!File.Exists(CompletedFilePath)) return;
-            Process.Start(new ProcessStartInfo(CompletedFilePath) { UseShellExecute = true });
+            return;
         }
 
-        [RelayCommand]
-        private void OpenFolder()
-        {
-            var folder = Path.GetDirectoryName(CompletedFilePath);
-            if (folder is null || !Directory.Exists(folder)) return;
-            Process.Start("explorer.exe", $"/select,\"{CompletedFilePath}\"");
-        }
+        Process.Start("explorer.exe", $"/select,\"{CompletedFilePath}\"");
+    }
 
-        [RelayCommand]
-        private void Pause()
-        {
-            IsActionButtonEnabled = false;
-            _downloaderService.PauseDownload();
-        }
+    [RelayCommand]
+    private void Pause()
+    {
+        IsActionButtonEnabled = false;
+        _downloaderService.PauseDownload();
+    }
 
-        [RelayCommand]
-        private void Resume()
-        {
-            IsActionButtonEnabled = false;
-            _downloaderService.ResumeDownload();
-        }
+    [RelayCommand]
+    private void Resume()
+    {
+        IsActionButtonEnabled = false;
+        _downloaderService.ResumeDownload();
     }
 }

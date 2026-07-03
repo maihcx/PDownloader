@@ -20,9 +20,10 @@ public class RunnerConfig
                 case "--url":      cfg.InitialUrl  = args[i + 1]; break;
                 case "--save-to":  cfg.SaveTo      = args[i + 1]; break;
                 case "--filename": cfg.FileName    = args[i + 1]; break;
-                case "--threads":  if (int.TryParse(args[i + 1], out var t)) cfg.Threads = t; break;
+                case "--threads":  if (int.TryParse(args[i + 1], out var t)) { cfg.Threads = t; } break;
             }
         }
+
         return cfg;
     }
 }

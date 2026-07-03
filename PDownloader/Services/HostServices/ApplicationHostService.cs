@@ -1,55 +1,69 @@
-﻿namespace PDownloader.Services.HostServices
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
+
+namespace PDownloader.Services.HostServices;
+
+/// <summary>
+/// Managed host of the application.
+/// </summary>
+public class ApplicationHostService : IHostedService
 {
-    /// <summary>
-    /// Managed host of the application.
-    /// </summary>
-    public class ApplicationHostService : IHostedService
+    private readonly IServiceProvider _serviceProvider;
+
+    public ApplicationHostService(IServiceProvider serviceProvider)
     {
-        private readonly IServiceProvider _serviceProvider;
+        _serviceProvider = serviceProvider;
+    }
 
-        public ApplicationHostService(IServiceProvider serviceProvider)
+    /// <summary>
+    /// Triggered when the application host is ready to start the service.
+    /// </summary>
+    /// <param name="cancellationToken">Indicates that the start process has been aborted.</param>
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        await HandleActivationAsync();
+    }
+
+    /// <summary>
+    /// Triggered when the application host is performing a graceful shutdown.
+    /// </summary>
+    /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Creates main window during activation.
+    /// </summary>
+    private Task HandleActivationAsync()
+    {
+        IWindow mainWindow = _serviceProvider.GetRequiredService<IWindow>();
+        mainWindow.Loaded += OnMainWindowLoaded;
+        mainWindow?.Show();
+
+        return Task.CompletedTask;
+    }
+
+    private void OnMainWindowLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MainWindow mainWindow)
         {
-            _serviceProvider = serviceProvider;
+            return;
         }
 
-        /// <summary>
-        /// Triggered when the application host is ready to start the service.
-        /// </summary>
-        /// <param name="cancellationToken">Indicates that the start process has been aborted.</param>
-        public async Task StartAsync(CancellationToken cancellationToken)
-        {
-            await HandleActivationAsync();
-        }
-
-        /// <summary>
-        /// Triggered when the application host is performing a graceful shutdown.
-        /// </summary>
-        /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
-        public async Task StopAsync(CancellationToken cancellationToken)
-        {
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Creates main window during activation.
-        /// </summary>
-        private Task HandleActivationAsync()
-        {
-            IWindow mainWindow = _serviceProvider.GetRequiredService<IWindow>();
-            mainWindow.Loaded += OnMainWindowLoaded;
-            mainWindow?.Show();
-
-            return Task.CompletedTask;
-        }
-
-        private void OnMainWindowLoaded(object sender, RoutedEventArgs e)
-        {
-            if (sender is not MainWindow mainWindow)
-            {
-                return;
-            }
-
-            _ = mainWindow.RootNavigation.Navigate(typeof(HomePage));
-        }
+        _ = mainWindow.RootNavigation.Navigate(typeof(HomePage));
     }
 }

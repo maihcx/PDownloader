@@ -1,114 +1,128 @@
-﻿namespace PDownloader.Runner.Utils
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
+
+namespace PDownloader.Runner.Utils;
+
+public class LocalizationExtension : Binding
 {
-    public class LocalizationExtension : Binding
+    public LocalizationExtension(string key)
+        : base($"[{key}]")  // binding đến indexer của TranslationSource
     {
-        public LocalizationExtension(string key)
-            : base($"[{key}]")  // binding đến indexer của TranslationSource
-        {
-            Mode = BindingMode.OneWay;
-            Source = TranslationSource.Instance;
-        }
+        Mode = BindingMode.OneWay;
+        Source = TranslationSource.Instance;
     }
+}
 
-    public class TranslationSource : INotifyPropertyChanged
+public class TranslationSource : INotifyPropertyChanged
+{
+    private static readonly TranslationSource instance = new TranslationSource();
+    public static TranslationSource Instance => instance;
+
+    private readonly ResourceManager resManager = Resources.Locales.String.ResourceManager;
+    private CultureInfo currentCulture = CultureInfo.CurrentUICulture;
+
+    public string this[string key] => resManager.GetString(key, currentCulture) ?? string.Empty;
+
+    public CultureInfo CurrentCulture
     {
-        private static readonly TranslationSource instance = new TranslationSource();
-        public static TranslationSource Instance => instance;
-
-        private readonly ResourceManager resManager = Resources.Locales.String.ResourceManager;
-        private CultureInfo currentCulture = CultureInfo.CurrentUICulture;
-
-        public string this[string key] => resManager.GetString(key, currentCulture) ?? string.Empty;
-
-        public CultureInfo CurrentCulture
+        get => currentCulture;
+        set
         {
-            get => currentCulture;
-            set
+            if (currentCulture != value)
             {
-                if (currentCulture != value)
-                {
-                    currentCulture = value;
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
-                }
+                currentCulture = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
             }
         }
-        public event PropertyChangedEventHandler? PropertyChanged;
+    }
+    public event PropertyChangedEventHandler? PropertyChanged;
+}
+
+public static class LanguageBase
+{
+    public static List<CultureInfo> SupportedLanguages { get; } = new List<CultureInfo>
+    {
+        new CultureInfo("en"),
+        new CultureInfo("vi")
+    };
+
+    public delegate void LanguageChangedEventHandler(string language);
+    public static event LanguageChangedEventHandler? LanguageChanged;
+
+    public static ObservableCollection<LanguageItem> GetLanguageItems()
+    {
+        ObservableCollection<LanguageItem> languageItems = new ObservableCollection<LanguageItem>();
+
+        foreach (CultureInfo item in SupportedLanguages)
+        {
+            languageItems.Add(new LanguageItem()
+            {
+                Code = item.TwoLetterISOLanguageName,
+                NativeName = item.NativeName,
+                EnglishName = item.EnglishName,
+            });
+        }
+
+        return languageItems;
     }
 
-    public static class LanguageBase
+    public static void SetLanguage(string language)
     {
-        public static List<CultureInfo> SupportedLanguages { get; } = new List<CultureInfo>
+        TranslationSource.Instance.CurrentCulture = new CultureInfo(language);
+        UserDataStore.SetValue("Language", language);
+        LanguageChanged?.Invoke(language);
+    }
+
+    public static CultureInfo GetSetupLanguage()
+    {
+        return new CultureInfo(UserDataStore.GetValue<string>("Language"));
+    }
+
+    public static CultureInfo GetCurrentLanguage()
+    {
+        return TranslationSource.Instance.CurrentCulture;
+    }
+
+    public static LanguageItem GetCurrentLanguageItem()
+    {
+        CultureInfo currentLang = GetCurrentLanguage();
+        return new LanguageItem()
         {
-            new CultureInfo("en"),
-            new CultureInfo("vi")
+            Code = currentLang.TwoLetterISOLanguageName,
+            NativeName = currentLang.NativeName,
+            EnglishName = currentLang.EnglishName,
         };
+    }
 
-        public delegate void LanguageChangedEventHandler(string language);
-        public static event LanguageChangedEventHandler? LanguageChanged;
+    public static string GetLangValue(string key, params object[] args)
+    {
+        string? raw = Resources.Locales.String.ResourceManager.GetString(
+            key,
+            TranslationSource.Instance.CurrentCulture
+        );
 
-        public static ObservableCollection<LanguageItem> GetLanguageItems()
+        if (raw == null)
         {
-            ObservableCollection<LanguageItem> languageItems = new ObservableCollection<LanguageItem>();
-
-            foreach (var item in SupportedLanguages)
-            {
-                languageItems.Add(new LanguageItem()
-                {
-                    Code = item.TwoLetterISOLanguageName,
-                    NativeName = item.NativeName,
-                    EnglishName = item.EnglishName,
-                });
-            }
-
-            return languageItems;
+            return key;
         }
 
-        public static void SetLanguage(string language)
+        if (args == null || args.Length == 0)
         {
-            TranslationSource.Instance.CurrentCulture = new CultureInfo(language);
-            UserDataStore.SetValue("Language", language);
-            LanguageChanged?.Invoke(language);
+            return raw;
         }
 
-        public static CultureInfo GetSetupLanguage()
-        {
-            return new CultureInfo(UserDataStore.GetValue<string>("Language"));
-        }
-
-        public static CultureInfo GetCurrentLanguage()
-        {
-            return TranslationSource.Instance.CurrentCulture;
-        }
-
-        public static LanguageItem GetCurrentLanguageItem()
-        {
-            var currentLang = GetCurrentLanguage();
-            return new LanguageItem()
-            {
-                Code = currentLang.TwoLetterISOLanguageName,
-                NativeName = currentLang.NativeName,
-                EnglishName = currentLang.EnglishName,
-            };
-        }
-
-        public static string GetLangValue(string key, params object[] args)
-        {
-            string? raw = Resources.Locales.String.ResourceManager.GetString(
-                key,
-                TranslationSource.Instance.CurrentCulture
-            );
-
-            if (raw == null)
-            {
-                return key;
-            }
-
-            if (args == null || args.Length == 0)
-            {
-                return raw;
-            }
-
-            return string.Format(raw, args);
-        }
+        return string.Format(raw, args);
     }
 }

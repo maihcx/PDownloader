@@ -121,7 +121,11 @@ public class DownloadItem : INotifyPropertyChanged
     {
         get
         {
-            if (SpeedBps <= 0 || TotalBytes <= 0) return "–";
+            if (SpeedBps <= 0 || TotalBytes <= 0)
+            {
+                return "–";
+            }
+
             long remaining = TotalBytes - DownloadedBytes;
             var eta = TimeSpan.FromSeconds(remaining / SpeedBps);
             return eta.TotalHours >= 1
@@ -132,10 +136,26 @@ public class DownloadItem : INotifyPropertyChanged
 
     private static string FormatBytes(long bytes)
     {
-        if (bytes <= 0)  return "0 B";
-        if (bytes < 1024) return $"{bytes} B";
-        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
-        if (bytes < 1024L * 1024 * 1024) return $"{bytes / (1024.0 * 1024):F1} MB";
+        if (bytes <= 0)
+        {
+            return "0 B";
+        }
+
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        if (bytes < 1024 * 1024)
+        {
+            return $"{bytes / 1024.0:F1} KB";
+        }
+
+        if (bytes < 1024L * 1024 * 1024)
+        {
+            return $"{bytes / (1024.0 * 1024):F1} MB";
+        }
+
         return $"{bytes / (1024.0 * 1024 * 1024):F2} GB";
     }
 

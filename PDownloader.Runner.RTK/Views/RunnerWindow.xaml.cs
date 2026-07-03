@@ -22,7 +22,11 @@ public partial class RunnerWindow : Window
         Dispatcher.Invoke(() =>
         {
             ViewModel.LoadRequest(url, saveTo, fileName);
-            if (!IsVisible) Show();
+            if (!IsVisible)
+            {
+                Show();
+            }
+
             Activate();
             Focus();
         });
@@ -30,7 +34,11 @@ public partial class RunnerWindow : Window
 
     private void OnTitleBarDrag(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (e.ClickCount == 2) return;
+        if (e.ClickCount == 2)
+        {
+            return;
+        }
+
         DragMove();
     }
 

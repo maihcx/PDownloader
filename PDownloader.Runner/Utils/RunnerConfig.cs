@@ -1,3 +1,18 @@
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
+
 namespace PDownloader.Runner.Utils;
 
 public partial class RunnerConfig : ObservableObject
@@ -39,12 +54,12 @@ public partial class RunnerConfig : ObservableObject
             {
                 switch (args[i])
                 {
-                    case "--token": cfg.Token      = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case "--token": cfg.Token = Helpers.Base64Decode(args[i + 1].Trim()); break;
                     case "--url": cfg.InitialUrl = Helpers.Base64Decode(args[i + 1].Trim()); break;
-                    case "--save-to": cfg.SaveTo     = Helpers.Base64Decode(args[i + 1].Trim()); break;
-                    case "--filename": cfg.FileName   = Helpers.Base64Decode(args[i + 1].Trim()); break;
-                    case "--threads": if (int.TryParse(Helpers.Base64Decode(args[i + 1].Trim()), out var t)) cfg.Threads = t; break;
-                    case "--download-runner": cfg.IsRunner   = Helpers.Base64Decode(args[i + 1].Trim()) == "runner"; break;
+                    case "--save-to": cfg.SaveTo = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case "--filename": cfg.FileName = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case "--threads": if (int.TryParse(Helpers.Base64Decode(args[i + 1].Trim()), out var t)) { cfg.Threads = t; } break;
+                    case "--download-runner": cfg.IsRunner = Helpers.Base64Decode(args[i + 1].Trim()) == "runner"; break;
                     case "--headers":
                         try
                         {
@@ -53,6 +68,7 @@ public partial class RunnerConfig : ObservableObject
                                 .Deserialize<Dictionary<string, string>>(json);
                         }
                         catch { }
+
                         break;
                 }
             }

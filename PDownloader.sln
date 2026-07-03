@@ -10,8 +10,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Tray", "PDownlo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Core", "PDownloader.Core\PDownloader.Core.csproj", "{215E38A5-C1E2-4C8A-91BF-002A65409656}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Runner.RTK", "PDownloader.Runner.RTK\PDownloader.Runner.RTK.csproj", "{AB343D55-F297-E44F-8703-89012686A364}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Installer", "PDownloader.Installer\PDownloader.Installer.csproj", "{818F3B27-359C-5D89-1D3B-8F85165FAE09}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Runner", "PDownloader.Runner\PDownloader.Runner.csproj", "{D8A75511-64C4-42EB-9B46-8C09F37CDC10}"
@@ -43,10 +41,6 @@ Global
 		{215E38A5-C1E2-4C8A-91BF-002A65409656}.Debug|x64.Build.0 = Debug|Any CPU
 		{215E38A5-C1E2-4C8A-91BF-002A65409656}.Release|x64.ActiveCfg = Release|Any CPU
 		{215E38A5-C1E2-4C8A-91BF-002A65409656}.Release|x64.Build.0 = Release|Any CPU
-		{AB343D55-F297-E44F-8703-89012686A364}.Debug|x64.ActiveCfg = Debug|x64
-		{AB343D55-F297-E44F-8703-89012686A364}.Debug|x64.Build.0 = Debug|x64
-		{AB343D55-F297-E44F-8703-89012686A364}.Release|x64.ActiveCfg = Release|x64
-		{AB343D55-F297-E44F-8703-89012686A364}.Release|x64.Build.0 = Release|x64
 		{818F3B27-359C-5D89-1D3B-8F85165FAE09}.Debug|x64.ActiveCfg = Debug|x64
 		{818F3B27-359C-5D89-1D3B-8F85165FAE09}.Debug|x64.Build.0 = Debug|x64
 		{818F3B27-359C-5D89-1D3B-8F85165FAE09}.Release|x64.ActiveCfg = Release|x64

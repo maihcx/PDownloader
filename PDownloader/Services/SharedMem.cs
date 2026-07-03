@@ -1,21 +1,33 @@
-using PDownloader.Models;
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
 
-namespace PDownloader.Services
+namespace PDownloader.Services;
+
+public static class SharedMem
 {
-    public static class SharedMem
-    {
-        public static DownloadConfigs? AppSettings { get; set; }
+    public static DownloadConfigs? AppSettings { get; set; }
 
-        private static bool _isScrollToUpdateCard = false;
-        public static bool IsScrollToUpdateCard
+    private static bool _isScrollToUpdateCard = false;
+    public static bool IsScrollToUpdateCard
+    {
+        get
         {
-            get
-            {
-                bool v = _isScrollToUpdateCard;
-                _isScrollToUpdateCard = false;
-                return v;
-            }
-            set => _isScrollToUpdateCard = value;
+            bool v = _isScrollToUpdateCard;
+            _isScrollToUpdateCard = false;
+            return v;
         }
+        set => _isScrollToUpdateCard = value;
     }
 }

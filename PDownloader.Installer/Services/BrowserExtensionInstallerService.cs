@@ -1,119 +1,141 @@
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
+
 using Microsoft.Win32;
 using System.IO;
 
-namespace PDownloader.Installer.Services
+namespace PDownloader.Installer.Services;
+
+public static class BrowserExtensionInstallerService
 {
-    public static class BrowserExtensionInstallerService
+    public const string ExtensionId = "nliblbkhgljcpdboininiepogjaegien";
+
+    private const string ForcelistSubKey = "ExtensionInstallForcelist";
+
+    private static readonly (string DisplayName, string PolicyRoot)[] SupportedBrowsers =
     {
-        public const string ExtensionId = "nliblbkhgljcpdboininiepogjaegien";
+        ("Google Chrome",   @"SOFTWARE\Policies\Google\Chrome"),
+        ("Microsoft Edge",  @"SOFTWARE\Policies\Microsoft\Edge"),
+        ("Brave",           @"SOFTWARE\Policies\BraveSoftware\Brave"),
+        ("Cốc Cốc",         @"SOFTWARE\Policies\CocCoc\CocCoc"),
+    };
 
-        private const string ForcelistSubKey = "ExtensionInstallForcelist";
-
-        private static readonly (string DisplayName, string PolicyRoot)[] SupportedBrowsers =
+    public static void InstallForAllBrowsers(string installDir)
+    {
+        if (string.IsNullOrWhiteSpace(ExtensionId) ||
+            ExtensionId.StartsWith("REPLACE_", StringComparison.Ordinal))
         {
-            ("Google Chrome",   @"SOFTWARE\Policies\Google\Chrome"),
-            ("Microsoft Edge",  @"SOFTWARE\Policies\Microsoft\Edge"),
-            ("Brave",           @"SOFTWARE\Policies\BraveSoftware\Brave"),
-            ("Cốc Cốc",         @"SOFTWARE\Policies\CocCoc\CocCoc"),
-        };
+            return;
+        }
 
-        public static void InstallForAllBrowsers(string installDir)
+        string extensionDir = Path.Combine(installDir, "BrowserExtension");
+        string updateManifestPath = Path.Combine(extensionDir, "update.xml");
+        string crxPath = Path.Combine(extensionDir, "PDownloader.crx");
+
+        if (!File.Exists(updateManifestPath) || !File.Exists(crxPath))
         {
-            if (string.IsNullOrWhiteSpace(ExtensionId) ||
-                ExtensionId.StartsWith("REPLACE_", StringComparison.Ordinal))
+            return;
+        }
+
+        string updateManifestUri = new Uri(updateManifestPath).AbsoluteUri;
+        string forcelistEntry = $"{ExtensionId};{updateManifestUri}";
+
+        foreach ((string _, string? policyRoot) in SupportedBrowsers)
+        {
+            try
             {
-                return;
+                RegisterForceInstall(policyRoot, forcelistEntry);
             }
-
-            string extensionDir = Path.Combine(installDir, "BrowserExtension");
-            string updateManifestPath = Path.Combine(extensionDir, "update.xml");
-            string crxPath = Path.Combine(extensionDir, "PDownloader.crx");
-
-            if (!File.Exists(updateManifestPath) || !File.Exists(crxPath))
+            catch (Exception ex)
             {
-                return;
+                MessageBox.Show(ex.ToString());
             }
+        }
+    }
 
-            string updateManifestUri = new Uri(updateManifestPath).AbsoluteUri;
-            string forcelistEntry = $"{ExtensionId};{updateManifestUri}";
+    public static void UninstallForAllBrowsers()
+    {
+        if (string.IsNullOrWhiteSpace(ExtensionId) ||
+            ExtensionId.StartsWith("REPLACE_", StringComparison.Ordinal))
+        {
+            return;
+        }
 
-            foreach (var (_, policyRoot) in SupportedBrowsers)
+        foreach ((string _, string? policyRoot) in SupportedBrowsers)
+        {
+            try
             {
-                try
-                {
-                    RegisterForceInstall(policyRoot, forcelistEntry);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.ToString());
-                }
+                RemoveForceInstall(policyRoot);
+            }
+            catch { }
+        }
+    }
+
+    private static void RegisterForceInstall(string policyRoot, string forcelistEntry)
+    {
+        using RegistryKey? baseKey = Registry.LocalMachine.CreateSubKey(policyRoot, writable: true);
+        if (baseKey == null)
+        {
+            return;
+        }
+
+        using RegistryKey? forceList = baseKey.CreateSubKey(ForcelistSubKey, writable: true);
+        if (forceList == null)
+        {
+            return;
+        }
+
+        string extensionId = forcelistEntry.Split(';')[0];
+
+        foreach (string valueName in forceList.GetValueNames())
+        {
+            if (forceList.GetValue(valueName) is string existing &&
+                existing.StartsWith(extensionId, StringComparison.OrdinalIgnoreCase))
+            {
+                forceList.SetValue(valueName, forcelistEntry);
+                return;
             }
         }
 
-        public static void UninstallForAllBrowsers()
+        int nextIndex = 1;
+        var usedIndexes = forceList.GetValueNames()
+            .Select(n => int.TryParse(n, out int i) ? i : 0)
+            .ToHashSet();
+        while (usedIndexes.Contains(nextIndex))
         {
-            if (string.IsNullOrWhiteSpace(ExtensionId) ||
-                ExtensionId.StartsWith("REPLACE_", StringComparison.Ordinal))
-                return;
-
-            foreach (var (_, policyRoot) in SupportedBrowsers)
-            {
-                try
-                {
-                    RemoveForceInstall(policyRoot);
-                }
-                catch { }
-            }
+            nextIndex++;
         }
 
-        private static void RegisterForceInstall(string policyRoot, string forcelistEntry)
+        forceList.SetValue(nextIndex.ToString(), forcelistEntry);
+    }
+
+    private static void RemoveForceInstall(string policyRoot)
+    {
+        using RegistryKey? baseKey = Registry.LocalMachine.OpenSubKey(policyRoot, writable: true);
+        using RegistryKey? forceList = baseKey?.OpenSubKey(ForcelistSubKey, writable: true);
+        if (forceList == null)
         {
-            using RegistryKey? baseKey = Registry.LocalMachine.CreateSubKey(policyRoot, writable: true);
-            if (baseKey == null)
-            {
-                return;
-            }
-
-            using RegistryKey? forceList = baseKey.CreateSubKey(ForcelistSubKey, writable: true);
-            if (forceList == null)
-            {
-                return;
-            }
-
-            string extensionId = forcelistEntry.Split(';')[0];
-
-            foreach (string valueName in forceList.GetValueNames())
-            {
-                if (forceList.GetValue(valueName) is string existing &&
-                    existing.StartsWith(extensionId, StringComparison.OrdinalIgnoreCase))
-                {
-                    forceList.SetValue(valueName, forcelistEntry);
-                    return;
-                }
-            }
-
-            int nextIndex = 1;
-            var usedIndexes = forceList.GetValueNames()
-                .Select(n => int.TryParse(n, out int i) ? i : 0)
-                .ToHashSet();
-            while (usedIndexes.Contains(nextIndex)) nextIndex++;
-
-            forceList.SetValue(nextIndex.ToString(), forcelistEntry);
+            return;
         }
 
-        private static void RemoveForceInstall(string policyRoot)
+        foreach (string valueName in forceList.GetValueNames().ToArray())
         {
-            using RegistryKey? baseKey = Registry.LocalMachine.OpenSubKey(policyRoot, writable: true);
-            using RegistryKey? forceList = baseKey?.OpenSubKey(ForcelistSubKey, writable: true);
-            if (forceList == null) return;
-
-            foreach (string valueName in forceList.GetValueNames().ToArray())
+            if (forceList.GetValue(valueName) is string existing &&
+                existing.StartsWith(ExtensionId, StringComparison.OrdinalIgnoreCase))
             {
-                if (forceList.GetValue(valueName) is string existing &&
-                    existing.StartsWith(ExtensionId, StringComparison.OrdinalIgnoreCase))
-                {
-                    forceList.DeleteValue(valueName, throwOnMissingValue: false);
-                }
+                forceList.DeleteValue(valueName, throwOnMissingValue: false);
             }
         }
     }

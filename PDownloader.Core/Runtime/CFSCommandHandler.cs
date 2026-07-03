@@ -1,210 +1,231 @@
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
+
 using PDownloader.Core.Services.DownloadServices;
-using static PDownloader.Core.Runtime.CFSIncomingHandler;
 
-namespace PDownloader.Core.Runtime
+namespace PDownloader.Core.Runtime;
+
+public static class CFSCommandHandler
 {
-    public static class CFSCommandHandler
+    public record YoutubePendingMeta(string FormatId);
+
+    private static readonly ConcurrentDictionary<string, YoutubePendingMeta> _youtubePending = new();
+
+    public static DownloadConfigService DownloadConfigService { get; set; } = Program.GetRequiredService<DownloadConfigService>();
+
+    private static Action? mainAppAction { get; set; } = null;
+
+    public static void Handle(string name, string value)
     {
-        public record YoutubePendingMeta(string FormatId);
-
-        private static readonly ConcurrentDictionary<string, YoutubePendingMeta> _youtubePending = new();
-
-        public static DownloadConfigService DownloadConfigService { get; set; } = Program.GetRequiredService<DownloadConfigService>();
-
-        private static Action? mainAppAction { get; set; } = null;
-
-        public static void Handle(string name, string value)
+        switch (name)
         {
-            switch (name)
-            {
-                case "main-event":
-                    AppRuntime.cfsTray?.Send(name, value);
-                    foreach (var (CFSkey, CFSvalue) in AppRuntime.DownloaderCFSRest)
-                    {
-                        CFSvalue.Send(name, value);
-                    }
-                    break;
-
-                case "tray-event":
-                case "state":
-                    HandleMainEvent(name, value);
-                    break;
-
-                case "core-svc-state":
-                    HandleCoreState(value);
-                    break;
-
-                case "core-event":
-                    HandleCoreEvent(value);
-                    break;
-
-                case "downloader-svc-getlist":
-                    SendListToMain();
-                    return;
-
-                case "runner-start-download":
-                    HandleStartDownload(value);
-                    return;
-
-                case "runner-resume":
-                    HandleShowRunnerForDownload(value);
-                    DownloadManager.Instance.Resume(value);
-                    return;
-
-                case "runner-retry":
-                    DownloadManager.Instance.Retry(value);
-                    return;
-
-                case "runner-cancel":
-                    DownloadManager.Instance.Cancel(value);
-                    return;
-
-                case "runner-pause":
-                    DownloadManager.Instance.Pause(value);
-                    return;
-            }
-        }
-
-        private static void HandleMainEvent(string name, string value)
-        {
-            if (!AppRuntime.cfsMain!.IsAppStarted())
-            {
-                mainAppAction = () =>
+            case "main-event":
+                AppRuntime.cfsTray?.Send(name, value);
+                foreach ((string? CFSkey, ConfluxService? CFSvalue) in AppRuntime.DownloaderCFSRest)
                 {
-                    AppRuntime.cfsMain.Send(name, value);
-                    mainAppAction = null;
-                };
-
-                AppRuntime.cfsMain.StartApp();
-            }
-            else
-            {
-                AppRuntime.cfsMain.Send(name, value);
-            }
-        }
-
-        private static void HandleCoreState(string value)
-        {
-            if (value == "shutdown")
-            {
-                if (AppRuntime.cfsMain!.IsAppStarted())
-                {
-                    AppRuntime.cfsMain.Send("state", value);
+                    CFSvalue.Send(name, value);
                 }
 
-                AppRuntime.bootstrap?.Shutdown();
-            }
-        }
+                break;
 
-        private static void HandleCoreEvent(string value)
+            case "tray-event":
+            case "state":
+                HandleMainEvent(name, value);
+                break;
+
+            case "core-svc-state":
+                HandleCoreState(value);
+                break;
+
+            case "core-event":
+                HandleCoreEvent(value);
+                break;
+
+            case "downloader-svc-getlist":
+                SendListToMain();
+                return;
+
+            case "runner-start-download":
+                HandleStartDownload(value);
+                return;
+
+            case "runner-resume":
+                HandleShowRunnerForDownload(value);
+                DownloadManager.Instance.Resume(value);
+                return;
+
+            case "runner-retry":
+                DownloadManager.Instance.Retry(value);
+                return;
+
+            case "runner-cancel":
+                DownloadManager.Instance.Cancel(value);
+                return;
+
+            case "runner-pause":
+                DownloadManager.Instance.Pause(value);
+                return;
+        }
+    }
+
+    private static void HandleMainEvent(string name, string value)
+    {
+        if (!AppRuntime.cfsMain!.IsAppStarted())
         {
-            switch (value)
+            mainAppAction = () =>
             {
-                case "refresh-downloader-configs":
-                    DownloadConfigService.Reload();
-                    break;
+                AppRuntime.cfsMain.Send(name, value);
+                mainAppAction = null;
+            };
 
-                case "ping":
-                    mainAppAction?.Invoke();
-                    break;
+            AppRuntime.cfsMain.StartApp();
+        }
+        else
+        {
+            AppRuntime.cfsMain.Send(name, value);
+        }
+    }
+
+    private static void HandleCoreState(string value)
+    {
+        if (value == "shutdown")
+        {
+            if (AppRuntime.cfsMain!.IsAppStarted())
+            {
+                AppRuntime.cfsMain.Send("state", value);
             }
+
+            AppRuntime.bootstrap?.Shutdown();
+        }
+    }
+
+    private static void HandleCoreEvent(string value)
+    {
+        switch (value)
+        {
+            case "refresh-downloader-configs":
+                DownloadConfigService.Reload();
+                break;
+
+            case "ping":
+                mainAppAction?.Invoke();
+                break;
+        }
+    }
+
+    private static void HandleShowRunnerForDownload(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
         }
 
-        private static void HandleShowRunnerForDownload(string value)
+        DownloadItem? downloadItem = DownloadManager.Instance.Find(value);
+        if (downloadItem != null)
         {
-            if (string.IsNullOrWhiteSpace(value))
+            AppRuntime.EnsureRunnerStarted(downloadItem.Id, new()
+            {
+                id = downloadItem.Id,
+                fileName = downloadItem.FileName,
+                formatId = downloadItem.FormatId ?? string.Empty,
+                filesize = downloadItem.TotalBytes,
+                saveTo = downloadItem.SavePath,
+                url = downloadItem.Url,
+                downloadRunner = "runner",
+                threads = downloadItem.Threads
+            });
+        }
+    }
+
+    private static void SendListToMain()
+    {
+        string json = DownloadManager.Instance.SerializeList();
+        AppRuntime.cfsMain?.Send("muxt-get-downloader-list", json);
+    }
+
+    private static void HandleStartDownload(string value)
+    {
+        try
+        {
+            StartDownloadRequest? req = JsonSerializer.Deserialize<StartDownloadRequest>(value,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (req == null || string.IsNullOrWhiteSpace(req.Url))
             {
                 return;
             }
-            DownloadItem? downloadItem = DownloadManager.Instance.Find(value);
-            if (downloadItem != null)
+
+            _youtubePending.TryRemove(req.Id, out YoutubePendingMeta? ytMeta);
+
+            Dictionary<string, string>? customHeaders = null;
+            if (req.Headers is { Count: > 0 })
             {
-                AppRuntime.EnsureRunnerStarted(downloadItem.Id, new()
+                customHeaders = req.Headers
+                    .Where(kv => !string.IsNullOrWhiteSpace(kv.Key)
+                              && !string.IsNullOrWhiteSpace(kv.Value))
+                    .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+                if (customHeaders.Count == 0)
                 {
-                    id = downloadItem.Id,
-                    fileName = downloadItem.FileName,
-                    formatId = downloadItem.FormatId ?? string.Empty,
-                    filesize = downloadItem.TotalBytes,
-                    saveTo = downloadItem.SavePath,
-                    url = downloadItem.Url,
-                    downloadRunner = "runner",
-                    threads = downloadItem.Threads
-                });
-            }
-        }
-
-        private static void SendListToMain()
-        {
-            string json = DownloadManager.Instance.SerializeList();
-            AppRuntime.cfsMain?.Send("muxt-get-downloader-list", json);
-        }
-
-        private static void HandleStartDownload(string value)
-        {
-            try
-            {
-                var req = JsonSerializer.Deserialize<StartDownloadRequest>(value,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                if (req == null || string.IsNullOrWhiteSpace(req.Url)) return;
-
-                _youtubePending.TryRemove(req.Id, out var ytMeta);
-
-                Dictionary<string, string>? customHeaders = null;
-                if (req.Headers is { Count: > 0 })
-                {
-                    customHeaders = req.Headers
-                        .Where(kv => !string.IsNullOrWhiteSpace(kv.Key)
-                                  && !string.IsNullOrWhiteSpace(kv.Value))
-                        .ToDictionary(kv => kv.Key, kv => kv.Value);
-
-                    if (customHeaders.Count == 0) customHeaders = null;
+                    customHeaders = null;
                 }
-
-                int defaultThreads = DownloadConfigService.DownloadConfigs?.DefaultThreadCount ?? 0;
-
-                var item = DownloadManager.Instance.Enqueue(
-                    id: req.Id,
-                    url: req.Url,
-                    saveTo: req.SaveTo   ?? string.Empty,
-                    fileName: req.FileName ?? string.Empty,
-                    threads: req.Threads > 0 ? req.Threads : defaultThreads,
-                    isYoutube: ytMeta != null,
-                    formatId: ytMeta?.FormatId,
-                    customHeaders: customHeaders);
-
-                BroadcastItemChanged(item);
             }
-            catch { }
+
+            int defaultThreads = DownloadConfigService.DownloadConfigs?.DefaultThreadCount ?? 0;
+
+            DownloadItem item = DownloadManager.Instance.Enqueue(
+                id: req.Id,
+                url: req.Url,
+                saveTo: req.SaveTo ?? string.Empty,
+                fileName: req.FileName ?? string.Empty,
+                threads: req.Threads > 0 ? req.Threads : defaultThreads,
+                isYoutube: ytMeta != null,
+                formatId: ytMeta?.FormatId,
+                customHeaders: customHeaders);
+
+            BroadcastItemChanged(item);
         }
-
-        public static void BroadcastItemChanged(DownloadItem item)
-        {
-            string json = DownloadManager.SerializeItem(item);
-            AppRuntime.DownloaderCFSRest.TryGetValue(item.Id, out var cfsDowloaderUI);
-
-            item.PropertyChanged += (sender, e) =>
-            {
-                if (e.PropertyName == nameof(item.DownloadedFormatted))
-                {
-                    string json = DownloadManager.SerializeItem(item);
-                    AppRuntime.cfsMain?.Send("muxt-download-progress", json);
-                    AppRuntime.DownloaderCFSRest.TryGetValue(item.Id, out var cfsDowloaderUI);
-                    cfsDowloaderUI?.Send("muxt-download-progress", json);
-                }
-            };
-            AppRuntime.cfsMain?.Send("muxt-download-progress", json);
-            cfsDowloaderUI?.Send("muxt-download-progress", json);
-        }
-
-        public static void RegisterYoutubePending(string id, string formatId)
-            => _youtubePending[id] = new YoutubePendingMeta(formatId);
-
-        private record StartDownloadRequest(
-            string Id,
-            string Url,
-            string? SaveTo,
-            string? FileName,
-            int Threads,
-            Dictionary<string, string>? Headers);
+        catch { }
     }
+
+    public static void BroadcastItemChanged(DownloadItem item)
+    {
+        string json = DownloadManager.SerializeItem(item);
+        AppRuntime.DownloaderCFSRest.TryGetValue(item.Id, out ConfluxService? cfsDowloaderUI);
+
+        item.PropertyChanged += (sender, e) =>
+        {
+            if (e.PropertyName == nameof(item.DownloadedFormatted))
+            {
+                string json = DownloadManager.SerializeItem(item);
+                AppRuntime.cfsMain?.Send("muxt-download-progress", json);
+                AppRuntime.DownloaderCFSRest.TryGetValue(item.Id, out ConfluxService? cfsDowloaderUI);
+                cfsDowloaderUI?.Send("muxt-download-progress", json);
+            }
+        };
+        AppRuntime.cfsMain?.Send("muxt-download-progress", json);
+        cfsDowloaderUI?.Send("muxt-download-progress", json);
+    }
+
+    public static void RegisterYoutubePending(string id, string formatId)
+        => _youtubePending[id] = new YoutubePendingMeta(formatId);
+
+    private record StartDownloadRequest(
+        string Id,
+        string Url,
+        string? SaveTo,
+        string? FileName,
+        int Threads,
+        Dictionary<string, string>? Headers);
 }

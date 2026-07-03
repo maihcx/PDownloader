@@ -1,86 +1,78 @@
-﻿namespace PDownloader.Utils
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
+
+namespace PDownloader.Utils;
+
+public static class WindowHelper
 {
-    public static class WindowHelper
+    public static ApplicationThemeManagerService? ThemeManagerService;
+
+    public static Window? MainWindow;
+
+    public static void BringToFront(Window window)
     {
-        public static ApplicationThemeManagerService? ThemeManagerService;
-
-        public static Window? MainWindow;
-
-        [DllImport("user32.dll")]
-        private static extern bool SetForegroundWindow(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-        [DllImport("user32.dll")]
-        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
-
-        [DllImport("user32.dll")]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr processId);
-
-        [DllImport("kernel32.dll")]
-        private static extern uint GetCurrentThreadId();
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetForegroundWindow();
-
-        [DllImport("user32.dll")]
-        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-
-        private const int SW_RESTORE = 9;
-
-        private const int KEYEVENTF_KEYUP = 0x0002;
-
-        private const byte VK_MENU = 0x12;
-
-        public static void BringToFront(Window window)
+        if (window == null)
         {
-            if (window == null) return;
+            return;
+        }
 
-            var handle = new WindowInteropHelper(window).Handle;
+        var handle = new WindowInteropHelper(window).Handle;
 
-            ShowWindow(handle, SW_RESTORE);
+        NativeMethods.ShowWindow(handle, NativeMethods.SW_RESTORE);
 
-            IntPtr foreground = GetForegroundWindow();
-            uint curThread = GetCurrentThreadId();
+        IntPtr foreground = NativeMethods.GetForegroundWindow();
+        uint curThread = NativeMethods.GetCurrentThreadId();
 
-            keybd_event(VK_MENU, 0, 0, UIntPtr.Zero);
-            keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+        NativeMethods.keybd_event(NativeMethods.VK_MENU, 0, 0, UIntPtr.Zero);
+        NativeMethods.keybd_event(NativeMethods.VK_MENU, 0, NativeMethods.KEYEVENTF_KEYUP, UIntPtr.Zero);
 
-            if (foreground != IntPtr.Zero)
+        if (foreground != IntPtr.Zero)
+        {
+            uint fgThread = NativeMethods.GetWindowThreadProcessId(foreground, IntPtr.Zero);
+            NativeMethods.AttachThreadInput(fgThread, curThread, true);
+            NativeMethods.SetForegroundWindow(handle);
+            NativeMethods.AttachThreadInput(fgThread, curThread, false);
+        }
+        else
+        {
+            NativeMethods.SetForegroundWindow(handle);
+        }
+
+        window.Activate();
+        window.Focus();
+    }
+
+    public static void FocusMainWindow()
+    {
+        if (System.Windows.Application.Current.MainWindow is MainWindow mw)
+        {
+            if (!mw.IsVisible)
             {
-                uint fgThread = GetWindowThreadProcessId(foreground, IntPtr.Zero);
-                AttachThreadInput(fgThread, curThread, true);
-                SetForegroundWindow(handle);
-                AttachThreadInput(fgThread, curThread, false);
+                mw.ShowWithEffect();
             }
             else
             {
-                SetForegroundWindow(handle);
+                if (mw.WindowState == WindowState.Minimized)
+                {
+                    mw.WindowState = WindowState.Normal;
+                }
+
+                mw.Activate();
             }
 
-            window.Activate();
-            window.Focus();
-        }
-
-        public static void FocusMainWindow()
-        {
-            if (System.Windows.Application.Current.MainWindow is MainWindow mw)
-            {
-                if (!mw.IsVisible)
-                {
-                    mw.ShowWithEffect();
-                }
-                else
-                {
-                    if (mw.WindowState == WindowState.Minimized)
-                    {
-                        mw.WindowState = WindowState.Normal;
-                    }
-                    mw.Activate();
-                }
-                BringToFront(mw);
-            }
+            BringToFront(mw);
         }
     }
 }
