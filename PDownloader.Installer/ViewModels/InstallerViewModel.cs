@@ -253,7 +253,7 @@ namespace PDownloader.Installer.ViewModels
 
             string installerDir = Path.GetDirectoryName(
                 Environment.ProcessPath
-                ?? System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "";
+                ?? AppContext.BaseDirectory) ?? "";
 
             string[] candidates =
             {

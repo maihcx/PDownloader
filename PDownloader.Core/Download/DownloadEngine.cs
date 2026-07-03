@@ -273,7 +273,8 @@ namespace PDownloader.Core.Download
                 if (assignItemFileName && string.IsNullOrWhiteSpace(_item.FileName))
                 {
                     var cd = resp.Content.Headers.ContentDisposition;
-                    _item.FileName = cd?.FileNameStar ?? cd?.FileName ?? GuessFileName(_item.Url);
+                    _item.FileName = cd?.FileNameStar ?? cd?.FileName
+                        ?? GuessFileName(resp.RequestMessage?.RequestUri?.ToString() ?? _item.Url);
                     _item.FileName = SanitizeFileName(_item.FileName);
                 }
 
@@ -306,7 +307,8 @@ namespace PDownloader.Core.Download
             if (assignItemFileName && string.IsNullOrWhiteSpace(_item.FileName))
             {
                 var cd = resp.Content.Headers.ContentDisposition;
-                _item.FileName = cd?.FileNameStar ?? cd?.FileName ?? GuessFileName(_item.Url);
+                _item.FileName = cd?.FileNameStar ?? cd?.FileName
+                    ?? GuessFileName(resp.RequestMessage?.RequestUri?.ToString() ?? _item.Url);
                 _item.FileName = SanitizeFileName(_item.FileName);
             }
 
@@ -402,17 +404,24 @@ namespace PDownloader.Core.Download
         private async Task DownloadSegmentWithRetryAsync(SegmentInfo seg, bool supportsRange, string url)
         {
             int attempt = 0;
+            bool rangeDisabledForThisSegment = false;
             while (true)
             {
                 _ct.ThrowIfCancellationRequested();
                 try
                 {
-                    await DownloadSegmentAsync(seg, supportsRange, url);
+                    await DownloadSegmentAsync(seg, supportsRange && !rangeDisabledForThisSegment, url);
                     return;
                 }
                 catch (OperationCanceledException) when (_ct.IsCancellationRequested)
                 {
                     throw;
+                }
+                catch (RangeRejectedException) when (!rangeDisabledForThisSegment)
+                {
+                    rangeDisabledForThisSegment = true;
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[Engine] Segment {seg.Index}: server từ chối Range (403). Thử lại không Range.");
                 }
                 catch (Exception ex) when (attempt < MaxRetries)
                 {
@@ -464,6 +473,12 @@ namespace PDownloader.Core.Download
 
                 throw new HttpRequestException($"Server trả 416 cho segment {seg.Index} " +
                     $"(range {resumeFrom}-{seg.RangeEnd}), đã có {seg.BytesWritten}B.");
+            }
+
+            if (resp.StatusCode == System.Net.HttpStatusCode.Forbidden && shouldSetRange)
+            {
+                throw new RangeRejectedException(
+                    $"Server trả 403 khi request có header Range cho segment {seg.Index}.");
             }
 
             resp.EnsureSuccessStatusCode();
@@ -804,4 +819,9 @@ namespace PDownloader.Core.Download
     }
 
     public record DownloadProgress(long DownloadedBytes, double SpeedBps);
+
+    public sealed class RangeRejectedException : Exception
+    {
+        public RangeRejectedException(string message) : base(message) { }
+    }
 }

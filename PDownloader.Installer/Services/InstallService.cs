@@ -134,7 +134,7 @@ namespace PDownloader.Installer.Services
 
             progress?.Report((0.1, Utils.LocalizationHelper.Get("uninstall_removing")));
             string installerExePath = Environment.ProcessPath
-                ?? Assembly.GetExecutingAssembly().Location;
+                ?? AppContext.BaseDirectory;
             string installerName = Path.GetFileNameWithoutExtension(installerExePath);
 
             await Task.Run(() =>
@@ -220,6 +220,23 @@ namespace PDownloader.Installer.Services
                     UseShellExecute = false,
                     WindowStyle = ProcessWindowStyle.Hidden,
                 });
+            }
+            catch { }
+        }
+
+        public static void ScheduleSelfExtractCleanup()
+        {
+            try
+            {
+                string baseDir = AppContext.BaseDirectory.TrimEnd('\\');
+                string netTempRoot = Path.Combine(Path.GetTempPath(), ".net").TrimEnd('\\');
+
+                if (!baseDir.StartsWith(netTempRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                ScheduleCleanup(baseDir);
             }
             catch { }
         }

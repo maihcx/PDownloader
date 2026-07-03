@@ -1,3 +1,4 @@
+using PDownloader.Installer.Services;
 using PDownloader.Installer.Views;
 using System.Windows;
 
@@ -12,6 +13,12 @@ namespace PDownloader.Installer
             bool isUninstall = e.Args.Contains("--uninstall");
             var window = new MainWindow(isUninstall);
             window.Show();
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            InstallService.ScheduleSelfExtractCleanup();
+            base.OnExit(e);
         }
     }
 }

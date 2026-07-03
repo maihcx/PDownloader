@@ -53,6 +53,11 @@ namespace PDownloader.Core.Utils
                 fileTask.threads = CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultThreadCount ?? 8;
             }
 
+            if (fileTask.threads == 0)
+            {
+                fileTask.threads = 8;
+            }
+
             svc.StartApp($"--token {token} --url {Helpers.Base64Encode(fileTask.url)} --threads {Helpers.Base64Encode(fileTask.threads.ToString())} --save-to {Helpers.Base64Encode(fileTask.saveTo)} --filename {Helpers.Base64Encode(fileTask.fileName)} --download-runner {Helpers.Base64Encode(fileTask.downloadRunner)}{headersArg}");
 
             DownloaderCFSRest.Add(token, svc);
