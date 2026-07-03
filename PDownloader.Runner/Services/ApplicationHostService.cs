@@ -50,15 +50,18 @@ public class ApplicationHostService : IHostedService
     /// <summary>
     /// Creates main window during activation.
     /// </summary>
+    /// 
     private async Task HandleActivationAsync()
     {
         _mainWindow = (
             _serviceProvider?.GetService(typeof(IWindow)) as IWindow
         )!;
-        //WindowHelper.BringToFront(App.Current.MainWindow);
-        _mainWindow!.Show();
 
-        _mainWindow!.Activate();
+        //App.Current.MainWindow.Topmost = true;
+        WindowHelper.BringToFront(App.Current.MainWindow);
+
+        _mainWindow?.Loaded += MainWindow_Loaded;
+        _mainWindow?.Show();
 
         if (_mainWindow is MainWindow window && window.ViewModel is INavigationAware navigationAware)
         {
@@ -66,5 +69,12 @@ public class ApplicationHostService : IHostedService
         }
 
         await Task.CompletedTask;
+    }
+
+    private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        //WindowHelper.BringToFront(App.Current.MainWindow);
+        App.Current.MainWindow.Activate();
+        App.Current.MainWindow.Topmost = false;
     }
 }

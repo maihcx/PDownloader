@@ -21,6 +21,7 @@
                  WindowCornerPreference="Round"
                  WindowStartupLocation="CenterScreen"
                  ResizeMode="NoResize"
+                 Topmost="True"
                  mc:Ignorable="d">
     <Grid x:Name="RootContent">
         <Grid.RowDefinitions>
