@@ -63,10 +63,6 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         <Link>ffmpeg.exe</Link>
       </Content>
-      <Content Include="Ext\ffplay.exe">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        <Link>ffplay.exe</Link>
-      </Content>
       <Content Include="Ext\ffprobe.exe">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         <Link>ffprobe.exe</Link>
