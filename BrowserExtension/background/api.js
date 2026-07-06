@@ -56,14 +56,24 @@
     return postJson(C.YT_ANALYZE_URL, { url });
   }
 
-  function ytDownload({ url, formatId, filename, title, filesize, referer }) {
+  async function ytDownload({ url, formatId, filename, title, filesize, referer }) {
+    let cookies = '';
+    try {
+      const all = await chrome.cookies.getAll({ url });
+      cookies = all.map(c => `${c.name}=${c.value}`).join('; ');
+    } catch (_) {}
+
+    const headers = {};
+    if (cookies) headers.Cookie = cookies;
+    if (referer) headers.Referer = referer;
+
     return postJson(C.YT_DOWNLOAD_URL, {
       url,
       formatId,
       filename,
       title:    title || filename,
       filesize: filesize || 0,
-      headers:  referer ? { Referer: referer } : undefined
+      headers:  Object.keys(headers).length ? headers : undefined
     });
   }
 
