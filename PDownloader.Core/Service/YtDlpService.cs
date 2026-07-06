@@ -1,4 +1,4 @@
-﻿// This program is free software: you can redistribute it and/or modify
+// This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
@@ -21,6 +21,8 @@ public sealed class YtDlpService
     private YtDlpService() { }
 
     private string? _resolvedPath;
+
+    private string? _resolvedPathQjs;
 
     public string? FindYtDlp()
     {
@@ -51,6 +53,40 @@ public sealed class YtDlpService
         if (fromPath != null)
         {
             return _resolvedPath = fromPath;
+        }
+
+        return null;
+    }
+
+    public string? FindQJS()
+    {
+        if (_resolvedPathQjs != null)
+        {
+            return _resolvedPathQjs;
+        }
+
+        var candidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "qjs.exe"),
+            Path.Combine(AppContext.BaseDirectory, "qjs"),
+
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "PDownloader", "qjs.exe"),
+        };
+
+        foreach (var c in candidates)
+        {
+            if (File.Exists(c))
+            {
+                return _resolvedPathQjs = c;
+            }
+        }
+
+        var fromPath = LocateOnPath("qjs.exe") ?? LocateOnPath("qjs");
+        if (fromPath != null)
+        {
+            return _resolvedPathQjs = fromPath;
         }
 
         return null;
@@ -117,8 +153,60 @@ public sealed class YtDlpService
         public long FilesizeApprox { get; set; }
     }
 
+    private static string? WriteNetscapeCookieFile(string? cookieHeader)
+    {
+        if (string.IsNullOrWhiteSpace(cookieHeader))
+        {
+            return null;
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("# Netscape HTTP Cookie File");
+
+        const string expiry = "2147483647";
+
+        foreach (string pair in cookieHeader.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            int eq = pair.IndexOf('=');
+            if (eq <= 0)
+            {
+                continue;
+            }
+
+            string name = pair[..eq].Trim();
+            string value = pair[(eq + 1)..].Trim();
+
+            if (name.Length == 0)
+            {
+                continue;
+            }
+
+            sb.Append(".youtube.com").Append('\t')
+              .Append("TRUE").Append('\t')
+              .Append('/').Append('\t')
+              .Append("TRUE").Append('\t')
+              .Append(expiry).Append('\t')
+              .Append(name).Append('\t')
+              .Append(value).Append('\n');
+        }
+
+        string path = Path.Combine(Path.GetTempPath(), $"pdownloader_cookies_{Guid.NewGuid():N}.txt");
+        File.WriteAllText(path, sb.ToString(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        return path;
+    }
+
+    private static void DeleteCookieFileSafe(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        try { File.Delete(path); } catch { /* best effort */ }
+    }
+
     public async Task<List<ResolvedStream>> ResolveDirectUrlsAsync(
-        string pageUrl, string formatId, string? referer, CancellationToken ct = default)
+        string pageUrl, string formatId, string? referer, string? cookieHeader = null, CancellationToken ct = default)
     {
         var bin = FindYtDlp()
             ?? throw new InvalidOperationException("yt-dlp không tìm thấy.");
@@ -127,63 +215,84 @@ public sealed class YtDlpService
             ? ""
             : $"--referer \"{EscapeArg(referer)}\" ";
 
-        string args = $"-f \"{EscapeArg(formatId)}\" -j --no-warnings --no-playlist " +
-                      refererArg +
-                      $"-- \"{EscapeArg(pageUrl)}\"";
+        string qjsBin = FindQJS() 
+            ?? throw new InvalidOperationException("qjs không tìm thấy.");
 
-        (string? stdout, string? stderr, int exitCode) = await RunAsync(bin, args, ct);
+        string qjsArg = string.IsNullOrWhiteSpace(qjsBin)
+            ? ""
+            : $"--js-runtimes quickjs:\"{qjsBin}\" ";
 
-        if (exitCode != 0 || string.IsNullOrWhiteSpace(stdout))
+        string? cookieFile = WriteNetscapeCookieFile(cookieHeader);
+        string cookieArg = cookieFile == null
+            ? ""
+            : $"--cookies \"{EscapeArg(cookieFile)}\" ";
+
+        try
         {
-            throw new InvalidOperationException(ParseYtDlpError(stderr));
-        }
+            string args = $"-f \"{EscapeArg(formatId)}\" -j --no-warnings --no-playlist " +
+                          refererArg +
+                          qjsArg +
+                          cookieArg +
+                          $"-- \"{EscapeArg(pageUrl)}\"";
 
-        string? jsonLine = stdout
-            .Split('\n')
-            .Select(l => l.Trim())
-            .FirstOrDefault(l => l.StartsWith("{"));
+            (string? stdout, string? stderr, int exitCode) = await RunAsync(bin, args, ct);
 
-        if (jsonLine == null)
-        {
-            throw new InvalidOperationException("yt-dlp không trả về JSON hợp lệ.");
-        }
-
-        using var doc = JsonDocument.Parse(jsonLine);
-        JsonElement root = doc.RootElement;
-
-        var results = new List<ResolvedStream>();
-
-        if (root.TryGetProperty("requested_formats", out JsonElement rf) &&
-            rf.ValueKind == JsonValueKind.Array && rf.GetArrayLength() > 0)
-        {
-            foreach (JsonElement el in rf.EnumerateArray())
+            if (exitCode != 0 || string.IsNullOrWhiteSpace(stdout))
             {
-                results.Add(ParseResolvedStream(el));
+                throw new InvalidOperationException(ParseYtDlpError(stderr));
             }
-        }
-        else if (root.TryGetProperty("requested_downloads", out JsonElement rd) &&
-            rd.ValueKind == JsonValueKind.Array && rd.GetArrayLength() > 0)
-        {
-            foreach (JsonElement el in rd.EnumerateArray())
+
+            string? jsonLine = stdout
+                .Split('\n')
+                .Select(l => l.Trim())
+                .FirstOrDefault(l => l.StartsWith("{"));
+
+            if (jsonLine == null)
             {
-                results.Add(ParseResolvedStream(el));
+                throw new InvalidOperationException("yt-dlp không trả về JSON hợp lệ.");
             }
+
+            using var doc = JsonDocument.Parse(jsonLine);
+            JsonElement root = doc.RootElement;
+
+            var results = new List<ResolvedStream>();
+
+            if (root.TryGetProperty("requested_formats", out JsonElement rf) &&
+                rf.ValueKind == JsonValueKind.Array && rf.GetArrayLength() > 0)
+            {
+                foreach (JsonElement el in rf.EnumerateArray())
+                {
+                    results.Add(ParseResolvedStream(el));
+                }
+            }
+            else if (root.TryGetProperty("requested_downloads", out JsonElement rd) &&
+                rd.ValueKind == JsonValueKind.Array && rd.GetArrayLength() > 0)
+            {
+                foreach (JsonElement el in rd.EnumerateArray())
+                {
+                    results.Add(ParseResolvedStream(el));
+                }
+            }
+            else
+            {
+                results.Add(ParseResolvedStream(root));
+            }
+
+            results.RemoveAll(r => string.IsNullOrWhiteSpace(r.Url));
+
+            if (results.Count == 0)
+            {
+                string preview = jsonLine.Length > 300 ? jsonLine[..300] + "..." : jsonLine;
+                throw new InvalidOperationException(
+                    "Không tìm thấy URL trực tiếp trong JSON yt-dlp trả về. JSON (rút gọn): " + preview);
+            }
+
+            return results;
         }
-        else
+        finally
         {
-            results.Add(ParseResolvedStream(root));
+            DeleteCookieFileSafe(cookieFile);
         }
-
-        results.RemoveAll(r => string.IsNullOrWhiteSpace(r.Url));
-
-        if (results.Count == 0)
-        {
-            string preview = jsonLine.Length > 300 ? jsonLine[..300] + "..." : jsonLine;
-            throw new InvalidOperationException(
-                "Không tìm thấy URL trực tiếp trong JSON yt-dlp trả về. JSON (rút gọn): " + preview);
-        }
-
-        return results;
     }
 
     private static ResolvedStream ParseResolvedStream(JsonElement el)
@@ -213,7 +322,7 @@ public sealed class YtDlpService
         };
     }
 
-    public async Task<YtAnalyzeResult> AnalyzeAsync(string url, CancellationToken ct = default)
+    public async Task<YtAnalyzeResult> AnalyzeAsync(string url, string? cookieHeader = null, CancellationToken ct = default)
     {
         var bin = FindYtDlp();
         if (bin == null)
@@ -223,25 +332,44 @@ public sealed class YtDlpService
                 "hoặc thêm vào PATH rồi khởi động lại.");
         }
 
-        (string? stdout, string? stderr, int exitCode) = await RunAsync(
-            bin,
-            $"-J --no-warnings --no-playlist -- \"{EscapeArg(url)}\"",
-            ct);
+        string qjsBin = FindQJS()
+            ?? throw new InvalidOperationException("qjs không tìm thấy.");
 
-        if (exitCode != 0 || string.IsNullOrWhiteSpace(stdout))
-        {
-            var err = ParseYtDlpError(stderr);
-            return YtAnalyzeResult.Fail(err);
-        }
+        string qjsArg = string.IsNullOrWhiteSpace(qjsBin)
+            ? ""
+            : $"--js-runtimes quickjs:\"{qjsBin}\" ";
+
+        string? cookieFile = WriteNetscapeCookieFile(cookieHeader);
+        string cookieArg = cookieFile == null
+            ? ""
+            : $"--cookies \"{EscapeArg(cookieFile)}\" ";
 
         try
         {
-            using var doc = JsonDocument.Parse(stdout);
-            return ParseFormats(doc.RootElement);
+            (string? stdout, string? stderr, int exitCode) = await RunAsync(
+                bin,
+                $"-J --no-warnings --no-playlist " + qjsArg + cookieArg + $"-- \"{EscapeArg(url)}\"",
+                ct);
+
+            if (exitCode != 0 || string.IsNullOrWhiteSpace(stdout))
+            {
+                var err = ParseYtDlpError(stderr);
+                return YtAnalyzeResult.Fail(err);
+            }
+
+            try
+            {
+                using var doc = JsonDocument.Parse(stdout);
+                return ParseFormats(doc.RootElement);
+            }
+            catch (Exception ex)
+            {
+                return YtAnalyzeResult.Fail($"Lỗi parse JSON từ yt-dlp: {ex.Message}");
+            }
         }
-        catch (Exception ex)
+        finally
         {
-            return YtAnalyzeResult.Fail($"Lỗi parse JSON từ yt-dlp: {ex.Message}");
+            DeleteCookieFileSafe(cookieFile);
         }
     }
 

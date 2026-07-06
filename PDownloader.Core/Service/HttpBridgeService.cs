@@ -151,10 +151,24 @@ public sealed class HttpBridgeService : IDisposable
         string body = await ReadBodyAsync(req);
 
         string? url;
+        string? cookieHeader = null;
         try
         {
             using var doc = JsonDocument.Parse(body);
             url = doc.RootElement.GetStringOrDefault("url");
+
+            if (doc.RootElement.TryGetProperty("headers", out JsonElement headersEl)
+                && headersEl.ValueKind == JsonValueKind.Object)
+            {
+                foreach (JsonProperty prop in headersEl.EnumerateObject())
+                {
+                    if (prop.Name.Equals("Cookie", StringComparison.OrdinalIgnoreCase))
+                    {
+                        cookieHeader = prop.Value.GetString();
+                        break;
+                    }
+                }
+            }
         }
         catch
         {
@@ -168,7 +182,7 @@ public sealed class HttpBridgeService : IDisposable
             return;
         }
 
-        YtAnalyzeResult result = await YtDlpService.Instance.AnalyzeAsync(url, ct);
+        YtAnalyzeResult result = await YtDlpService.Instance.AnalyzeAsync(url, cookieHeader, ct: ct);
 
         await Json(resp, result);
     }

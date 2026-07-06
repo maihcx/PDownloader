@@ -124,6 +124,9 @@ public class DownloadEngine
         string? referer = _item.CustomHeaders?
             .FirstOrDefault(kv => kv.Key.Equals("Referer", StringComparison.OrdinalIgnoreCase)).Value;
 
+        string? cookieHeader = _item.CustomHeaders?
+            .FirstOrDefault(kv => kv.Key.Equals("Cookie", StringComparison.OrdinalIgnoreCase)).Value;
+
         string stem = string.IsNullOrWhiteSpace(_item.FileName)
             ? SanitizeFileName(GuessFileName(_item.Url))
             : SanitizeFileName(Path.GetFileNameWithoutExtension(_item.FileName));
@@ -134,7 +137,8 @@ public class DownloadEngine
         try
         {
             streams = await YtDlpService.Instance.ResolveDirectUrlsAsync(
-                _item.Url, _item.FormatId ?? "bestvideo+bestaudio/best", referer, _ct);
+                _item.Url, _item.FormatId ?? "bestvideo+bestaudio/best", referer,
+                cookieHeader: cookieHeader, ct: _ct);
         }
         catch (Exception ex)
         {

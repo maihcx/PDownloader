@@ -83,6 +83,14 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         <Link>yt-dlp.exe</Link>
       </Content>
+      <Content Include="Ext\qjs.exe">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        <Link>qjs.exe</Link>
+      </Content>
+      <Content Include="Ext\libwinpthread-1.dll">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        <Link>libwinpthread-1.dll</Link>
+      </Content>
     </ItemGroup>
 
 </Project>
