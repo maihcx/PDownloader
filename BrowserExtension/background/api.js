@@ -44,6 +44,15 @@
     }
   }
 
+  async function getGoogleCookieHeader() {
+    try {
+      const all = await chrome.cookies.getAll({ domain: 'google.com' });
+      return all.map(c => `${c.name}=${c.value}`).join('; ');
+    } catch (_) {
+      return '';
+    }
+  }
+
   async function postJson(url, body) {
     try {
       const r = await fetch(url, {
@@ -58,18 +67,30 @@
   }
 
   async function ytAnalyze(url) {
-    const cookies = await getCookieHeader(url);
+    const [cookies, googleCookies] = await Promise.all([
+      getCookieHeader(url),
+      getGoogleCookieHeader()
+    ]);
+
+    const headers = {};
+    if (cookies) headers.Cookie = cookies;
+    if (googleCookies) headers['X-Google-Cookie'] = googleCookies;
+
     return postJson(C.YT_ANALYZE_URL, {
       url,
-      headers: cookies ? { Cookie: cookies } : undefined
+      headers: Object.keys(headers).length ? headers : undefined
     });
   }
 
   async function ytDownload({ url, formatId, filename, title, filesize, referer }) {
-    const cookies = await getCookieHeader(url);
+    const [cookies, googleCookies] = await Promise.all([
+      getCookieHeader(url),
+      getGoogleCookieHeader()
+    ]);
 
     const headers = {};
     if (cookies) headers.Cookie = cookies;
+    if (googleCookies) headers['X-Google-Cookie'] = googleCookies;
     if (referer) headers.Referer = referer;
 
     return postJson(C.YT_DOWNLOAD_URL, {
