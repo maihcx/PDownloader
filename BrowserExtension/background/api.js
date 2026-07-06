@@ -10,11 +10,7 @@
   }
 
   async function sendDownload(url, filename, referer) {
-    let cookies = '';
-    try {
-      const all = await chrome.cookies.getAll({ url });
-      cookies = all.map(c => `${c.name}=${c.value}`).join('; ');
-    } catch (_) {}
+    const cookies = await getCookieHeader(url);
 
     const payload = {
       url,
@@ -39,6 +35,15 @@
     }
   }
 
+  async function getCookieHeader(url) {
+    try {
+      const all = await chrome.cookies.getAll({ url });
+      return all.map(c => `${c.name}=${c.value}`).join('; ');
+    } catch (_) {
+      return '';
+    }
+  }
+
   async function postJson(url, body) {
     try {
       const r = await fetch(url, {
@@ -52,16 +57,16 @@
     }
   }
 
-  function ytAnalyze(url) {
-    return postJson(C.YT_ANALYZE_URL, { url });
+  async function ytAnalyze(url) {
+    const cookies = await getCookieHeader(url);
+    return postJson(C.YT_ANALYZE_URL, {
+      url,
+      headers: cookies ? { Cookie: cookies } : undefined
+    });
   }
 
   async function ytDownload({ url, formatId, filename, title, filesize, referer }) {
-    let cookies = '';
-    try {
-      const all = await chrome.cookies.getAll({ url });
-      cookies = all.map(c => `${c.name}=${c.value}`).join('; ');
-    } catch (_) {}
+    const cookies = await getCookieHeader(url);
 
     const headers = {};
     if (cookies) headers.Cookie = cookies;
