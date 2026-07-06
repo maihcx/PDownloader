@@ -72,4 +72,4 @@ if not exist "%OUT_CRX%" (
 echo.
 echo Done: %OUT_CRX%
 echo Nho: kiem tra manifest.json / update.xml da bump version truoc khi dong goi
-echo      ^(chay bump-version.ps1 neu chua^), roi moi build.bat.
+pause
