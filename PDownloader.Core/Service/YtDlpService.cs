@@ -388,7 +388,7 @@ public sealed class YtDlpService
         foreach (JsonElement f in fmtArray.EnumerateArray())
         {
             var id = f.GetStringOrDefault("format_id") ?? "";
-            var ext = f.GetStringOrDefault("ext") ?? "mp4";
+            var ext = f.GetStringOrDefault("ext") ?? "none";
 
             // Skip storyboard / mhtml thumbnails
             if (ext is "mhtml" or "none")
@@ -413,6 +413,11 @@ public sealed class YtDlpService
             else if (f.TryGetProperty("filesize_approx", out JsonElement fsaProp) && fsaProp.ValueKind == JsonValueKind.Number)
             {
                 filesize = fsaProp.GetInt64();
+            }
+
+            if (filesize == 0)
+            {
+                continue;
             }
 
             string note;
