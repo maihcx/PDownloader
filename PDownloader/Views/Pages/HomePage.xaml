@@ -4,6 +4,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:local="clr-namespace:PDownloader.Views.Pages"
       xmlns:controls="clr-namespace:PDownloader.Controls"
+      xmlns:utils="clr-namespace:PDownloader.Utils"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="HomePage"
@@ -19,10 +20,10 @@
     <StackPanel Margin="0 0 0 30">
 
         <controls:ReferralCard ImageSource="/Assets/banner.png"
-                               Title="{Binding ViewModel.AppName, Mode=OneWay}"
-                               Subtitle="{Binding ViewModel.SortSlogan, Mode=OneWay}"
-                               Description="{Binding ViewModel.Slogan, Mode=OneWay}"
-                               FooterText="{Binding ViewModel.AuthorCreated, Mode=OneWay}" />
+                               Title="{utils:Localization app_short_name_title}"
+                               Subtitle="{utils:Localization app_sort_slogan_summary}"
+                               Description="{utils:Localization app_slogan_summary}"
+                               FooterText="{utils:Localization app_author_created_summary}" />
 
         <controls:GalleryNavigationPresenter Margin="0"
                                              Padding="0"

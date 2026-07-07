@@ -61,11 +61,65 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to app_author_created_summary.
+        /// </summary>
+        internal static string app_author_created_summary {
+            get {
+                return ResourceManager.GetString("app_author_created_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to app_capitalized_name_title.
+        /// </summary>
+        internal static string app_capitalized_name_title {
+            get {
+                return ResourceManager.GetString("app_capitalized_name_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to app_description_summary.
         /// </summary>
         internal static string app_description_summary {
             get {
                 return ResourceManager.GetString("app_description_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to app_name_title.
+        /// </summary>
+        internal static string app_name_title {
+            get {
+                return ResourceManager.GetString("app_name_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to app_short_name_title.
+        /// </summary>
+        internal static string app_short_name_title {
+            get {
+                return ResourceManager.GetString("app_short_name_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to app_slogan_summary.
+        /// </summary>
+        internal static string app_slogan_summary {
+            get {
+                return ResourceManager.GetString("app_slogan_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to app_sort_slogan_summary.
+        /// </summary>
+        internal static string app_sort_slogan_summary {
+            get {
+                return ResourceManager.GetString("app_sort_slogan_summary", resourceCulture);
             }
         }
         

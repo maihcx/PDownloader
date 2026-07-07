@@ -37,7 +37,7 @@
                     <StackPanel  Grid.Column="2"
                                  HorizontalAlignment="Stretch"
                                  VerticalAlignment="Center">
-                        <ui:TextBlock Text="POWER DOWNLOADER"
+                        <ui:TextBlock Text="{utils:Localization app_capitalized_name_title}"
                                    FontSize="15"
                                    FontWeight="Bold" />
                         <ui:TextBlock Text="{utils:Localization app_description_summary}"

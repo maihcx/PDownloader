@@ -1,4 +1,4 @@
-﻿// This program is free software: you can redistribute it and/or modify
+// This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
@@ -15,6 +15,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using PDownloader.Core.Services;
 using PDownloader.Core.Services.DownloadServices;
 
 namespace PDownloader.Core;
@@ -25,18 +26,53 @@ internal class Program
 
     static async Task Main(string[] args)
     {
-        _host = Host
-            .CreateDefaultBuilder(args)
-            .ConfigureServices(services =>
+        AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+        TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+
+        try
+        {
+            _host = Host
+                .CreateDefaultBuilder(args)
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<Bootstrap>();
+                    services.AddSingleton<DownloadConfigService>();
+
+                    services.AddHostedService<CoreBackgroundService>();
+                })
+                .Build();
+
+            await _host.RunAsync();
+        }
+        catch (Exception ex)
+        {
+            CrashHandler.Handle(ex, "Main");
+        }
+        finally
+        {
+            if (_host is IAsyncDisposable asyncDisposable)
             {
-                services.AddSingleton<Bootstrap>();
-                services.AddSingleton<DownloadConfigService>();
+                await asyncDisposable.DisposeAsync();
+            }
+            else
+            {
+                _host?.Dispose();
+            }
+        }
+    }
 
-                services.AddHostedService<CoreBackgroundService>();
-            })
-            .Build();
+    private static void CurrentDomain_UnhandledException(object? sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception ex)
+        {
+            CrashHandler.Handle(ex, "AppDomain");
+        }
+    }
 
-        await _host.RunAsync();
+    private static void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    {
+        CrashHandler.WriteOnly(e.Exception, "TaskScheduler");
+        e.SetObserved();
     }
 
     public static T GetRequiredService<T>()

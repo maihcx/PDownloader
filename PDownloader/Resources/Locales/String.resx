@@ -402,4 +402,22 @@
   <data name="dep_lib_title" xml:space="preserve">
     <value>dep_lib_title</value>
   </data>
+  <data name="app_sort_slogan_summary" xml:space="preserve">
+    <value>app_sort_slogan_summary</value>
+  </data>
+  <data name="app_slogan_summary" xml:space="preserve">
+    <value>app_slogan_summary</value>
+  </data>
+  <data name="app_author_created_summary" xml:space="preserve">
+    <value>app_author_created_summary</value>
+  </data>
+  <data name="app_short_name_title" xml:space="preserve">
+    <value>app_short_name_title</value>
+  </data>
+  <data name="app_name_title" xml:space="preserve">
+    <value>app_name_title</value>
+  </data>
+  <data name="app_capitalized_name_title" xml:space="preserve">
+    <value>app_capitalized_name_title</value>
+  </data>
 </root>

@@ -402,4 +402,22 @@
   <data name="dep_lib_title" xml:space="preserve">
     <value>Dependency library</value>
   </data>
+  <data name="app_sort_slogan_summary" xml:space="preserve">
+    <value>Fast. Simple. Reliable</value>
+  </data>
+  <data name="app_slogan_summary" xml:space="preserve">
+    <value>Download any file with speed and ease</value>
+  </data>
+  <data name="app_author_created_summary" xml:space="preserve">
+    <value>Created by SM SOFT</value>
+  </data>
+  <data name="app_short_name_title" xml:space="preserve">
+    <value>PDownloader</value>
+  </data>
+  <data name="app_name_title" xml:space="preserve">
+    <value>Power Downloader</value>
+  </data>
+  <data name="app_capitalized_name_title" xml:space="preserve">
+    <value>POWER DOWNLOADER</value>
+  </data>
 </root>

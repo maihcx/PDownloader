@@ -32,21 +32,31 @@
 
                         <Border CornerRadius="{TemplateBinding Border.CornerRadius}">
                             <Grid>
-                                <StackPanel Margin="48,0"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Center"
-                                            Background="Transparent">
-                                    <ui:TextBlock FontTypography="Title"
-                                                  Foreground="#E4000000"
-                                                  Text="{TemplateBinding Title}" />
-                                    <ui:TextBlock FontTypography="BodyStrong"
-                                                  Foreground="#2A7AD5"
-                                                  Text="{TemplateBinding Subtitle}"
-                                                  Margin="2 4"/>
-                                    <ui:TextBlock FontTypography="BodyStrong"
-                                                  Foreground="#363636"
-                                                  Text="{TemplateBinding Description}" />
-                                </StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="120" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="48,0"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center"
+                                                Background="Transparent">
+                                        <ui:TextBlock FontTypography="Title"
+                                                      Foreground="#E4000000"
+                                                      TextTrimming="CharacterEllipsis"
+                                                      Text="{TemplateBinding Title}" />
+                                        <ui:TextBlock FontTypography="BodyStrong"
+                                                      Foreground="#2A7AD5"
+                                                      TextWrapping="Wrap"
+                                                      Text="{TemplateBinding Subtitle}"
+                                                      Margin="2 4"/>
+                                        <ui:TextBlock FontTypography="BodyStrong"
+                                                      Foreground="#363636"
+                                                      TextWrapping="Wrap"
+                                                      Text="{TemplateBinding Description}" />
+                                    </StackPanel>
+                                    
+                                </Grid>
 
                                 <controls:AcrylicPanel BackgroundSource="{Binding ElementName=PART_ImageLayer}"
                                                        Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
