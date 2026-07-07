@@ -106,7 +106,9 @@ public class AcrylicPanel : ContentControl
     private void UpdateClip()
     {
         if (_clipGeometry == null)
+        {
             return;
+        }
 
         _clipGeometry.Rect = new Rect(0, 0, ActualWidth, ActualHeight);
 
