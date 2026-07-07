@@ -291,7 +291,7 @@ public static class InstallService
             $"\"{uninstallerExe}\" --uninstall --quiet");
         key.SetValue("NoModify", 1, RegistryValueKind.DWord);
         key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
-        key.SetValue("EstimatedSize", 51200, RegistryValueKind.DWord);
+        key.SetValue("EstimatedSize", 204800, RegistryValueKind.DWord);
     }
 
     public static string? GetInstalledDir()
