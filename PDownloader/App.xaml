@@ -18,6 +18,7 @@
         <ResourceDictionary Source="Controls/GalleryNavigationPresenter.xaml" />
         <ResourceDictionary Source="Controls/FormFieldCard.xaml" />
         <ResourceDictionary Source="Controls/AcrylicPanel.xaml" />
+        <ResourceDictionary Source="Controls/InfoRow.xaml" />
       </ResourceDictionary.MergedDictionaries>
 
       <helpers:BoolToGreenRedBrush x:Key="BoolToGreenRedBrush" />
@@ -28,6 +29,7 @@
       <helpers:StatusToIconConverter x:Key="StatusToIconConverter" />
       <helpers:StatusToTextConverter x:Key="StatusToTextConverter" />
       <helpers:BoolToVisConverter x:Key="BoolToVisConverter" />
+      <helpers:NullOrEmptyToVisibilityConverter x:Key="NullOrEmptyToVisibilityConverter" />
     </ResourceDictionary>
   </Application.Resources>
 </Application>

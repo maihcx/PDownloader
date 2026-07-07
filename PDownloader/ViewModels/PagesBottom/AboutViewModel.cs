@@ -13,18 +13,21 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Helpers;
+namespace PDownloader.ViewModels.PagesBottom;
 
-[ValueConversion(typeof(bool), typeof(Visibility))]
-public class BoolToVisibilityConverter : IValueConverter
+public partial class AboutViewModel : ObservableObject
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public AboutViewModel()
     {
-        bool flag = value is bool b && b;
-        bool invert = parameter is string s && s == "invert";
-        return (flag ^ invert) ? Visibility.Visible : Visibility.Collapsed;
+        InitializeViewModel();
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        => value is Visibility v && v == Visibility.Visible;
+    [ObservableProperty]
+    private string _appVersion = string.Empty;
+
+    private void InitializeViewModel()
+    {
+        Version v = UpdateService.GetCurrentVersion();
+        AppVersion = $"{v.Major}.{v.Minor}.{v.Build}";
+    }
 }

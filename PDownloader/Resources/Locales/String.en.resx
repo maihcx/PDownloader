@@ -369,4 +369,37 @@
   <data name="update_available_summary" xml:space="preserve">
     <value>Version {0} is now available, please go to settings to proceed with the update!</value>
   </data>
+  <data name="app_description_summary" xml:space="preserve">
+    <value>A high-performance downloader, free and more.</value>
+  </data>
+  <data name="version_title" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="framework_title" xml:space="preserve">
+    <value>Framework</value>
+  </data>
+  <data name="ui_lib_title" xml:space="preserve">
+    <value>UI Library</value>
+  </data>
+  <data name="license_title" xml:space="preserve">
+    <value>License</value>
+  </data>
+  <data name="open_source_summary" xml:space="preserve">
+    <value>This application uses open-source libraries.</value>
+  </data>
+  <data name="issue_report_summary" xml:space="preserve">
+    <value>If you find any problems, please report them!</value>
+  </data>
+  <data name="report_issue_title" xml:space="preserve">
+    <value>Report an issue</value>
+  </data>
+  <data name="page_about_title" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="page_about_summary" xml:space="preserve">
+    <value>About the app</value>
+  </data>
+  <data name="dep_lib_title" xml:space="preserve">
+    <value>Dependency library</value>
+  </data>
 </root>

@@ -1,0 +1,109 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="clr-namespace:PDownloader.Controls"
+                    xmlns:helpers="clr-namespace:PDownloader.Helpers"
+                    xmlns:syntax="http://schemas.lepo.co/wpfui/2022/xaml/syntax"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+
+    <helpers:BoolToVisConverter x:Key="BoolToVisConverter" />
+    <helpers:NullOrEmptyToVisibilityConverter x:Key="NullOrEmptyToVisibilityConverter" />
+
+    <Style TargetType="{x:Type controls:InfoRow}">
+        <Setter Property="Focusable"
+                Value="False" />
+        <Setter Property="SnapsToDevicePixels"
+                Value="True" />
+        <Setter Property="OverridesDefaultStyle"
+                Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:InfoRow}">
+                    <StackPanel>
+                        <Grid x:Name="PART_MainGrid"
+                              Margin="0,5,0,5"
+                              VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="{Binding LabelWidth, RelativeSource={RelativeSource TemplatedParent}}" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Column="0"
+                                          Text="{TemplateBinding LabelText}"
+                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                          FontSize="12"
+                                          VerticalAlignment="Center" />
+
+                            <ContentPresenter x:Name="PART_ValueContent"
+                                              Grid.Column="1"
+                                              Content="{TemplateBinding ValueContent}"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="{TemplateBinding ValueHorizontalAlign}"
+                                              Margin="0"
+                                              Visibility="Collapsed" />
+
+                            <ui:HyperlinkButton x:Name="PART_HyperlinkButton"
+                                                Grid.Column="1"
+                                                HorizontalAlignment="{TemplateBinding ValueHorizontalAlign}"
+                                                NavigateUri="{TemplateBinding NavigateUri}">
+                                <ui:HyperlinkButton.Visibility>
+                                    <Binding Path="NavigateUri"
+                                             RelativeSource="{RelativeSource TemplatedParent}"
+                                             Converter="{StaticResource NullOrEmptyToVisibilityConverter}" />
+                                </ui:HyperlinkButton.Visibility>
+                                <ui:TextBlock Text="{TemplateBinding ValueText}"
+                                              FontSize="12"
+                                              FontWeight="Medium"
+                                              VerticalAlignment="Center"
+                                              TextTrimming="CharacterEllipsis" />
+                            </ui:HyperlinkButton>
+
+                            <ui:TextBlock x:Name="PART_ValueText"
+                                          Grid.Column="1"
+                                          HorizontalAlignment="{TemplateBinding ValueHorizontalAlign}"
+                                          Text="{TemplateBinding ValueText}"
+                                          FontSize="12"
+                                          FontWeight="Medium"
+                                          VerticalAlignment="Center"
+                                          TextTrimming="CharacterEllipsis"
+                                          Padding="11,5">
+                                <ui:TextBlock.Visibility>
+                                    <Binding Path="NavigateUri"
+                                             RelativeSource="{RelativeSource TemplatedParent}"
+                                             Converter="{StaticResource NullOrEmptyToVisibilityConverter}"
+                                             ConverterParameter="invert" />
+                                </ui:TextBlock.Visibility>
+                            </ui:TextBlock>
+
+                            <ui:Button x:Name="PART_CopyButton"
+                                       Grid.Column="2"
+                                       ToolTip="Copy"
+                                       Padding="6,4"
+                                       Appearance="Transparent"
+                                       Cursor="Hand"
+                                       Icon="{ui:SymbolIcon DocumentCopy16}" >
+                            </ui:Button>
+                        </Grid>
+                        <Separator Margin="0">
+                            <Separator.Visibility>
+                                <Binding Path="IsLast"
+                                         RelativeSource="{RelativeSource TemplatedParent}"
+                                         Converter="{StaticResource BoolToVisConverter}"
+                                         ConverterParameter="invert" />
+                            </Separator.Visibility>
+                        </Separator>
+                    </StackPanel>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsLast"
+                                 Value="True">
+                            <Setter TargetName="PART_MainGrid"
+                                    Property="Margin"
+                                    Value="0,5,0,-8" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

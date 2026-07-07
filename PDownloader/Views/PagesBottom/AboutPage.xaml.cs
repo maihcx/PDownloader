@@ -13,18 +13,18 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Helpers;
+namespace PDownloader.Views.PagesBottom;
 
-[ValueConversion(typeof(bool), typeof(Visibility))]
-public class BoolToVisibilityConverter : IValueConverter
+[PageMeta("page_about_title", "page_about_summary", SymbolRegular.Info24, 1000)]
+public partial class AboutPage : INavigableView<AboutViewModel>
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        bool flag = value is bool b && b;
-        bool invert = parameter is string s && s == "invert";
-        return (flag ^ invert) ? Visibility.Visible : Visibility.Collapsed;
-    }
+    public AboutViewModel ViewModel { get; }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        => value is Visibility v && v == Visibility.Visible;
+    public AboutPage(AboutViewModel viewModel)
+    {
+        ViewModel = viewModel;
+        DataContext = this;
+
+        InitializeComponent();
+    }
 }

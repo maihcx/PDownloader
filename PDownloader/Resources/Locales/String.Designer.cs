@@ -61,11 +61,29 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to app_description_summary.
+        /// </summary>
+        internal static string app_description_summary {
+            get {
+                return ResourceManager.GetString("app_description_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to clean_title.
         /// </summary>
         internal static string clean_title {
             get {
                 return ResourceManager.GetString("clean_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to dep_lib_title.
+        /// </summary>
+        internal static string dep_lib_title {
+            get {
+                return ResourceManager.GetString("dep_lib_title", resourceCulture);
             }
         }
         
@@ -151,6 +169,33 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to framework_title.
+        /// </summary>
+        internal static string framework_title {
+            get {
+                return ResourceManager.GetString("framework_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to issue_report_summary.
+        /// </summary>
+        internal static string issue_report_summary {
+            get {
+                return ResourceManager.GetString("issue_report_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to license_title.
+        /// </summary>
+        internal static string license_title {
+            get {
+                return ResourceManager.GetString("license_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to off_title.
         /// </summary>
         internal static string off_title {
@@ -169,11 +214,38 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to open_source_summary.
+        /// </summary>
+        internal static string open_source_summary {
+            get {
+                return ResourceManager.GetString("open_source_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to open_title.
         /// </summary>
         internal static string open_title {
             get {
                 return ResourceManager.GetString("open_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_about_summary.
+        /// </summary>
+        internal static string page_about_summary {
+            get {
+                return ResourceManager.GetString("page_about_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_about_title.
+        /// </summary>
+        internal static string page_about_title {
+            get {
+                return ResourceManager.GetString("page_about_title", resourceCulture);
             }
         }
         
@@ -763,6 +835,15 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to report_issue_title.
+        /// </summary>
+        internal static string report_issue_title {
+            get {
+                return ResourceManager.GetString("report_issue_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to save_title.
         /// </summary>
         internal static string save_title {
@@ -808,11 +889,29 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to ui_lib_title.
+        /// </summary>
+        internal static string ui_lib_title {
+            get {
+                return ResourceManager.GetString("ui_lib_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to update_available_summary.
         /// </summary>
         internal static string update_available_summary {
             get {
                 return ResourceManager.GetString("update_available_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to version_title.
+        /// </summary>
+        internal static string version_title {
+            get {
+                return ResourceManager.GetString("version_title", resourceCulture);
             }
         }
     }
