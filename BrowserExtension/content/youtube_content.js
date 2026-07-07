@@ -195,6 +195,11 @@ function renderDropdown(dd, data) {
   search.className = 'pd-yt-search';
   search.placeholder = PD.I18n.t('ytSearchPlaceholder');
   search.addEventListener('input', e => { query = e.target.value.toLowerCase(); draw(); });
+
+  ['keydown', 'keyup', 'keypress'].forEach(evt => {
+    search.addEventListener(evt, e => e.stopPropagation());
+  });
+
   dd.appendChild(search);
 
   const filterBar = document.createElement('div');
