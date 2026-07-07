@@ -118,10 +118,6 @@ jobs:
           if exist "LICENSE" copy /y "LICENSE" "%PAYLOAD_DIR%\LICENSE"
           if exist "LICENSE.vi" copy /y "LICENSE.vi" "%PAYLOAD_DIR%\LICENSE.vi"
 
-          mkdir "%PAYLOAD_DIR%\BrowserExtension"
-          if exist ".\BrowserExtension\PDownloader.crx" copy /y ".\BrowserExtension\PDownloader.crx" "%PAYLOAD_DIR%\BrowserExtension\"
-          if exist ".\BrowserExtension\update.xml" copy /y ".\BrowserExtension\update.xml" "%PAYLOAD_DIR%\BrowserExtension\"
-
           if exist "%PAYLOAD_ZIP%" del /f /q "%PAYLOAD_ZIP%"
           powershell -NoProfile -Command "Compress-Archive -Path '%PAYLOAD_DIR%\*' -DestinationPath '%PAYLOAD_ZIP%' -Force"
 

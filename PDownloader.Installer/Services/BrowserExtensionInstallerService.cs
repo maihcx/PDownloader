@@ -22,7 +22,9 @@ public static class BrowserExtensionInstallerService
 {
     public const string ExtensionId = "nliblbkhgljcpdboininiepogjaegien";
 
-    private const string ForcelistSubKey = "ExtensionInstallForcelist";
+    private const string ExtensionSettingsSubKey = "ExtensionSettings";
+
+    private const string UpdateURI = "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/update.xml";
 
     private static readonly (string DisplayName, string PolicyRoot)[] SupportedBrowsers =
     {
@@ -40,26 +42,15 @@ public static class BrowserExtensionInstallerService
             return;
         }
 
-        string extensionDir = Path.Combine(installDir, "BrowserExtension");
-        string updateManifestPath = Path.Combine(extensionDir, "update.xml");
-
-        if (!File.Exists(updateManifestPath))
-        {
-            return;
-        }
-
-        string updateManifestUri = new Uri(updateManifestPath).AbsoluteUri;
-        string forcelistEntry = $"{ExtensionId};{updateManifestUri}";
-
-        foreach ((string _, string? policyRoot) in SupportedBrowsers)
+        foreach ((string _, string policyRoot) in SupportedBrowsers)
         {
             try
             {
-                RegisterForceInstall(policyRoot, forcelistEntry);
+                RegisterExtensionPolicy(policyRoot, UpdateURI);
             }
-            catch (Exception ex)
+            catch
             {
-                MessageBox.Show(ex.ToString());
+                // Ignore unsupported browser policy
             }
         }
     }
@@ -72,70 +63,77 @@ public static class BrowserExtensionInstallerService
             return;
         }
 
-        foreach ((string _, string? policyRoot) in SupportedBrowsers)
+        foreach ((string _, string policyRoot) in SupportedBrowsers)
         {
             try
             {
-                RemoveForceInstall(policyRoot);
+                RemoveExtensionPolicy(policyRoot);
             }
-            catch { }
+            catch
+            {
+            }
         }
     }
 
-    private static void RegisterForceInstall(string policyRoot, string forcelistEntry)
+    private static void RegisterExtensionPolicy(
+        string policyRoot,
+        string updateUrl)
     {
-        using RegistryKey? baseKey = Registry.LocalMachine.CreateSubKey(policyRoot, writable: true);
-        if (baseKey == null)
+        using RegistryKey? extensionSettings =
+            Registry.LocalMachine.CreateSubKey(
+                $"{policyRoot}\\{ExtensionSettingsSubKey}",
+                writable: true);
+
+        if (extensionSettings == null)
         {
             return;
         }
 
-        using RegistryKey? forceList = baseKey.CreateSubKey(ForcelistSubKey, writable: true);
-        if (forceList == null)
+        using RegistryKey? extension =
+            extensionSettings.CreateSubKey(
+                ExtensionId,
+                writable: true);
+
+        if (extension == null)
         {
             return;
         }
 
-        string extensionId = forcelistEntry.Split(';')[0];
+        extension.SetValue(
+            "installation_mode",
+            "force_installed",
+            RegistryValueKind.String);
 
-        foreach (string valueName in forceList.GetValueNames())
-        {
-            if (forceList.GetValue(valueName) is string existing &&
-                existing.StartsWith(extensionId, StringComparison.OrdinalIgnoreCase))
-            {
-                forceList.SetValue(valueName, forcelistEntry);
-                return;
-            }
-        }
+        extension.SetValue(
+            "toolbar_pin",
+            "default_unpinned",
+            RegistryValueKind.String);
 
-        int nextIndex = 1;
-        var usedIndexes = forceList.GetValueNames()
-            .Select(n => int.TryParse(n, out int i) ? i : 0)
-            .ToHashSet();
-        while (usedIndexes.Contains(nextIndex))
-        {
-            nextIndex++;
-        }
+        extension.SetValue(
+            "update_url",
+            updateUrl,
+            RegistryValueKind.String);
 
-        forceList.SetValue(nextIndex.ToString(), forcelistEntry);
+        extension.SetValue(
+            "override_update_url",
+            1,
+            RegistryValueKind.DWord);
     }
 
-    private static void RemoveForceInstall(string policyRoot)
+    private static void RemoveExtensionPolicy(string policyRoot)
     {
-        using RegistryKey? baseKey = Registry.LocalMachine.OpenSubKey(policyRoot, writable: true);
-        using RegistryKey? forceList = baseKey?.OpenSubKey(ForcelistSubKey, writable: true);
-        if (forceList == null)
+        using RegistryKey? extensionSettings =
+            Registry.LocalMachine.OpenSubKey(
+                $"{policyRoot}\\{ExtensionSettingsSubKey}",
+                writable: true);
+
+        if (extensionSettings == null)
         {
             return;
         }
 
-        foreach (string valueName in forceList.GetValueNames().ToArray())
-        {
-            if (forceList.GetValue(valueName) is string existing &&
-                existing.StartsWith(ExtensionId, StringComparison.OrdinalIgnoreCase))
-            {
-                forceList.DeleteValue(valueName, throwOnMissingValue: false);
-            }
-        }
+        extensionSettings.DeleteSubKey(
+            ExtensionId,
+            throwOnMissingSubKey: false);
     }
 }
