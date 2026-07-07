@@ -41,14 +41,19 @@ public class DownloadEngine
 
     public async Task RunAsync()
     {
-        if (_item.IsYoutube)
-        {
-            await RunYtDlpAsync();
-            return;
-        }
-
         string tempDir = GetTempDir();
         Directory.CreateDirectory(tempDir);
+
+        if (_item.IsYoutube)
+        {
+            if (await TryHandleHlsPlaylistAsync(tempDir))
+            {
+                return;
+            }
+
+            await RunYtDlpAsync(tempDir);
+            return;
+        }
 
         try
         {
@@ -543,7 +548,7 @@ public class DownloadEngine
         _ => 1,
     };
 
-    private async Task RunYtDlpAsync()
+    private async Task RunYtDlpAsync(string tempDir)
     {
         if (YtDlpService.Instance.FindYtDlp() == null)
         {
@@ -590,9 +595,6 @@ public class DownloadEngine
             _item.ErrorMessage = "yt-dlp không trả về stream nào để tải.";
             return;
         }
-
-        string tempDir = GetTempDir();
-        Directory.CreateDirectory(tempDir);
 
         _item.TotalBytes = streams.Sum(s => s.FilesizeApprox);
         _item.Status = DownloadStatus.Downloading;
