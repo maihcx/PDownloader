@@ -13,7 +13,9 @@
 //
 // Copyright (C) Song Mai Software.
 
+using System.Globalization;
 using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
 
 namespace PDownloader.Core.Download;
 
@@ -50,6 +52,11 @@ public class DownloadEngine
 
         try
         {
+            if (await TryHandleHlsPlaylistAsync(tempDir))
+            {
+                return;
+            }
+
             (long totalBytes, bool supportsRange) = await ProbeAsync(_item.Url);
             _item.TotalBytes = totalBytes;
 
@@ -105,6 +112,436 @@ public class DownloadEngine
             throw;
         }
     }
+
+    private async Task<bool> TryHandleHlsPlaylistAsync(string tempDir)
+    {
+        try
+        {
+            using var sniffReq = new HttpRequestMessage(HttpMethod.Get, _item.Url);
+            sniffReq.Headers.Range = new RangeHeaderValue(0, 31);
+            using HttpResponseMessage sniffResp = await _http.SendAsync(
+                sniffReq, HttpCompletionOption.ResponseHeadersRead, _ct);
+
+            if (!sniffResp.IsSuccessStatusCode)
+            {
+                return false;
+            }
+
+            byte[] head = await sniffResp.Content.ReadAsByteArrayAsync(_ct);
+            string magic = Encoding.ASCII.GetString(head).TrimStart();
+
+            if (!magic.StartsWith("#EXTM3U", StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return false;
+        }
+
+        if (YtDlpService.Instance.FindYtDlp() == null)
+        {
+            _item.Status = DownloadStatus.Error;
+            _item.ErrorMessage =
+                "Phát hiện đây là playlist HLS (m3u8) nhưng cần yt-dlp để tải/ghép. " +
+                "Đặt yt-dlp.exe cạnh PDownloader.Core.exe hoặc thêm vào PATH.";
+            return true;
+        }
+
+        string folder = string.IsNullOrWhiteSpace(_item.SavePath)
+            ? CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultDownloadFolder ?? Helpers.GetDefaultFolder()
+            : _item.SavePath;
+        Directory.CreateDirectory(folder);
+
+        string stem = string.IsNullOrWhiteSpace(_item.FileName)
+            ? SanitizeFileName(GuessFileName(_item.Url))
+            : SanitizeFileName(Path.GetFileNameWithoutExtension(_item.FileName));
+
+        string? referer = _item.CustomHeaders?
+            .FirstOrDefault(kv => kv.Key.Equals("Referer", StringComparison.OrdinalIgnoreCase)).Value;
+        string? cookieHeader = _item.CustomHeaders?
+            .FirstOrDefault(kv => kv.Key.Equals("Cookie", StringComparison.OrdinalIgnoreCase)).Value;
+
+        _item.Status = DownloadStatus.Connecting;
+
+        YtDlpService.HlsFragmentsResult? fragResult = null;
+        try
+        {
+            fragResult = await YtDlpService.Instance.ResolveHlsFragmentsAsync(
+                _item.Url, referer, cookieHeader, _ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            fragResult = null;
+        }
+
+        string finalPath;
+
+        if (fragResult != null && fragResult.FragmentUrls.Count > 0)
+        {
+            finalPath = await DownloadHlsFragmentsInParallelAsync(fragResult, folder, stem, tempDir);
+        }
+        else
+        {
+            string uniqueWithExt = UniqueFilePath(folder, $"{stem}.mp4");
+            string outputPathNoExt = Path.Combine(
+                Path.GetDirectoryName(uniqueWithExt) ?? folder,
+                Path.GetFileNameWithoutExtension(uniqueWithExt));
+
+            long lastDownloaded = 0;
+            long lastTotal = 0;
+
+            _item.Status = DownloadStatus.Downloading;
+            _item.StartTime = DateTime.Now;
+
+            using var speedTimer = new System.Timers.Timer(1000);
+            long lastReported = 0;
+            speedTimer.Elapsed += (_, _) =>
+            {
+                long current = Interlocked.Read(ref lastDownloaded);
+                double speed = current - lastReported;
+                lastReported = current;
+                _item.DownloadedBytes = current;
+                _item.TotalBytes = Interlocked.Read(ref lastTotal);
+                _item.SpeedBps = speed;
+            };
+            speedTimer.Start();
+
+            try
+            {
+                finalPath = await DownloadHlsViaYtDlpProcessAsync(
+                    _item.Url,
+                    outputPathNoExt,
+                    referer,
+                    cookieHeader,
+                    threadCount: _item.Threads,
+                    onProgress: (downloaded, total) =>
+                    {
+                        Interlocked.Exchange(ref lastDownloaded, downloaded);
+                        Interlocked.Exchange(ref lastTotal, total);
+                    },
+                    ct: _ct);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                speedTimer.Stop();
+                _item.Status = DownloadStatus.Error;
+                _item.ErrorMessage = "Không tải được HLS bằng yt-dlp: " + ex.Message;
+                return true;
+            }
+
+            speedTimer.Stop();
+        }
+
+        CleanupTemp(tempDir);
+
+        _item.FileName = Path.GetFileName(finalPath);
+        _item.SavePath = finalPath;
+        _item.TotalBytes = new FileInfo(finalPath).Length;
+        _item.DownloadedBytes = _item.TotalBytes;
+        _item.SpeedBps = 0;
+        _item.Status = DownloadStatus.Completed;
+        _item.EndTime = DateTime.Now;
+
+        return true;
+    }
+
+    private async Task<string> DownloadHlsFragmentsInParallelAsync(
+        YtDlpService.HlsFragmentsResult fragResult, string folder, string stem, string tempDir)
+    {
+        List<string> urls = fragResult.FragmentUrls;
+        int total = urls.Count;
+        var bytesPerFragment = new long[total];
+        var tempPaths = new string[total];
+
+        _item.Status = DownloadStatus.Downloading;
+        _item.StartTime = DateTime.Now;
+        _item.TotalBytes = 0;
+
+        using var speedTimer = new System.Timers.Timer(1000);
+        long lastReported = 0;
+        speedTimer.Elapsed += (_, _) =>
+        {
+            long current = bytesPerFragment.Sum();
+            double speed = current - lastReported;
+            lastReported = current;
+            _item.DownloadedBytes = current;
+            _item.SpeedBps = speed;
+        };
+        speedTimer.Start();
+
+        int concurrency = Math.Clamp(_item.Threads, 1, 16);
+        using var semaphore = new SemaphoreSlim(concurrency);
+
+        var tasks = new Task[total];
+        for (int i = 0; i < total; i++)
+        {
+            int idx = i;
+            tasks[idx] = Task.Run(async () =>
+            {
+                await semaphore.WaitAsync(_ct);
+                try
+                {
+                    string tempPath = Path.Combine(tempDir, $"frag_{idx:D5}.part");
+                    tempPaths[idx] = tempPath;
+                    await DownloadOneFragmentWithRetryAsync(urls[idx], tempPath, idx, bytesPerFragment);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }, _ct);
+        }
+
+        try
+        {
+            await Task.WhenAll(tasks);
+        }
+        finally
+        {
+            speedTimer.Stop();
+        }
+
+        string ext = string.IsNullOrWhiteSpace(fragResult.Ext) ? "ts" : fragResult.Ext;
+        string finalPath = UniqueFilePath(folder, $"{stem}.{ext}");
+        string? dir = Path.GetDirectoryName(finalPath);
+        if (dir != null)
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        _item.Status = DownloadStatus.Merging;
+
+        using (var outStream = new FileStream(finalPath, FileMode.Create, FileAccess.Write))
+        {
+            for (int i = 0; i < total; i++)
+            {
+                _ct.ThrowIfCancellationRequested();
+                using var inStream = new FileStream(tempPaths[i], FileMode.Open, FileAccess.Read);
+                await inStream.CopyToAsync(outStream, _ct);
+            }
+        }
+
+        foreach (string p in tempPaths)
+        {
+            try { File.Delete(p); } catch { /* best effort */ }
+        }
+
+        return finalPath;
+    }
+
+    private async Task DownloadOneFragmentWithRetryAsync(
+        string url, string tempPath, int idx, long[] bytesPerFragment, int maxRetries = 3)
+    {
+        Exception? last = null;
+
+        for (int attempt = 0; attempt < maxRetries; attempt++)
+        {
+            _ct.ThrowIfCancellationRequested();
+            Interlocked.Exchange(ref bytesPerFragment[idx], 0);
+
+            try
+            {
+                using HttpResponseMessage resp = await _http.SendAsync(
+                    new HttpRequestMessage(HttpMethod.Get, url),
+                    HttpCompletionOption.ResponseHeadersRead, _ct);
+                resp.EnsureSuccessStatusCode();
+
+                await using (var outFs = new FileStream(tempPath, FileMode.Create, FileAccess.Write))
+                await using (Stream inStream = await resp.Content.ReadAsStreamAsync(_ct))
+                {
+                    byte[] buffer = new byte[BufferSize];
+                    int read;
+                    while ((read = await inStream.ReadAsync(buffer, _ct)) > 0)
+                    {
+                        await outFs.WriteAsync(buffer.AsMemory(0, read), _ct);
+                        Interlocked.Add(ref bytesPerFragment[idx], read);
+                    }
+                }
+
+                return;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                last = ex;
+                await Task.Delay(300 * (attempt + 1), _ct);
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Tải fragment HLS thất bại sau {maxRetries} lần thử: {url}", last);
+    }
+
+    private async Task<string> DownloadHlsViaYtDlpProcessAsync(
+        string url,
+        string outputPathNoExt,
+        string? referer,
+        string? cookieHeader,
+        int threadCount,
+        Action<long, long>? onProgress,
+        CancellationToken ct)
+    {
+        var bin = YtDlpService.Instance.FindYtDlp()
+            ?? throw new InvalidOperationException("yt-dlp không tìm thấy.");
+
+        int fragments = Math.Clamp(threadCount, 1, 16);
+
+        string refererArg = string.IsNullOrWhiteSpace(referer)
+            ? ""
+            : $"--add-header \"Referer:{EscapeArg(referer)}\" ";
+
+        string? cookieFile = YtDlpService.WriteNetscapeCookieFile(cookieHeader);
+        string cookieArg = cookieFile == null
+            ? ""
+            : $"--cookies \"{EscapeArg(cookieFile)}\" ";
+
+        string outputTemplate = $"{EscapeArg(outputPathNoExt)}.%(ext)s";
+
+        string args = "--newline --no-warnings --no-playlist " +
+                      "--merge-output-format mp4 " +
+                      "--hls-prefer-native " +
+                      $"--concurrent-fragments {fragments} " +
+                      refererArg + cookieArg +
+                      $"-o \"{outputTemplate}\" " +
+                      $"-- \"{EscapeArg(url)}\"";
+
+        try
+        {
+            (string? finalPath, string? stderr, int exitCode) = await RunYtDlpWithProgressAsync(
+                bin, args, onProgress, ct);
+
+            if (exitCode != 0)
+            {
+                throw new InvalidOperationException(YtDlpService.ParseYtDlpError(stderr ?? ""));
+            }
+
+            if (finalPath != null && File.Exists(finalPath))
+            {
+                return finalPath;
+            }
+
+            string? dir = Path.GetDirectoryName(outputPathNoExt);
+            string stem = Path.GetFileName(outputPathNoExt);
+            string? found = !string.IsNullOrEmpty(dir) && Directory.Exists(dir)
+                ? Directory.GetFiles(dir, stem + ".*").FirstOrDefault()
+                : null;
+
+            if (found == null)
+            {
+                throw new InvalidOperationException(
+                    "yt-dlp báo thành công nhưng không tìm thấy file kết quả.");
+            }
+
+            return found;
+        }
+        finally
+        {
+            YtDlpService.DeleteCookieFileSafe(cookieFile);
+        }
+    }
+
+    private static readonly Regex HlsProgressRegex = new(
+        @"^\[download\]\s+(?<pct>[\d.]+)%\s+of\s+~?\s*(?<size>[\d.]+)(?<unit>Ki?B|Mi?B|Gi?B|B)",
+        RegexOptions.Compiled);
+
+    private static readonly Regex HlsDestinationRegex = new(
+        @"^\[(?:download|Merger)\]\s+(?:Destination:|Merging formats into)\s*""?(?<path>.+?)""?$",
+        RegexOptions.Compiled);
+
+    private static async Task<(string? finalPath, string? stderr, int exitCode)> RunYtDlpWithProgressAsync(
+        string bin, string args,
+        Action<long, long>? onProgress,
+        CancellationToken ct)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = bin,
+            Arguments = args,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
+        };
+
+        using var proc = new Process { StartInfo = psi };
+
+        var stderrSb = new StringBuilder();
+        string? finalPath = null;
+
+        proc.OutputDataReceived += (_, e) =>
+        {
+            if (e.Data == null)
+            {
+                return;
+            }
+
+            Match pm = HlsProgressRegex.Match(e.Data);
+            if (pm.Success)
+            {
+                double pct = double.Parse(pm.Groups["pct"].Value, CultureInfo.InvariantCulture);
+                double size = double.Parse(pm.Groups["size"].Value, CultureInfo.InvariantCulture);
+                long totalBytes = (long)(size * HlsUnitMultiplier(pm.Groups["unit"].Value));
+                long downloadedBytes = (long)(totalBytes * pct / 100.0);
+                onProgress?.Invoke(downloadedBytes, totalBytes);
+                return;
+            }
+
+            Match dm = HlsDestinationRegex.Match(e.Data);
+            if (dm.Success)
+            {
+                finalPath = dm.Groups["path"].Value.Trim();
+            }
+        };
+        proc.ErrorDataReceived += (_, e) => { if (e.Data != null) { stderrSb.AppendLine(e.Data); } };
+
+        proc.Start();
+        proc.BeginOutputReadLine();
+        proc.BeginErrorReadLine();
+
+        try
+        {
+            await proc.WaitForExitAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            try { proc.Kill(entireProcessTree: true); } catch { }
+
+            throw;
+        }
+
+        return (finalPath, stderrSb.ToString(), proc.ExitCode);
+    }
+
+    private static double HlsUnitMultiplier(string unit) => unit switch
+    {
+        "B" => 1,
+        "KiB" => 1024,
+        "MiB" => 1024 * 1024,
+        "GiB" => 1024 * 1024 * 1024,
+        "KB" => 1000,
+        "MB" => 1000 * 1000,
+        "GB" => 1000 * 1000 * 1000,
+        _ => 1,
+    };
 
     private async Task RunYtDlpAsync()
     {
@@ -733,6 +1170,8 @@ public class DownloadEngine
             : _item.FileName;
         return UniqueFilePath(folder, name);
     }
+
+    private static string EscapeArg(string s) => s.Replace("\"", "\\\"");
 
     private static string UniqueFilePath(string folder, string name)
     {

@@ -13,6 +13,9 @@
 //
 // Copyright (C) Song Mai Software.
 
+using System.Globalization;
+using System.Text.RegularExpressions;
+
 namespace PDownloader.Core.Service;
 
 public sealed class YtDlpService
@@ -20,15 +23,15 @@ public sealed class YtDlpService
     public static readonly YtDlpService Instance = new();
     private YtDlpService() { }
 
-    private string? _resolvedPath;
+    private string? _resolvedPathYtDlp;
 
     private string? _resolvedPathQjs;
 
     public string? FindYtDlp()
     {
-        if (_resolvedPath != null)
+        if (_resolvedPathYtDlp != null)
         {
-            return _resolvedPath;
+            return _resolvedPathYtDlp;
         }
 
         var candidates = new[]
@@ -45,14 +48,14 @@ public sealed class YtDlpService
         {
             if (File.Exists(c))
             {
-                return _resolvedPath = c;
+                return _resolvedPathYtDlp = c;
             }
         }
 
         var fromPath = LocateOnPath("yt-dlp.exe") ?? LocateOnPath("yt-dlp");
         if (fromPath != null)
         {
-            return _resolvedPath = fromPath;
+            return _resolvedPathYtDlp = fromPath;
         }
 
         return null;
@@ -153,7 +156,7 @@ public sealed class YtDlpService
         public long FilesizeApprox { get; set; }
     }
 
-    private static string? WriteNetscapeCookieFile(string? cookieHeader)
+    internal static string? WriteNetscapeCookieFile(string? cookieHeader)
     {
         if (string.IsNullOrWhiteSpace(cookieHeader))
         {
@@ -195,7 +198,7 @@ public sealed class YtDlpService
         return path;
     }
 
-    private static void DeleteCookieFileSafe(string? path)
+    internal static void DeleteCookieFileSafe(string? path)
     {
         if (string.IsNullOrEmpty(path))
         {
@@ -215,7 +218,7 @@ public sealed class YtDlpService
             ? ""
             : $"--referer \"{EscapeArg(referer)}\" ";
 
-        string qjsBin = FindQJS() 
+        string qjsBin = FindQJS()
             ?? throw new InvalidOperationException("qjs không tìm thấy.");
 
         string qjsArg = string.IsNullOrWhiteSpace(qjsBin)
@@ -456,6 +459,118 @@ public sealed class YtDlpService
         return new YtAnalyzeResult { Success = true, Title = title, Formats = formats };
     }
 
+    public sealed class HlsFragmentsResult
+    {
+        public List<string> FragmentUrls { get; set; } = new();
+        public string Ext { get; set; } = "ts";
+    }
+
+    public async Task<HlsFragmentsResult?> ResolveHlsFragmentsAsync(
+        string url, string? referer, string? cookieHeader, CancellationToken ct = default)
+    {
+        var bin = FindYtDlp()
+            ?? throw new InvalidOperationException("yt-dlp không tìm thấy.");
+
+        string refererArg = string.IsNullOrWhiteSpace(referer)
+            ? ""
+            : $"--referer \"{EscapeArg(referer)}\" ";
+
+        string qjsBin = FindQJS()
+            ?? throw new InvalidOperationException("qjs không tìm thấy.");
+
+        string qjsArg = string.IsNullOrWhiteSpace(qjsBin)
+            ? ""
+            : $"--js-runtimes quickjs:\"{qjsBin}\" ";
+
+        string? cookieFile = WriteNetscapeCookieFile(cookieHeader);
+        string cookieArg = cookieFile == null
+            ? ""
+            : $"--cookies \"{EscapeArg(cookieFile)}\" ";
+
+        try
+        {
+            string args = "-j --no-warnings --no-playlist " +
+                          refererArg + qjsArg + cookieArg +
+                          $"-- \"{EscapeArg(url)}\"";
+
+            (string? stdout, string? stderr, int exitCode) = await RunAsync(bin, args, ct);
+
+            if (exitCode != 0 || string.IsNullOrWhiteSpace(stdout))
+            {
+                throw new InvalidOperationException(ParseYtDlpError(stderr));
+            }
+
+            string? jsonLine = stdout
+                .Split('\n')
+                .Select(l => l.Trim())
+                .FirstOrDefault(l => l.StartsWith("{"));
+
+            if (jsonLine == null)
+            {
+                throw new InvalidOperationException("yt-dlp không trả về JSON hợp lệ.");
+            }
+
+            using var doc = JsonDocument.Parse(jsonLine);
+            JsonElement root = doc.RootElement;
+
+            JsonElement target = root;
+            if (root.TryGetProperty("requested_formats", out JsonElement rf) &&
+                rf.ValueKind == JsonValueKind.Array)
+            {
+                if (rf.GetArrayLength() > 1)
+                {
+                    return null;
+                }
+
+                if (rf.GetArrayLength() == 1)
+                {
+                    target = rf[0];
+                }
+            }
+
+            return ExtractFragments(target);
+        }
+        finally
+        {
+            DeleteCookieFileSafe(cookieFile);
+        }
+    }
+
+    private static HlsFragmentsResult? ExtractFragments(JsonElement el)
+    {
+        if (!el.TryGetProperty("fragments", out JsonElement fragArr) ||
+            fragArr.ValueKind != JsonValueKind.Array || fragArr.GetArrayLength() == 0)
+        {
+            return null;
+        }
+
+        string? baseUrl = el.GetStringOrDefault("fragment_base_url");
+        string ext = el.GetStringOrDefault("ext") ?? "ts";
+
+        var urls = new List<string>();
+
+        foreach (JsonElement frag in fragArr.EnumerateArray())
+        {
+            string? fragUrl = frag.GetStringOrDefault("url");
+            string? fragPath = frag.GetStringOrDefault("path");
+
+            string? resolved = fragUrl;
+            if (string.IsNullOrEmpty(resolved) && !string.IsNullOrEmpty(fragPath) && baseUrl != null)
+            {
+                resolved = Uri.TryCreate(new Uri(baseUrl), fragPath, out Uri? abs)
+                    ? abs.AbsoluteUri
+                    : null;
+            }
+
+            if (!string.IsNullOrEmpty(resolved))
+            {
+                urls.Add(resolved);
+            }
+        }
+
+        return urls.Count > 0 ? new HlsFragmentsResult { FragmentUrls = urls, Ext = ext } : null;
+    }
+
     private static async Task<(string stdout, string stderr, int exitCode)>
         RunAsync(string bin, string args, CancellationToken ct)
     {
@@ -497,7 +612,7 @@ public sealed class YtDlpService
         return (stdoutSb.ToString(), stderrSb.ToString(), proc.ExitCode);
     }
 
-    private static string ParseYtDlpError(string stderr)
+    internal static string ParseYtDlpError(string stderr)
     {
         if (string.IsNullOrWhiteSpace(stderr))
         {
