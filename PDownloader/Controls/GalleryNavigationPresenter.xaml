@@ -19,51 +19,48 @@
                     <ControlTemplate.Resources>
                         <!-- Vertical ItemsPanel -->
                         <ItemsPanelTemplate x:Key="VerticalPanel">
-                            <controls:CustomVirtualizingWrapPanel
-                                IsItemsHost="True"
-                                Orientation="Vertical"
-                                StretchItems="True"
-                                SpacingMode="Uniform" />
+                            <controls:CustomVirtualizingWrapPanel IsItemsHost="True"
+                                                                  Orientation="Vertical"
+                                                                  StretchItems="True"
+                                                                  SpacingMode="Uniform"
+                                                                  MaxColumns="{Binding Tag, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
                         </ItemsPanelTemplate>
 
                         <!-- Horizontal ItemsPanel -->
                         <ItemsPanelTemplate x:Key="HorizontalPanel">
-                            <controls:CustomVirtualizingWrapPanel
-                                IsItemsHost="True"
-                                Orientation="Horizontal"
-                                StretchItems="True"
-                                SpacingMode="Uniform" />
+                            <controls:CustomVirtualizingWrapPanel IsItemsHost="True"
+                                                                  Orientation="Horizontal"
+                                                                  StretchItems="True"
+                                                                  SpacingMode="Uniform" />
                         </ItemsPanelTemplate>
                     </ControlTemplate.Resources>
 
-                    <ItemsControl ItemsSource="{TemplateBinding ItemsSource}">
+                    <ItemsControl Tag="{Binding MaxColumns, RelativeSource={RelativeSource TemplatedParent}}"
+                                  ItemsSource="{TemplateBinding ItemsSource}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type models:NavigationCard}">
-                                <ui:CardAction
-                                    Margin="2"
-                                    MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource SubtractDoubleConverter}, ConverterParameter=8}"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Stretch"
-                                    Command="{Binding TemplateButtonCommand, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=controls:GalleryNavigationPresenter}, Mode=OneWay}"
-                                    CommandParameter="{Binding PageType, Mode=OneWay}"
-                                    IsChevronVisible="True">
+                                <ui:CardAction Margin="2"
+                                               MinWidth="230"
+                                               MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource SubtractDoubleConverter}, ConverterParameter=8}"
+                                               HorizontalAlignment="Stretch"
+                                               VerticalAlignment="Stretch"
+                                               Command="{Binding TemplateButtonCommand, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=controls:GalleryNavigationPresenter}, Mode=OneWay}"
+                                               CommandParameter="{Binding PageType, Mode=OneWay}"
+                                               IsChevronVisible="True">
                                     <ui:CardAction.Icon>
-                                        <ui:SymbolIcon
-                                            FontSize="30"
-                                            Symbol="{Binding Icon, Mode=OneWay}"
-                                            TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                        <ui:SymbolIcon FontSize="30"
+                                                       Symbol="{Binding Icon, Mode=OneWay}"
+                                                       TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                     </ui:CardAction.Icon>
                                     <StackPanel>
-                                        <ui:TextBlock
-                                            Margin="0"
-                                            FontTypography="BodyStrong"
-                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                            Text="{Binding Name, Mode=OneWay}"
-                                            TextWrapping="Wrap" />
-                                        <ui:TextBlock
-                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                            Text="{Binding Description, Mode=OneWay}"
-                                            TextWrapping="Wrap" />
+                                        <ui:TextBlock Margin="0"
+                                                      FontTypography="BodyStrong"
+                                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                      Text="{Binding Name, Mode=OneWay}"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      Text="{Binding Description, Mode=OneWay}"
+                                                      TextWrapping="Wrap" />
                                     </StackPanel>
                                 </ui:CardAction>
                             </DataTemplate>
@@ -71,10 +68,13 @@
 
                         <ItemsControl.Style>
                             <Style TargetType="ItemsControl">
-                                <Setter Property="ItemsPanel" Value="{StaticResource VerticalPanel}" />
+                                <Setter Property="ItemsPanel"
+                                        Value="{StaticResource VerticalPanel}" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsVertical}" Value="False">
-                                        <Setter Property="ItemsPanel" Value="{StaticResource HorizontalPanel}" />
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsVertical}"
+                                                 Value="False">
+                                        <Setter Property="ItemsPanel"
+                                                Value="{StaticResource HorizontalPanel}" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
