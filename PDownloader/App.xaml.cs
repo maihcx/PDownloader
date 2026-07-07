@@ -17,8 +17,7 @@ namespace PDownloader;
 
 public partial class App
 {
-    private string logFile = Path.Combine(AppInfoHelper.GetAppPath(), "crash.log");
-    private bool _isViewAtBoot;
+    private readonly bool _isViewAtBoot;
 
     public App()
     {
@@ -34,14 +33,22 @@ public partial class App
 
     public void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
-        var ex = e.ExceptionObject as Exception;
-        File.AppendAllText(logFile, $"[{DateTime.Now}] UnhandledException: {ex}\n");
+        if (e.ExceptionObject is Exception ex)
+        {
+            CrashHandler.Handle(ex, "AppDomain");
+        }
     }
 
     public void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
-        File.AppendAllText(logFile, $"[{DateTime.Now}] UnobservedTaskException: {e.Exception}\n");
         e.SetObserved();
+        CrashHandler.WriteOnly(e.Exception, "TaskScheduler");
+    }
+
+    private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        e.Handled = true;
+        CrashHandler.Handle(e.Exception, "Dispatcher");
     }
 
     private static readonly IHost _host = Host
@@ -105,8 +112,6 @@ public partial class App
             _host.Dispose();
         }
     }
-
-    private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e) { }
 
     public static T GetRequiredService<T>()
         where T : class

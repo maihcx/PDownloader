@@ -5,7 +5,7 @@ echo ============================================
 echo   Building PDownloader Installer (WPF)
 echo ============================================
 
-set APP_PROJECTS=PDownloader PDownloader.Core PDownloader.Runner PDownloader.Tray
+set APP_PROJECTS=PDownloader PDownloader.BugTracker PDownloader.Core PDownloader.Runner PDownloader.Tray
 set INSTALLER_PROJECT=PDownloader.Installer\PDownloader.Installer.csproj
 set OUTPUT_DIR=.\installer-output
 set PAYLOAD_DIR=%OUTPUT_DIR%\publish
