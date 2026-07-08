@@ -19,7 +19,7 @@ public static class Bootstrap
 {
     private static Thread? _pipeThread;
     private static Mutex? _mutex;
-    private static string UniqueAppId = @"Global\PDownloader.SingleInstance.App";
+    private static readonly string _uniqueAppId = @"Global\PDownloader.SingleInstance.App";
     private static bool _isPrimaryInstance = false;
     private static SplashScreen? SplashScreen;
 
@@ -31,19 +31,19 @@ public static class Bootstrap
         #region Mutex checker
         try
         {
-            _mutex = CreateMutexWithSecurity(UniqueAppId);
+            _mutex = CreateMutexWithSecurity(_uniqueAppId);
             _isPrimaryInstance = _mutex.WaitOne(0, false);
         }
         catch
         {
-            _mutex = new Mutex(true, UniqueAppId, out _isPrimaryInstance);
+            _mutex = new Mutex(true, _uniqueAppId, out _isPrimaryInstance);
         }
 
         if (!_isPrimaryInstance)
         {
             try
             {
-                using var client = new NamedPipeClientStream(".", UniqueAppId, PipeDirection.Out);
+                using var client = new NamedPipeClientStream(".", _uniqueAppId, PipeDirection.Out);
                 client.Connect(1000);
                 using var writer = new StreamWriter(client) { AutoFlush = true };
                 writer.WriteLine("SHOW");
@@ -147,7 +147,7 @@ public static class Bootstrap
                         AccessControlType.Allow));
 
                     using NamedPipeServerStream server = NamedPipeServerStreamAcl.Create(
-                        UniqueAppId, PipeDirection.In, 1,
+                        _uniqueAppId, PipeDirection.In, 1,
                         PipeTransmissionMode.Byte, PipeOptions.None,
                         0, 0, pipeSecurity);
 
