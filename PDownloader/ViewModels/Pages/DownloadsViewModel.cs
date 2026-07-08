@@ -28,10 +28,13 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     [ObservableProperty]
     private string _statusText = "Ready";
 
-    public DownloadsViewModel(DownloadsChannelService downloadsChannelService)
+    private readonly DownloadLauncherService _downloadLauncherService;
+
+    public DownloadsViewModel(DownloadsChannelService downloadsChannelService, DownloadLauncherService downloadLauncherService)
     {
         downloadsChannelService.OnProgress += OnProgress;
         downloadsChannelService.OnList += OnList;
+        _downloadLauncherService = downloadLauncherService;
     }
 
     public Task OnNavigatedToAsync()
@@ -155,13 +158,12 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OpenFile(DownloadItemDto? item)
     {
-        if (item == null || !System.IO.File.Exists(item.SavePath))
+        if (item == null || !File.Exists(item.SavePath))
         {
             return;
         }
 
-        System.Diagnostics.Process.Start(
-            new System.Diagnostics.ProcessStartInfo(item.SavePath) { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo(item.SavePath) { UseShellExecute = true });
     }
 
     [RelayCommand]
@@ -179,6 +181,17 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         }
 
         Process.Start("explorer.exe", $"/select,\"{item.SavePath}\"");
+    }
+
+    [RelayCommand]
+    private async Task Add()
+    {
+        Dialogs.ViewModels.AddLink? result = await MessengerService.ShowDialogAsync<Dialogs.Views.AddLink, Dialogs.ViewModels.AddLink>();
+
+        if (result != null)
+        {
+            _downloadLauncherService.RequestDownload(result.Link);
+        }
     }
 
     [RelayCommand]

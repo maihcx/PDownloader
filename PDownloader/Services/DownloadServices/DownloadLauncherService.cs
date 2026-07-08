@@ -33,7 +33,7 @@ public class DownloadLauncherService
             fileName = fileName.Trim()
         });
 
-        ConfluxManager.cfsPDownloaderCore?.Send("download", payload);
+        ConfluxManager.cfsPDownloaderCore?.Send("download-by-link", payload);
     }
 
     public void RefreshConfigs()

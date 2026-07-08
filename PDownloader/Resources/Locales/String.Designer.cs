@@ -133,11 +133,38 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to close_title.
+        /// </summary>
+        internal static string close_title {
+            get {
+                return ResourceManager.GetString("close_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to dep_lib_title.
         /// </summary>
         internal static string dep_lib_title {
             get {
                 return ResourceManager.GetString("dep_lib_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to dialog_add_link_title.
+        /// </summary>
+        internal static string dialog_add_link_title {
+            get {
+                return ResourceManager.GetString("dialog_add_link_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to dialog_link_title.
+        /// </summary>
+        internal static string dialog_link_title {
+            get {
+                return ResourceManager.GetString("dialog_link_title", resourceCulture);
             }
         }
         
@@ -466,6 +493,15 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to page_downloads_add_title.
+        /// </summary>
+        internal static string page_downloads_add_title {
+            get {
+                return ResourceManager.GetString("page_downloads_add_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to page_downloads_cancel.
         /// </summary>
         internal static string page_downloads_cancel {
@@ -511,11 +547,11 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to page_downloads_refresh.
+        ///   Looks up a localized string similar to page_downloads_refresh_title.
         /// </summary>
-        internal static string page_downloads_refresh {
+        internal static string page_downloads_refresh_title {
             get {
-                return ResourceManager.GetString("page_downloads_refresh", resourceCulture);
+                return ResourceManager.GetString("page_downloads_refresh_title", resourceCulture);
             }
         }
         

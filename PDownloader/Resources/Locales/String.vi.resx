@@ -283,7 +283,7 @@
     <value>Số luồng tải mặc định</value>
   </data>
   <data name="page_config_threads_summary" xml:space="preserve">
-    <value>Số kết nối song song cho mỗi file (tương tự IDM)</value>
+    <value>Số kết nối song song cho mỗi file</value>
   </data>
   <data name="page_config_threads_unit" xml:space="preserve">
     <value>luồng</value>
@@ -336,7 +336,7 @@
   <data name="page_downloads_open_folder" xml:space="preserve">
     <value>Mở thư mục</value>
   </data>
-  <data name="page_downloads_refresh" xml:space="preserve">
+  <data name="page_downloads_refresh_title" xml:space="preserve">
     <value>Làm mới</value>
   </data>
   <data name="task_num_title" xml:space="preserve">
@@ -419,5 +419,17 @@
   </data>
   <data name="app_capitalized_name_title" xml:space="preserve">
     <value>POWER DOWNLOADER</value>
+  </data>
+  <data name="page_downloads_add_title" xml:space="preserve">
+    <value>Thêm</value>
+  </data>
+  <data name="close_title" xml:space="preserve">
+    <value>Đóng</value>
+  </data>
+  <data name="dialog_add_link_title" xml:space="preserve">
+    <value>Tác vụ mới</value>
+  </data>
+  <data name="dialog_link_title" xml:space="preserve">
+    <value>Đường dẫn</value>
   </data>
 </root>

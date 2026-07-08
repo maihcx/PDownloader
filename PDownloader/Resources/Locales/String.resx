@@ -336,8 +336,8 @@
   <data name="page_downloads_open_folder" xml:space="preserve">
     <value>page_downloads_open_folder</value>
   </data>
-  <data name="page_downloads_refresh" xml:space="preserve">
-    <value>page_downloads_refresh</value>
+  <data name="page_downloads_refresh_title" xml:space="preserve">
+    <value>page_downloads_refresh_title</value>
   </data>
   <data name="task_num_title" xml:space="preserve">
     <value>task_num_title</value>
@@ -419,5 +419,17 @@
   </data>
   <data name="app_capitalized_name_title" xml:space="preserve">
     <value>app_capitalized_name_title</value>
+  </data>
+  <data name="page_downloads_add_title" xml:space="preserve">
+    <value>page_downloads_add_title</value>
+  </data>
+  <data name="close_title" xml:space="preserve">
+    <value>close_title</value>
+  </data>
+  <data name="dialog_add_link_title" xml:space="preserve">
+    <value>dialog_add_link_title</value>
+  </data>
+  <data name="dialog_link_title" xml:space="preserve">
+    <value>dialog_link_title</value>
   </data>
 </root>

@@ -33,7 +33,7 @@ public static class CFSCommandHandler
         {
             case "main-event":
                 AppRuntime.cfsTray?.Send(name, value);
-                foreach ((string? CFSkey, ConfluxService? CFSvalue) in AppRuntime.DownloaderCFSRest)
+                foreach ((_, ConfluxService? CFSvalue) in AppRuntime.DownloaderCFSRest)
                 {
                     CFSvalue.Send(name, value);
                 }
@@ -56,6 +56,10 @@ public static class CFSCommandHandler
             case "downloader-svc-getlist":
                 SendListToMain();
                 return;
+
+            case "download-by-link":
+                _ = HandleDownloadByLink(value);
+                break;
 
             case "runner-start-download":
                 HandleStartDownload(value);
@@ -153,6 +157,25 @@ public static class CFSCommandHandler
     {
         string json = DownloadManager.Instance.SerializeList();
         AppRuntime.cfsMain?.Send("muxt-get-downloader-list", json);
+    }
+
+    private static async Task HandleDownloadByLink(string value)
+    {
+        StartDownloadRequest? req = JsonSerializer.Deserialize<StartDownloadRequest>(value, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (req == null || string.IsNullOrWhiteSpace(req.Url))
+        {
+            return;
+        }
+
+        var id = Guid.NewGuid().ToString();
+        string fileName = await DownloadEngine.GetRemoteFileNameAsync(req.Url) ?? "Unknown";
+        AppRuntime.EnsureRunnerStarted(id, new()
+        {
+            id = id,
+            fileName = fileName,
+            url = req.Url,
+            saveTo = Helpers.GetDefaultFolder()
+        });
     }
 
     private static void HandleStartDownload(string value)

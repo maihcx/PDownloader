@@ -15,6 +15,7 @@
     ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     mc:Ignorable="d"
+    Margin="0"
     ScrollViewer.CanContentScroll="False">
 
     <Page.Resources>
@@ -222,11 +223,18 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="4" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="{Binding ViewModel.StatusText}"
                            Opacity="0.5" FontSize="12" VerticalAlignment="Center"/>
                 <ui:Button Grid.Column="1"
-                           Content="{utils:Localization page_downloads_refresh}"
+                           Content="{utils:Localization page_downloads_add_title}"
+                           Icon="{ui:SymbolIcon AddCircle24}"
+                           Appearance="Primary"
+                           Command="{Binding ViewModel.AddCommand}" />
+                <ui:Button Grid.Column="3"
+                           Content="{utils:Localization page_downloads_refresh_title}"
                            Icon="{ui:SymbolIcon ArrowClockwise24}"
                            Appearance="Transparent"
                            Command="{Binding ViewModel.RefreshCommand}"/>

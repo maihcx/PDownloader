@@ -78,6 +78,7 @@ public partial class App
             services.AddSingleton<MainWindowViewModel>();
             services.AddSingleton<INavigationService, NavigationService>();
             services.AddSingleton<ISnackbarService, SnackbarService>();
+            services.AddSingleton<IContentDialogService, ContentDialogService>();
 
             services.AddSingleton<UpdateService>();
             services.AddSingleton<UpdateHostService>();

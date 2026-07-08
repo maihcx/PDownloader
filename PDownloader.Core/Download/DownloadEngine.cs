@@ -197,44 +197,11 @@ public class DownloadEngine
         }
         else
         {
-            string uniqueWithExt = UniqueFilePath(folder, $"{stem}.mp4");
-            string outputPathNoExt = Path.Combine(
-                Path.GetDirectoryName(uniqueWithExt) ?? folder,
-                Path.GetFileNameWithoutExtension(uniqueWithExt));
-
-            long lastDownloaded = 0;
-            long lastTotal = 0;
-
-            _item.Status = DownloadStatus.Downloading;
-            _item.StartTime = DateTime.Now;
-
-            using var speedTimer = new System.Timers.Timer(1000);
-            long lastReported = 0;
-            speedTimer.Elapsed += (_, _) =>
-            {
-                long current = Interlocked.Read(ref lastDownloaded);
-                double speed = current - lastReported;
-                lastReported = current;
-                _item.DownloadedBytes = current;
-                _item.TotalBytes = Interlocked.Read(ref lastTotal);
-                _item.SpeedBps = speed;
-            };
-            speedTimer.Start();
-
+            List<YtDlpService.ResolvedStream> streams;
             try
             {
-                finalPath = await DownloadHlsViaYtDlpProcessAsync(
-                    _item.Url,
-                    outputPathNoExt,
-                    referer,
-                    cookieHeader,
-                    threadCount: _item.Threads,
-                    onProgress: (downloaded, total) =>
-                    {
-                        Interlocked.Exchange(ref lastDownloaded, downloaded);
-                        Interlocked.Exchange(ref lastTotal, total);
-                    },
-                    ct: _ct);
+                streams = await YtDlpService.Instance.ResolveDirectUrlsAsync(
+                    _item.Url, "bestvideo+bestaudio/best", referer, cookieHeader, _ct);
             }
             catch (OperationCanceledException)
             {
@@ -242,13 +209,35 @@ public class DownloadEngine
             }
             catch (Exception ex)
             {
-                speedTimer.Stop();
                 _item.Status = DownloadStatus.Error;
-                _item.ErrorMessage = "Không tải được HLS bằng yt-dlp: " + ex.Message;
+                _item.ErrorMessage = "Không resolve được URL HLS từ yt-dlp: " + ex.Message;
                 return true;
             }
 
-            speedTimer.Stop();
+            if (streams.Count == 0)
+            {
+                _item.Status = DownloadStatus.Error;
+                _item.ErrorMessage = "yt-dlp không trả về stream nào để tải cho playlist HLS này.";
+                return true;
+            }
+
+            _item.Status = DownloadStatus.Downloading;
+            _item.StartTime = DateTime.Now;
+
+            try
+            {
+                finalPath = await DownloadResolvedStreamsAsync(streams, folder, stem, tempDir, _ct);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _item.Status = DownloadStatus.Error;
+                _item.ErrorMessage = "Không tải được HLS: " + ex.Message;
+                return true;
+            }
         }
 
         CleanupTemp(tempDir);
@@ -394,160 +383,6 @@ public class DownloadEngine
             $"Tải fragment HLS thất bại sau {maxRetries} lần thử: {url}", last);
     }
 
-    private async Task<string> DownloadHlsViaYtDlpProcessAsync(
-        string url,
-        string outputPathNoExt,
-        string? referer,
-        string? cookieHeader,
-        int threadCount,
-        Action<long, long>? onProgress,
-        CancellationToken ct)
-    {
-        var bin = YtDlpService.Instance.FindYtDlp()
-            ?? throw new InvalidOperationException("yt-dlp không tìm thấy.");
-
-        int fragments = Math.Clamp(threadCount, 1, 16);
-
-        string refererArg = string.IsNullOrWhiteSpace(referer)
-            ? ""
-            : $"--add-header \"Referer:{EscapeArg(referer)}\" ";
-
-        string? cookieFile = YtDlpService.WriteNetscapeCookieFile(cookieHeader);
-        string cookieArg = cookieFile == null
-            ? ""
-            : $"--cookies \"{EscapeArg(cookieFile)}\" ";
-
-        string outputTemplate = $"{EscapeArg(outputPathNoExt)}.%(ext)s";
-
-        string args = "--newline --no-warnings --no-playlist " +
-                      "--merge-output-format mp4 " +
-                      "--hls-prefer-native " +
-                      $"--concurrent-fragments {fragments} " +
-                      refererArg + cookieArg +
-                      $"-o \"{outputTemplate}\" " +
-                      $"-- \"{EscapeArg(url)}\"";
-
-        try
-        {
-            (string? finalPath, string? stderr, int exitCode) = await RunYtDlpWithProgressAsync(
-                bin, args, onProgress, ct);
-
-            if (exitCode != 0)
-            {
-                throw new InvalidOperationException(YtDlpService.ParseYtDlpError(stderr ?? ""));
-            }
-
-            if (finalPath != null && File.Exists(finalPath))
-            {
-                return finalPath;
-            }
-
-            string? dir = Path.GetDirectoryName(outputPathNoExt);
-            string stem = Path.GetFileName(outputPathNoExt);
-            string? found = !string.IsNullOrEmpty(dir) && Directory.Exists(dir)
-                ? Directory.GetFiles(dir, stem + ".*").FirstOrDefault()
-                : null;
-
-            if (found == null)
-            {
-                throw new InvalidOperationException(
-                    "yt-dlp báo thành công nhưng không tìm thấy file kết quả.");
-            }
-
-            return found;
-        }
-        finally
-        {
-            YtDlpService.DeleteCookieFileSafe(cookieFile);
-        }
-    }
-
-    private static readonly Regex HlsProgressRegex = new(
-        @"^\[download\]\s+(?<pct>[\d.]+)%\s+of\s+~?\s*(?<size>[\d.]+)(?<unit>Ki?B|Mi?B|Gi?B|B)",
-        RegexOptions.Compiled);
-
-    private static readonly Regex HlsDestinationRegex = new(
-        @"^\[(?:download|Merger)\]\s+(?:Destination:|Merging formats into)\s*""?(?<path>.+?)""?$",
-        RegexOptions.Compiled);
-
-    private static async Task<(string? finalPath, string? stderr, int exitCode)> RunYtDlpWithProgressAsync(
-        string bin, string args,
-        Action<long, long>? onProgress,
-        CancellationToken ct)
-    {
-        var psi = new ProcessStartInfo
-        {
-            FileName = bin,
-            Arguments = args,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
-        };
-
-        using var proc = new Process { StartInfo = psi };
-
-        var stderrSb = new StringBuilder();
-        string? finalPath = null;
-
-        proc.OutputDataReceived += (_, e) =>
-        {
-            if (e.Data == null)
-            {
-                return;
-            }
-
-            Match pm = HlsProgressRegex.Match(e.Data);
-            if (pm.Success)
-            {
-                double pct = double.Parse(pm.Groups["pct"].Value, CultureInfo.InvariantCulture);
-                double size = double.Parse(pm.Groups["size"].Value, CultureInfo.InvariantCulture);
-                long totalBytes = (long)(size * HlsUnitMultiplier(pm.Groups["unit"].Value));
-                long downloadedBytes = (long)(totalBytes * pct / 100.0);
-                onProgress?.Invoke(downloadedBytes, totalBytes);
-                return;
-            }
-
-            Match dm = HlsDestinationRegex.Match(e.Data);
-            if (dm.Success)
-            {
-                finalPath = dm.Groups["path"].Value.Trim();
-            }
-        };
-        proc.ErrorDataReceived += (_, e) => { if (e.Data != null) { stderrSb.AppendLine(e.Data); } };
-
-        proc.Start();
-        proc.BeginOutputReadLine();
-        proc.BeginErrorReadLine();
-
-        try
-        {
-            await proc.WaitForExitAsync(ct);
-        }
-        catch (OperationCanceledException)
-        {
-            try { proc.Kill(entireProcessTree: true); } catch { }
-
-            throw;
-        }
-
-        return (finalPath, stderrSb.ToString(), proc.ExitCode);
-    }
-
-    private static double HlsUnitMultiplier(string unit) => unit switch
-    {
-        "B" => 1,
-        "KiB" => 1024,
-        "MiB" => 1024 * 1024,
-        "GiB" => 1024 * 1024 * 1024,
-        "KB" => 1000,
-        "MB" => 1000 * 1000,
-        "GB" => 1000 * 1000 * 1000,
-        _ => 1,
-    };
-
     private async Task RunYtDlpAsync(string tempDir)
     {
         if (YtDlpService.Instance.FindYtDlp() == null)
@@ -596,47 +431,12 @@ public class DownloadEngine
             return;
         }
 
-        _item.TotalBytes = streams.Sum(s => s.FilesizeApprox);
         _item.Status = DownloadStatus.Downloading;
         _item.StartTime = DateTime.Now;
 
-        var rawFiles = new List<(YtDlpService.ResolvedStream stream, string path)>();
-
         try
         {
-            long progressBase = 0;
-            foreach (YtDlpService.ResolvedStream stream in streams)
-            {
-                string ext = string.IsNullOrWhiteSpace(stream.Ext) ? "bin" : stream.Ext;
-                string rawPath = Path.Combine(
-                    tempDir, (stream.HasVideo ? "video" : "audio") + "." + ext);
-
-                await DownloadUrlMultiSegmentAsync(stream.Url, rawPath, tempDir, progressBase, _ct);
-
-                progressBase += File.Exists(rawPath) ? new FileInfo(rawPath).Length : 0;
-                rawFiles.Add((stream, rawPath));
-            }
-
-            _ct.ThrowIfCancellationRequested();
-            _item.Status = DownloadStatus.Merging;
-
-            string finalPath;
-            if (rawFiles.Count == 1)
-            {
-                string ext = string.IsNullOrWhiteSpace(rawFiles[0].stream.Ext) ? "mp4" : rawFiles[0].stream.Ext;
-                finalPath = UniqueFilePath(folder, $"{stem}.{ext}");
-                string? dir = Path.GetDirectoryName(finalPath);
-                if (dir != null)
-                {
-                    Directory.CreateDirectory(dir);
-                }
-
-                File.Move(rawFiles[0].path, finalPath, overwrite: true);
-            }
-            else
-            {
-                finalPath = await MuxStreamsWithFfmpegAsync(rawFiles, folder, stem, _ct);
-            }
+            string finalPath = await DownloadResolvedStreamsAsync(streams, folder, stem, tempDir, _ct);
 
             CleanupTemp(tempDir);
 
@@ -656,6 +456,47 @@ public class DownloadEngine
             _item.Status = DownloadStatus.Error;
             _item.ErrorMessage = ex.Message;
         }
+    }
+
+    private async Task<string> DownloadResolvedStreamsAsync(
+        List<YtDlpService.ResolvedStream> streams,
+        string folder, string stem, string tempDir, CancellationToken ct)
+    {
+        _item.TotalBytes = streams.Sum(s => s.FilesizeApprox);
+
+        var rawFiles = new List<(YtDlpService.ResolvedStream stream, string path)>();
+        long progressBase = 0;
+
+        foreach (YtDlpService.ResolvedStream stream in streams)
+        {
+            string ext = string.IsNullOrWhiteSpace(stream.Ext) ? "bin" : stream.Ext;
+            string rawPath = Path.Combine(
+                tempDir, (stream.HasVideo ? "video" : "audio") + "." + ext);
+
+            await DownloadUrlMultiSegmentAsync(stream.Url, rawPath, tempDir, progressBase, ct);
+
+            progressBase += File.Exists(rawPath) ? new FileInfo(rawPath).Length : 0;
+            rawFiles.Add((stream, rawPath));
+        }
+
+        ct.ThrowIfCancellationRequested();
+        _item.Status = DownloadStatus.Merging;
+
+        if (rawFiles.Count == 1)
+        {
+            string ext = string.IsNullOrWhiteSpace(rawFiles[0].stream.Ext) ? "mp4" : rawFiles[0].stream.Ext;
+            string finalPath = UniqueFilePath(folder, $"{stem}.{ext}");
+            string? dir = Path.GetDirectoryName(finalPath);
+            if (dir != null)
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            File.Move(rawFiles[0].path, finalPath, overwrite: true);
+            return finalPath;
+        }
+
+        return await MuxStreamsWithFfmpegAsync(rawFiles, folder, stem, ct);
     }
 
     private async Task<string> MuxStreamsWithFfmpegAsync(
@@ -1329,6 +1170,20 @@ public class DownloadEngine
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
             "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
         return client;
+    }
+
+    public static async Task<string?> GetRemoteFileNameAsync(string url)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Head, url);
+        using HttpResponseMessage resp = await BuildHttpClient(null).SendAsync(req);
+
+        ContentDispositionHeaderValue? cd = resp.Content.Headers.ContentDisposition;
+
+        return SanitizeFileName(
+            cd?.FileNameStar ??
+            cd?.FileName ??
+            GuessFileName(resp.RequestMessage?.RequestUri?.ToString() ?? url)
+        );
     }
 }
 
