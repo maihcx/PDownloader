@@ -26,11 +26,16 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Authors>Song Mai Software</Authors>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
     <Resource Include="Assets\app-256.png" />
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
     <None Include="Resources\Locales\String.Designer.cs" />
     <EmbeddedResource Include="..\LICENSE" Condition="Exists('..\LICENSE')">
       <LogicalName>PDownloader.Installer.LICENSE</LogicalName>
