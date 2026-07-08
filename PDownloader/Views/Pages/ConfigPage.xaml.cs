@@ -15,7 +15,7 @@
 
 namespace PDownloader.Views.Pages;
 
-[PageMeta("page_config_title", "page_config_summary", SymbolRegular.ArrowTrendingSettings24, 1, false)]
+[PageMeta("page_config_title", "page_config_summary", SymbolRegular.PersonSettings20, 1, false)]
 public partial class ConfigPage : INavigableView<ConfigViewModel>
 {
     public ConfigViewModel ViewModel { get; }

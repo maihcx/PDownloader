@@ -203,7 +203,7 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
         });
         items.Add(new MenuItem
         {
-            Icon = new SymbolIcon { Symbol = SymbolRegular.ArrowTrendingSettings24 },
+            Icon = new SymbolIcon { Symbol = SymbolRegular.PersonSettings20 },
             Header = LocalizationHelper.GetLang("page_config_title"),
             Tag = "tray_config",
             Command = TrayExecuteCommand,
