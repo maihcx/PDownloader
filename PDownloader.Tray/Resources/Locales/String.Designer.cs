@@ -79,6 +79,15 @@ namespace PDownloader.Tray.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to page_about_title.
+        /// </summary>
+        internal static string page_about_title {
+            get {
+                return ResourceManager.GetString("page_about_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to page_config_title.
         /// </summary>
         internal static string page_config_title {

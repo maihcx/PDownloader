@@ -55,6 +55,8 @@ public partial class MainWindow : INavigableView<MainWindowViewModels>, IDisposa
 
         this.Hide();
         _ = _powerModeService.OptimizeAfterAsync(TimeSpan.FromSeconds(3));
+
+        _powerModeService.SetPowerMode(PowerModeService.PowerModeState.EfficiencyAdvanced);
     }
 
     private void NotifyIcon_LeftClick(Wpf.Ui.Tray.Controls.NotifyIcon sender, RoutedEventArgs e)

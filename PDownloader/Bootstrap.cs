@@ -124,6 +124,9 @@ public static class Bootstrap
 
                             NavigationHandle.NavigationService?.Navigate(typeof(SettingsPage));
                             break;
+                        case "OnGoAbout":
+                            NavigationHandle.NavigationService?.Navigate(typeof(AboutPage));
+                            break;
                     }
                 }
             });

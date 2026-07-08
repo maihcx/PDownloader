@@ -151,6 +151,10 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
                 CoreService?.StartApp();
                 CoreService?.Send("tray-event", "OnGoSettings--UPDATE");
                 break;
+            case "tray_about":
+                CoreService?.StartApp();
+                CoreService?.Send("tray-event", "OnGoAbout");
+                break;
             case "tray_close":
                 Application.Current.Shutdown();
                 break;
@@ -220,6 +224,14 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
             Tag = "tray_settings",
             Command = TrayExecuteCommand,
             CommandParameter = "tray_settings"
+        });
+        items.Add(new MenuItem
+        {
+            Icon = new SymbolIcon { Symbol = SymbolRegular.Info24 },
+            Header = LocalizationHelper.GetLang("page_about_title"),
+            Tag = "tray_about",
+            Command = TrayExecuteCommand,
+            CommandParameter = "tray_about"
         });
         items.Add(new MenuItem
         {

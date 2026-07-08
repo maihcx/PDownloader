@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -122,6 +122,9 @@
   </data>
   <data name="open_title" xml:space="preserve">
     <value>Open</value>
+  </data>
+  <data name="page_about_title" xml:space="preserve">
+    <value>About</value>
   </data>
   <data name="page_config_title" xml:space="preserve">
     <value>Config</value>
