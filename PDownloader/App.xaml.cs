@@ -67,7 +67,6 @@ public partial class App
             services.AddHostedService<ApplicationHostService>();
 
             services.AddHostedService<PowerModeHostService>();
-
             services.AddSingleton<PowerModeService>();
 
             services.AddSingleton<DownloadConfigService>();

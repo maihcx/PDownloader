@@ -48,6 +48,12 @@ public partial class NavigationPanelHostService : ObservableObject, IHostedServi
         try
         {
             mainWindow?.SizeChanged -= MainWindow_SizeChanged;
+
+            _navigationView?.PaneOpened -= _navigationView_PaneOpened;
+
+            _navigationView?.PaneClosed -= _navigationView_PaneClosed;
+
+            _navigationView?.Navigated -= _navigationView_Navigated;
         }
         catch { }
 
