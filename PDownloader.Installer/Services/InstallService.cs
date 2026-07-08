@@ -279,9 +279,12 @@ public static class InstallService
         string exePath = Path.Combine(installDir, "PDownloader.exe");
         string uninstallerExe = Path.Combine(installDir, "PDownloader.Installer.exe");
 
+        Version? AssemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        string _appVersion = AssemblyName != null ? AssemblyName.ToString() : "0.0.0.0";
+
         using RegistryKey key = Registry.LocalMachine.CreateSubKey(UninstallRegKey);
         key.SetValue("DisplayName", "PDownloader");
-        key.SetValue("DisplayVersion", "1.0.0");
+        key.SetValue("DisplayVersion", _appVersion);
         key.SetValue("Publisher", "PDownloader");
         key.SetValue("InstallLocation", installDir);
         key.SetValue("DisplayIcon", exePath);
