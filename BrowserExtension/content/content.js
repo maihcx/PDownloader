@@ -94,7 +94,12 @@ function getBtn() {
     }
 
     url = _activeVideo.currentSrc || _activeVideo.src;
-    if (!url || url.startsWith('blob:')) {
+    const isPlaceholderSrc = !url
+      || url.startsWith('blob:')
+      || /(^|[\/_-])(blank|dummy|placeholder|empty)([\/_.-]|$)/i.test(url)
+      || (isFinite(_activeVideo.duration) && _activeVideo.duration > 0 && _activeVideo.duration < 2);
+
+    if (isPlaceholderSrc) {
       const manifest = await chrome.runtime.sendMessage({ action: 'get_hls_manifest' });
       if (manifest?.url) {
         filename = sanitizeName(document.title) + '.mp4';
