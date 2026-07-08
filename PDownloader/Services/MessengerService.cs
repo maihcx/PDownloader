@@ -13,7 +13,24 @@
 //
 // Copyright (C) Song Mai Software.
 
+using CommunityToolkit.Mvvm.Messaging.Messages;
+
 namespace PDownloader.Services;
+
+public interface IDialogWithResult<TResult>
+{
+    TResult? Result { get; }
+}
+
+public interface IDialogWithModel
+{
+    void SetModel(object? model);
+}
+
+public class GenericMessage<T> : ValueChangedMessage<T>
+{
+    public GenericMessage(T value) : base(value) { }
+}
 
 public static class MessengerService
 {
@@ -37,5 +54,37 @@ public static class MessengerService
     public static async void ShowSnackbar(string title, string content, ControlAppearance controlAppearance, IconElement? icon = null, TimeSpan timeSpan = default)
     {
         GlobalSnackbar.Show(LanguageBase.GetLangValue(title), LanguageBase.GetLangValue(content), controlAppearance, icon, timeSpan);
+    }
+
+    public static async Task<TResult?> ShowDialogAsync<TDialog, TResult>(object? model = null, ContentDialogHost? dialogHost = null, Func<TDialog, Task>? onShowing = null) where TDialog : ContentDialog, IDialogWithResult<TResult>
+    {
+        IContentDialogService service = App.GetRequiredService<IContentDialogService>();
+
+        dialogHost ??= service.GetDialogHostEx();
+
+        if (Activator.CreateInstance(typeof(TDialog), dialogHost) is not TDialog dialog)
+        {
+            throw new InvalidOperationException($"Cannot create instance of type {typeof(TDialog).FullName}.");
+        }
+
+        if (dialog is IDialogWithModel modelDialog)
+        {
+            if (onShowing != null)
+            {
+                await onShowing(dialog);
+            }
+            modelDialog.SetModel(model);
+        }
+        else if (model != null)
+        {
+            if (onShowing != null)
+            {
+                await onShowing(dialog);
+            }
+            dialog.DataContext = model;
+        }
+
+        await dialog.ShowAsync();
+        return dialog.Result;
     }
 }

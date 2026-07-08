@@ -29,7 +29,8 @@ public sealed partial class MainWindow : IWindow
         MainWindowViewModel viewModel,
         INavigationService navigationService,
         IServiceProvider serviceProvider,
-        ISnackbarService snackbarService
+        ISnackbarService snackbarService,
+        IContentDialogService contentDialogService
     )
     {
         ViewModel = viewModel;
@@ -44,6 +45,7 @@ public sealed partial class MainWindow : IWindow
 
         snackbarService.SetSnackbarPresenter(GlobalSnackbar);
         navigationService.SetNavigationControl(RootNavigation);
+        contentDialogService.SetDialogHost(RootContentDialog);
 
         TranslationSource.Instance.PropertyChanged += (s, e) =>
         {
