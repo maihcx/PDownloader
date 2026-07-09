@@ -61,7 +61,7 @@
                                 <controls:AcrylicPanel BackgroundSource="{Binding ElementName=PART_ImageLayer}"
                                                        Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
                                                        CornerRadius="{TemplateBinding Border.CornerRadius}"
-                                                       BlurRadius="130"
+                                                       BlurRadius="30"
                                                        HorizontalAlignment="Right"
                                                        VerticalAlignment="Bottom"
                                                        Padding="8,4"
