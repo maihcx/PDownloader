@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PDownloader — multi-threaded download manager for Windows." />
+  <title>PDownloader</title>
+  <link rel="icon" href="./assets/favicon-48.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="./css/01-tokens.css" />
+  <link rel="stylesheet" href="./css/02-reset.css" />
+  <link rel="stylesheet" href="./css/03-base.css" />
+  <link rel="stylesheet" href="./css/04-layout.css" />
+  <link rel="stylesheet" href="./css/05-components.css" />
+  <link rel="stylesheet" href="./css/06-navbar.css" />
+  <link rel="stylesheet" href="./css/07-hero.css" />
+  <link rel="stylesheet" href="./css/08-features.css" />
+  <link rel="stylesheet" href="./css/09-architecture.css" />
+  <link rel="stylesheet" href="./css/10-extension.css" />
+  <link rel="stylesheet" href="./css/11-cta.css" />
+  <link rel="stylesheet" href="./css/12-footer.css" />
+  <link rel="stylesheet" href="./css/13-animations.css" />
+  <link rel="stylesheet" href="./css/14-responsive.css" />
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container navbar-inner">
+      <a href="#top" class="brand">
+        <img src="./assets/pdownloader-icon.png" alt="PDownloader" />
+        <span>PDownloader</span>
+      </a>
+
+      <nav class="nav-links" id="nav-links">
+        <a href="#features" data-i18n="nav.features">Features</a>
+        <a href="#architecture" data-i18n="nav.architecture">Architecture</a>
+        <a href="#extension" data-i18n="nav.extension">Extension</a>
+        <a href="#" data-href-config="repoUrl" target="_blank" rel="noopener" data-i18n="nav.github">GitHub</a>
+      </nav>
+
+      <div class="nav-actions">
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button type="button" data-lang-btn="vi">VI</button>
+          <button type="button" data-lang-btn="en">EN</button>
+        </div>
+        <button class="nav-toggle" id="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 4.5H16M2 9H16M2 13.5H16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- ================= HERO ================= -->
+    <section class="hero">
+      <div class="container hero-inner">
+        <span class="eyebrow" data-i18n="hero.eyebrow">Multi-threaded download manager · Windows</span>
+
+        <h1>
+          <span data-i18n="hero.titlePrefix">Split the file.</span><br />
+          <span class="grad" data-i18n="hero.titleGrad">Not your patience.</span>
+        </h1>
+
+        <p class="hero-sub" data-i18n="hero.subtitle">
+          PDownloader tears large downloads into parallel byte-range segments, resumes what breaks mid-transfer, and pulls YouTube and HLS streams into one clean queue.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#" data-href-config="releasesUrl" target="_blank" rel="noopener" data-i18n="hero.ctaPrimary">Download for Windows</a>
+          <a class="btn btn-ghost" href="#" data-href-config="repoUrl" target="_blank" rel="noopener" data-i18n="hero.ctaSecondary">View source on GitHub</a>
+        </div>
+
+        <!-- Signature visual: segmented download bar -->
+        <div class="segbar">
+          <div class="segbar-header">
+            <span class="mono">download.bin</span>
+            <span class="segbar-status" data-segbar-status data-state="running" data-i18n="segbar.statusRunning">downloading — 8 segments</span>
+          </div>
+          <div class="segbar-track" data-segbar-track></div>
+          <div class="segbar-labels">
+            <span>01</span><span>02</span><span>03</span><span>04</span>
+            <span>05</span><span>06</span><span>07</span><span>08</span>
+          </div>
+        </div>
+
+        <div class="hero-meta">
+          <span><strong data-i18n="hero.metaThreads">8 parallel segments by default</strong></span>
+          <span data-i18n="hero.metaStack">.NET 10 · WPF · MVVM</span>
+          <span data-i18n="hero.metaLicense">GPL-3.0 licensed</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= FEATURES ================= -->
+    <section id="features">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow" data-i18n="features.eyebrow">What it does</span>
+          <h2 data-i18n="features.title">One engine, every kind of download</h2>
+          <p data-i18n="features.subtitle">The same engine handles plain files, broken connections, and streaming media.</p>
+        </div>
+
+        <div class="features-grid">
+          <article class="card reveal">
+            <div class="card-icon">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="8" width="3" height="7" rx="1" fill="currentColor"/><rect x="7" y="4" width="3" height="11" rx="1" fill="currentColor"/><rect x="12" y="10" width="3" height="5" rx="1" fill="currentColor"/><rect x="17" y="6" width="1.5" height="9" rx="0.75" fill="currentColor" opacity="0.5"/></svg>
+            </div>
+            <h3 data-i18n="features.segments.title">Multi-segment downloading</h3>
+            <p data-i18n="features.segments.desc">Splits a file into parallel byte-range requests.</p>
+          </article>
+
+          <article class="card reveal">
+            <div class="card-icon">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M16 5a7 7 0 1 0 1.5 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M17 2v4h-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <h3 data-i18n="features.resume.title">Resume &amp; retry</h3>
+            <p data-i18n="features.resume.desc">Segment progress persists to disk between runs.</p>
+          </article>
+
+          <article class="card reveal">
+            <div class="card-icon">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 8l4 2-4 2V8z" fill="currentColor"/></svg>
+            </div>
+            <h3 data-i18n="features.hls.title">HLS / DASH streaming</h3>
+            <p data-i18n="features.hls.desc">Detects .m3u8 playlists and merges fragments.</p>
+          </article>
+
+          <article class="card reveal">
+            <div class="card-icon">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 8.3l3.5 1.7-3.5 1.7V8.3z" fill="currentColor"/></svg>
+            </div>
+            <h3 data-i18n="features.ytdlp.title">YouTube via yt-dlp</h3>
+            <p data-i18n="features.ytdlp.desc">Resolves formats and streams; PDownloader handles the transfer.</p>
+          </article>
+
+          <article class="card reveal">
+            <div class="card-icon">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2.5" y="2.5" width="6" height="6" rx="1.4" stroke="currentColor" stroke-width="1.5"/><rect x="11.5" y="2.5" width="6" height="6" rx="1.4" stroke="currentColor" stroke-width="1.5"/><rect x="2.5" y="11.5" width="6" height="6" rx="1.4" stroke="currentColor" stroke-width="1.5"/><path d="M14.5 11.5v6M11.5 14.5h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <h3 data-i18n="features.extension.title">Browser extension</h3>
+            <p data-i18n="features.extension.desc">Context-menu capture and a manual URL popup.</p>
+          </article>
+
+          <article class="card reveal">
+            <div class="card-icon">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2" fill="currentColor"/></svg>
+            </div>
+            <h3 data-i18n="features.tray.title">Tray &amp; background service</h3>
+            <p data-i18n="features.tray.desc">Coordinates the UI, download window, and tray icon over IPC.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ARCHITECTURE ================= -->
+    <section id="architecture">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow" data-i18n="architecture.eyebrow">Under the hood</span>
+          <h2 data-i18n="architecture.title">Four small processes, one local bridge</h2>
+          <p data-i18n="architecture.subtitle">The browser extension talks to a local HTTP bridge; everything else is routed over CFS.</p>
+        </div>
+
+        <div class="arch-wrap reveal">
+          <svg class="arch-diagram" viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="segGradient" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#7c5cfc" />
+                <stop offset="100%" stop-color="#45d6ff" />
+              </linearGradient>
+            </defs>
+
+            <!-- Browser -->
+            <rect class="arch-node" x="20" y="114" width="150" height="72" rx="10" />
+            <foreignObject x="20" y="114" width="150" height="72">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="arch-node-content">
+                <span class="arch-node-title" data-i18n="architecture.browser">Browser extension</span>
+                <span class="arch-node-sub" data-i18n="architecture.browserSub">context menu / popup</span>
+              </div>
+            </foreignObject>
+
+            <!-- line browser -> core -->
+            <path class="arch-line arch-line--live" d="M170 150 H 320" />
+            <text class="arch-port" x="245" y="140" text-anchor="middle">:6287</text>
+
+            <!-- Core -->
+            <rect class="arch-node arch-node--core" x="320" y="104" width="180" height="92" rx="10" />
+            <foreignObject x="320" y="104" width="180" height="92">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="arch-node-content">
+                <span class="arch-node-title" data-i18n="architecture.core">PDownloader.Core</span>
+                <span class="arch-node-sub" data-i18n="architecture.coreSub">HTTP bridge + CFS router</span>
+              </div>
+            </foreignObject>
+
+            <!-- lines core -> 3 nodes -->
+            <path class="arch-line" d="M500 128 H 610 V 54" />
+            <path class="arch-line" d="M500 150 H 620" />
+            <path class="arch-line" d="M500 172 H 610 V 248" />
+
+            <!-- Main UI -->
+            <rect class="arch-node" x="620" y="18" width="180" height="72" rx="10" />
+            <foreignObject x="620" y="18" width="180" height="72">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="arch-node-content">
+                <span class="arch-node-title" data-i18n="architecture.mainui">PDownloader</span>
+                <span class="arch-node-sub" data-i18n="architecture.mainuiSub">main UI, settings</span>
+              </div>
+            </foreignObject>
+
+            <!-- Tray -->
+            <rect class="arch-node" x="620" y="114" width="180" height="72" rx="10" />
+            <foreignObject x="620" y="114" width="180" height="72">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="arch-node-content">
+                <span class="arch-node-title" data-i18n="architecture.tray">PDownloader.Tray</span>
+                <span class="arch-node-sub" data-i18n="architecture.traySub">tray icon</span>
+              </div>
+            </foreignObject>
+
+            <!-- Runner -->
+            <rect class="arch-node" x="620" y="212" width="180" height="72" rx="10" />
+            <foreignObject x="620" y="212" width="180" height="72">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="arch-node-content">
+                <span class="arch-node-title" data-i18n="architecture.runner">PDownloader.Runner</span>
+                <span class="arch-node-sub" data-i18n="architecture.runnerSub">DownloadEngine</span>
+              </div>
+            </foreignObject>
+          </svg>
+
+          <div class="arch-legend">
+            <div class="arch-legend-title mono" data-i18n="architecture.legendTitle">Local HTTP bridge — localhost:6287</div>
+            <div class="arch-legend-grid">
+              <div class="arch-legend-item">
+                <span class="arch-legend-key mono" data-i18n="architecture.legend1k">/ping</span>
+                <span class="arch-legend-desc" data-i18n="architecture.legend1v">health check</span>
+              </div>
+              <div class="arch-legend-item">
+                <span class="arch-legend-key mono" data-i18n="architecture.legend2k">/download</span>
+                <span class="arch-legend-desc" data-i18n="architecture.legend2v">queue a regular file download</span>
+              </div>
+              <div class="arch-legend-item">
+                <span class="arch-legend-key mono" data-i18n="architecture.legend3k">/youtube/analyze</span>
+                <span class="arch-legend-desc" data-i18n="architecture.legend3v">resolve formats via yt-dlp</span>
+              </div>
+              <div class="arch-legend-item">
+                <span class="arch-legend-key mono" data-i18n="architecture.legend4k">/youtube/download</span>
+                <span class="arch-legend-desc" data-i18n="architecture.legend4v">start a resolved download</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= EXTENSION ================= -->
+    <section id="extension">
+      <div class="container ext-layout">
+        <div class="reveal">
+          <span class="eyebrow" data-i18n="extension.eyebrow">Browser extension</span>
+          <h2 style="margin-bottom:1rem;" data-i18n="extension.title">Capture links without leaving the page</h2>
+          <p style="margin-bottom:1.5rem;color:var(--text-secondary);" data-i18n="extension.subtitle">Installed automatically alongside the desktop app.</p>
+
+          <div class="browser-row">
+            <span class="pill">Chrome</span>
+            <span class="pill">Edge</span>
+            <span class="pill">Brave</span>
+            <span class="pill">Cốc Cốc</span>
+          </div>
+
+          <ul class="ext-list">
+            <li>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span data-i18n="extension.item1">Context menu entries on links, videos, and pages.</span>
+            </li>
+            <li>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span data-i18n="extension.item2">Popup for entering a URL by hand.</span>
+            </li>
+            <li>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span data-i18n="extension.item3">Automatic capture of downloadable file clicks.</span>
+            </li>
+            <li>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span data-i18n="extension.item4">Desktop notifications for queueing and errors.</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="ext-visual reveal">
+          <img class="ext-visual-icon" src="./assets/pdownloader-icon.png" alt="" />
+          <div class="ext-flow">
+            <div class="ext-flow-step"><span class="n">1</span><span data-i18n="extension.flowStep1">click "Download with PDownloader"</span></div>
+            <div class="ext-flow-arrow">↓</div>
+            <div class="ext-flow-step"><span class="n">2</span><span data-i18n="extension.flowStep2">POST localhost:6287/download</span></div>
+            <div class="ext-flow-arrow">↓</div>
+            <div class="ext-flow-step"><span class="n">3</span><span data-i18n="extension.flowStep3">Core parses &amp; forwards over CFS</span></div>
+            <div class="ext-flow-arrow">↓</div>
+            <div class="ext-flow-step"><span class="n">4</span><span data-i18n="extension.flowStep4">Runner enqueues → DownloadEngine starts</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CTA / GET STARTED ================= -->
+    <section id="get-started">
+      <div class="container">
+        <div class="cta reveal">
+          <div>
+            <span class="eyebrow" data-i18n="cta.eyebrow">Get started</span>
+            <h2 data-i18n="cta.title">Build it from source, or grab the installer</h2>
+            <p data-i18n="cta.subtitle">PDownloader is open source under GPL-3.0.</p>
+
+            <div class="cta-actions">
+              <a class="btn btn-primary" href="#" data-href-config="releasesUrl" target="_blank" rel="noopener" data-i18n="cta.primary">Download latest release</a>
+              <a class="btn btn-ghost" href="#" data-href-config="repoUrl" target="_blank" rel="noopener" data-i18n="cta.secondary">Browse the source</a>
+            </div>
+
+            <div class="cta-requirements">
+              <span data-i18n="cta.req1">.NET 10 SDK</span>
+              <span data-i18n="cta.req2">Windows 10 or later, x64</span>
+            </div>
+          </div>
+
+          <div class="terminal">
+            <div class="terminal-bar">
+              <div class="terminal-dots"><span></span><span></span><span></span></div>
+              <span class="terminal-label" data-i18n="cta.terminalLabel">shell</span>
+              <button class="copy-btn" data-copy-target="#build-snippet">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 10.5V3.5A1.5 1.5 0 014.5 2h7" stroke="currentColor" stroke-width="1.3"/></svg>
+                <span>copy</span>
+              </button>
+            </div>
+            <pre id="build-snippet"><span class="tok-comment" data-i18n="cta.terminalComment1"># restore & build the whole solution</span>
+<span class="tok-cmd">dotnet build PDownloader.sln -c Release</span>
+
+<span class="tok-comment" data-i18n="cta.terminalComment2"># starts the Core background service automatically</span>
+<span class="tok-cmd">dotnet run --project PDownloader</span></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="./assets/pdownloader-icon.png" alt="" width="20" height="20" style="border-radius:5px;" />
+        <span data-i18n="footer.tagline">A multi-threaded download manager for Windows.</span>
+      </div>
+      <div class="footer-links">
+        <a href="#" data-href-config="repoUrl" target="_blank" rel="noopener" data-i18n="footer.source">Source</a>
+        <a href="#" data-href-config="releasesUrl" target="_blank" rel="noopener" data-i18n="footer.releases">Releases</a>
+        <a href="#" data-href-config="licenseUrl" target="_blank" rel="noopener" data-i18n="footer.license">License (GPL-3.0)</a>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
