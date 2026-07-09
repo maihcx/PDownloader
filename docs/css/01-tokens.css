@@ -1,0 +1,57 @@
+/* ==========================================================================
+   Design tokens
+   Palette: near-black engineering surface + violet→cyan segment gradient,
+   amber used sparingly for "retry / resume" states.
+   ========================================================================== */
+:root {
+  /* Color */
+  --bg-void: #0a0a12;
+  --bg-surface: #131320;
+  --bg-surface-2: #1a1a2b;
+  --bg-surface-3: #20203570;
+  --border-soft: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  --text-primary: #f3f2f9;
+  --text-secondary: #b8b6c9;
+  --text-muted: #83829a;
+
+  --accent-violet: #7c5cfc;
+  --accent-violet-dim: #7c5cfc33;
+  --accent-cyan: #45d6ff;
+  --accent-cyan-dim: #45d6ff33;
+  --accent-amber: #ffb454;
+  --accent-green: #4ce0a1;
+
+  --gradient-segment: linear-gradient(90deg, var(--accent-violet), var(--accent-cyan));
+  --gradient-hero-glow: radial-gradient(60% 60% at 50% 0%, #7c5cfc22 0%, transparent 70%);
+
+  /* Type */
+  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-body: "Inter", "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --fs-eyebrow: 0.8125rem;
+  --fs-small: 0.875rem;
+  --fs-body: 1.0625rem;
+  --fs-lead: 1.25rem;
+  --fs-h3: clamp(1.25rem, 1rem + 1vw, 1.625rem);
+  --fs-h2: clamp(1.875rem, 1.4rem + 2vw, 2.75rem);
+  --fs-h1: clamp(2.5rem, 1.6rem + 4vw, 4.25rem);
+
+  --lh-tight: 1.15;
+  --lh-snug: 1.35;
+  --lh-body: 1.7;
+
+  /* Layout */
+  --content-width: 1120px;
+  --gutter: clamp(1.25rem, 4vw, 3rem);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 180ms;
+  --dur-med: 420ms;
+}
