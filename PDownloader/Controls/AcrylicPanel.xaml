@@ -18,7 +18,7 @@
                         <Grid x:Name="PART_RootGrid">
                             <Rectangle Fill="{TemplateBinding BlurBrush}">
                                 <Rectangle.Effect>
-                                    <BlurEffect Radius="{TemplateBinding BlurRadius}" />
+                                    <BlurEffect Radius="{Binding BlurRadius, RelativeSource={RelativeSource TemplatedParent}}" />
                                 </Rectangle.Effect>
                             </Rectangle>
 

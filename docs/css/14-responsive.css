@@ -1,0 +1,28 @@
+@media (max-width: 640px) {
+  .hero-meta {
+    gap: 1rem 1.5rem;
+  }
+
+  .segbar-track {
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, 34px);
+    height: auto;
+  }
+
+  .segbar-labels {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .segbar-labels span:nth-child(n + 5) {
+    display: none;
+  }
+
+  .segbar-track.is-merged {
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: 34px;
+  }
+
+  .arch-legend-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,131 @@
+.hero {
+  padding-top: clamp(4.5rem, 10vw, 7rem);
+  padding-bottom: clamp(3rem, 8vw, 5rem);
+}
+
+.hero-inner {
+  display: grid;
+  gap: clamp(2.5rem, 6vw, 4rem);
+  text-align: center;
+  justify-items: center;
+}
+
+.hero h1 {
+  max-width: 15ch;
+}
+
+.hero h1 .grad {
+  background: var(--gradient-segment);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero-sub {
+  max-width: 56ch;
+  font-size: var(--fs-lead);
+  color: var(--text-secondary);
+}
+
+.hero-actions {
+  display: flex;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hero-meta {
+  display: flex;
+  gap: 1.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.hero-meta strong {
+  color: var(--text-secondary);
+}
+
+/* ---- Signature: segmented download bar ---- */
+.segbar {
+  width: 100%;
+  max-width: 720px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  padding: 1.75rem clamp(1.25rem, 4vw, 2.25rem) 1.5rem;
+}
+
+.segbar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.segbar-status {
+  color: var(--accent-cyan);
+  transition: color var(--dur-med);
+}
+
+.segbar-status[data-state="merged"] {
+  color: var(--accent-green);
+}
+
+.segbar-track {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  height: 34px;
+}
+
+.segbar-track.is-merged {
+  gap: 0;
+}
+
+.seg {
+  position: relative;
+  border-radius: 4px;
+  background: var(--bg-surface-3);
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  transition: border-radius var(--dur-med) var(--ease-out);
+}
+
+.segbar-track.is-merged .seg:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.segbar-track.is-merged .seg:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.seg-fill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: var(--gradient-segment);
+}
+
+.seg.is-done .seg-fill {
+  width: 100% !important;
+}
+
+.segbar-labels {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  margin-top: 0.5rem;
+}
+
+.segbar-labels span {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: center;
+}
