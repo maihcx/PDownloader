@@ -16,6 +16,16 @@
     if (!url || url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('chrome-extension:')) return;
     if (await Utils.isBlacklisted(url, settings.blacklistedDomains || [])) return;
 
+    let activeTabUrl = '';
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      activeTabUrl = tab?.url || '';
+    } catch (_) {}
+
+    if (Utils.isIncompatibleSite(url) ||
+        Utils.isIncompatibleSite(item.referrer || '') ||
+        Utils.isIncompatibleSite(activeTabUrl)) return;
+
     const finalUrl = item.finalUrl || url;
 
     let filename = item.filename || ContentDisposition.lookup([finalUrl, url]);
@@ -33,11 +43,7 @@
     chrome.downloads.cancel(item.id);
     chrome.downloads.erase({ id: item.id });
 
-    let referer = '';
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      referer = tab?.url || '';
-    } catch (_) {}
+    const referer = activeTabUrl;
 
     const displayName = filename
       ? filename.split(/[/\\]/).pop()
