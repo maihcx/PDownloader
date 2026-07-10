@@ -71,7 +71,7 @@ internal sealed class HlsDownloadHandler
 
         try
         {
-            YtDlpService.HlsFragmentsResult? fragmentResult =
+            HlsFragmentsResult? fragmentResult =
                 await TryResolveFragmentsAsync(referer, cookieHeader, cancellationToken);
 
             _item.Status = DownloadStatus.Downloading;
@@ -108,7 +108,7 @@ internal sealed class HlsDownloadHandler
         }
     }
 
-    private async Task<YtDlpService.HlsFragmentsResult?> TryResolveFragmentsAsync(
+    private async Task<HlsFragmentsResult?> TryResolveFragmentsAsync(
         string? referer,
         string? cookieHeader,
         CancellationToken cancellationToken)
@@ -132,7 +132,7 @@ internal sealed class HlsDownloadHandler
     }
 
     private Task<string> DownloadResolvedFragmentsAsync(
-        YtDlpService.HlsFragmentsResult fragmentResult,
+        HlsFragmentsResult fragmentResult,
         string outputFolder,
         string fileStem,
         string tempDirectory,
