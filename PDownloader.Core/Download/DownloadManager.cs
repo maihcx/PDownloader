@@ -80,10 +80,10 @@ public class DownloadManager : IDisposable
             var cts = new CancellationTokenSource();
             _ctsByItem[item.Id] = cts;
 
-            var progress = new Progress<DownloadProgress>(p =>
+            var progress = new Progress<DownloadProgress>(_ =>
             {
-                item.DownloadedBytes = p.DownloadedBytes;
-                item.SpeedBps = p.SpeedBps;
+                // DownloadEngine already owns and updates the DownloadItem.
+                // This callback only publishes the latest snapshot.
                 OnItemChanged?.Invoke(item);
             });
 

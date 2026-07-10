@@ -21,8 +21,12 @@ internal sealed class DownloadProgressMonitor : IDisposable
     private readonly Action<long, double> _report;
     private readonly Action? _afterReport;
     private readonly System.Timers.Timer _timer;
+    private readonly object _sync = new();
+
     private long _lastReportedBytes;
+    private long _lastSampleTimestamp;
     private int _isTicking;
+    private bool _isRunning;
     private bool _disposed;
 
     public DownloadProgressMonitor(
@@ -31,10 +35,20 @@ internal sealed class DownloadProgressMonitor : IDisposable
         Action? afterReport = null,
         double intervalMilliseconds = 1000)
     {
+        ArgumentNullException.ThrowIfNull(getDownloadedBytes);
+        ArgumentNullException.ThrowIfNull(report);
+
+        if (intervalMilliseconds <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(intervalMilliseconds),
+                intervalMilliseconds,
+                "Khoảng thời gian cập nhật tiến độ phải lớn hơn 0.");
+        }
+
         _getDownloadedBytes = getDownloadedBytes;
         _report = report;
         _afterReport = afterReport;
-        _lastReportedBytes = getDownloadedBytes();
 
         _timer = new System.Timers.Timer(intervalMilliseconds)
         {
@@ -43,17 +57,45 @@ internal sealed class DownloadProgressMonitor : IDisposable
         _timer.Elapsed += OnElapsed;
     }
 
-    public void Start() => _timer.Start();
+    public void Start()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
-    public void Stop() => _timer.Stop();
+        lock (_sync)
+        {
+            _lastReportedBytes = _getDownloadedBytes();
+            _lastSampleTimestamp = Stopwatch.GetTimestamp();
+            _isRunning = true;
+        }
+
+        _timer.Start();
+    }
+
+    public void Stop()
+    {
+        _timer.Stop();
+
+        lock (_sync)
+        {
+            _isRunning = false;
+        }
+    }
 
     public void ReportFinal(double speedBps = 0)
     {
         _timer.Stop();
-        long current = _getDownloadedBytes();
-        Interlocked.Exchange(ref _lastReportedBytes, current);
-        _report(current, speedBps);
-        _afterReport?.Invoke();
+
+        lock (_sync)
+        {
+            _isRunning = false;
+
+            long current = _getDownloadedBytes();
+            _lastReportedBytes = current;
+            _lastSampleTimestamp = Stopwatch.GetTimestamp();
+
+            _report(current, Math.Max(0, speedBps));
+            _afterReport?.Invoke();
+        }
     }
 
     private void OnElapsed(object? sender, System.Timers.ElapsedEventArgs e)
@@ -65,11 +107,30 @@ internal sealed class DownloadProgressMonitor : IDisposable
 
         try
         {
-            long current = _getDownloadedBytes();
-            long previous = Interlocked.Exchange(ref _lastReportedBytes, current);
-            double speed = Math.Max(0, current - previous);
-            _report(current, speed);
-            _afterReport?.Invoke();
+            lock (_sync)
+            {
+                if (!_isRunning || _disposed)
+                {
+                    return;
+                }
+
+                long current = _getDownloadedBytes();
+                long now = Stopwatch.GetTimestamp();
+
+                long byteDelta = current - _lastReportedBytes;
+                long timestampDelta = now - _lastSampleTimestamp;
+
+                _lastReportedBytes = current;
+                _lastSampleTimestamp = now;
+
+                double elapsedSeconds = timestampDelta / (double)Stopwatch.Frequency;
+                double speedBps = byteDelta > 0 && elapsedSeconds > 0
+                    ? byteDelta / elapsedSeconds
+                    : 0;
+
+                _report(current, speedBps);
+                _afterReport?.Invoke();
+            }
         }
         catch (Exception ex)
         {
@@ -88,8 +149,19 @@ internal sealed class DownloadProgressMonitor : IDisposable
             return;
         }
 
-        _disposed = true;
         _timer.Stop();
+
+        lock (_sync)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _isRunning = false;
+            _disposed = true;
+        }
+
         _timer.Elapsed -= OnElapsed;
         _timer.Dispose();
     }
