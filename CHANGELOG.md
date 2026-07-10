@@ -1,3 +1,19 @@
+## v0.1.3
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- Implement graceful runner shutdown sequence (#13) — @maihcx
+
+## 🧹 Maintenance
+
+- Refactor yt-dlp & ffmpeg utilities into ExternalTools (#16) — @maihcx
+- Refactor Download module into modular services and organized namespaces (#15) — @maihcx
+- Move UserDataStore to Utils folder (#14) — @maihcx
+
+
+---
+
 ## v0.1.2
 
 ## 🚀 Changelog
