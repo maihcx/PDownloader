@@ -20,18 +20,6 @@ namespace PDownloader.Core.Download.Models;
 
 public class DownloadItem : INotifyPropertyChanged
 {
-    private string _url = string.Empty;
-    private string _fileName = string.Empty;
-    private string _savePath = string.Empty;
-    private long _totalBytes = 0;
-    private long _downloadedBytes = 0;
-    private double _speedBps = 0;
-    private DownloadStatus _status = DownloadStatus.Queued;
-    private string _errorMessage = string.Empty;
-    private int _threads = 8;
-    private DateTime _startTime;
-    private DateTime _endTime;
-
     public Dictionary<string, string>? CustomHeaders { get; set; }
 
     public string Id = string.Empty;
@@ -40,78 +28,91 @@ public class DownloadItem : INotifyPropertyChanged
 
     public string? FormatId { get; set; }
 
+    public double Progress => TotalBytes > 0 ? (double)DownloadedBytes / TotalBytes * 100 : 0;
+
+    public bool IsActive => Status is DownloadStatus.Downloading or DownloadStatus.Connecting or DownloadStatus.Merging;
+
+    private string _url = string.Empty;
     public string Url
     {
         get => _url;
         set { _url = value; OnPropertyChanged(); }
     }
 
+    private string _fileName = string.Empty;
     public string FileName
     {
         get => _fileName;
         set { _fileName = value; OnPropertyChanged(); }
     }
 
+    private string _savePath = string.Empty;
     public string SavePath
     {
         get => _savePath;
         set { _savePath = value; OnPropertyChanged(); }
     }
 
+    private long _totalBytes = 0;
     public long TotalBytes
     {
         get => _totalBytes;
         set { _totalBytes = value; OnPropertyChanged(); OnPropertyChanged(nameof(Progress)); OnPropertyChanged(nameof(TotalFormatted)); }
     }
 
+    private long _downloadedBytes = 0;
     public long DownloadedBytes
     {
         get => _downloadedBytes;
         set { _downloadedBytes = value; OnPropertyChanged(); OnPropertyChanged(nameof(Progress)); OnPropertyChanged(nameof(DownloadedFormatted)); }
     }
 
-    public double Progress => TotalBytes > 0 ? (double)DownloadedBytes / TotalBytes * 100 : 0;
-
+    private double _speedBps = 0;
     public double SpeedBps
     {
         get => _speedBps;
         set { _speedBps = value; OnPropertyChanged(); OnPropertyChanged(nameof(SpeedFormatted)); OnPropertyChanged(nameof(EtaFormatted)); }
     }
 
+    private DownloadStatus _status = DownloadStatus.Queued;
     public DownloadStatus Status
     {
         get => _status;
         set { _status = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsActive)); }
     }
 
+    private string _errorMessage = string.Empty;
     public string ErrorMessage
     {
         get => _errorMessage;
         set { _errorMessage = value; OnPropertyChanged(); }
     }
 
+    private int _threads = 8;
     public int Threads
     {
         get => _threads;
         set { _threads = value; OnPropertyChanged(); }
     }
 
+    private DateTime _startTime;
     public DateTime StartTime
     {
         get => _startTime;
         set { _startTime = value; OnPropertyChanged(); }
     }
 
+    private DateTime _endTime;
     public DateTime EndTime
     {
         get => _endTime;
         set { _endTime = value; OnPropertyChanged(); }
     }
 
-    public bool IsActive => Status is DownloadStatus.Downloading or DownloadStatus.Connecting or DownloadStatus.Merging;
-
     public string TotalFormatted => FormatBytes(TotalBytes);
+
     public string DownloadedFormatted => FormatBytes(DownloadedBytes);
+
     public string SpeedFormatted => SpeedBps > 0 ? $"{FormatBytes((long)SpeedBps)}/s" : "–";
 
     public string EtaFormatted

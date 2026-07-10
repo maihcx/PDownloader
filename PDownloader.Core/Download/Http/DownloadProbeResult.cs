@@ -13,7 +13,7 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Core.Download;
+namespace PDownloader.Core.Download.Http;
 
 internal sealed record DownloadProbeResult(
     long TotalBytes,

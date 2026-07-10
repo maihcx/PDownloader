@@ -13,7 +13,7 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Core.Download;
+namespace PDownloader.Core.Download.Hls;
 
 internal sealed class HlsFragmentDownloadService
 {
@@ -81,7 +81,6 @@ internal sealed class HlsFragmentDownloadService
             $"{fileStem}.{extension}");
 
         await MergeFragmentsAsync(tempPaths, finalPath, cancellationToken);
-        DeleteFragments(tempPaths);
         return finalPath;
     }
 
@@ -195,12 +194,17 @@ internal sealed class HlsFragmentDownloadService
                 foreach (string tempPath in tempPaths)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    await using var input = new FileStream(
+
+                    await using (var input = new FileStream(
                         tempPath,
                         FileMode.Open,
                         FileAccess.Read,
-                        FileShare.Read);
-                    await input.CopyToAsync(output, cancellationToken);
+                        FileShare.Read))
+                    {
+                        await input.CopyToAsync(output, cancellationToken);
+                    }
+
+                    TryDeleteFragment(tempPath);
                 }
             }
 
@@ -224,21 +228,18 @@ internal sealed class HlsFragmentDownloadService
         }
     }
 
-    private static void DeleteFragments(IEnumerable<string> tempPaths)
+    private static void TryDeleteFragment(string path)
     {
-        foreach (string path in tempPaths)
+        try
         {
-            try
+            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
             {
-                if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
-                {
-                    File.Delete(path);
-                }
+                File.Delete(path);
             }
-            catch
-            {
-                // Best effort cleanup.
-            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[HLS] Không thể xóa fragment ngay sau khi ghép: {ex.Message}");
         }
     }
 }

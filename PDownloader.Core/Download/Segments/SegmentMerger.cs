@@ -13,7 +13,7 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Core.Download;
+namespace PDownloader.Core.Download.Segments;
 
 internal sealed class SegmentMerger
 {
@@ -44,21 +44,22 @@ internal sealed class SegmentMerger
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    await using var input = new FileStream(
+                    await using (var input = new FileStream(
                         segment.TempFilePath,
                         FileMode.Open,
                         FileAccess.Read,
-                        FileShare.Read);
-                    await input.CopyToAsync(output, cancellationToken);
+                        FileShare.Read))
+                    {
+                        await input.CopyToAsync(output, cancellationToken);
+                    }
+
+                    // Segment đã được nối thành công vào file .merging nên có thể
+                    // giải phóng ngay, tránh giữ đồng thời cả file part và bản ghép.
+                    TryDelete(segment.TempFilePath, segment.Index);
                 }
             }
 
             File.Move(mergingPath, destinationPath, overwrite: true);
-
-            foreach (SegmentInfo segment in segments)
-            {
-                TryDelete(segment.TempFilePath, segment.Index);
-            }
         }
         catch
         {

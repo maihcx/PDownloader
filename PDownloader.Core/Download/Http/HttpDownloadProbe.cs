@@ -15,7 +15,7 @@
 
 using System.Net.Http.Headers;
 
-namespace PDownloader.Core.Download;
+namespace PDownloader.Core.Download.Http;
 
 internal sealed class HttpDownloadProbe
 {

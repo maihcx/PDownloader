@@ -13,7 +13,7 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Core.Download;
+namespace PDownloader.Core.Download.Handlers;
 
 internal sealed class YoutubeDownloadHandler
 {
@@ -129,13 +129,16 @@ internal sealed class YoutubeDownloadHandler
         var files = new List<DownloadedStreamFile>(streams.Count);
         long progressBaseOffset = 0;
 
-        for (int index = 0; index < streams.Count; index++)
+        foreach (YtDlpService.ResolvedStream stream in streams)
         {
-            YtDlpService.ResolvedStream stream = streams[index];
             string extension = string.IsNullOrWhiteSpace(stream.Ext) ? "bin" : stream.Ext;
             string kind = stream.HasVideo ? "video" : "audio";
-            string rawPath = Path.Combine(tempDirectory, $"{kind}_{index}.{extension}");
-            string segmentDirectory = Path.Combine(tempDirectory, $"{kind}_{index}_segments");
+
+            // Giữ nguyên cấu trúc temp của phiên bản cũ:
+            //   video.<ext> + video_segs/
+            //   audio.<ext> + audio_segs/
+            string rawPath = Path.Combine(tempDirectory, $"{kind}.{extension}");
+            string segmentDirectory = Path.Combine(tempDirectory, $"{kind}_segs");
 
             DownloadProbeResult probe = await _multiSegmentDownloader.ProbeAndDownloadAsync(
                 stream.Url,

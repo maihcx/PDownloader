@@ -16,7 +16,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace PDownloader.Core.Download;
+namespace PDownloader.Core.Download.Hls;
 
 internal sealed class YtDlpHlsDownloadService
 {
