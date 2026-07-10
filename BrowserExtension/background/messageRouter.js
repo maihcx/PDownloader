@@ -1,6 +1,6 @@
 (function (root) {
   const PD = root.PD || (root.PD = {});
-  const { Api, Badge, Notify, State, Storage, HlsCapture } = PD;
+  const { Api, Badge, Notify, State, Storage, HlsCapture, Utils } = PD;
 
   const handlers = {
     ping_app(_msg, _sender, sendResponse) {
@@ -61,6 +61,19 @@
 
     remove_blacklist(msg, _sender, sendResponse) {
       Storage.removeBlacklist(msg.domain).then(() => sendResponse({ success: true }));
+      return true;
+    },
+
+    get_site_status(msg, _sender, sendResponse) {
+      (async () => {
+        const url = msg.url || '';
+        const domain = Utils.getDomain(url);
+        const settings = await Storage.getSettings();
+        const autoIntercept = settings.autoIntercept !== false;
+        const incompatible = domain ? Utils.isIncompatibleSite(url) : false;
+        const blacklisted = domain ? await Utils.isBlacklisted(url, settings.blacklistedDomains || []) : false;
+        sendResponse({ domain, autoIntercept, incompatible, blacklisted });
+      })();
       return true;
     },
 
