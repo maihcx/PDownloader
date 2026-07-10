@@ -81,4 +81,16 @@ public static class AppRuntime
 
         return svc;
     }
+
+    public static void EnsureCloseAllRunnerStarted()
+    {
+        foreach (KeyValuePair<string, ConfluxService> item in DownloaderCFSRest)
+        {
+            string key = item.Key;
+            using (ConfluxService service = item.Value)
+            {
+                service.Send("state", "shutdown");
+            }
+        }
+    }
 }
