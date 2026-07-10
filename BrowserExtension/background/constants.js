@@ -10,7 +10,12 @@
     YT_ANALYZE_URL:  `${APP_URL}/youtube/analyze`,
     YT_DOWNLOAD_URL: `${APP_URL}/youtube/download`,
 
-    CACHE_TTL: 30000, // 30s — TTL cho content-disposition cache
+    CACHE_TTL: 30000,
+
+    INCOMPATIBLE_DOMAINS: [
+      'claude.ai',
+      'chatgpt.com'
+    ],
 
     DEFAULT_EXTENSIONS: [
       // Archives

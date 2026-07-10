@@ -22,6 +22,14 @@
   "popupSectionInterceptSettings": { "message": "Interception settings" },
   "popupToggleAutoIntercept":      { "message": "Auto-catch links" },
   "popupToggleAutoInterceptSub":   { "message": "Block the browser's own download, hand it to PDownloader" },
+
+  "popupToggleAutoInterceptSite":               { "message": "Auto-catch links on this site" },
+  "popupToggleAutoInterceptSiteSubDefault":     { "message": "Applies only to the page you're on" },
+  "popupToggleAutoInterceptSiteSubDomain":      { "message": "Applies only to $DOMAIN$", "placeholders": { "domain": { "content": "$1" } } },
+  "popupToggleAutoInterceptSiteSubGlobalOff":   { "message": "Turn on \"Auto-catch links\" above to use this" },
+  "popupToggleAutoInterceptSiteSubIncompatible":{ "message": "$DOMAIN$ isn't supported by PDownloader", "placeholders": { "domain": { "content": "$1" } } },
+  "popupToggleAutoInterceptSiteSubInvalid":     { "message": "Not applicable to this page" },
+
   "popupToggleShowNotif":          { "message": "Show notifications" },
   "popupToggleShowNotifSub":       { "message": "Notify when a link is caught" },
 

@@ -51,15 +51,26 @@
     return '';
   }
 
+  function matchesDomainList(url, list) {
+    const d = getDomain(url);
+    if (!d) return false;
+    return list.some(b => d === b || d.endsWith('.' + b));
+  }
+
   async function isBlacklisted(url, list) {
     try {
-      const d = getDomain(url);
-      return list.some(b => d === b || d.endsWith('.' + b));
+      return matchesDomainList(url, list);
+    } catch (_) { return false; }
+  }
+
+  function isIncompatibleSite(url) {
+    try {
+      return matchesDomainList(url, PD.Constants.INCOMPATIBLE_DOMAINS || []);
     } catch (_) { return false; }
   }
 
   PD.Utils = {
     getDomain, getFilenameFromUrl, extractExt, matchExt, matchMime,
-    parseContentDisposition, isBlacklisted
+    parseContentDisposition, isBlacklisted, isIncompatibleSite
   };
 })(self);

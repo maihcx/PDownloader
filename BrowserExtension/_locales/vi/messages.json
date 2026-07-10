@@ -22,6 +22,14 @@
   "popupSectionInterceptSettings": { "message": "Cài đặt bắt link" },
   "popupToggleAutoIntercept":      { "message": "Tự động bắt link" },
   "popupToggleAutoInterceptSub":   { "message": "Chặn tải của trình duyệt, chuyển sang PDownloader" },
+
+  "popupToggleAutoInterceptSite":               { "message": "Tự động bắt link ở trang web này" },
+  "popupToggleAutoInterceptSiteSubDefault":     { "message": "Áp dụng riêng cho trang bạn đang mở" },
+  "popupToggleAutoInterceptSiteSubDomain":      { "message": "Áp dụng riêng cho $DOMAIN$", "placeholders": { "domain": { "content": "$1" } } },
+  "popupToggleAutoInterceptSiteSubGlobalOff":   { "message": "Bật \"Tự động bắt link\" ở trên để dùng tùy chọn này" },
+  "popupToggleAutoInterceptSiteSubIncompatible":{ "message": "$DOMAIN$ không được PDownloader hỗ trợ", "placeholders": { "domain": { "content": "$1" } } },
+  "popupToggleAutoInterceptSiteSubInvalid":     { "message": "Không áp dụng được cho trang này" },
+
   "popupToggleShowNotif":          { "message": "Hiện thông báo" },
   "popupToggleShowNotifSub":       { "message": "Thông báo khi bắt được link" },
 
