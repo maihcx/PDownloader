@@ -21,18 +21,35 @@ namespace PDownloader.Installer;
 
 public partial class App : System.Windows.Application
 {
+    private string? _updateTempDirectory;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
-        bool isUninstall = e.Args.Contains("--uninstall");
+        bool isUninstall = e.Args.Contains("--uninstall", StringComparer.OrdinalIgnoreCase);
+        _updateTempDirectory = GetOptionValue(e.Args, "--update-temp-dir");
+
         var window = new MainWindow(isUninstall);
         window.Show();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
-        InstallService.ScheduleSelfExtractCleanup();
+        InstallService.ScheduleTemporaryFilesCleanup(_updateTempDirectory);
         base.OnExit(e);
+    }
+
+    private static string? GetOptionValue(string[] args, string optionName)
+    {
+        for (int index = 0; index < args.Length - 1; index++)
+        {
+            if (args[index].Equals(optionName, StringComparison.OrdinalIgnoreCase))
+            {
+                return args[index + 1];
+            }
+        }
+
+        return null;
     }
 }

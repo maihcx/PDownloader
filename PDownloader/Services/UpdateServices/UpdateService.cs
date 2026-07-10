@@ -22,6 +22,7 @@ public class UpdateService
 {
     private const string GitHubOwner = "maihcx";
     private const string GitHubRepo = "PDownloader";
+    private const string UpdateTempDirectoryName = "PDownloaderUpdate";
 
     private static readonly HttpClient _http = new()
     {
@@ -82,44 +83,82 @@ public class UpdateService
         }
 
         ErrorMessage = null;
+        DownloadedInstallerPath = null;
 
-        string tempDir = Path.Combine(Path.GetTempPath(), "PDownloaderUpdate");
-        Directory.CreateDirectory(tempDir);
+        string tempDir = Path.Combine(Path.GetTempPath(), UpdateTempDirectoryName);
+        PrepareUpdateDirectory(tempDir);
 
         string fileName = Path.GetFileName(new Uri(InstallerDownloadUrl).LocalPath);
         string destPath = Path.Combine(tempDir, fileName);
+        string partialPath = destPath + ".download";
 
         try
         {
             using HttpResponseMessage response = await _http.GetAsync(
-                InstallerDownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+                InstallerDownloadUrl,
+                HttpCompletionOption.ResponseHeadersRead,
+                ct);
             response.EnsureSuccessStatusCode();
 
             long total = response.Content.Headers.ContentLength ?? InstallerSize;
 
-            await using Stream src = await response.Content.ReadAsStreamAsync(ct);
-            await using FileStream dest = File.Create(destPath);
-
-            var buffer = new byte[81920];
-            long downloaded = 0;
-            int read;
-
-            while ((read = await src.ReadAsync(buffer, ct)) > 0)
+            await using (Stream source = await response.Content.ReadAsStreamAsync(ct))
+            await using (var destination = new FileStream(
+                partialPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 81920,
+                useAsync: true))
             {
-                await dest.WriteAsync(buffer.AsMemory(0, read), ct);
-                downloaded += read;
-                if (total > 0)
+                var buffer = new byte[81920];
+                long downloaded = 0;
+                int read;
+
+                while ((read = await source.ReadAsync(buffer, ct)) > 0)
                 {
-                    progress.Report((double)downloaded / total);
+                    await destination.WriteAsync(buffer.AsMemory(0, read), ct);
+                    downloaded += read;
+
+                    if (total > 0)
+                    {
+                        progress.Report((double)downloaded / total);
+                    }
                 }
+
+                await destination.FlushAsync(ct);
             }
 
+            File.Move(partialPath, destPath, overwrite: true);
             DownloadedInstallerPath = destPath;
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
+            TryDeleteDirectory(tempDir);
             throw;
+        }
+    }
+
+    private static void PrepareUpdateDirectory(string tempDirectory)
+    {
+        TryDeleteDirectory(tempDirectory);
+        Directory.CreateDirectory(tempDirectory);
+    }
+
+    private static void TryDeleteDirectory(string directory)
+    {
+        try
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+        catch
+        {
+            // A previous installer may still be shutting down. The installer itself
+            // also schedules a delayed retry when it exits.
         }
     }
 
@@ -130,11 +169,21 @@ public class UpdateService
             throw new FileNotFoundException("Installer not found.", DownloadedInstallerPath);
         }
 
-        Process.Start(new ProcessStartInfo
+        string updateDirectory = Path.GetDirectoryName(DownloadedInstallerPath)
+            ?? throw new InvalidOperationException("Update directory not found.");
+
+        var startInfo = new ProcessStartInfo
         {
             FileName = DownloadedInstallerPath,
             UseShellExecute = true,
-        });
+        };
+
+        // Pass the exact directory to the elevated installer. Inferring it later
+        // from Environment.ProcessPath is not reliable for every publish mode.
+        startInfo.ArgumentList.Add("--update-temp-dir");
+        startInfo.ArgumentList.Add(updateDirectory);
+
+        Process.Start(startInfo);
 
         System.Windows.Application.Current.Dispatcher.Invoke(() => System.Windows.Application.Current.Shutdown());
     }

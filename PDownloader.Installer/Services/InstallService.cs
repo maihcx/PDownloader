@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
+using System.Text;
 
 namespace PDownloader.Installer.Services;
 
@@ -26,6 +27,7 @@ public static class InstallService
     private const string UninstallRegKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PDownloader";
 
     private const string PayloadResourceName = "PDownloader.Installer.Resources.payload.zip";
+    private const string UpdateTempDirectoryName = "PDownloaderUpdate";
 
     public static string DefaultInstallPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PDownloader");
 
@@ -237,41 +239,188 @@ public static class InstallService
         progress?.Report((1.0, Utils.LocalizationHelper.Get("uninstall_done_title")));
     }
 
-    private static void ScheduleCleanup(string installDir)
+    private static void ScheduleCleanup(string directory)
     {
-        string escapedDir = installDir.TrimEnd('\\');
-        string args = $"/c timeout /t 3 /nobreak >nul & " +
-                      $"rd /s /q \"{escapedDir}\"";
+        string targetDirectory = NormalizeDirectory(directory);
+        string rootDirectory = (Path.GetPathRoot(targetDirectory) ?? string.Empty)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        if (string.IsNullOrWhiteSpace(targetDirectory)
+            || targetDirectory.Equals(rootDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
 
         try
         {
-            Process.Start(new ProcessStartInfo
+            // Keep the cleanup script outside the directory that it will remove.
+            // It waits for this installer PID to disappear before deleting files,
+            // so the downloaded installer is no longer locked by Windows.
+            string cleanupDirectory = Path.Combine(Path.GetTempPath(), "PDownloaderCleanup");
+            Directory.CreateDirectory(cleanupDirectory);
+
+            string scriptPath = Path.Combine(
+                cleanupDirectory,
+                $"cleanup-{Environment.ProcessId}-{Guid.NewGuid():N}.cmd");
+
+            string script = """
+                @echo off
+                setlocal DisableDelayedExpansion
+                set "TARGET=%PDOWNLOADER_CLEANUP_TARGET%"
+
+                rem The running installer remains locked during the first attempts.
+                rem Retry until Windows releases it after the process has exited.
+                for /L %%i in (1,1,120) do (
+                    rd /s /q "%TARGET%" >nul 2>&1
+                    if not exist "%TARGET%" goto cleanup_done
+                    timeout /t 1 /nobreak >nul
+                )
+
+                :cleanup_done
+                endlocal
+                del /f /q "%~f0" >nul 2>&1
+                exit /b 0
+                """;
+
+            File.WriteAllText(
+                scriptPath,
+                script.ReplaceLineEndings(Environment.NewLine));
+
+            var startInfo = new ProcessStartInfo
             {
-                FileName = "cmd.exe",
-                Arguments = args,
+                FileName = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe",
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 WindowStyle = ProcessWindowStyle.Hidden,
-            });
+                WorkingDirectory = cleanupDirectory,
+            };
+
+            startInfo.Environment["PDOWNLOADER_CLEANUP_TARGET"] = targetDirectory;
+
+            startInfo.ArgumentList.Add("/d");
+            startInfo.ArgumentList.Add("/q");
+            startInfo.ArgumentList.Add("/c");
+            startInfo.ArgumentList.Add(scriptPath);
+
+            Process.Start(startInfo);
         }
-        catch { }
+        catch
+        {
+            // Cleanup is best-effort and must never block installer shutdown.
+        }
     }
 
-    public static void ScheduleSelfExtractCleanup()
+    public static void ScheduleTemporaryFilesCleanup(string? requestedUpdateTempDirectory = null)
     {
         try
         {
-            string baseDir = AppContext.BaseDirectory.TrimEnd('\\');
-            string netTempRoot = Path.Combine(Path.GetTempPath(), ".net").TrimEnd('\\');
+            string tempRoot = NormalizeDirectory(Path.GetTempPath());
+            string expectedUpdateDirectory = NormalizeDirectory(
+                Path.Combine(tempRoot, UpdateTempDirectoryName));
 
-            if (!baseDir.StartsWith(netTempRoot, StringComparison.OrdinalIgnoreCase))
+            string? updateDirectory = ResolveUpdateTempDirectory(
+                requestedUpdateTempDirectory,
+                expectedUpdateDirectory);
+
+            if (updateDirectory is not null)
             {
-                return;
+                ScheduleCleanup(updateDirectory);
             }
 
-            ScheduleCleanup(baseDir);
+            string baseDirectory = NormalizeDirectory(AppContext.BaseDirectory);
+            string netTempRoot = NormalizeDirectory(Path.Combine(tempRoot, ".net"));
+
+            if (IsSameDirectoryOrChild(baseDirectory, netTempRoot))
+            {
+                ScheduleCleanup(baseDirectory);
+            }
         }
-        catch { }
+        catch
+        {
+            // Cleanup is best-effort and must never block installer shutdown.
+        }
+    }
+
+    private static string? ResolveUpdateTempDirectory(
+        string? requestedDirectory,
+        string expectedUpdateDirectory)
+    {
+        // Accept only the exact application-owned update folder. Never trust a
+        // command-line path as an arbitrary recursive-delete target.
+        if (!string.IsNullOrWhiteSpace(requestedDirectory))
+        {
+            string normalizedRequested = NormalizeDirectory(requestedDirectory);
+            if (normalizedRequested.Equals(
+                    expectedUpdateDirectory,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return expectedUpdateDirectory;
+            }
+        }
+
+        string processDirectory = Path.GetDirectoryName(Environment.ProcessPath ?? string.Empty)
+            ?? string.Empty;
+        if (IsSameDirectoryOrChild(processDirectory, expectedUpdateDirectory))
+        {
+            return expectedUpdateDirectory;
+        }
+
+        string commandLineExecutable = Environment.GetCommandLineArgs().FirstOrDefault()
+            ?? string.Empty;
+        string commandLineDirectory = Path.GetDirectoryName(commandLineExecutable)
+            ?? string.Empty;
+        if (IsSameDirectoryOrChild(commandLineDirectory, expectedUpdateDirectory))
+        {
+            return expectedUpdateDirectory;
+        }
+
+        // Compatibility fallback for an update launched by an older app build
+        // that does not yet pass --update-temp-dir. Only target the fixed,
+        // application-owned folder and only when a completed installer exists.
+        try
+        {
+            bool containsDownloadedInstaller = Directory.Exists(expectedUpdateDirectory)
+                && Directory.EnumerateFiles(
+                        expectedUpdateDirectory,
+                        "PDownloader.Installer*.exe",
+                        SearchOption.TopDirectoryOnly)
+                    .Any();
+
+            if (containsDownloadedInstaller)
+            {
+                return expectedUpdateDirectory;
+            }
+        }
+        catch
+        {
+            // Fall through when the directory cannot be inspected.
+        }
+
+        return null;
+    }
+
+    private static string NormalizeDirectory(string directory)
+    {
+        return Path.GetFullPath(directory)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+    }
+
+    private static bool IsSameDirectoryOrChild(string candidate, string root)
+    {
+        if (string.IsNullOrWhiteSpace(candidate) || string.IsNullOrWhiteSpace(root))
+        {
+            return false;
+        }
+
+        string candidatePath = Path.GetFullPath(candidate)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string rootPath = Path.GetFullPath(root)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        return candidatePath.Equals(rootPath, StringComparison.OrdinalIgnoreCase)
+            || candidatePath.StartsWith(
+                rootPath + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase);
     }
 
     private static void RegisterUninstaller(string installDir)
