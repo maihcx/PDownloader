@@ -61,7 +61,7 @@ internal sealed class YoutubeDownloadHandler
 
         try
         {
-            List<YtDlpService.ResolvedStream> streams;
+            List<ResolvedStream> streams;
             try
             {
                 streams = await YtDlpService.Instance.ResolveDirectUrlsAsync(
@@ -122,14 +122,14 @@ internal sealed class YoutubeDownloadHandler
     }
 
     private async Task<List<DownloadedStreamFile>> DownloadStreamsAsync(
-        IReadOnlyList<YtDlpService.ResolvedStream> streams,
+        IReadOnlyList<ResolvedStream> streams,
         string tempDirectory,
         CancellationToken cancellationToken)
     {
         var files = new List<DownloadedStreamFile>(streams.Count);
         long progressBaseOffset = 0;
 
-        foreach (YtDlpService.ResolvedStream stream in streams)
+        foreach (ResolvedStream stream in streams)
         {
             string extension = string.IsNullOrWhiteSpace(stream.Ext) ? "bin" : stream.Ext;
             string kind = stream.HasVideo ? "video" : "audio";

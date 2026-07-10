@@ -28,7 +28,7 @@ internal sealed class HlsFragmentDownloadService
     }
 
     public async Task<string> DownloadAsync(
-        YtDlpService.HlsFragmentsResult fragmentResult,
+        HlsFragmentsResult fragmentResult,
         string outputFolder,
         string fileStem,
         string tempDirectory,

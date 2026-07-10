@@ -23,7 +23,7 @@ internal sealed class FfmpegMuxer
         string fileStem,
         CancellationToken cancellationToken)
     {
-        string ffmpegPath = YtDlpService.Instance.FindFfmpeg()
+        string ffmpegPath = FfmpegExecutableLocator.Instance.Find()
             ?? throw new InvalidOperationException(
                 "ffmpeg không tìm thấy — cần ffmpeg để ghép video+audio tải riêng thành 1 file. " +
                 "Đặt ffmpeg.exe cạnh PDownloader.Core.exe hoặc thêm vào PATH.");
@@ -111,5 +111,5 @@ internal sealed class FfmpegMuxer
 }
 
 internal sealed record DownloadedStreamFile(
-    YtDlpService.ResolvedStream Stream,
+    ResolvedStream Stream,
     string Path);

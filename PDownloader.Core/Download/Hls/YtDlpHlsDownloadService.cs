@@ -20,6 +20,10 @@ namespace PDownloader.Core.Download.Hls;
 
 internal sealed class YtDlpHlsDownloadService
 {
+    private readonly YtDlpExecutableLocator _executableLocator =
+        YtDlpExecutableLocator.Instance;
+    private readonly YtDlpCookieFileService _cookieFileService =
+        YtDlpCookieFileService.Instance;
     private static readonly Regex ProgressRegex = new(
         @"^\[download\]\s+(?<pct>[\d.]+)%\s+of\s+~?\s*(?<size>[\d.]+)(?<unit>Ki?B|Mi?B|Gi?B|B)",
         RegexOptions.Compiled);
@@ -38,12 +42,12 @@ internal sealed class YtDlpHlsDownloadService
         Action<long, long>? reportProgress,
         CancellationToken cancellationToken)
     {
-        string ytDlpPath = YtDlpService.Instance.FindYtDlp()
+        string ytDlpPath = _executableLocator.FindYtDlp()
             ?? throw new InvalidOperationException("yt-dlp không tìm thấy.");
 
         string fileStem = Path.GetFileName(outputPathWithoutExtension);
         string temporaryOutputWithoutExtension = Path.Combine(tempDirectory, fileStem);
-        string? cookieFile = YtDlpService.WriteNetscapeCookieFile(cookieHeader);
+        string? cookieFile = _cookieFileService.Create(cookieHeader);
 
         try
         {
@@ -63,7 +67,7 @@ internal sealed class YtDlpHlsDownloadService
             if (processResult.ExitCode != 0)
             {
                 throw new InvalidOperationException(
-                    YtDlpService.ParseYtDlpError(processResult.StandardError));
+                    YtDlpErrorParser.Parse(processResult.StandardError));
             }
 
             string temporaryResultPath = ResolveTemporaryResultPath(
@@ -93,7 +97,7 @@ internal sealed class YtDlpHlsDownloadService
         }
         finally
         {
-            YtDlpService.DeleteCookieFileSafe(cookieFile);
+            _cookieFileService.DeleteSafe(cookieFile);
         }
     }
 

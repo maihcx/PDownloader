@@ -45,9 +45,6 @@
   </Target>
 
   <Target Name="CopyExtFiles" AfterTargets="Publish">
-    <Copy
-        SourceFiles="@(ExtFiles)"
-        DestinationFiles="@(ExtFiles->'$(PublishDir)%(Filename)%(Extension)')"
-        SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(ExtFiles)" DestinationFiles="@(ExtFiles->'$(PublishDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 </Project>

@@ -16,6 +16,8 @@
 global using PDownloader.CFS;
 global using PDownloader.Core.Download;
 global using PDownloader.Core.Download.Exceptions;
+global using PDownloader.Core.Download.ExternalTools.Ffmpeg;
+global using PDownloader.Core.Download.ExternalTools.YtDlp;
 global using PDownloader.Core.Download.Handlers;
 global using PDownloader.Core.Download.Hls;
 global using PDownloader.Core.Download.Http;
