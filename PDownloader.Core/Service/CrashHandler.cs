@@ -114,8 +114,8 @@ public static class CrashHandler
 
         Process.Start(new ProcessStartInfo
         {
-            FileName        = trackerPath,
-            Arguments       = $"--crash-report \"{logPath}\" --app \"PDownloader\"",
+            FileName = trackerPath,
+            Arguments = $"--crash-report \"{logPath}\" --app \"PDownloader\"",
             UseShellExecute = true,
         });
     }

@@ -16,7 +16,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace PDownloader.Core.Download;
+namespace PDownloader.Core.Download.Models;
 
 public class DownloadItem : INotifyPropertyChanged
 {

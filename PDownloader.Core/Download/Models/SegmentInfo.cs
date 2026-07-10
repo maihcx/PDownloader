@@ -13,23 +13,15 @@
 //
 // Copyright (C) Song Mai Software.
 
-global using PDownloader.CFS;
-global using PDownloader.Core.Download;
-global using PDownloader.Core.Download.Models;
+namespace PDownloader.Core.Download.Models;
 
-global using PDownloader.Core.Models;
-global using PDownloader.Core.Runtime;
-global using PDownloader.Core.Service;
-global using PDownloader.Core.Utils;
-global using System.Collections.Concurrent;
-global using System.Collections.Generic;
-global using System.Diagnostics;
-global using System.IO;
-global using System.Linq;
-global using System.Net;
-global using System.Net.Http;
-global using System.Text;
-global using System.Text.Json;
-global using System.Text.Json.Serialization;
-global using System.Threading;
-global using System.Threading.Tasks;
+public class SegmentInfo
+{
+    public int Index { get; init; }
+    public long RangeStart { get; init; }
+    public long RangeEnd { get; init; }
+    public long BytesWritten { get; set; }
+    public string TempFilePath { get; init; } = string.Empty;
+    public bool IsCompleted { get; set; }
+    public long Length => RangeEnd - RangeStart + 1;
+}
