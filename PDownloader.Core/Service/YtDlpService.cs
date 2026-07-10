@@ -13,9 +13,6 @@
 //
 // Copyright (C) Song Mai Software.
 
-using System.Globalization;
-using System.Text.RegularExpressions;
-
 namespace PDownloader.Core.Service;
 
 public sealed class YtDlpService
