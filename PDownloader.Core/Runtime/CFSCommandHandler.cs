@@ -209,7 +209,7 @@ public static class CFSCommandHandler
 
             int defaultThreads = DownloadConfigService.DownloadConfigs?.DefaultThreadCount ?? 0;
 
-            DownloadItem item = DownloadManager.Instance.Enqueue(
+            DownloadManager.Instance.Enqueue(
                 id: req.Id,
                 url: req.Url,
                 saveTo: req.SaveTo ?? string.Empty,
@@ -218,8 +218,6 @@ public static class CFSCommandHandler
                 isYoutube: ytMeta != null,
                 formatId: ytMeta?.FormatId,
                 customHeaders: customHeaders);
-
-            BroadcastItemChanged(item);
         }
         catch { }
     }
@@ -227,18 +225,10 @@ public static class CFSCommandHandler
     public static void BroadcastItemChanged(DownloadItem item)
     {
         string json = DownloadManager.SerializeItem(item);
-        AppRuntime.DownloaderCFSRest.TryGetValue(item.Id, out ConfluxService? cfsDowloaderUI);
+        AppRuntime.DownloaderCFSRest.TryGetValue(
+            item.Id,
+            out ConfluxService? cfsDowloaderUI);
 
-        item.PropertyChanged += (sender, e) =>
-        {
-            if (e.PropertyName == nameof(item.DownloadedFormatted))
-            {
-                string json = DownloadManager.SerializeItem(item);
-                AppRuntime.cfsMain?.Send("muxt-download-progress", json);
-                AppRuntime.DownloaderCFSRest.TryGetValue(item.Id, out ConfluxService? cfsDowloaderUI);
-                cfsDowloaderUI?.Send("muxt-download-progress", json);
-            }
-        };
         AppRuntime.cfsMain?.Send("muxt-download-progress", json);
         cfsDowloaderUI?.Send("muxt-download-progress", json);
     }
