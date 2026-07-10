@@ -111,6 +111,8 @@ public static class CFSCommandHandler
                 AppRuntime.cfsMain.Send("state", value);
             }
 
+            AppRuntime.EnsureCloseAllRunnerStarted();
+
             AppRuntime.bootstrap?.Shutdown();
         }
     }

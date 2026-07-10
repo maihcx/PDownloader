@@ -192,10 +192,13 @@ public class DownloaderService : IHostedService, IDisposable
 
                     break;
 
-                    //case "state":
-                    //    if (value == "shutdown")
-                    //        System.Windows.Application.Current?.Shutdown();
-                    //    break;
+                case "state":
+                    if (value == "shutdown")
+                    {
+                        System.Windows.Application.Current?.Shutdown();
+                    }
+
+                    break;
             }
         };
 

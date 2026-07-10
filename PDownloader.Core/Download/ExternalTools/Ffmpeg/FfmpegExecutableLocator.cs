@@ -13,15 +13,25 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Core.Download;
+namespace PDownloader.Core.Download.ExternalTools.Ffmpeg;
 
-public class SegmentInfo
+internal sealed class FfmpegExecutableLocator
 {
-    public int Index { get; init; }
-    public long RangeStart { get; init; }
-    public long RangeEnd { get; init; }
-    public long BytesWritten { get; set; }
-    public string TempFilePath { get; init; } = string.Empty;
-    public bool IsCompleted { get; set; }
-    public long Length => RangeEnd - RangeStart + 1;
+    public static FfmpegExecutableLocator Instance { get; } = new();
+
+    private string? _resolvedPath;
+
+    private FfmpegExecutableLocator()
+    {
+    }
+
+    public string? Find()
+    {
+        if (_resolvedPath != null && File.Exists(_resolvedPath))
+        {
+            return _resolvedPath;
+        }
+
+        return _resolvedPath = ExecutablePathResolver.Find("ffmpeg");
+    }
 }
