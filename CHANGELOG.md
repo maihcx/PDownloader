@@ -1,3 +1,13 @@
+## v0.1.4
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- Fix progress monitoring race conditions and simplify updates (#18) — @maihcx
+
+
+---
+
 ## v0.1.3
 
 ## 🚀 Changelog
