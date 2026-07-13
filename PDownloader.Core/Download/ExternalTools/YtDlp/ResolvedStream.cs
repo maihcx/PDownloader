@@ -26,4 +26,7 @@ public sealed class ResolvedStream
     public bool HasAudio { get; set; }
 
     public long FilesizeApprox { get; set; }
+
+    public Dictionary<string, string> HttpHeaders { get; set; } =
+        new(StringComparer.OrdinalIgnoreCase);
 }

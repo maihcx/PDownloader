@@ -54,7 +54,7 @@ public sealed class YtDlpService
     {
         string ytDlpPath = RequireYtDlp();
         string quickJsPath = RequireQuickJs();
-        string? cookieFile = _cookieFileService.Create(cookieHeader);
+        string? cookieFile = _cookieFileService.Create(cookieHeader, pageUrl);
 
         try
         {
@@ -92,7 +92,7 @@ public sealed class YtDlpService
         }
 
         string quickJsPath = RequireQuickJs();
-        string? cookieFile = _cookieFileService.Create(cookieHeader);
+        string? cookieFile = _cookieFileService.Create(cookieHeader, url);
 
         try
         {
@@ -134,7 +134,7 @@ public sealed class YtDlpService
     {
         string ytDlpPath = RequireYtDlp();
         string quickJsPath = RequireQuickJs();
-        string? cookieFile = _cookieFileService.Create(cookieHeader);
+        string? cookieFile = _cookieFileService.Create(cookieHeader, url);
 
         try
         {
