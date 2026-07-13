@@ -47,7 +47,7 @@ internal sealed class YtDlpHlsDownloadService
 
         string fileStem = Path.GetFileName(outputPathWithoutExtension);
         string temporaryOutputWithoutExtension = Path.Combine(tempDirectory, fileStem);
-        string? cookieFile = _cookieFileService.Create(cookieHeader);
+        string? cookieFile = _cookieFileService.Create(cookieHeader, url);
 
         try
         {
