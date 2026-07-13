@@ -1,3 +1,24 @@
+## v0.2.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- Add search, sort, and detail view to download list viewer (#25) — @maihcx
+
+## 🐛 Bug Fixes
+
+- Fixed XAML warning with  (#23) — @maihcx
+- [extension] Fix video detection with tiktok (#22) — @maihcx
+- [extension] Improve video link detection (#21) — @maihcx
+- Improve installer update cleanup and safety (#20) — @maihcx
+
+## 🧹 Maintenance
+
+- Adjust NavigationView padding in MainWindow (#24) — @maihcx
+
+
+---
+
 ## v0.1.4
 
 ## 🚀 Changelog
