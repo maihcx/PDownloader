@@ -35,7 +35,6 @@
     if (!site) return location.href;
 
     const current = normalizeUrl(location.href, site);
-    if (current && getUrlQuality(current, site) > 0) return current;
 
     const directVideoUrl = getDirectVideoUrl(video, contextNode, site);
     if (directVideoUrl) return directVideoUrl;
@@ -48,6 +47,8 @@
       return candidates[0].url;
     }
 
+    if (current && getUrlQuality(current, site) > 0) return current;
+
     const canonical = getCanonicalUrl(site);
     if (canonical && getUrlQuality(canonical, site) > 0) return canonical;
 
@@ -55,6 +56,12 @@
   }
 
   function getDirectVideoUrl(video, contextNode, site) {
+    if (site === 'instagram') {
+      return getInstagramDomPermalink(video, contextNode)
+        || requestInstagramMetadata(video, contextNode)?.url
+        || null;
+    }
+
     if (site === 'tiktok') {
       return getTikTokDirectVideoUrl(video, contextNode);
     }
@@ -74,6 +81,92 @@
       if (/^\d{5,}$/.test(id)) {
         return `https://www.facebook.com/watch/?v=${encodeURIComponent(id)}`;
       }
+    }
+
+    return null;
+  }
+
+  const INSTAGRAM_RESOLVE_EVENT = 'pd-instagram-resolve';
+  const INSTAGRAM_URL_ATTRIBUTE = 'data-pd-instagram-url';
+  const INSTAGRAM_TITLE_ATTRIBUTE = 'data-pd-instagram-title';
+
+  function getInstagramDomPermalink(video, contextNode) {
+    const roots = [];
+    const seen = new Set();
+
+    const add = (node) => {
+      if (!(node instanceof Element) || seen.has(node)) return;
+      seen.add(node);
+      roots.push(node);
+    };
+
+    add(safeClosest(video, 'a[href]'));
+    add(safeClosest(contextNode, 'a[href]'));
+    add(safeClosest(video, 'article'));
+    add(safeClosest(contextNode, 'article'));
+    add(safeClosest(video, '[role="presentation"]'));
+    add(safeClosest(contextNode, '[role="presentation"]'));
+    add(contextNode);
+    add(video);
+
+    const videoRect = safeRect(video);
+    let best = null;
+
+    for (const root of roots) {
+      const anchors = [];
+      if (isAnchor(root)) anchors.push(root);
+
+      try {
+        for (const anchor of root.querySelectorAll?.(
+          'a[href*="/reel/"],a[href*="/p/"],a[href*="/tv/"]'
+        ) || []) {
+          anchors.push(anchor);
+        }
+      } catch (_) { }
+
+      for (const anchor of anchors) {
+        const url = normalizeUrl(anchor.href || anchor.getAttribute?.('href'), 'instagram');
+        const quality = url ? getUrlQuality(url, 'instagram') : 0;
+        if (quality <= 0) continue;
+
+        let score = quality + getProximityBonus(videoRect, safeRect(anchor));
+        if (anchor.contains?.(video)) score += 120;
+        if (safeClosest(anchor, 'article') === safeClosest(video, 'article')) score += 80;
+
+        if (!best || score > best.score) best = { url, score };
+      }
+    }
+
+    return best?.url || null;
+  }
+
+  function requestInstagramMetadata(video, contextNode) {
+    const nodes = [];
+    const add = (node) => {
+      if (node instanceof Element && !nodes.includes(node)) nodes.push(node);
+    };
+
+    add(video);
+    add(contextNode);
+
+    for (const node of nodes) {
+      try {
+        node.removeAttribute(INSTAGRAM_URL_ATTRIBUTE);
+        node.removeAttribute(INSTAGRAM_TITLE_ATTRIBUTE);
+        node.dispatchEvent(new Event(INSTAGRAM_RESOLVE_EVENT, {
+          bubbles: true,
+          composed: true
+        }));
+
+        const rawUrl = node.getAttribute(INSTAGRAM_URL_ATTRIBUTE);
+        const url = normalizeUrl(rawUrl, 'instagram');
+        if (!url || getUrlQuality(url, 'instagram') <= 0) continue;
+
+        return {
+          url,
+          title: cleanMediaTitle(node.getAttribute(INSTAGRAM_TITLE_ATTRIBUTE))
+        };
+      } catch (_) { }
     }
 
     return null;
@@ -290,6 +383,18 @@
 
   function getMediaTitle(video, contextNode = video) {
     const site = detectSite(location.hostname);
+
+    if (site === 'instagram') {
+      const existingTitle = cleanMediaTitle(
+        video?.getAttribute?.(INSTAGRAM_TITLE_ATTRIBUTE)
+        || contextNode?.getAttribute?.(INSTAGRAM_TITLE_ATTRIBUTE)
+      );
+      if (existingTitle) return existingTitle;
+
+      const metadata = requestInstagramMetadata(video, contextNode);
+      return metadata?.title || document.title || 'Instagram Reel';
+    }
+
     if (site !== 'tiktok') return document.title || 'video';
 
     const roots = collectTikTokRoots(video, contextNode);

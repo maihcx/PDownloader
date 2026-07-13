@@ -133,7 +133,36 @@ internal static class YtDlpJsonParser
             HasVideo = !string.Equals(videoCodec, "none", StringComparison.OrdinalIgnoreCase),
             HasAudio = !string.Equals(audioCodec, "none", StringComparison.OrdinalIgnoreCase),
             FilesizeApprox = GetFileSize(element),
+            HttpHeaders = ParseHttpHeaders(element),
         };
+    }
+
+    private static Dictionary<string, string> ParseHttpHeaders(JsonElement element)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!element.TryGetProperty("http_headers", out JsonElement headersElement)
+            || headersElement.ValueKind != JsonValueKind.Object)
+        {
+            return headers;
+        }
+
+        foreach (JsonProperty property in headersElement.EnumerateObject())
+        {
+            if (property.Value.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            string? value = property.Value.GetString();
+            if (!string.IsNullOrWhiteSpace(property.Name)
+                && !string.IsNullOrWhiteSpace(value))
+            {
+                headers[property.Name] = value;
+            }
+        }
+
+        return headers;
     }
 
     private static YtFormat? ParseFormat(JsonElement element)

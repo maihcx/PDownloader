@@ -442,7 +442,7 @@
     <value>Liên kết Url</value>
   </data>
   <data name="download_view_file_cap_loaded_title" xml:space="preserve">
-    <value>Dung lượng / Đã tải</value>
+    <value>Đã tải / Dung lượng</value>
   </data>
   <data name="download_view_file_save_path_title" xml:space="preserve">
     <value>Đường dẫn</value>
@@ -478,6 +478,6 @@
     <value>Kích cỡ (Nhỏ đến lớn)</value>
   </data>
   <data name="download_view_sort_filesize_desc_title" xml:space="preserve">
-    <value>Kích thước (Lớn đến nhỏ)</value>
+    <value>Kích cỡ (Lớn đến nhỏ)</value>
   </data>
 </root>

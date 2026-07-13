@@ -46,7 +46,6 @@ public class DownloadEngine
         _youtubeHandler = new YoutubeDownloadHandler(
             item,
             _pathService,
-            _multiSegmentDownloader,
             ReportProgress);
     }
 

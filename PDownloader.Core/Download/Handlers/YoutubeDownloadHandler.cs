@@ -19,19 +19,16 @@ internal sealed class YoutubeDownloadHandler
 {
     private readonly DownloadItem _item;
     private readonly DownloadPathService _pathService;
-    private readonly MultiSegmentDownloadService _multiSegmentDownloader;
     private readonly FfmpegMuxer _ffmpegMuxer;
     private readonly Action<long, double> _reportProgress;
 
     public YoutubeDownloadHandler(
         DownloadItem item,
         DownloadPathService pathService,
-        MultiSegmentDownloadService multiSegmentDownloader,
         Action<long, double> reportProgress)
     {
         _item = item;
         _pathService = pathService;
-        _multiSegmentDownloader = multiSegmentDownloader;
         _ffmpegMuxer = new FfmpegMuxer();
         _reportProgress = reportProgress;
     }
@@ -140,7 +137,16 @@ internal sealed class YoutubeDownloadHandler
             string rawPath = Path.Combine(tempDirectory, $"{kind}.{extension}");
             string segmentDirectory = Path.Combine(tempDirectory, $"{kind}_segs");
 
-            DownloadProbeResult probe = await _multiSegmentDownloader.ProbeAndDownloadAsync(
+            Dictionary<string, string>? streamHeaders = MergeHeaders(
+                _item.CustomHeaders,
+                stream.HttpHeaders);
+
+            using DownloadHttpClientLease streamClientLease =
+                DownloadHttpClientFactory.Create(streamHeaders);
+            var streamDownloader = new MultiSegmentDownloadService(
+                streamClientLease.Client);
+
+            DownloadProbeResult probe = await streamDownloader.ProbeAndDownloadAsync(
                 stream.Url,
                 rawPath,
                 segmentDirectory,
@@ -163,6 +169,39 @@ internal sealed class YoutubeDownloadHandler
         }
 
         return files;
+    }
+
+    private static Dictionary<string, string>? MergeHeaders(
+        Dictionary<string, string>? originalHeaders,
+        Dictionary<string, string>? resolvedHeaders)
+    {
+        var merged = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        if (originalHeaders != null)
+        {
+            foreach ((string key, string value) in originalHeaders)
+            {
+                if (!string.IsNullOrWhiteSpace(key)
+                    && !string.IsNullOrWhiteSpace(value))
+                {
+                    merged[key] = value;
+                }
+            }
+        }
+
+        if (resolvedHeaders != null)
+        {
+            foreach ((string key, string value) in resolvedHeaders)
+            {
+                if (!string.IsNullOrWhiteSpace(key)
+                    && !string.IsNullOrWhiteSpace(value))
+                {
+                    merged[key] = value;
+                }
+            }
+        }
+
+        return merged.Count == 0 ? null : merged;
     }
 
     private static string MoveSingleStream(
