@@ -66,10 +66,13 @@ const VIDEO_CONTEXT_SELECTOR = [
 
 let _activeVideo = null;
 let _activeContextNode = null;
+let _pressedVideo = null;
+let _pressedContextNode = null;
 let _btn = null;
 let _hideTimer = null;
 let _pointerFrame = 0;
 let _lastPointerEvent = null;
+let _forcePointerRefresh = false;
 let _contextInvalidated = false;
 
 function isYouTubeWatch() {
@@ -89,12 +92,31 @@ function getBtn() {
   });
   _btn.addEventListener('pointerleave', () => scheduleHide(300));
 
+  // Khóa video ngay khi người dùng nhấn nút. Khi sự kiện click chạy, con trỏ
+  // đang nằm trên nút overlay chứ không còn nằm trực tiếp trên video nữa.
+  _btn.addEventListener('pointerdown', () => {
+    if (!_activeVideo || !isRenderedVideo(_activeVideo)) {
+      refreshActiveVideoFromPointer();
+    }
+
+    _pressedVideo = _activeVideo;
+    _pressedContextNode = _activeContextNode;
+  }, true);
+
   _btn.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const activeVideo = _activeVideo;
-    const activeContextNode = _activeContextNode;
+    const activeVideo = isRenderedVideo(_pressedVideo)
+      ? _pressedVideo
+      : _activeVideo;
+    const activeContextNode = activeVideo === _pressedVideo
+      ? _pressedContextNode
+      : _activeContextNode;
+
+    _pressedVideo = null;
+    _pressedContextNode = null;
+
     if (!activeVideo || !activeVideo.isConnected) return;
 
     const hostname = location.hostname;
@@ -233,6 +255,8 @@ function hideButton(clearActive = true) {
   if (clearActive) {
     _activeVideo = null;
     _activeContextNode = null;
+    _pressedVideo = null;
+    _pressedContextNode = null;
   }
 }
 
@@ -400,17 +424,48 @@ function findVideoAtPoint(x, y, target) {
   return ranked[0]?.video || null;
 }
 
-function processPointerEvent(event) {
+function getVideoUnderLastPointer() {
+  if (!_lastPointerEvent) return null;
+
+  const { clientX, clientY, target: previousTarget } = _lastPointerEvent;
+  const target = document.elementFromPoint?.(clientX, clientY) || previousTarget;
+  const video = findVideoAtPoint(clientX, clientY, target);
+
+  return { video, target };
+}
+
+function refreshActiveVideoFromPointer() {
+  const pointed = getVideoUnderLastPointer();
+  if (!pointed?.video) return false;
+
+  _activeVideo = pointed.video;
+  _activeContextNode = getVideoContextNode(pointed.target, pointed.video);
+  return true;
+}
+
+function queuePointerProcessing(forceRefresh = false) {
+  if (forceRefresh) _forcePointerRefresh = true;
+  if (!_pointerFrame) {
+    _pointerFrame = requestAnimationFrame(processPointerEvent);
+  }
+}
+
+function processPointerEvent() {
   _pointerFrame = 0;
+  const forceRefresh = _forcePointerRefresh;
+  _forcePointerRefresh = false;
+
   if (!_lastPointerEvent || _contextInvalidated || isYouTubeWatch()) return;
 
-  const { clientX, clientY, target } = _lastPointerEvent;
-  if (_btn && target instanceof Node && _btn.contains(target)) {
+  const pointed = getVideoUnderLastPointer();
+  const target = pointed?.target || _lastPointerEvent.target;
+
+  if (!forceRefresh && _btn && target instanceof Node && _btn.contains(target)) {
     clearHide();
     return;
   }
 
-  const video = findVideoAtPoint(clientX, clientY, target);
+  const video = pointed?.video || null;
   if (!video) {
     scheduleHide(350);
     return;
@@ -432,9 +487,25 @@ function initListeners() {
       target: event.target
     };
 
-    if (!_pointerFrame) {
-      _pointerFrame = requestAnimationFrame(processPointerEvent);
-    }
+    queuePointerProcessing(false);
+  }, true);
+
+  document.addEventListener('pointerdown', (event) => {
+    if (_btn && event.target instanceof Node && _btn.contains(event.target)) return;
+
+    _lastPointerEvent = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      target: event.target
+    };
+
+    const pointed = getVideoUnderLastPointer();
+    if (!pointed?.video) return;
+
+    clearHide();
+    _activeVideo = pointed.video;
+    _activeContextNode = getVideoContextNode(pointed.target, pointed.video);
+    positionBtn(pointed.video);
   }, true);
 
   document.addEventListener('pointerleave', () => scheduleHide(150), true);
@@ -447,8 +518,21 @@ function initListeners() {
     }
   };
 
-  window.addEventListener('scroll', reposition, true);
-  window.addEventListener('resize', reposition, { passive: true });
+  window.addEventListener('scroll', () => {
+    if (_lastPointerEvent) {
+      queuePointerProcessing(true);
+    } else {
+      reposition();
+    }
+  }, true);
+
+  window.addEventListener('resize', () => {
+    if (_lastPointerEvent) {
+      queuePointerProcessing(true);
+    } else {
+      reposition();
+    }
+  }, { passive: true });
 }
 
 initListeners();
