@@ -17,10 +17,14 @@ namespace PDownloader.ViewModels.Pages;
 
 public partial class DownloadsViewModel : ObservableObject, INavigationAware
 {
+    private bool _isInitialized = false;
+
     public ObservableCollection<DownloadItemDto> Downloads { get; } = new();
 
+    public ICollectionView DownloadsView { get; }
+
     [ObservableProperty]
-    private bool _isLoading = false;
+    private bool _isLoading;
 
     [ObservableProperty]
     private bool _isEmpty = true;
@@ -28,19 +32,62 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     [ObservableProperty]
     private string _statusText = "Ready";
 
+    [ObservableProperty]
+    private string _searchText = string.Empty;
+
+    public ObservableCollection<DownloadSortOption> SortOptions { get; } =
+    [
+        new(DownloadSortMode.NameAscending,
+            "download_view_sort_filename_az_title"),
+        new(DownloadSortMode.NameDescending,
+            "download_view_sort_filename_za_title"),
+        new(DownloadSortMode.TimeStartAscending,
+            "download_view_sort_filetime_start_asc_title"),
+        new(DownloadSortMode.TimeStartDescending,
+            "download_view_sort_filetime_start_desc_title"),
+        new(DownloadSortMode.TimeEndAscending,
+            "download_view_sort_filetime_end_asc_title"),
+        new(DownloadSortMode.TimeEndDescending,
+            "download_view_sort_filetime_end_desc_title"),
+        new(DownloadSortMode.SizeAscending,
+            "download_view_sort_filesize_asc_title"),
+        new(DownloadSortMode.SizeDescending,
+            "download_view_sort_filesize_desc_title"),
+    ];
+
+    [ObservableProperty]
+    private DownloadSortOption? _selectedSortOption;
+
+    partial void OnSelectedSortOptionChanged(DownloadSortOption? value)
+    {
+        if (value == null)
+        {
+            return;
+        }
+
+        ApplySort(value.Mode);
+    }
+
     private readonly DownloadLauncherService _downloadLauncherService;
 
-    public DownloadsViewModel(DownloadsChannelService downloadsChannelService, DownloadLauncherService downloadLauncherService)
+    public DownloadsViewModel(
+        DownloadsChannelService downloadsChannelService,
+        DownloadLauncherService downloadLauncherService)
     {
         downloadsChannelService.OnProgress += OnProgress;
         downloadsChannelService.OnList += OnList;
+
         _downloadLauncherService = downloadLauncherService;
+
+        DownloadsView = CollectionViewSource.GetDefaultView(Downloads);
+        DownloadsView.Filter = FilterDownload;
+
+        SelectedSortOption = SortOptions[0];
     }
 
     public Task OnNavigatedToAsync()
     {
         RequestRefresh();
-
         return Task.CompletedTask;
     }
 
@@ -51,9 +98,124 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
     public void RequestRefresh()
     {
-        IsLoading = true;
+        if (!_isInitialized)
+        {
+            IsLoading = true;
 
-        ConfluxManager.cfsPDownloaderCore?.Send("downloader-svc-getlist", string.Empty);
+            ConfluxManager.cfsPDownloaderCore?.Send(
+                "downloader-svc-getlist",
+                string.Empty);
+
+            _isInitialized = true;
+        }
+    }
+
+    partial void OnSearchTextChanged(string value)
+    {
+        DownloadsView.Refresh();
+        UpdateViewState();
+    }
+
+    private bool FilterDownload(object item)
+    {
+        if (item is not DownloadItemDto download)
+        {
+            return false;
+        }
+
+        string keyword = SearchText.Trim();
+
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return true;
+        }
+
+        return ContainsKeyword(download.FileName, keyword)
+            || ContainsKeyword(download.Url, keyword)
+            || ContainsKeyword(download.Status, keyword)
+            || ContainsKeyword(download.ErrorMessage, keyword)
+            || ContainsKeyword(download.SavePath, keyword);
+    }
+
+    private void ApplySort(DownloadSortMode mode)
+    {
+        using (DownloadsView.DeferRefresh())
+        {
+            DownloadsView.SortDescriptions.Clear();
+
+            switch (mode)
+            {
+                case DownloadSortMode.NameAscending:
+                    AddSort(
+                        nameof(DownloadItemDto.FileName),
+                        ListSortDirection.Ascending);
+                    break;
+
+                case DownloadSortMode.NameDescending:
+                    AddSort(
+                        nameof(DownloadItemDto.FileName),
+                        ListSortDirection.Descending);
+                    break;
+
+                case DownloadSortMode.TimeStartAscending:
+                    AddSort(
+                        nameof(DownloadItemDto.StartTime),
+                        ListSortDirection.Ascending);
+                    break;
+
+                case DownloadSortMode.TimeStartDescending:
+                    AddSort(
+                        nameof(DownloadItemDto.StartTime),
+                        ListSortDirection.Descending);
+                    break;
+
+                case DownloadSortMode.SizeAscending:
+                    AddSort(
+                        nameof(DownloadItemDto.TotalBytes),
+                        ListSortDirection.Ascending);
+                    break;
+
+                case DownloadSortMode.SizeDescending:
+                    AddSort(
+                        nameof(DownloadItemDto.TotalBytes),
+                        ListSortDirection.Descending);
+                    break;
+            }
+        }
+
+        UpdateViewState();
+    }
+
+    private void AddSort(
+        string propertyName,
+        ListSortDirection direction)
+    {
+        DownloadsView.SortDescriptions.Add(
+            new SortDescription(propertyName, direction));
+    }
+
+    private static bool ContainsKeyword(string? value, string keyword)
+    {
+        return !string.IsNullOrWhiteSpace(value)
+            && value.Contains(keyword, StringComparison.CurrentCultureIgnoreCase);
+    }
+
+    private void UpdateViewState()
+    {
+        int visibleCount = DownloadsView.Cast<object>().Count();
+
+        IsEmpty = visibleCount == 0;
+        StatusText = LanguageBase.GetLangValue("task_num_title", visibleCount);
+    }
+
+    private void RefreshFilteredView()
+    {
+        if (!string.IsNullOrWhiteSpace(SearchText))
+        {
+            DownloadsView.Refresh();
+        }
+
+        UpdateViewState();
     }
 
     private void OnList(List<DownloadItemDto> items)
@@ -61,14 +223,15 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         App.Current.Dispatcher.Invoke(() =>
         {
             Downloads.Clear();
+
             foreach (DownloadItemDto item in items)
             {
                 Downloads.Add(item);
             }
 
-            IsEmpty = Downloads.Count == 0;
             IsLoading = false;
-            StatusText = LanguageBase.GetLangValue("task_num_title", Downloads.Count);
+
+            RefreshFilteredView();
         });
     }
 
@@ -85,21 +248,16 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
                 }
                 else
                 {
-                    int idx = Downloads.IndexOf(existing);
-                    Downloads[idx] = dto;
+                    int index = Downloads.IndexOf(existing);
+                    Downloads[index] = dto;
                 }
             }
-            else
+            else if (dto.Status != "Cancelled")
             {
-                if (dto.Status != "Cancelled")
-                {
-                    Downloads.Insert(0, dto);
-                }
+                Downloads.Insert(0, dto);
             }
 
-            IsEmpty = Downloads.Count == 0;
-
-            StatusText = LanguageBase.GetLangValue("task_num_title", Downloads.Count);
+            RefreshFilteredView();
         });
     }
 
@@ -123,6 +281,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         }
 
         _ = Enum.TryParse(item.Status, out DownloadStatus status);
+
         if (status == DownloadStatus.Completed)
         {
             OpenFile(item);
@@ -174,8 +333,8 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
             return;
         }
 
-        var folder = Path.GetDirectoryName(item.SavePath);
-        if (folder is null || !Directory.Exists(folder))
+        string? folder = Path.GetDirectoryName(item.SavePath);
+        if (folder == null || !Directory.Exists(folder))
         {
             return;
         }
@@ -195,5 +354,14 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     }
 
     [RelayCommand]
-    private void Refresh() => RequestRefresh();
+    private void Refresh()
+    {
+        RequestRefresh();
+    }
+
+    [RelayCommand]
+    private void ClearSearch()
+    {
+        SearchText = string.Empty;
+    }
 }

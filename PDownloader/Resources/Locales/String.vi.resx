@@ -432,4 +432,52 @@
   <data name="dialog_link_title" xml:space="preserve">
     <value>Đường dẫn</value>
   </data>
+  <data name="download_filter_searchbox_desc" xml:space="preserve">
+    <value>Tìm kiếm tên tệp, URL ...</value>
+  </data>
+  <data name="download_view_file_name_title" xml:space="preserve">
+    <value>Tên tệp</value>
+  </data>
+  <data name="download_view_file_url_title" xml:space="preserve">
+    <value>Liên kết Url</value>
+  </data>
+  <data name="download_view_file_cap_loaded_title" xml:space="preserve">
+    <value>Dung lượng / Đã tải</value>
+  </data>
+  <data name="download_view_file_save_path_title" xml:space="preserve">
+    <value>Đường dẫn</value>
+  </data>
+  <data name="download_view_file_status_title" xml:space="preserve">
+    <value>Trạng thái</value>
+  </data>
+  <data name="download_view_file_start_time_title" xml:space="preserve">
+    <value>Thời gian bắt đầu</value>
+  </data>
+  <data name="download_view_file_end_time_title" xml:space="preserve">
+    <value>Thời gian kết thúc</value>
+  </data>
+  <data name="download_view_sort_filename_az_title" xml:space="preserve">
+    <value>Tên tệp (A - Z)</value>
+  </data>
+  <data name="download_view_sort_filename_za_title" xml:space="preserve">
+    <value>Tên tệp (Z - A)</value>
+  </data>
+  <data name="download_view_sort_filetime_start_asc_title" xml:space="preserve">
+    <value>Thời gian bắt đầu (Tăng dần)</value>
+  </data>
+  <data name="download_view_sort_filetime_start_desc_title" xml:space="preserve">
+    <value>Thời gian bắt đầu (Giảm dần)</value>
+  </data>
+  <data name="download_view_sort_filetime_end_asc_title" xml:space="preserve">
+    <value>Thời gian kết thúc (Tăng dần)</value>
+  </data>
+  <data name="download_view_sort_filetime_end_desc_title" xml:space="preserve">
+    <value>Thời gian kết thúc (Giảm dần)</value>
+  </data>
+  <data name="download_view_sort_filesize_asc_title" xml:space="preserve">
+    <value>Kích cỡ (Nhỏ đến lớn)</value>
+  </data>
+  <data name="download_view_sort_filesize_desc_title" xml:space="preserve">
+    <value>Kích thước (Lớn đến nhỏ)</value>
+  </data>
 </root>
