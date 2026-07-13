@@ -21,22 +21,99 @@ namespace PDownloader.Models;
 /// Mirror of Core's DownloadItemDto — received via CFS "muxt-get-downloader-list"
 /// and "muxt-download-progress" commands.
 /// </summary>
-public class DownloadItemDto
+public partial class DownloadItemDto : ObservableObject
 {
-    [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
-    [JsonPropertyName("url")] public string Url { get; set; } = string.Empty;
-    [JsonPropertyName("fileName")] public string FileName { get; set; } = string.Empty;
-    [JsonPropertyName("savePath")] public string SavePath { get; set; } = string.Empty;
-    [JsonPropertyName("totalBytes")] public long TotalBytes { get; set; }
-    [JsonPropertyName("downloadedBytes")] public long DownloadedBytes { get; set; }
-    [JsonPropertyName("speedBps")] public double SpeedBps { get; set; }
-    [JsonPropertyName("progress")] public double Progress { get; set; }
-    [JsonPropertyName("status")] public string Status { get; set; } = string.Empty;
-    [JsonPropertyName("statusText")] public string StatusText { get; set; } = string.Empty;
-    [JsonPropertyName("speedFormatted")] public string SpeedFormatted { get; set; } = string.Empty;
-    [JsonPropertyName("etaFormatted")] public string EtaFormatted { get; set; } = string.Empty;
-    [JsonPropertyName("totalFormatted")] public string TotalFormatted { get; set; } = string.Empty;
-    [JsonPropertyName("downloadedFormatted")] public string DownloadedFormatted { get; set; } = string.Empty;
-    [JsonPropertyName("errorMessage")] public string ErrorMessage { get; set; } = string.Empty;
-    [JsonPropertyName("isActive")] public bool IsActive { get; set; }
+    public DownloadItemDto()
+    {
+        LanguageBase.LanguageChanged += LanguageBase_LanguageChanged;
+    }
+
+    private void LanguageBase_LanguageChanged(string language)
+    {
+        RefreshStatusText();
+    }
+
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("url")]
+    public string Url { get; set; } = string.Empty;
+
+    [JsonPropertyName("fileName")]
+    public string FileName { get; set; } = string.Empty;
+
+    [JsonPropertyName("startTime")]
+    public DateTime StartTime { get; set; }
+
+    [JsonPropertyName("endTime")]
+    public DateTime EndTime { get; set; }
+
+    [JsonPropertyName("savePath")]
+    public string SavePath { get; set; } = string.Empty;
+
+    [JsonPropertyName("totalBytes")]
+    public long TotalBytes { get; set; }
+
+    [JsonPropertyName("downloadedBytes")]
+    public long DownloadedBytes { get; set; }
+
+    [JsonPropertyName("speedBps")]
+    public double SpeedBps { get; set; }
+
+    [JsonPropertyName("progress")]
+    public double Progress { get; set; }
+
+    [JsonPropertyName("status")]
+    public string Status
+    {
+        get; set
+        {
+            field = value;
+            RefreshStatusText();
+        }
+    } = string.Empty;
+
+    [ObservableProperty]
+    private string _statusText = string.Empty;
+
+    [JsonPropertyName("speedFormatted")]
+    public string SpeedFormatted { get; set; } = string.Empty;
+
+    [JsonPropertyName("etaFormatted")]
+    public string EtaFormatted { get; set; } = string.Empty;
+
+    [JsonPropertyName("totalFormatted")]
+    public string TotalFormatted { get; set; } = string.Empty;
+
+    [JsonPropertyName("downloadedFormatted")]
+    public string DownloadedFormatted { get; set; } = string.Empty;
+
+    [JsonPropertyName("errorMessage")]
+    public string ErrorMessage { get; set; } = string.Empty;
+
+    [JsonPropertyName("isActive")]
+    public bool IsActive { get; set; }
+
+    private void RefreshStatusText()
+    {
+        if (Status == "Error")
+        {
+            StatusText = LanguageBase.GetLangValue("download_status_error_title", ErrorMessage);
+        }
+        else
+        {
+            StatusText = LanguageBase.GetLangValue(
+                Status switch
+                {
+                    "Queued" => "download_status_queued_title",
+                    "Connecting" => "download_status_connecting_title",
+                    "Downloading" => "download_status_downloading_title",
+                    "Paused" => "download_status_paused_title",
+                    "Merging" => "download_status_merging_title",
+                    "Completed" => "download_status_completed_title",
+                    _ => "?"
+                }
+            );
+        }
+    }
 }

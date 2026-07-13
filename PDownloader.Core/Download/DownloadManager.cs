@@ -371,6 +371,7 @@ public record DownloadItemSnapshot(
 
 public record DownloadItemDto(
     string Id, string Url, string FileName, string SavePath,
+    DateTime StartTime, DateTime EndTime,
     long TotalBytes, long DownloadedBytes, double SpeedBps,
     double Progress, string Status,
     string SpeedFormatted, string EtaFormatted,
@@ -379,6 +380,7 @@ public record DownloadItemDto(
 {
     public static DownloadItemDto From(DownloadItem i) => new(
         i.Id.ToString(), i.Url, i.FileName, i.SavePath,
+        i.StartTime, i.EndTime,
         i.TotalBytes, i.DownloadedBytes, i.SpeedBps,
         i.Progress, i.Status.ToString(),
         i.SpeedFormatted, i.EtaFormatted,
