@@ -1,3 +1,20 @@
+## v0.2.1
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- [extension] Add Instagram support and improve pointer tracking (#31) — @maihcx
+- Add HTTP headers support and source-aware cookies (#30) — @maihcx
+
+## 🧹 Maintenance
+
+- [extension] Add referer to ytdlp download message (#29) — @maihcx
+- Reorder download progress display (#28) — @maihcx
+- Normalize Vietnamese size terminology in sort labels (#27) — @maihcx
+
+
+---
+
 ## v0.2.0
 
 ## 🚀 Changelog
