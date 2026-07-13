@@ -169,6 +169,15 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to download_filter_searchbox_desc.
+        /// </summary>
+        internal static string download_filter_searchbox_desc {
+            get {
+                return ResourceManager.GetString("download_filter_searchbox_desc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to download_status_cancelled_title.
         /// </summary>
         internal static string download_status_cancelled_title {
@@ -237,6 +246,141 @@ namespace PDownloader.Resources.Locales {
         internal static string download_status_queued_title {
             get {
                 return ResourceManager.GetString("download_status_queued_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_file_cap_loaded_title.
+        /// </summary>
+        internal static string download_view_file_cap_loaded_title {
+            get {
+                return ResourceManager.GetString("download_view_file_cap_loaded_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_file_end_time_title.
+        /// </summary>
+        internal static string download_view_file_end_time_title {
+            get {
+                return ResourceManager.GetString("download_view_file_end_time_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_file_name_title.
+        /// </summary>
+        internal static string download_view_file_name_title {
+            get {
+                return ResourceManager.GetString("download_view_file_name_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_file_save_path_title.
+        /// </summary>
+        internal static string download_view_file_save_path_title {
+            get {
+                return ResourceManager.GetString("download_view_file_save_path_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_file_start_time_title.
+        /// </summary>
+        internal static string download_view_file_start_time_title {
+            get {
+                return ResourceManager.GetString("download_view_file_start_time_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_file_status_title.
+        /// </summary>
+        internal static string download_view_file_status_title {
+            get {
+                return ResourceManager.GetString("download_view_file_status_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_file_url_title.
+        /// </summary>
+        internal static string download_view_file_url_title {
+            get {
+                return ResourceManager.GetString("download_view_file_url_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_sort_filename_az_title.
+        /// </summary>
+        internal static string download_view_sort_filename_az_title {
+            get {
+                return ResourceManager.GetString("download_view_sort_filename_az_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_sort_filename_za_title.
+        /// </summary>
+        internal static string download_view_sort_filename_za_title {
+            get {
+                return ResourceManager.GetString("download_view_sort_filename_za_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_sort_filesize_asc_title.
+        /// </summary>
+        internal static string download_view_sort_filesize_asc_title {
+            get {
+                return ResourceManager.GetString("download_view_sort_filesize_asc_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_sort_filesize_desc_title.
+        /// </summary>
+        internal static string download_view_sort_filesize_desc_title {
+            get {
+                return ResourceManager.GetString("download_view_sort_filesize_desc_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_sort_filetime_end_asc_title.
+        /// </summary>
+        internal static string download_view_sort_filetime_end_asc_title {
+            get {
+                return ResourceManager.GetString("download_view_sort_filetime_end_asc_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_sort_filetime_end_desc_title.
+        /// </summary>
+        internal static string download_view_sort_filetime_end_desc_title {
+            get {
+                return ResourceManager.GetString("download_view_sort_filetime_end_desc_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_sort_filetime_start_asc_title.
+        /// </summary>
+        internal static string download_view_sort_filetime_start_asc_title {
+            get {
+                return ResourceManager.GetString("download_view_sort_filetime_start_asc_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_view_sort_filetime_start_desc_title.
+        /// </summary>
+        internal static string download_view_sort_filetime_start_desc_title {
+            get {
+                return ResourceManager.GetString("download_view_sort_filetime_start_desc_title", resourceCulture);
             }
         }
         

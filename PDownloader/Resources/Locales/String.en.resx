@@ -432,4 +432,52 @@
   <data name="dialog_link_title" xml:space="preserve">
     <value>Link</value>
   </data>
+  <data name="download_filter_searchbox_desc" xml:space="preserve">
+    <value>Search for filenames, URLs ...</value>
+  </data>
+  <data name="download_view_file_name_title" xml:space="preserve">
+    <value>File name</value>
+  </data>
+  <data name="download_view_file_url_title" xml:space="preserve">
+    <value>URL link</value>
+  </data>
+  <data name="download_view_file_cap_loaded_title" xml:space="preserve">
+    <value>Size / Downloaded</value>
+  </data>
+  <data name="download_view_file_save_path_title" xml:space="preserve">
+    <value>Save path</value>
+  </data>
+  <data name="download_view_file_status_title" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="download_view_file_start_time_title" xml:space="preserve">
+    <value>Start time</value>
+  </data>
+  <data name="download_view_file_end_time_title" xml:space="preserve">
+    <value>End time</value>
+  </data>
+  <data name="download_view_sort_filename_az_title" xml:space="preserve">
+    <value>File name (A - Z)</value>
+  </data>
+  <data name="download_view_sort_filename_za_title" xml:space="preserve">
+    <value>File name (Z - A)</value>
+  </data>
+  <data name="download_view_sort_filetime_start_asc_title" xml:space="preserve">
+    <value>Start time (Ascending order)</value>
+  </data>
+  <data name="download_view_sort_filetime_start_desc_title" xml:space="preserve">
+    <value>Start time (Descending order)</value>
+  </data>
+  <data name="download_view_sort_filetime_end_asc_title" xml:space="preserve">
+    <value>End time (Ascending order)</value>
+  </data>
+  <data name="download_view_sort_filetime_end_desc_title" xml:space="preserve">
+    <value>End time (Descending order)</value>
+  </data>
+  <data name="download_view_sort_filesize_asc_title" xml:space="preserve">
+    <value>Size (Small to large)</value>
+  </data>
+  <data name="download_view_sort_filesize_desc_title" xml:space="preserve">
+    <value>Size (Large to small)</value>
+  </data>
 </root>

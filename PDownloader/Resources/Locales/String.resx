@@ -432,4 +432,52 @@
   <data name="dialog_link_title" xml:space="preserve">
     <value>dialog_link_title</value>
   </data>
+  <data name="download_filter_searchbox_desc" xml:space="preserve">
+    <value>download_filter_searchbox_desc</value>
+  </data>
+  <data name="download_view_file_name_title" xml:space="preserve">
+    <value>download_view_file_name_title</value>
+  </data>
+  <data name="download_view_file_url_title" xml:space="preserve">
+    <value>download_view_file_url_title</value>
+  </data>
+  <data name="download_view_file_cap_loaded_title" xml:space="preserve">
+    <value>download_view_file_cap_loaded_title</value>
+  </data>
+  <data name="download_view_file_save_path_title" xml:space="preserve">
+    <value>download_view_file_save_path_title</value>
+  </data>
+  <data name="download_view_file_status_title" xml:space="preserve">
+    <value>download_view_file_status_title</value>
+  </data>
+  <data name="download_view_file_start_time_title" xml:space="preserve">
+    <value>download_view_file_start_time_title</value>
+  </data>
+  <data name="download_view_file_end_time_title" xml:space="preserve">
+    <value>download_view_file_end_time_title</value>
+  </data>
+  <data name="download_view_sort_filename_az_title" xml:space="preserve">
+    <value>download_view_sort_filename_az_title</value>
+  </data>
+  <data name="download_view_sort_filename_za_title" xml:space="preserve">
+    <value>download_view_sort_filename_za_title</value>
+  </data>
+  <data name="download_view_sort_filetime_start_asc_title" xml:space="preserve">
+    <value>download_view_sort_filetime_start_asc_title</value>
+  </data>
+  <data name="download_view_sort_filetime_start_desc_title" xml:space="preserve">
+    <value>download_view_sort_filetime_start_desc_title</value>
+  </data>
+  <data name="download_view_sort_filetime_end_asc_title" xml:space="preserve">
+    <value>download_view_sort_filetime_end_asc_title</value>
+  </data>
+  <data name="download_view_sort_filetime_end_desc_title" xml:space="preserve">
+    <value>download_view_sort_filetime_end_desc_title</value>
+  </data>
+  <data name="download_view_sort_filesize_asc_title" xml:space="preserve">
+    <value>download_view_sort_filesize_asc_title</value>
+  </data>
+  <data name="download_view_sort_filesize_desc_title" xml:space="preserve">
+    <value>download_view_sort_filesize_desc_title</value>
+  </data>
 </root>
