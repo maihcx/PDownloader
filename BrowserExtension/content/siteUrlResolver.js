@@ -55,6 +55,10 @@
   }
 
   function getDirectVideoUrl(video, contextNode, site) {
+    if (site === 'tiktok') {
+      return getTikTokDirectVideoUrl(video, contextNode);
+    }
+
     if (site !== 'facebook') return null;
 
     const nodes = [];
@@ -73,6 +77,250 @@
     }
 
     return null;
+  }
+
+  function getTikTokDirectVideoUrl(video, contextNode) {
+    const roots = collectTikTokRoots(video, contextNode);
+
+    for (const root of roots) {
+      const permalink = findTikTokPermalink(root);
+      if (permalink) return permalink;
+    }
+
+    const itemId = findTikTokItemId(roots);
+    if (!itemId) return null;
+
+    const hydrationItem = getTikTokHydrationItem(itemId);
+    const username = findTikTokUsername(roots)
+      || normalizeTikTokUsername(hydrationItem?.author?.uniqueId);
+
+    if (!username) return null;
+
+    return `https://www.tiktok.com/@${encodeURIComponent(username)}/video/${itemId}`;
+  }
+
+  function collectTikTokRoots(video, contextNode) {
+    const roots = [];
+    const seen = new Set();
+
+    const add = (node) => {
+      if (!node || seen.has(node)) return;
+      seen.add(node);
+      roots.push(node);
+    };
+
+    add(safeClosest(video, '[id^="xgwrapper-"]'));
+    add(safeClosest(contextNode, '[id^="xgwrapper-"]'));
+    add(safeClosest(video, '[data-e2e="feed-video"]'));
+    add(safeClosest(contextNode, '[data-e2e="feed-video"]'));
+    add(safeClosest(video, '[data-e2e="recommend-list-item-container"]'));
+    add(safeClosest(contextNode, '[data-e2e="recommend-list-item-container"]'));
+    add(safeClosest(video, 'article'));
+    add(safeClosest(contextNode, 'article'));
+    add(contextNode);
+    add(video);
+
+    return roots;
+  }
+
+  function findTikTokPermalink(root) {
+    if (!root) return null;
+
+    const anchors = [];
+    if (isAnchor(root)) anchors.push(root);
+
+    try {
+      for (const anchor of root.querySelectorAll?.('a[href*="/video/"]') || []) {
+        anchors.push(anchor);
+      }
+    } catch (_) { }
+
+    for (const anchor of anchors) {
+      const url = normalizeUrl(anchor.href || anchor.getAttribute?.('href'), 'tiktok');
+      if (url && getUrlQuality(url, 'tiktok') > 0) return url;
+    }
+
+    return null;
+  }
+
+  function findTikTokItemId(roots) {
+    for (const root of roots) {
+      const direct = extractTikTokItemId(root);
+      if (direct) return direct;
+
+      let nodes = [];
+      try {
+        nodes = root?.querySelectorAll?.(
+          '[id^="xgwrapper-"],[data-item-id],[data-video-id],[data-aweme-id]'
+        ) || [];
+      } catch (_) { }
+
+      for (let i = 0; i < nodes.length && i < 100; i++) {
+        const id = extractTikTokItemId(nodes[i]);
+        if (id) return id;
+      }
+
+      let mediaNodes = [];
+      try {
+        mediaNodes = root?.querySelectorAll?.('video[src],source[src]') || [];
+      } catch (_) { }
+
+      for (let i = 0; i < mediaNodes.length && i < 20; i++) {
+        const raw = mediaNodes[i].currentSrc || mediaNodes[i].src || mediaNodes[i].getAttribute?.('src');
+        const id = extractTikTokItemIdFromUrl(raw);
+        if (id) return id;
+      }
+    }
+
+    return null;
+  }
+
+  function extractTikTokItemId(node) {
+    if (!node) return null;
+
+    const values = [
+      node.id,
+      node.getAttribute?.('data-item-id'),
+      node.getAttribute?.('data-video-id'),
+      node.getAttribute?.('data-aweme-id')
+    ];
+
+    for (const value of values) {
+      const text = String(value || '');
+      const wrapperMatch = text.match(/xgwrapper-.*?(\d{15,22})(?:\D|$)/i);
+      if (wrapperMatch) return wrapperMatch[1];
+
+      if (/^\d{15,22}$/.test(text)) return text;
+    }
+
+    return null;
+  }
+
+  function extractTikTokItemIdFromUrl(rawUrl) {
+    if (!rawUrl || String(rawUrl).startsWith('blob:')) return null;
+
+    try {
+      const url = new URL(rawUrl, location.href);
+      const queryId = url.searchParams.get('item_id') || url.searchParams.get('aweme_id');
+      if (/^\d{15,22}$/.test(queryId || '')) return queryId;
+
+      return url.pathname.match(/\/video\/(\d{15,22})(?:\/|$)/i)?.[1] || null;
+    } catch (_) {
+      return String(rawUrl).match(/(?:item_id|aweme_id)=([0-9]{15,22})/i)?.[1] || null;
+    }
+  }
+
+  function findTikTokUsername(roots) {
+    const selectors = [
+      'a[data-e2e="video-author-avatar"][href]',
+      '[data-e2e="video-author-uniqueid"] a[href]',
+      'a[href^="/@"]',
+      'a[href*="tiktok.com/@"]'
+    ];
+
+    for (const root of roots) {
+      if (!root) continue;
+
+      const candidates = [];
+      if (isAnchor(root)) candidates.push(root);
+
+      for (const selector of selectors) {
+        try {
+          const anchor = root.querySelector?.(selector);
+          if (anchor) candidates.push(anchor);
+        } catch (_) { }
+      }
+
+      for (const anchor of candidates) {
+        const username = extractTikTokUsernameFromUrl(
+          anchor.href || anchor.getAttribute?.('href')
+        );
+        if (username) return username;
+      }
+    }
+
+    return null;
+  }
+
+  function extractTikTokUsernameFromUrl(rawUrl) {
+    if (!rawUrl) return null;
+
+    try {
+      const url = new URL(rawUrl, location.href);
+      return normalizeTikTokUsername(url.pathname.match(/^\/@([^/?#]+)/i)?.[1]);
+    } catch (_) {
+      return normalizeTikTokUsername(String(rawUrl).match(/(?:^|\/)@([^/?#]+)/)?.[1]);
+    }
+  }
+
+  function normalizeTikTokUsername(value) {
+    if (!value) return null;
+
+    let username = String(value).trim().replace(/^@/, '');
+    try { username = decodeURIComponent(username); } catch (_) { }
+
+    return /^[A-Za-z0-9._]{1,64}$/.test(username) ? username : null;
+  }
+
+  let _tiktokHydrationItems = null;
+
+  function getTikTokHydrationItem(itemId) {
+    if (!itemId) return null;
+
+    if (_tiktokHydrationItems === null) {
+      _tiktokHydrationItems = new Map();
+
+      try {
+        const script = document.getElementById?.('__UNIVERSAL_DATA_FOR_REHYDRATION__');
+        const json = script?.textContent ? JSON.parse(script.textContent) : null;
+        const scope = json?.__DEFAULT_SCOPE__ || json;
+        const items = scope?.['webapp.updated-items'];
+
+        if (Array.isArray(items)) {
+          for (const item of items) {
+            const id = String(item?.id || item?.video?.id || '');
+            if (/^\d{15,22}$/.test(id)) _tiktokHydrationItems.set(id, item);
+          }
+        }
+      } catch (_) { }
+    }
+
+    return _tiktokHydrationItems.get(String(itemId)) || null;
+  }
+
+  function getMediaTitle(video, contextNode = video) {
+    const site = detectSite(location.hostname);
+    if (site !== 'tiktok') return document.title || 'video';
+
+    const roots = collectTikTokRoots(video, contextNode);
+    const itemId = findTikTokItemId(roots);
+    const hydrationItem = getTikTokHydrationItem(itemId);
+
+    for (const root of roots) {
+      if (!root) continue;
+
+      const description = cleanMediaTitle(
+        root.querySelector?.('[data-e2e="video-desc"]')?.textContent
+        || root.querySelector?.('img[alt]')?.getAttribute?.('alt')
+      );
+      if (description) return description;
+    }
+
+    const hydrationDescription = cleanMediaTitle(hydrationItem?.desc);
+    if (hydrationDescription) return hydrationDescription;
+
+    const username = findTikTokUsername(roots)
+      || normalizeTikTokUsername(hydrationItem?.author?.uniqueId);
+    if (username) return `TikTok - @${username}`;
+
+    return document.title || 'TikTok video';
+  }
+
+  function cleanMediaTitle(value) {
+    return String(value || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 160) || null;
   }
 
   function canonicalizeFacebookGroupUrl(url) {
@@ -387,5 +635,5 @@
     }
   }
 
-  PD.SiteUrlResolver = { resolve };
+  PD.SiteUrlResolver = { resolve, getMediaTitle };
 })(globalThis);

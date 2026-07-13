@@ -110,13 +110,14 @@ function getBtn() {
 
       if (isSpecial) {
         url = getSiteUrl(activeVideo, activeContextNode);
-        filename = sanitizeName(document.title) + (hostname.includes('soundcloud.com') ? '.mp3' : '.mp4');
+        const mediaTitle = getMediaTitle(activeVideo, activeContextNode);
+        filename = sanitizeName(mediaTitle) + (hostname.includes('soundcloud.com') ? '.mp3' : '.mp4');
 
         const resp = await sendMessageSafe({
           action: 'download_via_ytdlp',
           url,
           filename,
-          title: document.title
+          title: mediaTitle
         });
 
         showBtnFeedback(
@@ -276,8 +277,19 @@ function getSiteUrl(video, contextNode) {
   return PD.SiteUrlResolver?.resolve(video, contextNode || video) || location.href;
 }
 
+function getMediaTitle(video, contextNode) {
+  return PD.SiteUrlResolver?.getMediaTitle?.(video, contextNode || video)
+    || document.title
+    || 'video';
+}
+
 function sanitizeName(name) {
-  return name.replace(/[\\/:*?"<>|]/g, '_').slice(0, 80);
+  const sanitized = String(name || 'video')
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+  return sanitized || 'video';
 }
 
 function clamp(value, min, max) {
