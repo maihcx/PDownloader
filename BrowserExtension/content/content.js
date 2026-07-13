@@ -117,7 +117,8 @@ function getBtn() {
           action: 'download_via_ytdlp',
           url,
           filename,
-          title: mediaTitle
+          title: mediaTitle,
+          referer: location.href
         });
 
         showBtnFeedback(
