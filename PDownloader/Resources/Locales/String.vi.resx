@@ -478,6 +478,6 @@
     <value>Kích cỡ (Nhỏ đến lớn)</value>
   </data>
   <data name="download_view_sort_filesize_desc_title" xml:space="preserve">
-    <value>Kích thước (Lớn đến nhỏ)</value>
+    <value>Kích cỡ (Lớn đến nhỏ)</value>
   </data>
 </root>
