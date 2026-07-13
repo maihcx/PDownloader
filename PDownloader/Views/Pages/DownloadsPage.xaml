@@ -304,9 +304,9 @@
                                                           FontWeight="Medium"
                                                           VerticalAlignment="Center"
                                                           TextTrimming="CharacterEllipsis">
-                                                <Run Text="{Binding TotalFormatted}" />
-                                                <Run Text="/" />
                                                 <Run Text="{Binding DownloadedFormatted}" />
+                                                <Run Text="/" />
+                                                <Run Text="{Binding TotalFormatted}" />
                                             </ui:TextBlock>
                                         </StackPanel>
                                     </controls:InfoRow.ValueContent>

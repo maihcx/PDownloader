@@ -442,7 +442,7 @@
     <value>Liên kết Url</value>
   </data>
   <data name="download_view_file_cap_loaded_title" xml:space="preserve">
-    <value>Dung lượng / Đã tải</value>
+    <value>Đã tải / Dung lượng</value>
   </data>
   <data name="download_view_file_save_path_title" xml:space="preserve">
     <value>Đường dẫn</value>
