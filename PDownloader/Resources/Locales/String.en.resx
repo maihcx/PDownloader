@@ -442,7 +442,7 @@
     <value>URL link</value>
   </data>
   <data name="download_view_file_cap_loaded_title" xml:space="preserve">
-    <value>Size / Downloaded</value>
+    <value>Downloaded / Size</value>
   </data>
   <data name="download_view_file_save_path_title" xml:space="preserve">
     <value>Save path</value>
