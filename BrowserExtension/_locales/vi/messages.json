@@ -148,5 +148,11 @@
   },
   "contentReloadPage": {
     "message": "Extension vừa được cập nhật. Hãy tải lại trang."
+  },
+  "extensionUpdatedNotificationTitle": {
+    "message": "PDownloader Webhook"
+  },
+  "extensionUpdatedNotificationMessage": {
+    "message": "Phần mở rộng của PDownloader Webhook vừa được cập nhật! Vui lòng cập nhật ứng dụng PDownloader trên PC của bạn"
   }
 }

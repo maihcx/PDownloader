@@ -25,6 +25,9 @@ public partial class AboutViewModel : ObservableObject
     [ObservableProperty]
     private string _appVersion = string.Empty;
 
+    [ObservableProperty]
+    private string _copyRight = AppInfoHelper.CopyRight;
+
     private void InitializeViewModel()
     {
         Version v = UpdateService.GetCurrentVersion();

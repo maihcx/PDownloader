@@ -224,9 +224,6 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
     }
     #endregion
 
-    [ObservableProperty]
-    private string _copyRight = AppInfoHelper.CopyRight;
-
     public Task OnNavigatedToAsync()
     {
         if (!_isInitialized)

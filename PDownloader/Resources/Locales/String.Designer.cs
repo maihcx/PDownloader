@@ -61,6 +61,24 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to about_app_title.
+        /// </summary>
+        internal static string about_app_title {
+            get {
+                return ResourceManager.GetString("about_app_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to about_us_title.
+        /// </summary>
+        internal static string about_us_title {
+            get {
+                return ResourceManager.GetString("about_us_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to app_author_created_summary.
         /// </summary>
         internal static string app_author_created_summary {
@@ -138,6 +156,15 @@ namespace PDownloader.Resources.Locales {
         internal static string close_title {
             get {
                 return ResourceManager.GetString("close_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to contact_us_title.
+        /// </summary>
+        internal static string contact_us_title {
+            get {
+                return ResourceManager.GetString("contact_us_title", resourceCulture);
             }
         }
         
@@ -754,15 +781,6 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to page_settings_about_title.
-        /// </summary>
-        internal static string page_settings_about_title {
-            get {
-                return ResourceManager.GetString("page_settings_about_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to page_settings_app_theme_summary.
         /// </summary>
         internal static string page_settings_app_theme_summary {
@@ -795,15 +813,6 @@ namespace PDownloader.Resources.Locales {
         internal static string page_settings_auto_hide_nav_title {
             get {
                 return ResourceManager.GetString("page_settings_auto_hide_nav_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to page_settings_contact_us_title.
-        /// </summary>
-        internal static string page_settings_contact_us_title {
-            get {
-                return ResourceManager.GetString("page_settings_contact_us_title", resourceCulture);
             }
         }
         
