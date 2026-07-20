@@ -1,3 +1,16 @@
+## v0.3.1
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- [extension] Intercept only downloads started since activation (#44) — @maihcx
+- Improve progress reporting with stable total tracking (#43) — @maihcx
+- Fix GitHub repository URL in About page (#42) — @maihcx
+- Make disk space requirement dynamic (#41) — @maihcx
+
+
+---
+
 ## v0.3.0
 
 ## 🚀 Changelog
