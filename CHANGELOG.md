@@ -1,3 +1,21 @@
+## v0.3.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- Add security improvements for HTTP bridge and file handling (#34) — @maihcx
+
+## 🐛 Bug Fixes
+
+- Fix race conditions in download progress handling (#35) — @maihcx
+
+## 🧹 Maintenance
+
+- [extension] Bump browser extension version to 0.2.3 (#36) — @maihcx
+
+
+---
+
 ## v0.2.1
 
 ## 🚀 Changelog
