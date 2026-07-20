@@ -301,10 +301,14 @@
                                            Command="{Binding BrowseFolderCmd}"/>
                             </Grid>
 
-                            <TextBlock Text="{local:LocalizationExtension path_required_space}"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                       Margin="0,0,0,32"/>
+                            <ui:TextBlock FontSize="12"
+                                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                          Margin="0,0,0,32">
+                                <Run Text="{local:LocalizationExtension path_required_space}" />
+                                <Run Text="~" />
+                                <Run Text="{Binding EstimatedSize, Mode=OneWay}" />
+                                <Run Text="MB" />
+                            </ui:TextBlock>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal"

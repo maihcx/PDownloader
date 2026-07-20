@@ -14,23 +14,25 @@
 // Copyright (C) Song Mai Software.
 
 using System.Globalization;
-using System.Text.RegularExpressions;
 
 namespace PDownloader.Core.Download.Hls;
 
 internal sealed class YtDlpHlsDownloadService
 {
+    private const string ProgressPrefix = "__PD_PROGRESS__|";
+    private const string DestinationPrefix = "__PD_DESTINATION__|";
+
+    private const string ProgressTemplate =
+        "download:" + ProgressPrefix +
+        "%(progress.downloaded_bytes)s|" +
+        "%(progress.total_bytes)s|" +
+        "%(progress.total_bytes_estimate)s|" +
+        "%(progress.speed)s";
+
     private readonly YtDlpExecutableLocator _executableLocator =
         YtDlpExecutableLocator.Instance;
     private readonly YtDlpCookieFileService _cookieFileService =
         YtDlpCookieFileService.Instance;
-    private static readonly Regex ProgressRegex = new(
-        @"^\[download\]\s+(?<pct>[\d.]+)%\s+of\s+~?\s*(?<size>[\d.]+)(?<unit>Ki?B|Mi?B|Gi?B|B)",
-        RegexOptions.Compiled);
-
-    private static readonly Regex DestinationRegex = new(
-        @"^\[(?:download|Merger)\]\s+(?:Destination:|Merging formats into)\s*""?(?<path>.+?)""?$",
-        RegexOptions.Compiled);
 
     public async Task<string> DownloadAsync(
         string url,
@@ -39,7 +41,7 @@ internal sealed class YtDlpHlsDownloadService
         string? referer,
         string? cookieHeader,
         int preferredFragmentCount,
-        Action<long, long>? reportProgress,
+        Action<long, long, double>? reportProgress,
         CancellationToken cancellationToken)
     {
         string ytDlpPath = _executableLocator.FindYtDlp()
@@ -123,11 +125,24 @@ internal sealed class YtDlpHlsDownloadService
         startInfo.ArgumentList.Add("--newline");
         startInfo.ArgumentList.Add("--no-warnings");
         startInfo.ArgumentList.Add("--no-playlist");
+
+        startInfo.ArgumentList.Add("--progress");
+        startInfo.ArgumentList.Add("--progress-delta");
+        startInfo.ArgumentList.Add("0.25");
+        startInfo.ArgumentList.Add("--progress-template");
+        startInfo.ArgumentList.Add(ProgressTemplate);
+        startInfo.ArgumentList.Add("--print");
+        startInfo.ArgumentList.Add(
+            $"after_move:{DestinationPrefix}%(filepath)s");
+        startInfo.ArgumentList.Add("--no-simulate");
+
         startInfo.ArgumentList.Add("--merge-output-format");
         startInfo.ArgumentList.Add("mp4");
         startInfo.ArgumentList.Add("--hls-prefer-native");
         startInfo.ArgumentList.Add("--concurrent-fragments");
-        startInfo.ArgumentList.Add(Math.Clamp(preferredFragmentCount, 1, 16).ToString(CultureInfo.InvariantCulture));
+        startInfo.ArgumentList.Add(
+            Math.Clamp(preferredFragmentCount, 1, 16)
+                .ToString(CultureInfo.InvariantCulture));
 
         if (!string.IsNullOrWhiteSpace(referer))
         {
@@ -151,40 +166,40 @@ internal sealed class YtDlpHlsDownloadService
 
     private static async Task<YtDlpProcessResult> RunProcessAsync(
         ProcessStartInfo startInfo,
-        Action<long, long>? reportProgress,
+        Action<long, long, double>? reportProgress,
         CancellationToken cancellationToken)
     {
         using var process = new Process { StartInfo = startInfo };
         var standardError = new StringBuilder();
+        var totalSizeTracker = new StableTotalSizeTracker();
         string? destinationPath = null;
 
         process.OutputDataReceived += (_, args) =>
         {
-            if (args.Data == null)
+            string? line = args.Data;
+            if (string.IsNullOrEmpty(line))
             {
                 return;
             }
 
-            Match progressMatch = ProgressRegex.Match(args.Data);
-            if (progressMatch.Success)
+            if (TryParseProgress(line, out YtDlpProgressSnapshot progress))
             {
-                double percent = double.Parse(
-                    progressMatch.Groups["pct"].Value,
-                    CultureInfo.InvariantCulture);
-                double size = double.Parse(
-                    progressMatch.Groups["size"].Value,
-                    CultureInfo.InvariantCulture);
-                long totalBytes = (long)(size * GetUnitMultiplier(
-                    progressMatch.Groups["unit"].Value));
-                long downloadedBytes = (long)(totalBytes * percent / 100.0);
-                reportProgress?.Invoke(downloadedBytes, totalBytes);
+                long stableTotalBytes = totalSizeTracker.GetStableTotalBytes(progress);
+
+                reportProgress?.Invoke(
+                    progress.DownloadedBytes,
+                    stableTotalBytes,
+                    progress.SpeedBps);
                 return;
             }
 
-            Match destinationMatch = DestinationRegex.Match(args.Data);
-            if (destinationMatch.Success)
+            if (line.StartsWith(DestinationPrefix, StringComparison.Ordinal))
             {
-                destinationPath = destinationMatch.Groups["path"].Value.Trim();
+                string path = line[DestinationPrefix.Length..].Trim();
+                if (!string.IsNullOrWhiteSpace(path))
+                {
+                    destinationPath = path;
+                }
             }
         };
 
@@ -207,6 +222,7 @@ internal sealed class YtDlpHlsDownloadService
         catch (OperationCanceledException)
         {
             try { process.Kill(entireProcessTree: true); } catch { }
+
             throw;
         }
 
@@ -214,6 +230,87 @@ internal sealed class YtDlpHlsDownloadService
             destinationPath,
             standardError.ToString(),
             process.ExitCode);
+    }
+
+    private static bool TryParseProgress(
+        string line,
+        out YtDlpProgressSnapshot progress)
+    {
+        progress = default;
+
+        if (!line.StartsWith(ProgressPrefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        string[] values = line[ProgressPrefix.Length..].Split('|');
+        if (values.Length < 4
+            || !TryParseNonNegativeInt64(values[0], out long downloadedBytes))
+        {
+            return false;
+        }
+
+        _ = TryParseNonNegativeInt64(values[1], out long exactTotalBytes);
+        _ = TryParseNonNegativeInt64(values[2], out long estimatedTotalBytes);
+        _ = TryParseNonNegativeDouble(values[3], out double speedBps);
+
+        progress = new YtDlpProgressSnapshot(
+            downloadedBytes,
+            exactTotalBytes,
+            estimatedTotalBytes,
+            speedBps);
+        return true;
+    }
+
+    private static bool TryParseNonNegativeInt64(string value, out long result)
+    {
+        value = value.Trim();
+
+        if (long.TryParse(
+                value,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out long integerValue)
+            && integerValue >= 0)
+        {
+            result = integerValue;
+            return true;
+        }
+
+        if (double.TryParse(
+                value,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double floatingValue)
+            && double.IsFinite(floatingValue)
+            && floatingValue >= 0)
+        {
+            result = floatingValue >= long.MaxValue
+                ? long.MaxValue
+                : (long)floatingValue;
+            return true;
+        }
+
+        result = 0;
+        return false;
+    }
+
+    private static bool TryParseNonNegativeDouble(string value, out double result)
+    {
+        if (double.TryParse(
+                value.Trim(),
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double parsed)
+            && double.IsFinite(parsed)
+            && parsed >= 0)
+        {
+            result = parsed;
+            return true;
+        }
+
+        result = 0;
+        return false;
     }
 
     private static string ResolveTemporaryResultPath(
@@ -247,17 +344,60 @@ internal sealed class YtDlpHlsDownloadService
             "yt-dlp báo thành công nhưng không tìm thấy file kết quả.");
     }
 
-    private static double GetUnitMultiplier(string unit) => unit switch
+    private readonly record struct YtDlpProgressSnapshot(
+        long DownloadedBytes,
+        long ExactTotalBytes,
+        long EstimatedTotalBytes,
+        double SpeedBps);
+
+    private sealed class StableTotalSizeTracker
     {
-        "B" => 1,
-        "KiB" => 1024,
-        "MiB" => 1024 * 1024,
-        "GiB" => 1024 * 1024 * 1024,
-        "KB" => 1000,
-        "MB" => 1000 * 1000,
-        "GB" => 1000 * 1000 * 1000,
-        _ => 1,
-    };
+        private const int EstimateWarmupSampleCount = 4;
+
+        private int _estimateSampleCount;
+        private long _largestWarmupEstimate;
+        private long _lockedEstimatedTotalBytes;
+        private long _lockedExactTotalBytes;
+
+        public long GetStableTotalBytes(YtDlpProgressSnapshot progress)
+        {
+            if (_lockedExactTotalBytes > 0)
+            {
+                return _lockedExactTotalBytes;
+            }
+
+            if (progress.ExactTotalBytes > 0)
+            {
+                _lockedExactTotalBytes = Math.Max(
+                    progress.ExactTotalBytes,
+                    progress.DownloadedBytes);
+
+                return _lockedExactTotalBytes;
+            }
+
+            if (_lockedEstimatedTotalBytes > 0)
+            {
+                return _lockedEstimatedTotalBytes;
+            }
+
+            if (progress.EstimatedTotalBytes <= 0)
+            {
+                return 0;
+            }
+
+            _estimateSampleCount++;
+            _largestWarmupEstimate = Math.Max(
+                _largestWarmupEstimate,
+                Math.Max(progress.EstimatedTotalBytes, progress.DownloadedBytes));
+
+            if (_estimateSampleCount >= EstimateWarmupSampleCount)
+            {
+                _lockedEstimatedTotalBytes = _largestWarmupEstimate;
+            }
+
+            return _lockedEstimatedTotalBytes;
+        }
+    }
 
     private sealed record YtDlpProcessResult(
         string? DestinationPath,

@@ -160,7 +160,7 @@
     <value>Browse...</value>
   </data>
   <data name="path_required_space" xml:space="preserve">
-    <value>Required disk space: ~50 MB</value>
+    <value>Required disk space:</value>
   </data>
   <data name="path_next" xml:space="preserve">
     <value>Next</value>
