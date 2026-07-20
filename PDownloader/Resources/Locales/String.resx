@@ -123,8 +123,8 @@
   <data name="page_home_title" xml:space="preserve">
     <value>page_home_title</value>
   </data>
-  <data name="page_settings_about_title" xml:space="preserve">
-    <value>page_settings_about_title</value>
+  <data name="about_us_title" xml:space="preserve">
+    <value>about_us_title</value>
   </data>
   <data name="page_settings_app_theme_summary" xml:space="preserve">
     <value>page_settings_app_theme_summary</value>
@@ -135,8 +135,8 @@
   <data name="page_settings_auto_hide_nav_title" xml:space="preserve">
     <value>page_settings_auto_hide_nav_title</value>
   </data>
-  <data name="page_settings_contact_us_title" xml:space="preserve">
-    <value>page_settings_contact_us_title</value>
+  <data name="contact_us_title" xml:space="preserve">
+    <value>contact_us_title</value>
   </data>
   <data name="page_settings_display_material_summary" xml:space="preserve">
     <value>page_settings_display_material_summary</value>
@@ -479,5 +479,8 @@
   </data>
   <data name="download_view_sort_filesize_desc_title" xml:space="preserve">
     <value>download_view_sort_filesize_desc_title</value>
+  </data>
+  <data name="about_app_title" xml:space="preserve">
+    <value>about_app_title</value>
   </data>
 </root>

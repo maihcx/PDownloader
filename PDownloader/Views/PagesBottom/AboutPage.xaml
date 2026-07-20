@@ -53,6 +53,17 @@
             <ui:CardAction Margin="0,0,0,8"
                      IsChevronVisible="False">
                 <StackPanel>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="0,0,0,12">
+                        <ui:SymbolIcon Symbol="Apps24"
+                                       FontSize="15"
+                                       Margin="0 0 8 0" />
+                        <TextBlock Text="{utils:Localization about_app_title}"
+                                   FontWeight="SemiBold"
+                                   FontSize="14" />
+                    </StackPanel>
+                    
                     <controls:InfoRow LabelText="{utils:Localization version_title}"
                                       ValueText="{Binding ViewModel.AppVersion}"
                                       NavigateUri="https://github.com/maihcx/SYSi/releases"/>
@@ -83,43 +94,117 @@
                     </controls:InfoRow>
                     <controls:InfoRow LabelText="{utils:Localization license_title}"
                                       ValueText="GPL-3.0"
+                                      NavigateUri="https://github.com/maihcx/PDownloader/blob/main/LICENSE"
                                       IsLast="True" />
                 </StackPanel>
             </ui:CardAction>
 
-            <ui:InfoBar Title="PDownloader"
-                        Margin="0,0,0,8"
-                        Message="{utils:Localization open_source_summary}"
-                        Severity="Informational"
-                        IsOpen="True"
-                        IsClosable="False" />
-
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                
-                <ui:InfoBar Grid.Column="0"
-                            Title="PDownloader"
-                            Message="{utils:Localization issue_report_summary}"
-                            Severity="Warning"
-                            IsOpen="True"
-                            IsClosable="False"
-                            HorizontalAlignment="Stretch" />
-                
-                <ui:HyperlinkButton VerticalAlignment="Stretch"
-                                    Grid.Column="2"
-                                    NavigateUri="https://github.com/maihcx/PDownloader/issues/new/choose">
-                    <ui:HyperlinkButton.Resources>
-                        <Style TargetType="ui:HyperlinkButton"
-                               BasedOn="{StaticResource {x:Type ui:Button}}" />
-                    </ui:HyperlinkButton.Resources>
+            <ui:CardAction Margin="0 0 0 8"
+                           IsChevronVisible="False">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="0 0 0 12">
+                        <ui:SymbolIcon Symbol="BuildingFactory24"
+                                       FontSize="15"
+                                       Margin="0 0 8 0" />
+                        <TextBlock Text="{utils:Localization about_us_title}"
+                                   FontWeight="SemiBold"
+                                   FontSize="14" />
+                    </StackPanel>
                     
-                    <TextBlock Text="{utils:Localization report_issue_title}" />
-                </ui:HyperlinkButton>
-            </Grid>
+                    <ui:CardExpander ContentPadding="0"
+                                     Icon="{ui:ImageIcon 'pack://application:,,,/Assets/app-100.png', Width=38, Height=38}"
+                                     Margin="0 0 0 8">
+                        <ui:CardExpander.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="PDownloader"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                              Text="{Binding ViewModel.CopyRight, Mode=OneWay}"
+                                              TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="0"
+                                           Grid.RowSpan="2"
+                                           Grid.Column="1"
+                                           Margin="0,0,16,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding ViewModel.AppVersion, Mode=OneWay}" />
+                            </Grid>
+                        </ui:CardExpander.Header>
+                        <StackPanel>
+                            <ui:Anchor Margin="0"
+                                       Padding="16"
+                                       HorizontalAlignment="Stretch"
+                                       HorizontalContentAlignment="Stretch"
+                                       Background="Transparent"
+                                       BorderThickness="0,1,0,0"
+                                       CornerRadius="0"
+                                       NavigateUri="https://www.facebook.com/MaiXuan.HuynhOR/">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="{utils:Localization contact_us_title}" />
+                                    <ui:SymbolIcon Grid.Column="1"
+                                                   Symbol="Link24" />
+                                </Grid>
+                            </ui:Anchor>
+                            <TextBlock Margin="16"
+                                       Text="{Binding ViewModel.AppVersion, Mode=OneWay}" />
+                        </StackPanel>
+                    </ui:CardExpander>
+
+                    <ui:InfoBar Title="PDownloader"
+                                Margin="0,0,0,8"
+                                Message="{utils:Localization open_source_summary}"
+                                Severity="Informational"
+                                IsOpen="True"
+                                IsClosable="False" />
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <ui:InfoBar Grid.Column="0"
+                                    Title="PDownloader"
+                                    Message="{utils:Localization issue_report_summary}"
+                                    Severity="Warning"
+                                    IsOpen="True"
+                                    IsClosable="False"
+                                    HorizontalAlignment="Stretch" />
+
+                        <ui:HyperlinkButton VerticalAlignment="Stretch"
+                                            Grid.Column="2"
+                                            NavigateUri="https://github.com/maihcx/PDownloader/issues/new/choose">
+                            <ui:HyperlinkButton.Resources>
+                                <Style TargetType="ui:HyperlinkButton"
+                                       BasedOn="{StaticResource {x:Type ui:Button}}" />
+                            </ui:HyperlinkButton.Resources>
+
+                            <TextBlock Text="{utils:Localization report_issue_title}" />
+                        </ui:HyperlinkButton>
+                    </Grid>
+                </StackPanel>
+            </ui:CardAction>
         </StackPanel>
     </Grid>
 </Page>
