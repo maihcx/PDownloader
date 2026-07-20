@@ -123,7 +123,7 @@
   <data name="page_home_title" xml:space="preserve">
     <value>Trang chủ</value>
   </data>
-  <data name="page_settings_about_title" xml:space="preserve">
+  <data name="about_us_title" xml:space="preserve">
     <value>Về chúng tôi</value>
   </data>
   <data name="page_settings_app_theme_summary" xml:space="preserve">
@@ -135,7 +135,7 @@
   <data name="page_settings_auto_hide_nav_title" xml:space="preserve">
     <value>Tự động Ẩn/Hiện khung điều hướng</value>
   </data>
-  <data name="page_settings_contact_us_title" xml:space="preserve">
+  <data name="contact_us_title" xml:space="preserve">
     <value>Liên hệ với chúng tôi</value>
   </data>
   <data name="page_settings_display_material_summary" xml:space="preserve">
@@ -479,5 +479,8 @@
   </data>
   <data name="download_view_sort_filesize_desc_title" xml:space="preserve">
     <value>Kích cỡ (Lớn đến nhỏ)</value>
+  </data>
+  <data name="about_app_title" xml:space="preserve">
+    <value>Về ứng dụng</value>
   </data>
 </root>
