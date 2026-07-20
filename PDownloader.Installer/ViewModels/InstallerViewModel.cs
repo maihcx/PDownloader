@@ -81,8 +81,8 @@ public class InstallerViewModel : INotifyPropertyChanged
         _ => -1,
     };
 
-    private static System.Version? AssemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-    private string? _appVersion = AssemblyName != null ? $"{AssemblyName.Major}.{AssemblyName.Minor}.{AssemblyName.Build}" : null;
+    private static readonly System.Version? _assemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+    private string? _appVersion = _assemblyName != null ? $"{_assemblyName.Major}.{_assemblyName.Minor}.{_assemblyName.Build}" : null;
 
     public string AppVersion
     {
@@ -122,6 +122,12 @@ public class InstallerViewModel : INotifyPropertyChanged
     {
         get => _installPath;
         set { _installPath = value; OnPropertyChanged(); }
+    }
+
+    private readonly int _estimatedSize = InstallService.EstimatedSize;
+    public int EstimatedSize
+    {
+        get => _estimatedSize / 1024;
     }
 
     // -- Options --
@@ -180,7 +186,7 @@ public class InstallerViewModel : INotifyPropertyChanged
     // -- Uninstall --
     public bool IsUninstallMode { get; }
 
-    private string _uninstallDir = "";
+    private readonly string _uninstallDir = "";
 
     // ------------------------------------------------------------------ //
     //  Commands

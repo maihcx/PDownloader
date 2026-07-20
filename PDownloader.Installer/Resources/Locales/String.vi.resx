@@ -160,7 +160,7 @@
     <value>Duyệt...</value>
   </data>
   <data name="path_required_space" xml:space="preserve">
-    <value>Dung lượng cần thiết: ~50 MB</value>
+    <value>Dung lượng cần thiết:</value>
   </data>
   <data name="path_next" xml:space="preserve">
     <value>Tiếp theo</value>
