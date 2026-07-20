@@ -103,6 +103,7 @@ public partial class DownloaderProgressViewModel : ObservableObject
 
                 case DownloadStatus.Connecting:
                     StatusText = LanguageBase.GetLangValue("download_status_connecting_title");
+                    DownloaderStatus.State = RunnerState.Downloading;
                     IsActionButtonEnabled = false;
                     break;
 
@@ -114,18 +115,25 @@ public partial class DownloaderProgressViewModel : ObservableObject
 
                 case DownloadStatus.Paused:
                     StatusText = LanguageBase.GetLangValue("download_status_paused_title");
+                    DownloaderStatus.State = RunnerState.Downloading;
                     IsActionButtonEnabled = true;
                     break;
 
                 case DownloadStatus.Merging:
                     StatusText = LanguageBase.GetLangValue("download_status_merging_title");
+                    DownloaderStatus.State = RunnerState.Downloading;
                     IsActionButtonEnabled = false;
                     break;
 
                 case DownloadStatus.Completed:
+                    ProgressPercent = 100;
+                    ProgressText = "100%";
+                    SpeedText = "–";
+                    EtaText = "–";
                     StatusText = LanguageBase.GetLangValue("download_status_completed_title");
                     CompletedFilePath = obj.SavePath;
                     DownloaderStatus.State = RunnerState.Completed;
+                    IsActionButtonEnabled = false;
                     break;
 
                 case DownloadStatus.Cancelled:

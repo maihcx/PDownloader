@@ -22,6 +22,7 @@ public static class CFSCommandHandler
     public record YoutubePendingMeta(string FormatId);
 
     private static readonly ConcurrentDictionary<string, YoutubePendingMeta> _youtubePending = new();
+    private static readonly ConcurrentDictionary<string, object> _broadcastLocks = new();
 
     public static DownloadConfigService DownloadConfigService { get; set; } = Program.GetRequiredService<DownloadConfigService>();
 
@@ -224,13 +225,18 @@ public static class CFSCommandHandler
 
     public static void BroadcastItemChanged(DownloadItem item)
     {
-        string json = DownloadManager.SerializeItem(item);
-        AppRuntime.DownloaderCFSRest.TryGetValue(
-            item.Id,
-            out ConfluxService? cfsDowloaderUI);
+        object broadcastLock = _broadcastLocks.GetOrAdd(item.Id, static _ => new object());
 
-        AppRuntime.cfsMain?.Send("muxt-download-progress", json);
-        cfsDowloaderUI?.Send("muxt-download-progress", json);
+        lock (broadcastLock)
+        {
+            string json = DownloadManager.SerializeItem(item);
+            AppRuntime.DownloaderCFSRest.TryGetValue(
+                item.Id,
+                out ConfluxService? cfsDowloaderUI);
+
+            AppRuntime.cfsMain?.Send("muxt-download-progress", json);
+            cfsDowloaderUI?.Send("muxt-download-progress", json);
+        }
     }
 
     public static void RegisterYoutubePending(string id, string formatId)
