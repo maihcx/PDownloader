@@ -44,21 +44,23 @@ internal sealed class DownloadPathService
 
     public static string UniqueFilePath(string folder, string name)
     {
-        Directory.CreateDirectory(folder);
+        string fullFolder = Path.GetFullPath(folder);
+        Directory.CreateDirectory(fullFolder);
 
-        string path = Path.Combine(folder, name);
+        string safeName = SanitizeFileName(name);
+        string path = Path.Combine(fullFolder, safeName);
         if (!File.Exists(path))
         {
             return path;
         }
 
-        string nameWithoutExtension = Path.GetFileNameWithoutExtension(name);
-        string extension = Path.GetExtension(name);
+        string nameWithoutExtension = Path.GetFileNameWithoutExtension(safeName);
+        string extension = Path.GetExtension(safeName);
         int counter = 1;
 
         do
         {
-            path = Path.Combine(folder, $"{nameWithoutExtension} ({counter}){extension}");
+            path = Path.Combine(fullFolder, $"{nameWithoutExtension} ({counter}){extension}");
             counter++;
         }
         while (File.Exists(path));
@@ -82,13 +84,65 @@ internal sealed class DownloadPathService
 
     public static string SanitizeFileName(string name)
     {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "download";
+        }
+
+        // Always collapse user-provided values to a leaf filename. This blocks
+        // both Windows and URL-style traversal regardless of the current OS.
+        int lastSeparator = Math.Max(name.LastIndexOf('\\'), name.LastIndexOf('/'));
+        if (lastSeparator >= 0 && lastSeparator < name.Length - 1)
+        {
+            name = name[(lastSeparator + 1)..];
+        }
+        else if (lastSeparator == name.Length - 1)
+        {
+            name = string.Empty;
+        }
+
         foreach (char invalidCharacter in Path.GetInvalidFileNameChars())
         {
             name = name.Replace(invalidCharacter, '_');
         }
 
-        name = name.Trim('"', '\'', ' ');
-        return string.IsNullOrWhiteSpace(name) ? "download" : name;
+        // Windows silently normalizes trailing spaces/dots and treats dot-only
+        // path segments specially, so remove them before combining paths.
+        name = name.Trim('"', '\'', ' ').TrimEnd(' ', '.');
+        if (string.IsNullOrWhiteSpace(name) || name is "." or "..")
+        {
+            return "download";
+        }
+
+        string baseName = Path.GetFileNameWithoutExtension(name).TrimEnd(' ', '.');
+        if (IsReservedWindowsDeviceName(baseName))
+        {
+            name = "_" + name;
+        }
+
+        return name;
+    }
+
+    private static bool IsReservedWindowsDeviceName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return false;
+        }
+
+        return name.Equals("CON", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("PRN", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("AUX", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("NUL", StringComparison.OrdinalIgnoreCase)
+            || IsNumberedDeviceName(name, "COM")
+            || IsNumberedDeviceName(name, "LPT");
+    }
+
+    private static bool IsNumberedDeviceName(string name, string prefix)
+    {
+        return name.Length == prefix.Length + 1
+            && name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            && name[^1] is >= '1' and <= '9';
     }
 
     public static string? GetHeader(
@@ -140,8 +194,9 @@ internal sealed class DownloadPathService
                 ? CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultDownloadFolder
                     ?? Helpers.GetDefaultFolder()
                 : savePath;
-            string name = string.IsNullOrWhiteSpace(fileName) ? "download" : fileName;
-            string mergingPath = Path.Combine(folder, name) + ".merging";
+            string name = SanitizeFileName(
+                string.IsNullOrWhiteSpace(fileName) ? "download" : fileName);
+            string mergingPath = Path.Combine(Path.GetFullPath(folder), name) + ".merging";
 
             if (File.Exists(mergingPath))
             {
