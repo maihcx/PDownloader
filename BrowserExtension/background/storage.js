@@ -28,11 +28,26 @@
     return list;
   }
 
-  function seedDefaultsOnInstall() {
-    return chrome.storage.local.set({
+  // Keep existing user preferences during extension updates.
+  // Only keys that have never been stored are initialized with defaults.
+  async function seedDefaultsOnInstall() {
+    const defaults = {
       ...DEFAULT_SETTINGS,
       extensions: DEFAULT_EXTENSIONS
-    });
+    };
+
+    const existing = await chrome.storage.local.get(Object.keys(defaults));
+    const missing = {};
+
+    for (const [key, value] of Object.entries(defaults)) {
+      if (typeof existing[key] === 'undefined') {
+        missing[key] = value;
+      }
+    }
+
+    if (Object.keys(missing).length > 0) {
+      await chrome.storage.local.set(missing);
+    }
   }
 
   PD.Storage = {
