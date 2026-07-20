@@ -28,6 +28,7 @@ public class DownloaderService : IHostedService, IDisposable
 
     public event Action<DownloadItemDto>? OnProgress;
 
+    private DownloadStatus? _lastReceivedProgressStatus;
     private bool _disposed;
 
     public DownloaderService(RunnerConfig runnerConfig)
@@ -210,12 +211,22 @@ public class DownloaderService : IHostedService, IDisposable
                     try
                     {
                         DownloadItemDto? dto = JsonSerializer.Deserialize<DownloadItemDto>(value, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                        if (dto != null)
+                        if (dto != null
+                            && Enum.TryParse(dto.Status, ignoreCase: true, out DownloadStatus status))
                         {
-                            Enum.TryParse(dto.Status, out DownloadStatus status);
+                            if (_lastReceivedProgressStatus is DownloadStatus.Completed
+                                or DownloadStatus.Cancelled)
+                            {
+                                if (status != _lastReceivedProgressStatus.Value)
+                                {
+                                    break;
+                                }
+                            }
 
+                            _lastReceivedProgressStatus = status;
                             DownloaderStatus.IsPaused = status == DownloadStatus.Paused;
-                            DownloaderStatus.IsSending = !(status is DownloadStatus.Completed or DownloadStatus.Cancelled);
+                            DownloaderStatus.IsSending = status is DownloadStatus.Queued
+                                or DownloadStatus.Connecting;
                             OnProgress?.Invoke(dto);
                         }
                     }
