@@ -66,7 +66,7 @@
                     
                     <controls:InfoRow LabelText="{utils:Localization version_title}"
                                       ValueText="{Binding ViewModel.AppVersion}"
-                                      NavigateUri="https://github.com/maihcx/SYSi/releases"/>
+                                      NavigateUri="https://github.com/maihcx/PDownloader/releases"/>
                     <controls:InfoRow LabelText="{utils:Localization framework_title}"
                                       ValueText=".NET 10 / WPF" />
                     <controls:InfoRow LabelText="{utils:Localization ui_lib_title}"
