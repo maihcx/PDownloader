@@ -31,6 +31,8 @@ public static class InstallService
 
     public static string DefaultInstallPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PDownloader");
 
+    public static readonly int EstimatedSize = 205824;
+
     public static async Task InstallAsync(
         string installDir,
         bool desktopShortcut,
@@ -443,7 +445,7 @@ public static class InstallService
             $"\"{uninstallerExe}\" --uninstall --quiet");
         key.SetValue("NoModify", 1, RegistryValueKind.DWord);
         key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
-        key.SetValue("EstimatedSize", 204800, RegistryValueKind.DWord);
+        key.SetValue("EstimatedSize", EstimatedSize, RegistryValueKind.DWord);
     }
 
     public static string? GetInstalledDir()
