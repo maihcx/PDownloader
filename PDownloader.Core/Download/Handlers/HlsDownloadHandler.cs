@@ -164,39 +164,48 @@ internal sealed class HlsDownloadHandler
             Path.GetDirectoryName(uniqueMp4Path) ?? outputFolder,
             Path.GetFileNameWithoutExtension(uniqueMp4Path));
 
-        long downloadedBytes = 0;
-        long totalBytes = 0;
+        long previousDownloadedBytes = 0;
+        long previousTimestamp = Stopwatch.GetTimestamp();
+        object progressSync = new();
 
-        using var monitor = new DownloadProgressMonitor(
-            () => Interlocked.Read(ref downloadedBytes),
-            _reportProgress,
-            afterReport: () =>
-                _item.TotalBytes = Interlocked.Read(ref totalBytes));
-        monitor.Start();
-
-        try
-        {
-            string finalPath = await _ytDlpDownloader.DownloadAsync(
-                _item.Url,
-                tempDirectory,
-                outputPathWithoutExtension,
-                referer,
-                cookieHeader,
-                _item.Threads,
-                (downloaded, total) =>
+        return await _ytDlpDownloader.DownloadAsync(
+            _item.Url,
+            tempDirectory,
+            outputPathWithoutExtension,
+            referer,
+            cookieHeader,
+            _item.Threads,
+            (downloadedBytes, totalBytes, ytDlpSpeedBps) =>
+            {
+                lock (progressSync)
                 {
-                    Interlocked.Exchange(ref downloadedBytes, downloaded);
-                    Interlocked.Exchange(ref totalBytes, total);
-                },
-                cancellationToken);
+                    long now = Stopwatch.GetTimestamp();
+                    double elapsedSeconds =
+                        (now - previousTimestamp) / (double)Stopwatch.Frequency;
 
-            monitor.ReportFinal();
-            return finalPath;
-        }
-        finally
-        {
-            monitor.Stop();
-        }
+                    double fallbackSpeedBps =
+                        downloadedBytes >= previousDownloadedBytes
+                        && elapsedSeconds > 0
+                            ? (downloadedBytes - previousDownloadedBytes)
+                                / elapsedSeconds
+                            : 0;
+
+                    previousDownloadedBytes = downloadedBytes;
+                    previousTimestamp = now;
+
+                    if (totalBytes > 0)
+                    {
+                        _item.TotalBytes = totalBytes;
+                    }
+
+                    double speedBps = ytDlpSpeedBps > 0
+                        ? ytDlpSpeedBps
+                        : fallbackSpeedBps;
+
+                    _reportProgress(downloadedBytes, speedBps);
+                }
+            },
+            cancellationToken);
     }
 
     private void Complete(string finalPath)
