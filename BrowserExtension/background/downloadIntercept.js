@@ -2,58 +2,114 @@
   const PD = root.PD || (root.PD = {});
   const { Utils, ContentDisposition, Storage, Constants } = PD;
 
+  const INTERCEPT_SINCE_KEY = 'downloadInterceptSince';
+
+  let interceptSincePromise = null;
+  const processingDownloadIds = new Set();
+
   function init() {
-    chrome.downloads.onCreated.addListener(onCreated);
+    void getInterceptSince().catch(error => {
+      console.error('[PDownloader] Failed to initialize download interception boundary:', error);
+    });
+
+    if (!chrome.downloads.onCreated.hasListener(onCreated)) {
+      chrome.downloads.onCreated.addListener(onCreated);
+    }
+  }
+
+  function getInterceptSince() {
+    if (interceptSincePromise) return interceptSincePromise;
+
+    const firstActivationAt = Date.now();
+
+    interceptSincePromise = (async () => {
+      const stored = await chrome.storage.local.get([INTERCEPT_SINCE_KEY]);
+      const existing = Number(stored[INTERCEPT_SINCE_KEY]);
+
+      if (Number.isFinite(existing) && existing > 0) {
+        return existing;
+      }
+
+      await chrome.storage.local.set({
+        [INTERCEPT_SINCE_KEY]: firstActivationAt
+      });
+
+      return firstActivationAt;
+    })();
+
+    return interceptSincePromise;
+  }
+
+  function isNewDownloadItem(item, interceptSince) {
+    if (!item || typeof item.id !== 'number') return false;
+
+    if (item.state !== 'in_progress') return false;
+
+    const startedAt = Date.parse(item.startTime || '');
+
+    if (!Number.isFinite(startedAt)) return false;
+
+    return startedAt >= interceptSince;
   }
 
   async function onCreated(item) {
-    const settings = await Storage.getSettings(
-      ['autoIntercept', 'extensions', 'minInterceptSizeMb', 'blacklistedDomains']
-    );
-    if (!settings.autoIntercept) return;
+    if (processingDownloadIds.has(item?.id)) return;
+    processingDownloadIds.add(item.id);
 
-    const url = item.url || '';
-    if (!url || url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('chrome-extension:')) return;
-    if (await Utils.isBlacklisted(url, settings.blacklistedDomains || [])) return;
-
-    let activeTabUrl = '';
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      activeTabUrl = tab?.url || '';
-    } catch (_) {}
+      const interceptSince = await getInterceptSince();
+      if (!isNewDownloadItem(item, interceptSince)) return;
 
-    if (Utils.isIncompatibleSite(url) ||
-        Utils.isIncompatibleSite(item.referrer || '') ||
-        Utils.isIncompatibleSite(activeTabUrl)) return;
+      const settings = await Storage.getSettings(
+        ['autoIntercept', 'extensions', 'minInterceptSizeMb', 'blacklistedDomains']
+      );
+      if (!settings.autoIntercept) return;
 
-    const finalUrl = item.finalUrl || url;
+      const url = item.url || '';
+      if (!url || url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('chrome-extension:')) return;
+      if (await Utils.isBlacklisted(url, settings.blacklistedDomains || [])) return;
 
-    let filename = item.filename || ContentDisposition.lookup([finalUrl, url]);
+      let activeTabUrl = '';
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        activeTabUrl = tab?.url || '';
+      } catch (_) {}
 
-    const ext  = Utils.extractExt(finalUrl, filename) || Utils.extractExt(url, filename);
-    const exts = settings.extensions || Constants.DEFAULT_EXTENSIONS;
-    const minBytes = ((settings.minInterceptSizeMb ?? 2)) * 1024 * 1024;
+      if (Utils.isIncompatibleSite(url) ||
+          Utils.isIncompatibleSite(item.referrer || '') ||
+          Utils.isIncompatibleSite(activeTabUrl)) return;
 
-    const byExt  = ext && exts.some(p => Utils.matchExt(p, ext));
-    const bySize = minBytes > 0 && item.fileSize > 0 && item.fileSize >= minBytes;
-    const byMime = Utils.matchMime(item.mime || '');
+      const finalUrl = item.finalUrl || url;
 
-    if (!byExt && !bySize && !byMime) return;
+      let filename = item.filename || ContentDisposition.lookup([finalUrl, url]);
 
-    chrome.downloads.cancel(item.id);
-    chrome.downloads.erase({ id: item.id });
+      const ext  = Utils.extractExt(finalUrl, filename) || Utils.extractExt(url, filename);
+      const exts = settings.extensions || Constants.DEFAULT_EXTENSIONS;
+      const minBytes = ((settings.minInterceptSizeMb ?? 2)) * 1024 * 1024;
 
-    const referer = activeTabUrl;
+      const byExt  = ext && exts.some(p => Utils.matchExt(p, ext));
+      const bySize = minBytes > 0 && item.fileSize > 0 && item.fileSize >= minBytes;
+      const byMime = Utils.matchMime(item.mime || '');
 
-    const displayName = filename
-      ? filename.split(/[/\\]/).pop()
-      : (Utils.getFilenameFromUrl(finalUrl) || Utils.getFilenameFromUrl(url) || null);
+      if (!byExt && !bySize && !byMime) return;
 
-    const ok = await PD.Api.sendDownload(url, displayName, referer);
-    if (ok) {
-      PD.State.incrementInterceptCount();
-      PD.Badge.update();
-      await PD.Notify.show(displayName || Utils.getFilenameFromUrl(url));
+      await chrome.downloads.cancel(item.id).catch(() => {});
+      await chrome.downloads.erase({ id: item.id }).catch(() => {});
+
+      const referer = activeTabUrl;
+
+      const displayName = filename
+        ? filename.split(/[/\\]/).pop()
+        : (Utils.getFilenameFromUrl(finalUrl) || Utils.getFilenameFromUrl(url) || null);
+
+      const ok = await PD.Api.sendDownload(url, displayName, referer);
+      if (ok) {
+        PD.State.incrementInterceptCount();
+        PD.Badge.update();
+        await PD.Notify.show(displayName || Utils.getFilenameFromUrl(url));
+      }
+    } finally {
+      processingDownloadIds.delete(item?.id);
     }
   }
 
