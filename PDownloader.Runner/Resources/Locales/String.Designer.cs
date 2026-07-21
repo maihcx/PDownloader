@@ -79,6 +79,60 @@ namespace PDownloader.Runner.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to download_compact_status_completed_description.
+        /// </summary>
+        internal static string download_compact_status_completed_description {
+            get {
+                return ResourceManager.GetString("download_compact_status_completed_description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_compact_status_completed_title.
+        /// </summary>
+        internal static string download_compact_status_completed_title {
+            get {
+                return ResourceManager.GetString("download_compact_status_completed_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_compact_status_no_threads_description.
+        /// </summary>
+        internal static string download_compact_status_no_threads_description {
+            get {
+                return ResourceManager.GetString("download_compact_status_no_threads_description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_compact_status_single_thread_description.
+        /// </summary>
+        internal static string download_compact_status_single_thread_description {
+            get {
+                return ResourceManager.GetString("download_compact_status_single_thread_description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_compact_status_single_thread_title.
+        /// </summary>
+        internal static string download_compact_status_single_thread_title {
+            get {
+                return ResourceManager.GetString("download_compact_status_single_thread_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_compact_status_unsupported_title.
+        /// </summary>
+        internal static string download_compact_status_unsupported_title {
+            get {
+                return ResourceManager.GetString("download_compact_status_unsupported_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to download_start_title.
         /// </summary>
         internal static string download_start_title {
@@ -156,6 +210,96 @@ namespace PDownloader.Runner.Resources.Locales {
         internal static string download_status_queued_title {
             get {
                 return ResourceManager.GetString("download_status_queued_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_fragment_detail.
+        /// </summary>
+        internal static string download_thread_fragment_detail {
+            get {
+                return ResourceManager.GetString("download_thread_fragment_detail", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_item_title.
+        /// </summary>
+        internal static string download_thread_item_title {
+            get {
+                return ResourceManager.GetString("download_thread_item_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_state_completed.
+        /// </summary>
+        internal static string download_thread_state_completed {
+            get {
+                return ResourceManager.GetString("download_thread_state_completed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_state_downloading.
+        /// </summary>
+        internal static string download_thread_state_downloading {
+            get {
+                return ResourceManager.GetString("download_thread_state_downloading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_state_failed.
+        /// </summary>
+        internal static string download_thread_state_failed {
+            get {
+                return ResourceManager.GetString("download_thread_state_failed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_state_retrying.
+        /// </summary>
+        internal static string download_thread_state_retrying {
+            get {
+                return ResourceManager.GetString("download_thread_state_retrying", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_state_waiting.
+        /// </summary>
+        internal static string download_thread_state_waiting {
+            get {
+                return ResourceManager.GetString("download_thread_state_waiting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_visualization_title.
+        /// </summary>
+        internal static string download_thread_visualization_title {
+            get {
+                return ResourceManager.GetString("download_thread_visualization_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_visualization_unsupported_generic.
+        /// </summary>
+        internal static string download_thread_visualization_unsupported_generic {
+            get {
+                return ResourceManager.GetString("download_thread_visualization_unsupported_generic", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_visualization_unsupported_ytdlp.
+        /// </summary>
+        internal static string download_thread_visualization_unsupported_ytdlp {
+            get {
+                return ResourceManager.GetString("download_thread_visualization_unsupported_ytdlp", resourceCulture);
             }
         }
         

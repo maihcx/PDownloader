@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -205,25 +205,13 @@
     <value>Lỗi: {0}</value>
   </data>
   <data name="download_thread_visualization_title" xml:space="preserve">
-    <value>Tiến trình luồng tải · {0}</value>
+    <value>Tiến trình luồng tải</value>
   </data>
   <data name="download_thread_visualization_unsupported_ytdlp" xml:space="preserve">
     <value>Phiên tải này được xử lý trực tiếp bởi yt-dlp nên không hỗ trợ hiển thị tiến trình trực quan theo từng luồng.</value>
   </data>
   <data name="download_thread_visualization_unsupported_generic" xml:space="preserve">
     <value>Phiên tải này không hỗ trợ hiển thị tiến trình trực quan theo từng luồng.</value>
-  </data>
-  <data name="download_thread_stage_file" xml:space="preserve">
-    <value>Tệp</value>
-  </data>
-  <data name="download_thread_stage_video" xml:space="preserve">
-    <value>Video</value>
-  </data>
-  <data name="download_thread_stage_audio" xml:space="preserve">
-    <value>Âm thanh</value>
-  </data>
-  <data name="download_thread_stage_hls" xml:space="preserve">
-    <value>HLS</value>
   </data>
   <data name="download_thread_item_title" xml:space="preserve">
     <value>Luồng {0}</value>

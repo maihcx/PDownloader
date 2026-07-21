@@ -205,25 +205,13 @@
     <value>Error: {0}</value>
   </data>
   <data name="download_thread_visualization_title" xml:space="preserve">
-    <value>Download threads · {0}</value>
+    <value>Download threads</value>
   </data>
   <data name="download_thread_visualization_unsupported_ytdlp" xml:space="preserve">
     <value>This transfer is handled directly by yt-dlp, so visual per-thread progress is not available.</value>
   </data>
   <data name="download_thread_visualization_unsupported_generic" xml:space="preserve">
     <value>Visual per-thread progress is not available for this transfer.</value>
-  </data>
-  <data name="download_thread_stage_file" xml:space="preserve">
-    <value>File</value>
-  </data>
-  <data name="download_thread_stage_video" xml:space="preserve">
-    <value>Video</value>
-  </data>
-  <data name="download_thread_stage_audio" xml:space="preserve">
-    <value>Audio</value>
-  </data>
-  <data name="download_thread_stage_hls" xml:space="preserve">
-    <value>HLS</value>
   </data>
   <data name="download_thread_item_title" xml:space="preserve">
     <value>Thread {0}</value>
