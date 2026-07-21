@@ -41,7 +41,7 @@ public partial class MainWindow : IWindow
 
     public ApplicationThemeManagerService ThemeManagerService { get; }
 
-    public MainWindow(MainWindowViewModel viewModel)
+    public MainWindow(MainWindowViewModel viewModel, RunnerConfig runnerConfig)
     {
         ViewModel = viewModel;
         DataContext = this;
@@ -54,7 +54,9 @@ public partial class MainWindow : IWindow
 
         InitializeComponent();
 
-        Height = NormalWindowHeight;
+        Height = runnerConfig.IsArgsSetup && runnerConfig.IsRunner
+            ? CompactWindowHeight
+            : NormalWindowHeight;
         FrameHostContent.Navigated += FrameHostContent_Navigated;
         Closed += MainWindow_Closed;
         SourceInitialized += MainWindow_SourceInitialized;
