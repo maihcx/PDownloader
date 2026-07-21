@@ -1,3 +1,23 @@
+## v0.4.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- Add per-thread download progress visualization (#50) — @maihcx
+
+## 🐛 Bug Fixes
+
+- Report progress when merge phase starts (#54) — @maihcx
+- Add resolved URL tracking and improve range validation (#53) — @maihcx
+- Pause active downloads when adding items (#52) — @maihcx
+
+## 🧹 Maintenance
+
+- Reduce ObjectCornerRadius to 6 (#51) — @maihcx
+
+
+---
+
 ## v0.3.1
 
 ## 🚀 Changelog
