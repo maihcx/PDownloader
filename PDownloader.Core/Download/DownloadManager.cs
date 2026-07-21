@@ -202,6 +202,7 @@ public class DownloadManager : IDisposable
         item.Status = DownloadStatus.Queued;
         item.ErrorMessage = string.Empty;
         item.DownloadedBytes = 0;
+        item.MergeProgress = 0;
         _ = StartAsync(item);
     }
 
