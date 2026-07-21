@@ -246,6 +246,8 @@
                                                                      ProgressText="{Binding ProgressText}"
                                                                      Progress="{Binding Progress, Mode=OneWay}"
                                                                      State="{Binding State}"
+                                                                     OverallStatus="{Binding DataContext.ViewModel.CurrentDownloadStatus,
+                                                                                     RelativeSource={RelativeSource AncestorType=Page}}"
                                                                      IsIndeterminate="{Binding IsIndeterminate, Mode=OneWay}" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

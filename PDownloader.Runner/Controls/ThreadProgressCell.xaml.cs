@@ -19,18 +19,6 @@ namespace PDownloader.Runner.Controls;
 
 public partial class ThreadProgressCell : UserControl
 {
-    private static readonly Brush ConnectingBackgroundBrush = CreateBrush(0x08, 0xF5, 0x9E, 0x0B);
-
-    private static readonly Brush ConnectingProgressBrush = CreateBrush(0x24, 0xF5, 0x9E, 0x0B);
-
-    private static readonly Brush DownloadingBackgroundBrush = CreateBrush(0x08, 0x0E, 0xA5, 0xE9);
-
-    private static readonly Brush DownloadingProgressBrush = CreateBrush(0x28, 0x0E, 0xA5, 0xE9);
-
-    private static readonly Brush CompletedBackgroundBrush = CreateBrush(0x08, 0x22, 0xC5, 0x5E);
-
-    private static readonly Brush CompletedProgressBrush = CreateBrush(0x2C, 0x22, 0xC5, 0x5E);
-
     public static readonly DependencyProperty TitleProperty =
         DependencyProperty.Register(
             nameof(Title),
@@ -72,6 +60,13 @@ public partial class ThreadProgressCell : UserControl
             typeof(string),
             typeof(ThreadProgressCell),
             new PropertyMetadata(string.Empty, OnVisualPropertyChanged));
+
+    public static readonly DependencyProperty OverallStatusProperty =
+        DependencyProperty.Register(
+            nameof(OverallStatus),
+            typeof(DownloadStatus),
+            typeof(ThreadProgressCell),
+            new PropertyMetadata(DownloadStatus.Connecting));
 
     public static readonly DependencyProperty IsIndeterminateProperty =
         DependencyProperty.Register(
@@ -124,6 +119,12 @@ public partial class ThreadProgressCell : UserControl
         set => SetValue(StateProperty, value);
     }
 
+    public DownloadStatus OverallStatus
+    {
+        get => (DownloadStatus)GetValue(OverallStatusProperty);
+        set => SetValue(OverallStatusProperty, value);
+    }
+
     public bool IsIndeterminate
     {
         get => (bool)GetValue(IsIndeterminateProperty);
@@ -142,18 +143,6 @@ public partial class ThreadProgressCell : UserControl
 
     private void UpdateVisual(bool animate)
     {
-        ThreadCellState visualState = GetVisualState(State);
-
-        (Brush background, Brush progress) = visualState switch
-        {
-            ThreadCellState.Completed => (CompletedBackgroundBrush, CompletedProgressBrush),
-            ThreadCellState.Downloading => (DownloadingBackgroundBrush, DownloadingProgressBrush),
-            _ => (ConnectingBackgroundBrush, ConnectingProgressBrush)
-        };
-
-        StateBackground.Background = background;
-        ProgressFill.Background = progress;
-
         UpdateProgressWidth(animate);
     }
 
@@ -211,13 +200,6 @@ public partial class ThreadProgressCell : UserControl
 
         // Waiting, Connecting and Retrying all represent the connection/preparation phase.
         return ThreadCellState.Connecting;
-    }
-
-    private static Brush CreateBrush(byte alpha, byte red, byte green, byte blue)
-    {
-        SolidColorBrush brush = new(Color.FromArgb(alpha, red, green, blue));
-        brush.Freeze();
-        return brush;
     }
 
     private enum ThreadCellState
