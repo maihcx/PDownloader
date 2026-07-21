@@ -23,12 +23,14 @@ internal sealed class HlsDownloadHandler
     private readonly YtDlpHlsDownloadService _ytDlpDownloader;
     private readonly DownloadPathService _pathService;
     private readonly Action<long, double> _reportProgress;
+    private readonly Action<string, IReadOnlyList<DownloadThreadProgress>> _reportThreadProgress;
 
     public HlsDownloadHandler(
         DownloadItem item,
         HttpClient httpClient,
         DownloadPathService pathService,
-        Action<long, double> reportProgress)
+        Action<long, double> reportProgress,
+        Action<string, IReadOnlyList<DownloadThreadProgress>> reportThreadProgress)
     {
         _item = item;
         _detector = new HlsPlaylistDetector(httpClient);
@@ -36,6 +38,7 @@ internal sealed class HlsDownloadHandler
         _ytDlpDownloader = new YtDlpHlsDownloadService();
         _pathService = pathService;
         _reportProgress = reportProgress;
+        _reportThreadProgress = reportThreadProgress;
     }
 
     public async Task<bool> TryHandleAsync(
@@ -145,7 +148,12 @@ internal sealed class HlsDownloadHandler
             tempDirectory,
             _item.Threads,
             _reportProgress,
-            () => _item.Status = DownloadStatus.Merging,
+            progress => _reportThreadProgress("HlsFragments", progress),
+            () =>
+            {
+                _item.Status = DownloadStatus.Merging;
+                _reportProgress(_item.DownloadedBytes, 0);
+            },
             cancellationToken);
     }
 
@@ -157,6 +165,9 @@ internal sealed class HlsDownloadHandler
         string? cookieHeader,
         CancellationToken cancellationToken)
     {
+        _item.SetProgressVisualizationUnsupported("YtDlp");
+        _reportProgress(_item.DownloadedBytes, _item.SpeedBps);
+
         string uniqueMp4Path = DownloadPathService.UniqueFilePath(
             outputFolder,
             $"{fileStem}.mp4");

@@ -18,4 +18,5 @@ namespace PDownloader.Core.Download.Http;
 internal sealed record DownloadProbeResult(
     long TotalBytes,
     bool SupportsRange,
-    string SuggestedFileName);
+    string SuggestedFileName,
+    string EffectiveUrl);

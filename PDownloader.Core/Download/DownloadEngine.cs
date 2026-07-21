@@ -42,11 +42,13 @@ public class DownloadEngine
             item,
             _httpClientLease.Client,
             _pathService,
-            ReportProgress);
+            ReportProgress,
+            ReportThreadProgress);
         _youtubeHandler = new YoutubeDownloadHandler(
             item,
             _pathService,
-            ReportProgress);
+            ReportProgress,
+            ReportThreadProgress);
     }
 
     public async Task RunAsync()
@@ -91,9 +93,26 @@ public class DownloadEngine
 
     private async Task RunHttpDownloadAsync(string tempDirectory)
     {
+        string probeUrl = string.IsNullOrWhiteSpace(_item.ResolvedUrl)
+            ? _item.Url
+            : _item.ResolvedUrl;
+
         DownloadProbeResult probe = await _multiSegmentDownloader.ProbeAsync(
-            _item.Url,
+            probeUrl,
             _cancellationToken);
+
+        // Mirror URLs (for example SourceForge) are pinned after the first redirect.
+        // If a previously resolved mirror is no longer reachable, fall back to the
+        // original URL so the provider can select a new mirror.
+        if (probe.TotalBytes <= 0
+            && !string.Equals(probeUrl, _item.Url, StringComparison.Ordinal))
+        {
+            probe = await _multiSegmentDownloader.ProbeAsync(
+                _item.Url,
+                _cancellationToken);
+        }
+
+        _item.ResolvedUrl = probe.EffectiveUrl;
 
         if (string.IsNullOrWhiteSpace(_item.FileName))
         {
@@ -106,14 +125,19 @@ public class DownloadEngine
 
         string finalPath = _pathService.GetFinalPath(_item);
         await _multiSegmentDownloader.DownloadAsync(
-            _item.Url,
+            probe.EffectiveUrl,
             finalPath,
             tempDirectory,
             probe,
             _item.Threads,
             progressBaseOffset: 0,
             reportProgress: ReportProgress,
-            mergingStarted: () => _item.Status = DownloadStatus.Merging,
+            reportThreadProgress: progress => ReportThreadProgress("File", progress),
+            mergingStarted: () =>
+            {
+                _item.Status = DownloadStatus.Merging;
+                ReportProgress(_item.DownloadedBytes, 0);
+            },
             cancellationToken: _cancellationToken);
 
         _cancellationToken.ThrowIfCancellationRequested();
@@ -133,5 +157,12 @@ public class DownloadEngine
         _item.DownloadedBytes = downloadedBytes;
         _item.SpeedBps = speedBps;
         _progress.Report(new DownloadProgress(downloadedBytes, speedBps));
+    }
+
+    private void ReportThreadProgress(
+        string stage,
+        IReadOnlyList<DownloadThreadProgress> progress)
+    {
+        _item.SetThreadProgress(stage, progress);
     }
 }

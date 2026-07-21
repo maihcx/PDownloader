@@ -36,6 +36,4 @@ public interface IWindow
     void Show();
 
     bool Activate();
-
-    void ShowForDownload(RunnerConfig runnerConfig);
 }

@@ -57,16 +57,13 @@ public class ApplicationHostService : IHostedService
             _serviceProvider?.GetService(typeof(IWindow)) as IWindow
         )!;
 
-        //App.Current.MainWindow.Topmost = true;
-        WindowHelper.BringToFront(App.Current.MainWindow);
-
-        _mainWindow?.Loaded += MainWindow_Loaded;
-        _mainWindow?.Show();
-
         if (_mainWindow is MainWindow window && window.ViewModel is INavigationAware navigationAware)
         {
             await navigationAware.OnNavigatedToAsync();
         }
+
+        _mainWindow.Loaded += MainWindow_Loaded;
+        _mainWindow.Show();
 
         await Task.CompletedTask;
     }

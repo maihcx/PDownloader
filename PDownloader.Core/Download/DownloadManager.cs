@@ -238,18 +238,22 @@ public class DownloadManager : IDisposable
     {
         var item = snapshot.ToDownloadItem();
 
+        // A restored item must never start automatically.
+        // Jobs that were still in a transient/running state when the application
+        // was closed are exposed as Paused so the user can explicitly resume them.
+        // Error items remain Error and can only be restarted through Retry.
+        if (item.Status is DownloadStatus.Queued
+            or DownloadStatus.Connecting
+            or DownloadStatus.Downloading
+            or DownloadStatus.Merging)
+        {
+            item.Status = DownloadStatus.Paused;
+            item.SpeedBps = 0;
+        }
+
         lock (_lock) { _downloads.Add(item); }
 
         OnItemChanged?.Invoke(item);
-
-        bool isFinal = item.Status is DownloadStatus.Completed or DownloadStatus.Cancelled or DownloadStatus.Paused;
-        if (!isFinal)
-        {
-            item.Status = DownloadStatus.Queued;
-            Task task = StartAsync(item);
-            _runningTaskByItem[item.Id] = task;
-        }
-
         return item;
     }
 
@@ -340,12 +344,17 @@ public record DownloadItemSnapshot(
     string Status, string ErrorMessage,
     DateTime StartTime, DateTime EndTime)
 {
+    public string? ResolvedUrl { get; init; }
+
     public static DownloadItemSnapshot From(DownloadItem i) => new(
         i.Id, i.Url, i.FileName, i.SavePath,
         i.Threads, i.IsYoutube, i.FormatId,
         i.TotalBytes, i.DownloadedBytes,
         i.Status.ToString(), i.ErrorMessage,
-        i.StartTime, i.EndTime);
+        i.StartTime, i.EndTime)
+    {
+        ResolvedUrl = i.ResolvedUrl
+    };
 
     public DownloadItem ToDownloadItem()
     {
@@ -354,6 +363,7 @@ public record DownloadItemSnapshot(
         {
             Id = Id,
             Url = Url,
+            ResolvedUrl = ResolvedUrl ?? string.Empty,
             FileName = FileName,
             SavePath = SavePath,
             Threads = Threads,
@@ -376,7 +386,10 @@ public record DownloadItemDto(
     double Progress, string Status,
     string SpeedFormatted, string EtaFormatted,
     string TotalFormatted, string DownloadedFormatted,
-    string ErrorMessage, bool IsActive)
+    string ErrorMessage, bool IsActive,
+    string ProgressVisualizationMode,
+    string ProgressVisualizationStage,
+    IReadOnlyList<DownloadThreadProgress> ThreadProgress)
 {
     public static DownloadItemDto From(DownloadItem i) => new(
         i.Id.ToString(), i.Url, i.FileName, i.SavePath,
@@ -385,5 +398,8 @@ public record DownloadItemDto(
         i.Progress, i.Status.ToString(),
         i.SpeedFormatted, i.EtaFormatted,
         i.TotalFormatted, i.DownloadedFormatted,
-        i.ErrorMessage, i.IsActive);
+        i.ErrorMessage, i.IsActive,
+        i.ProgressVisualizationMode,
+        i.ProgressVisualizationStage,
+        i.GetThreadProgressSnapshot());
 }
