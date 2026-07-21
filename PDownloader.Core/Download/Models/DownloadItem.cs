@@ -20,6 +20,38 @@ namespace PDownloader.Core.Download.Models;
 
 public class DownloadItem : INotifyPropertyChanged
 {
+    private DownloadThreadProgress[] _threadProgress = Array.Empty<DownloadThreadProgress>();
+
+    public string ProgressVisualizationMode { get; private set; } = "None";
+
+    public string ProgressVisualizationStage { get; private set; } = string.Empty;
+
+    public IReadOnlyList<DownloadThreadProgress> GetThreadProgressSnapshot() =>
+        Volatile.Read(ref _threadProgress);
+
+    public void SetThreadProgress(
+        string stage,
+        IReadOnlyCollection<DownloadThreadProgress> progress)
+    {
+        ProgressVisualizationStage = stage;
+        ProgressVisualizationMode = "Threads";
+        Volatile.Write(ref _threadProgress, progress.ToArray());
+    }
+
+    public void SetProgressVisualizationUnsupported(string stage)
+    {
+        ProgressVisualizationStage = stage;
+        ProgressVisualizationMode = "Unsupported";
+        Volatile.Write(ref _threadProgress, Array.Empty<DownloadThreadProgress>());
+    }
+
+    public void ClearProgressVisualization()
+    {
+        ProgressVisualizationStage = string.Empty;
+        ProgressVisualizationMode = "None";
+        Volatile.Write(ref _threadProgress, Array.Empty<DownloadThreadProgress>());
+    }
+
     public Dictionary<string, string>? CustomHeaders { get; set; }
 
     public string Id = string.Empty;

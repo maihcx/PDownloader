@@ -21,7 +21,7 @@ public partial class DownloaderViewModel : ObservableObject
 
     private Services.INavigationService _navigationService { get; set; }
 
-    private DownloaderService _downloaderService;
+    private readonly DownloaderService _downloaderService;
 
     [ObservableProperty]
     private RunnerConfig _runnerConfig;

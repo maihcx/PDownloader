@@ -34,6 +34,7 @@ internal sealed class HlsFragmentDownloadService
         string tempDirectory,
         int preferredConcurrency,
         Action<long, double> reportProgress,
+        Action<IReadOnlyList<DownloadThreadProgress>>? reportThreadProgress,
         Action mergingStarted,
         CancellationToken cancellationToken)
     {
@@ -42,24 +43,38 @@ internal sealed class HlsFragmentDownloadService
         var bytesPerFragment = new long[fragmentCount];
         var tempPaths = new string[fragmentCount];
 
+        int concurrency = Math.Clamp(preferredConcurrency, 1, 16);
+        concurrency = Math.Min(concurrency, Math.Max(1, fragmentCount));
+
+        HlsWorkerState[] workers = Enumerable.Range(0, concurrency)
+            .Select(index => new HlsWorkerState(index))
+            .ToArray();
+        var threadTracker = new HlsWorkerProgressTracker(workers, fragmentCount);
+
+        void PublishProgress(long downloadedBytes, double speedBps)
+        {
+            reportThreadProgress?.Invoke(threadTracker.Capture());
+            reportProgress(downloadedBytes, speedBps);
+        }
+
         using var monitor = new DownloadProgressMonitor(
             () => bytesPerFragment.Sum(),
-            reportProgress);
+            PublishProgress);
+
+        PublishProgress(0, 0);
         monitor.Start();
 
-        int concurrency = Math.Clamp(preferredConcurrency, 1, 16);
-        using var semaphore = new SemaphoreSlim(concurrency);
-
+        int nextFragmentIndex = -1;
         try
         {
-            Task[] tasks = Enumerable.Range(0, fragmentCount)
-                .Select(index => DownloadFragmentGuardedAsync(
-                    urls[index],
-                    index,
+            Task[] tasks = workers
+                .Select(worker => DownloadWorkerAsync(
+                    worker,
+                    urls,
                     tempDirectory,
                     tempPaths,
                     bytesPerFragment,
-                    semaphore,
+                    () => Interlocked.Increment(ref nextFragmentIndex),
                     cancellationToken))
                 .ToArray();
 
@@ -84,30 +99,37 @@ internal sealed class HlsFragmentDownloadService
         return finalPath;
     }
 
-    private async Task DownloadFragmentGuardedAsync(
-        string url,
-        int index,
+    private async Task DownloadWorkerAsync(
+        HlsWorkerState worker,
+        IReadOnlyList<string> urls,
         string tempDirectory,
         string[] tempPaths,
         long[] bytesPerFragment,
-        SemaphoreSlim semaphore,
+        Func<int> getNextFragmentIndex,
         CancellationToken cancellationToken)
     {
-        await semaphore.WaitAsync(cancellationToken);
-        try
+        while (true)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            int index = getNextFragmentIndex();
+            if (index >= urls.Count)
+            {
+                worker.MarkCompleted();
+                return;
+            }
+
             string tempPath = Path.Combine(tempDirectory, $"frag_{index:D5}.part");
             tempPaths[index] = tempPath;
+            worker.BeginFragment(index);
+
             await DownloadFragmentWithRetryAsync(
-                url,
+                urls[index],
                 tempPath,
                 index,
                 bytesPerFragment,
+                worker,
                 cancellationToken);
-        }
-        finally
-        {
-            semaphore.Release();
         }
     }
 
@@ -116,6 +138,7 @@ internal sealed class HlsFragmentDownloadService
         string tempPath,
         int index,
         long[] bytesPerFragment,
+        HlsWorkerState worker,
         CancellationToken cancellationToken)
     {
         Exception? lastException = null;
@@ -124,6 +147,7 @@ internal sealed class HlsFragmentDownloadService
         {
             cancellationToken.ThrowIfCancellationRequested();
             Interlocked.Exchange(ref bytesPerFragment[index], 0);
+            worker.BeginAttempt();
 
             try
             {
@@ -133,6 +157,9 @@ internal sealed class HlsFragmentDownloadService
                     HttpCompletionOption.ResponseHeadersRead,
                     cancellationToken);
                 response.EnsureSuccessStatusCode();
+
+                worker.SetCurrentTotalBytes(
+                    Math.Max(0, response.Content.Headers.ContentLength ?? 0));
 
                 await using var output = new FileStream(
                     tempPath,
@@ -147,8 +174,10 @@ internal sealed class HlsFragmentDownloadService
                 {
                     await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
                     Interlocked.Add(ref bytesPerFragment[index], read);
+                    worker.AddBytes(read);
                 }
 
+                worker.CompleteCurrentFragment();
                 return;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -160,11 +189,13 @@ internal sealed class HlsFragmentDownloadService
                 lastException = ex;
                 if (attempt < MaxRetries)
                 {
+                    worker.MarkRetrying();
                     await Task.Delay(300 * attempt, cancellationToken);
                 }
             }
         }
 
+        worker.MarkFailed();
         throw new InvalidOperationException(
             $"Tải fragment HLS thất bại sau {MaxRetries} lần thử: {url}",
             lastException);
@@ -240,6 +271,130 @@ internal sealed class HlsFragmentDownloadService
         catch (Exception ex)
         {
             Debug.WriteLine($"[HLS] Không thể xóa fragment ngay sau khi ghép: {ex.Message}");
+        }
+    }
+
+    private sealed class HlsWorkerState
+    {
+        private int _state = (int)DownloadThreadState.Waiting;
+        private int _currentFragmentIndex = -1;
+        private long _currentDownloadedBytes;
+        private long _currentTotalBytes;
+        private long _lifetimeDownloadedBytes;
+
+        public HlsWorkerState(int index)
+        {
+            Index = index;
+        }
+
+        public int Index { get; }
+
+        public DownloadThreadState State =>
+            (DownloadThreadState)Volatile.Read(ref _state);
+
+        public int CurrentFragmentIndex =>
+            Volatile.Read(ref _currentFragmentIndex);
+
+        public long CurrentDownloadedBytes =>
+            Interlocked.Read(ref _currentDownloadedBytes);
+
+        public long CurrentTotalBytes =>
+            Interlocked.Read(ref _currentTotalBytes);
+
+        public long LifetimeDownloadedBytes =>
+            Interlocked.Read(ref _lifetimeDownloadedBytes);
+
+        public void BeginFragment(int fragmentIndex)
+        {
+            Volatile.Write(ref _currentFragmentIndex, fragmentIndex);
+            Interlocked.Exchange(ref _currentDownloadedBytes, 0);
+            Interlocked.Exchange(ref _currentTotalBytes, 0);
+            Volatile.Write(ref _state, (int)DownloadThreadState.Waiting);
+        }
+
+        public void BeginAttempt()
+        {
+            Interlocked.Exchange(ref _currentDownloadedBytes, 0);
+            Interlocked.Exchange(ref _currentTotalBytes, 0);
+            Volatile.Write(ref _state, (int)DownloadThreadState.Downloading);
+        }
+
+        public void SetCurrentTotalBytes(long value) =>
+            Interlocked.Exchange(ref _currentTotalBytes, Math.Max(0, value));
+
+        public void AddBytes(int count)
+        {
+            Interlocked.Add(ref _currentDownloadedBytes, count);
+            Interlocked.Add(ref _lifetimeDownloadedBytes, count);
+        }
+
+        public void MarkRetrying() =>
+            Volatile.Write(ref _state, (int)DownloadThreadState.Retrying);
+
+        public void CompleteCurrentFragment() =>
+            Volatile.Write(ref _state, (int)DownloadThreadState.Completed);
+
+        public void MarkCompleted() =>
+            Volatile.Write(ref _state, (int)DownloadThreadState.Completed);
+
+        public void MarkFailed() =>
+            Volatile.Write(ref _state, (int)DownloadThreadState.Failed);
+    }
+
+    private sealed class HlsWorkerProgressTracker
+    {
+        private readonly HlsWorkerState[] _workers;
+        private readonly long[] _lastLifetimeBytes;
+        private readonly int _fragmentCount;
+        private long _lastTimestamp;
+
+        public HlsWorkerProgressTracker(
+            HlsWorkerState[] workers,
+            int fragmentCount)
+        {
+            _workers = workers;
+            _fragmentCount = fragmentCount;
+            _lastLifetimeBytes = new long[workers.Length];
+            _lastTimestamp = Stopwatch.GetTimestamp();
+        }
+
+        public IReadOnlyList<DownloadThreadProgress> Capture()
+        {
+            long now = Stopwatch.GetTimestamp();
+            long timestampDelta = now - _lastTimestamp;
+            double elapsedSeconds = timestampDelta > 0
+                ? timestampDelta / (double)Stopwatch.Frequency
+                : 0;
+
+            var result = new DownloadThreadProgress[_workers.Length];
+
+            for (int index = 0; index < _workers.Length; index++)
+            {
+                HlsWorkerState worker = _workers[index];
+                long lifetimeBytes = worker.LifetimeDownloadedBytes;
+                long byteDelta = lifetimeBytes - _lastLifetimeBytes[index];
+                DownloadThreadState state = worker.State;
+                double speedBps = state is DownloadThreadState.Completed or DownloadThreadState.Failed
+                    ? 0
+                    : byteDelta > 0 && elapsedSeconds > 0
+                        ? byteDelta / elapsedSeconds
+                        : 0;
+
+                int fragmentIndex = worker.CurrentFragmentIndex;
+                result[index] = new DownloadThreadProgress(
+                    worker.Index,
+                    worker.CurrentDownloadedBytes,
+                    worker.CurrentTotalBytes,
+                    speedBps,
+                    state.ToString(),
+                    fragmentIndex >= 0 ? fragmentIndex + 1 : 0,
+                    _fragmentCount);
+
+                _lastLifetimeBytes[index] = lifetimeBytes;
+            }
+
+            _lastTimestamp = now;
+            return result;
         }
     }
 }

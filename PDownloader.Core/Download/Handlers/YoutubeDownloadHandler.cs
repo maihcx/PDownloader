@@ -21,16 +21,19 @@ internal sealed class YoutubeDownloadHandler
     private readonly DownloadPathService _pathService;
     private readonly FfmpegMuxer _ffmpegMuxer;
     private readonly Action<long, double> _reportProgress;
+    private readonly Action<string, IReadOnlyList<DownloadThreadProgress>> _reportThreadProgress;
 
     public YoutubeDownloadHandler(
         DownloadItem item,
         DownloadPathService pathService,
-        Action<long, double> reportProgress)
+        Action<long, double> reportProgress,
+        Action<string, IReadOnlyList<DownloadThreadProgress>> reportThreadProgress)
     {
         _item = item;
         _pathService = pathService;
         _ffmpegMuxer = new FfmpegMuxer();
         _reportProgress = reportProgress;
+        _reportThreadProgress = reportThreadProgress;
     }
 
     public async Task RunAsync(
@@ -146,6 +149,8 @@ internal sealed class YoutubeDownloadHandler
             var streamDownloader = new MultiSegmentDownloadService(
                 streamClientLease.Client);
 
+            string progressStage = stream.HasVideo ? "Video" : "Audio";
+
             DownloadProbeResult probe = await streamDownloader.ProbeAndDownloadAsync(
                 stream.Url,
                 rawPath,
@@ -153,6 +158,7 @@ internal sealed class YoutubeDownloadHandler
                 _item.Threads,
                 progressBaseOffset,
                 _reportProgress,
+                progress => _reportThreadProgress(progressStage, progress),
                 cancellationToken);
 
             long actualLength = File.Exists(rawPath)

@@ -376,7 +376,10 @@ public record DownloadItemDto(
     double Progress, string Status,
     string SpeedFormatted, string EtaFormatted,
     string TotalFormatted, string DownloadedFormatted,
-    string ErrorMessage, bool IsActive)
+    string ErrorMessage, bool IsActive,
+    string ProgressVisualizationMode,
+    string ProgressVisualizationStage,
+    IReadOnlyList<DownloadThreadProgress> ThreadProgress)
 {
     public static DownloadItemDto From(DownloadItem i) => new(
         i.Id.ToString(), i.Url, i.FileName, i.SavePath,
@@ -385,5 +388,8 @@ public record DownloadItemDto(
         i.Progress, i.Status.ToString(),
         i.SpeedFormatted, i.EtaFormatted,
         i.TotalFormatted, i.DownloadedFormatted,
-        i.ErrorMessage, i.IsActive);
+        i.ErrorMessage, i.IsActive,
+        i.ProgressVisualizationMode,
+        i.ProgressVisualizationStage,
+        i.GetThreadProgressSnapshot());
 }

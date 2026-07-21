@@ -44,6 +44,7 @@ internal sealed class MultiSegmentDownloadService
         int preferredThreadCount,
         long progressBaseOffset,
         Action<long, double> reportProgress,
+        Action<IReadOnlyList<DownloadThreadProgress>>? reportThreadProgress,
         CancellationToken cancellationToken)
     {
         DownloadProbeResult probe = await _probe.ProbeAsync(url, cancellationToken);
@@ -55,6 +56,7 @@ internal sealed class MultiSegmentDownloadService
             preferredThreadCount,
             progressBaseOffset,
             reportProgress: reportProgress,
+            reportThreadProgress: reportThreadProgress,
             mergingStarted: null,
             cancellationToken: cancellationToken);
         return probe;
@@ -68,6 +70,7 @@ internal sealed class MultiSegmentDownloadService
         int preferredThreadCount,
         long progressBaseOffset,
         Action<long, double> reportProgress,
+        Action<IReadOnlyList<DownloadThreadProgress>>? reportThreadProgress,
         Action? mergingStarted,
         CancellationToken cancellationToken)
     {
@@ -91,6 +94,7 @@ internal sealed class MultiSegmentDownloadService
                 probe.SupportsRange,
                 progressBaseOffset,
                 reportProgress,
+                reportThreadProgress,
                 cancellationToken);
         }
         catch (RangeRejectedException ex)
@@ -111,6 +115,7 @@ internal sealed class MultiSegmentDownloadService
                 supportsRange: false,
                 progressBaseOffset: progressBaseOffset,
                 reportProgress: reportProgress,
+                reportThreadProgress: reportThreadProgress,
                 cancellationToken: cancellationToken);
         }
 
@@ -131,16 +136,25 @@ internal sealed class MultiSegmentDownloadService
         bool supportsRange,
         long progressBaseOffset,
         Action<long, double> reportProgress,
+        Action<IReadOnlyList<DownloadThreadProgress>>? reportThreadProgress,
         CancellationToken cancellationToken)
     {
         long GetDownloadedBytes() => segments.Sum(segment => segment.BytesWritten);
 
+        var threadTracker = new SegmentProgressTracker(segments);
+
+        void PublishProgress(long downloaded, double speed)
+        {
+            reportThreadProgress?.Invoke(threadTracker.Capture());
+            reportProgress(progressBaseOffset + downloaded, speed);
+        }
+
         using var monitor = new DownloadProgressMonitor(
             GetDownloadedBytes,
-            (downloaded, speed) =>
-                reportProgress(progressBaseOffset + downloaded, speed),
+            PublishProgress,
             () => _stateStore.Persist(tempDirectory, segments));
 
+        PublishProgress(GetDownloadedBytes(), 0);
         monitor.Start();
         try
         {

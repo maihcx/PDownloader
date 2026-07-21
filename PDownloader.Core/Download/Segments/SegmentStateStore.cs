@@ -132,6 +132,11 @@ internal sealed class SegmentStateStore
                 {
                     segment.IsCompleted = false;
                 }
+
+                segment.TransferState = segment.IsCompleted
+                    ? DownloadThreadState.Completed
+                    : DownloadThreadState.Waiting;
+                segment.RetryAttempt = 0;
             }
 
             return saved;

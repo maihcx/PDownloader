@@ -42,11 +42,13 @@ public class DownloadEngine
             item,
             _httpClientLease.Client,
             _pathService,
-            ReportProgress);
+            ReportProgress,
+            ReportThreadProgress);
         _youtubeHandler = new YoutubeDownloadHandler(
             item,
             _pathService,
-            ReportProgress);
+            ReportProgress,
+            ReportThreadProgress);
     }
 
     public async Task RunAsync()
@@ -113,6 +115,7 @@ public class DownloadEngine
             _item.Threads,
             progressBaseOffset: 0,
             reportProgress: ReportProgress,
+            reportThreadProgress: progress => ReportThreadProgress("File", progress),
             mergingStarted: () => _item.Status = DownloadStatus.Merging,
             cancellationToken: _cancellationToken);
 
@@ -133,5 +136,12 @@ public class DownloadEngine
         _item.DownloadedBytes = downloadedBytes;
         _item.SpeedBps = speedBps;
         _progress.Report(new DownloadProgress(downloadedBytes, speedBps));
+    }
+
+    private void ReportThreadProgress(
+        string stage,
+        IReadOnlyList<DownloadThreadProgress> progress)
+    {
+        _item.SetThreadProgress(stage, progress);
     }
 }
