@@ -93,9 +93,26 @@ public class DownloadEngine
 
     private async Task RunHttpDownloadAsync(string tempDirectory)
     {
+        string probeUrl = string.IsNullOrWhiteSpace(_item.ResolvedUrl)
+            ? _item.Url
+            : _item.ResolvedUrl;
+
         DownloadProbeResult probe = await _multiSegmentDownloader.ProbeAsync(
-            _item.Url,
+            probeUrl,
             _cancellationToken);
+
+        // Mirror URLs (for example SourceForge) are pinned after the first redirect.
+        // If a previously resolved mirror is no longer reachable, fall back to the
+        // original URL so the provider can select a new mirror.
+        if (probe.TotalBytes <= 0
+            && !string.Equals(probeUrl, _item.Url, StringComparison.Ordinal))
+        {
+            probe = await _multiSegmentDownloader.ProbeAsync(
+                _item.Url,
+                _cancellationToken);
+        }
+
+        _item.ResolvedUrl = probe.EffectiveUrl;
 
         if (string.IsNullOrWhiteSpace(_item.FileName))
         {
@@ -108,7 +125,7 @@ public class DownloadEngine
 
         string finalPath = _pathService.GetFinalPath(_item);
         await _multiSegmentDownloader.DownloadAsync(
-            _item.Url,
+            probe.EffectiveUrl,
             finalPath,
             tempDirectory,
             probe,

@@ -238,6 +238,10 @@ public class DownloadManager : IDisposable
     {
         var item = snapshot.ToDownloadItem();
 
+        // A restored item must never start automatically.
+        // Jobs that were still in a transient/running state when the application
+        // was closed are exposed as Paused so the user can explicitly resume them.
+        // Error items remain Error and can only be restarted through Retry.
         if (item.Status is DownloadStatus.Queued
             or DownloadStatus.Connecting
             or DownloadStatus.Downloading
@@ -340,12 +344,17 @@ public record DownloadItemSnapshot(
     string Status, string ErrorMessage,
     DateTime StartTime, DateTime EndTime)
 {
+    public string? ResolvedUrl { get; init; }
+
     public static DownloadItemSnapshot From(DownloadItem i) => new(
         i.Id, i.Url, i.FileName, i.SavePath,
         i.Threads, i.IsYoutube, i.FormatId,
         i.TotalBytes, i.DownloadedBytes,
         i.Status.ToString(), i.ErrorMessage,
-        i.StartTime, i.EndTime);
+        i.StartTime, i.EndTime)
+    {
+        ResolvedUrl = i.ResolvedUrl
+    };
 
     public DownloadItem ToDownloadItem()
     {
@@ -354,6 +363,7 @@ public record DownloadItemSnapshot(
         {
             Id = Id,
             Url = Url,
+            ResolvedUrl = ResolvedUrl ?? string.Empty,
             FileName = FileName,
             SavePath = SavePath,
             Threads = Threads,

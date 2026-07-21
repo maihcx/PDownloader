@@ -39,7 +39,8 @@ internal sealed class HttpDownloadProbe
                 cancellationToken);
 
             bool headIsUnreliable = !response.IsSuccessStatusCode
-                || response.Content.Headers.ContentLength is null or 0;
+                || response.Content.Headers.ContentLength is null or 0
+                || !response.Headers.AcceptRanges.Contains("bytes");
 
             if (headIsUnreliable)
             {
@@ -49,8 +50,13 @@ internal sealed class HttpDownloadProbe
             long totalBytes = response.Content.Headers.ContentLength ?? 0;
             bool supportsRange = response.Headers.AcceptRanges.Contains("bytes");
             string fileName = ResolveFileName(response, url);
+            string effectiveUrl = ResolveEffectiveUrl(response, url);
 
-            return new DownloadProbeResult(totalBytes, supportsRange, fileName);
+            return new DownloadProbeResult(
+                totalBytes,
+                supportsRange,
+                fileName,
+                effectiveUrl);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -72,7 +78,8 @@ internal sealed class HttpDownloadProbe
                     TotalBytes: 0,
                     SupportsRange: false,
                     SuggestedFileName: DownloadPathService.SanitizeFileName(
-                        DownloadPathService.GuessFileName(url)));
+                        DownloadPathService.GuessFileName(url)),
+                    EffectiveUrl: url);
             }
         }
     }
@@ -98,14 +105,26 @@ internal sealed class HttpDownloadProbe
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken);
 
+        response.EnsureSuccessStatusCode();
+
         bool supportsRange = response.StatusCode == HttpStatusCode.PartialContent;
         long totalBytes = response.Content.Headers.ContentRange?.Length
             ?? response.Content.Headers.ContentLength
             ?? 0;
         string fileName = ResolveFileName(response, url);
+        string effectiveUrl = ResolveEffectiveUrl(response, url);
 
-        return new DownloadProbeResult(totalBytes, supportsRange, fileName);
+        return new DownloadProbeResult(
+            totalBytes,
+            supportsRange,
+            fileName,
+            effectiveUrl);
     }
+
+    private static string ResolveEffectiveUrl(
+        HttpResponseMessage response,
+        string fallbackUrl) =>
+        response.RequestMessage?.RequestUri?.ToString() ?? fallbackUrl;
 
     private static string ResolveFileName(HttpResponseMessage response, string fallbackUrl)
     {
