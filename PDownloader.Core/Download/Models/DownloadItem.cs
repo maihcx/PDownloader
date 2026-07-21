@@ -71,6 +71,8 @@ public class DownloadItem : INotifyPropertyChanged
         set { _url = value; OnPropertyChanged(); }
     }
 
+    public string ResolvedUrl { get; set; } = string.Empty;
+
     private string _fileName = string.Empty;
     public string FileName
     {

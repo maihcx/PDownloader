@@ -107,6 +107,21 @@ internal sealed class SegmentDownloader
     {
         SynchronizeLengthWithFile(segment);
 
+        long expectedLength = GetExpectedLength(segment);
+        if (expectedLength > 0 && segment.BytesWritten >= expectedLength)
+        {
+            if (segment.BytesWritten > expectedLength)
+            {
+                throw new InvalidDataException(
+                    $"Segment {segment.Index} lớn hơn kích thước dự kiến: " +
+                    $"{segment.BytesWritten}/{expectedLength} byte.");
+            }
+
+            segment.IsCompleted = true;
+            segment.TransferState = DownloadThreadState.Completed;
+            return;
+        }
+
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         long resumeFrom = segment.RangeStart + segment.BytesWritten;
         bool shouldSetRange = supportsRange && segment.RangeEnd >= 0;
@@ -241,6 +256,30 @@ internal sealed class SegmentDownloader
                 $"Server không hỗ trợ Range ổn định cho segment {segment.Index} " +
                 $"(trả về {(int)response.StatusCode} thay vì 206).");
         }
+
+        if (response.StatusCode == HttpStatusCode.PartialContent)
+        {
+            ContentRangeHeaderValue? contentRange = response.Content.Headers.ContentRange;
+            if (contentRange?.From != resumeFrom)
+            {
+                string actualRange = contentRange == null
+                    ? "không có Content-Range"
+                    : contentRange.ToString();
+
+                throw new RangeRejectedException(
+                    $"Server trả sai range cho segment {segment.Index}: " +
+                    $"yêu cầu bắt đầu từ {resumeFrom}, nhận {actualRange}.");
+            }
+
+            if (segment.RangeEnd >= 0
+                && contentRange.To.HasValue
+                && contentRange.To.Value > segment.RangeEnd)
+            {
+                throw new RangeRejectedException(
+                    $"Server trả vượt range của segment {segment.Index}: " +
+                    $"{contentRange} (tối đa {segment.RangeEnd}).");
+            }
+        }
     }
 
     private static async Task WriteBufferAsync(
@@ -270,12 +309,18 @@ internal sealed class SegmentDownloader
     private static void ValidateCompletedLength(SegmentInfo segment)
     {
         long expectedLength = GetExpectedLength(segment);
-        if (expectedLength > 0 && segment.BytesWritten < expectedLength)
+        if (expectedLength <= 0 || segment.BytesWritten == expectedLength)
         {
-            throw new EndOfStreamException(
-                $"Segment {segment.Index} bị thiếu dữ liệu: " +
-                $"đã tải {segment.BytesWritten}/{expectedLength} byte.");
+            return;
         }
+
+        string reason = segment.BytesWritten < expectedLength
+            ? "bị thiếu dữ liệu"
+            : "có dữ liệu vượt quá range";
+
+        throw new InvalidDataException(
+            $"Segment {segment.Index} {reason}: " +
+            $"đã tải {segment.BytesWritten}/{expectedLength} byte.");
     }
 
     private static long GetExpectedLength(SegmentInfo segment) =>
