@@ -153,13 +153,12 @@
                                 </Grid.ColumnDefinitions>
 
                                 <!-- Status icon -->
-                                <TextBlock Grid.Column="0"
-                                           Text="{Binding Status, Converter={StaticResource StatusToIconConverter}}"
-                                           FontSize="22"
-                                           VerticalAlignment="Center"
-                                           Margin="0,0,14,0"
-                                           Foreground="{Binding Status, Mode=OneWay,
-                                        Converter={StaticResource StatusToColorConverter}}" />
+                                <ui:SymbolIcon Grid.Column="0"
+                                               FontSize="22"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,14,0"
+                                               Foreground="{Binding Status, Mode=OneWay, Converter={StaticResource StatusToColorConverter}}"
+                                               Symbol="{Binding Status, Converter={StaticResource StatusToIconConverter}}" />
 
                                 <!-- File info -->
                                 <StackPanel Grid.Column="1"
