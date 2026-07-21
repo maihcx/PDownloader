@@ -19,7 +19,8 @@ public partial class DownloaderProgressViewModel : ObservableObject
 {
     private bool _isInitialized = false;
 
-    private DownloaderService _downloaderService;
+    private readonly DownloaderService _downloaderService;
+    private string _currentProgressVisualizationStage = string.Empty;
 
     [ObservableProperty]
     private RunnerConfig _runnerConfig;
@@ -34,10 +35,10 @@ public partial class DownloaderProgressViewModel : ObservableObject
     private double _progressRatio;
 
     [ObservableProperty]
-    private string _ProgressText = string.Empty;
+    private string _progressText = string.Empty;
 
     [ObservableProperty]
-    private string _SpeedText = string.Empty;
+    private string _speedText = string.Empty;
 
     [ObservableProperty]
     private string _etaText = string.Empty;
@@ -54,6 +55,24 @@ public partial class DownloaderProgressViewModel : ObservableObject
     [ObservableProperty]
     private bool _isActionButtonEnabled = true;
 
+    [ObservableProperty]
+    private bool _isThreadProgressVisible;
+
+    [ObservableProperty]
+    private bool _isThreadProgressUnsupportedVisible;
+
+    [ObservableProperty]
+    private bool _isThreadVisualizationLayoutExpanded;
+
+    [ObservableProperty]
+    private string _threadProgressTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _threadProgressUnsupportedText = string.Empty;
+
+    [ObservableProperty]
+    private ObservableCollection<object> _threadProgress = new ObservableCollection<object>();
+
     private string CompletedFilePath = string.Empty;
 
     partial void OnProgressPercentChanged(double value)
@@ -61,7 +80,9 @@ public partial class DownloaderProgressViewModel : ObservableObject
         ProgressRatio = ProgressPercent / 100.0;
     }
 
-    public DownloaderProgressViewModel(RunnerConfig runnerConfig, DownloaderService downloaderService)
+    public DownloaderProgressViewModel(
+        RunnerConfig runnerConfig,
+        DownloaderService downloaderService)
     {
         RunnerConfig = runnerConfig;
         _downloaderService = downloaderService;
@@ -78,6 +99,8 @@ public partial class DownloaderProgressViewModel : ObservableObject
         _isInitialized = true;
 
         DownloaderStatus.State = RunnerState.Downloading;
+        ThreadProgressUnsupportedText = LanguageBase.GetLangValue(
+            "download_thread_visualization_unsupported_ytdlp");
         _downloaderService.OnProgress += _downloaderService_OnProgress;
     }
 
@@ -92,8 +115,10 @@ public partial class DownloaderProgressViewModel : ObservableObject
             DownloadedText = obj.DownloadedFormatted;
             TotalText = obj.TotalFormatted;
 
-            Enum.TryParse(obj.Status, out DownloadStatus Status);
-            switch (Status)
+            UpdateProgressVisualization(obj);
+
+            Enum.TryParse(obj.Status, ignoreCase: true, out DownloadStatus status);
+            switch (status)
             {
                 case DownloadStatus.Queued:
                     StatusText = LanguageBase.GetLangValue("download_status_queued_title");
@@ -144,12 +169,177 @@ public partial class DownloaderProgressViewModel : ObservableObject
                     break;
 
                 case DownloadStatus.Error:
-                    StatusText = LanguageBase.GetLangValue("download_status_error_title", obj.ErrorMessage);
+                    StatusText = LanguageBase.GetLangValue(
+                        "download_status_error_title",
+                        obj.ErrorMessage);
                     IsActionButtonEnabled = false;
                     break;
             }
-
         }, System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    private void UpdateProgressVisualization(DownloadItemDto item)
+    {
+        string mode = string.IsNullOrWhiteSpace(item.ProgressVisualizationMode)
+            ? "None"
+            : item.ProgressVisualizationMode;
+        string stage = item.ProgressVisualizationStage ?? string.Empty;
+        List<DownloadThreadProgressDto> threadProgress =
+            item.ThreadProgress ?? new List<DownloadThreadProgressDto>();
+
+        if (mode.Equals("Unsupported", StringComparison.OrdinalIgnoreCase))
+        {
+            IsThreadVisualizationLayoutExpanded = false;
+            IsThreadProgressVisible = false;
+            IsThreadProgressUnsupportedVisible = true;
+            ThreadProgressUnsupportedText = GetUnsupportedVisualizationText(stage);
+            ClearThreadProgress();
+            return;
+        }
+
+        if (!mode.Equals("Threads", StringComparison.OrdinalIgnoreCase))
+        {
+            IsThreadVisualizationLayoutExpanded = false;
+            IsThreadProgressVisible = false;
+            IsThreadProgressUnsupportedVisible = false;
+            ClearThreadProgress();
+            return;
+        }
+
+        IsThreadVisualizationLayoutExpanded = true;
+        IsThreadProgressUnsupportedVisible = false;
+        ThreadProgressTitle = GetThreadProgressTitle(stage);
+
+        if (!_currentProgressVisualizationStage.Equals(
+            stage,
+            StringComparison.OrdinalIgnoreCase))
+        {
+            ClearThreadProgress();
+            _currentProgressVisualizationStage = stage;
+        }
+
+        ThreadProgress.Clear();
+        foreach (DownloadThreadProgressDto progress in threadProgress
+                     .OfType<DownloadThreadProgressDto>()
+                     .OrderBy(progress => progress.Index))
+        {
+            ThreadProgress.Add(CreateThreadProgressItem(progress));
+        }
+
+        IsThreadProgressVisible = ThreadProgress.Count > 0;
+    }
+
+    private static object CreateThreadProgressItem(DownloadThreadProgressDto source)
+    {
+        long downloadedBytes = Math.Max(0, source.DownloadedBytes);
+        long totalBytes = Math.Max(0, source.TotalBytes);
+        double speedBps = Math.Max(0, source.SpeedBps);
+        double progress = Math.Clamp(source.Progress, 0, 100);
+        string state = source.State ?? string.Empty;
+        int currentUnit = Math.Max(0, source.CurrentUnit);
+        int totalUnits = Math.Max(0, source.TotalUnits);
+
+        return new
+        {
+            source.Index,
+            Number = source.Index + 1,
+            Title = LanguageBase.GetLangValue(
+                "download_thread_item_title",
+                source.Index + 1),
+            DownloadedBytes = downloadedBytes,
+            TotalBytes = totalBytes,
+            SpeedBps = speedBps,
+            Progress = progress,
+            State = state,
+            CurrentUnit = currentUnit,
+            TotalUnits = totalUnits,
+            IsIndeterminate = totalBytes <= 0
+                && state.Equals("Downloading", StringComparison.OrdinalIgnoreCase),
+            StateText = GetThreadStateText(state),
+            DetailText = currentUnit > 0 && totalUnits > 0
+                ? LanguageBase.GetLangValue(
+                    "download_thread_fragment_detail",
+                    currentUnit,
+                    totalUnits)
+                : string.Empty,
+            SpeedText = speedBps > 0
+                ? $"{FormatBytes((long)speedBps)}/s"
+                : "–",
+            BytesText = totalBytes > 0
+                ? $"{FormatBytes(downloadedBytes)} / {FormatBytes(totalBytes)}"
+                : FormatBytes(downloadedBytes),
+            ProgressText = totalBytes > 0
+                ? $"{progress:F0}%"
+                : "–"
+        };
+    }
+
+    private static string GetThreadStateText(string state)
+    {
+        return state.ToLowerInvariant() switch
+        {
+            "waiting" => LanguageBase.GetLangValue("download_thread_state_waiting"),
+            "downloading" => LanguageBase.GetLangValue("download_thread_state_downloading"),
+            "retrying" => LanguageBase.GetLangValue("download_thread_state_retrying"),
+            "completed" => LanguageBase.GetLangValue("download_thread_state_completed"),
+            "failed" => LanguageBase.GetLangValue("download_thread_state_failed"),
+            _ => state
+        };
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes <= 0)
+        {
+            return "0 B";
+        }
+
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        if (bytes < 1024 * 1024)
+        {
+            return $"{bytes / 1024.0:F1} KB";
+        }
+
+        if (bytes < 1024L * 1024 * 1024)
+        {
+            return $"{bytes / (1024.0 * 1024):F1} MB";
+        }
+
+        return $"{bytes / (1024.0 * 1024 * 1024):F2} GB";
+    }
+
+    private string GetThreadProgressTitle(string stage)
+    {
+        string stageText = stage?.ToLowerInvariant() switch
+        {
+            "video" => LanguageBase.GetLangValue("download_thread_stage_video"),
+            "audio" => LanguageBase.GetLangValue("download_thread_stage_audio"),
+            "hlsfragments" => LanguageBase.GetLangValue("download_thread_stage_hls"),
+            _ => LanguageBase.GetLangValue("download_thread_stage_file")
+        };
+
+        return LanguageBase.GetLangValue(
+            "download_thread_visualization_title",
+            stageText);
+    }
+
+    private static string GetUnsupportedVisualizationText(string? stage)
+    {
+        return string.Equals(stage, "YtDlp", StringComparison.OrdinalIgnoreCase)
+            ? LanguageBase.GetLangValue(
+                "download_thread_visualization_unsupported_ytdlp")
+            : LanguageBase.GetLangValue(
+                "download_thread_visualization_unsupported_generic");
+    }
+
+    private void ClearThreadProgress()
+    {
+        ThreadProgress.Clear();
+        _currentProgressVisualizationStage = string.Empty;
     }
 
     [RelayCommand]

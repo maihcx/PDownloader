@@ -10,9 +10,9 @@
                  d:DataContext="{d:DesignInstance local:MainWindow,
                                    IsDesignTimeCreatable=True}"
                  d:DesignWidth="600"
-                 d:DesignHeight="400"
+                 d:DesignHeight="370"
                  Width="600"
-                 Height="400"
+                 Height="370"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"

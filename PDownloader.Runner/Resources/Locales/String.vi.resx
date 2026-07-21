@@ -204,4 +204,46 @@
   <data name="download_status_error_title" xml:space="preserve">
     <value>Lỗi: {0}</value>
   </data>
+  <data name="download_thread_visualization_title" xml:space="preserve">
+    <value>Tiến trình luồng tải · {0}</value>
+  </data>
+  <data name="download_thread_visualization_unsupported_ytdlp" xml:space="preserve">
+    <value>Phiên tải này được xử lý trực tiếp bởi yt-dlp nên không hỗ trợ hiển thị tiến trình trực quan theo từng luồng.</value>
+  </data>
+  <data name="download_thread_visualization_unsupported_generic" xml:space="preserve">
+    <value>Phiên tải này không hỗ trợ hiển thị tiến trình trực quan theo từng luồng.</value>
+  </data>
+  <data name="download_thread_stage_file" xml:space="preserve">
+    <value>Tệp</value>
+  </data>
+  <data name="download_thread_stage_video" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="download_thread_stage_audio" xml:space="preserve">
+    <value>Âm thanh</value>
+  </data>
+  <data name="download_thread_stage_hls" xml:space="preserve">
+    <value>HLS</value>
+  </data>
+  <data name="download_thread_item_title" xml:space="preserve">
+    <value>Luồng {0}</value>
+  </data>
+  <data name="download_thread_state_waiting" xml:space="preserve">
+    <value>Đang chờ</value>
+  </data>
+  <data name="download_thread_state_downloading" xml:space="preserve">
+    <value>Đang tải</value>
+  </data>
+  <data name="download_thread_state_retrying" xml:space="preserve">
+    <value>Đang thử lại</value>
+  </data>
+  <data name="download_thread_state_completed" xml:space="preserve">
+    <value>Hoàn thành</value>
+  </data>
+  <data name="download_thread_fragment_detail" xml:space="preserve">
+    <value>Mảnh {0}/{1}</value>
+  </data>
+  <data name="download_thread_state_failed" xml:space="preserve">
+    <value>Thất bại</value>
+  </data>
 </root>

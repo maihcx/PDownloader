@@ -15,25 +15,16 @@
 
 namespace PDownloader.Core.Download.Models;
 
-public class SegmentInfo
+public sealed record DownloadThreadProgress(
+    int Index,
+    long DownloadedBytes,
+    long TotalBytes,
+    double SpeedBps,
+    string State,
+    int CurrentUnit = 0,
+    int TotalUnits = 0)
 {
-    public int Index { get; init; }
-
-    public long RangeStart { get; init; }
-
-    public long RangeEnd { get; init; }
-
-    public long BytesWritten { get; set; }
-
-    public string TempFilePath { get; init; } = string.Empty;
-
-    public bool IsCompleted { get; set; }
-
-    [JsonIgnore]
-    public DownloadThreadState TransferState { get; set; } = DownloadThreadState.Waiting;
-
-    [JsonIgnore]
-    public int RetryAttempt { get; set; }
-
-    public long Length => RangeEnd - RangeStart + 1;
+    public double Progress => TotalBytes > 0
+        ? Math.Clamp(DownloadedBytes / (double)TotalBytes * 100.0, 0, 100)
+        : 0;
 }

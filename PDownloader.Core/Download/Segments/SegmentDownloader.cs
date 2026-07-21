@@ -58,6 +58,7 @@ internal sealed class SegmentDownloader
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            segment.TransferState = DownloadThreadState.Downloading;
 
             try
             {
@@ -66,6 +67,8 @@ internal sealed class SegmentDownloader
                     supportsRange,
                     url,
                     cancellationToken);
+                segment.TransferState = DownloadThreadState.Completed;
+                segment.RetryAttempt = 0;
                 return;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -79,11 +82,19 @@ internal sealed class SegmentDownloader
             catch (Exception ex) when (attempt < MaxRetries)
             {
                 attempt++;
+                segment.TransferState = DownloadThreadState.Retrying;
+                segment.RetryAttempt = attempt;
+
                 int delayMilliseconds = (int)Math.Pow(2, attempt) * 500;
                 Debug.WriteLine(
                     $"[Segments] Segment {segment.Index}, lần thử {attempt} thất bại: " +
                     $"{ex.Message}. Thử lại sau {delayMilliseconds}ms.");
                 await Task.Delay(delayMilliseconds, cancellationToken);
+            }
+            catch
+            {
+                segment.TransferState = DownloadThreadState.Failed;
+                throw;
             }
         }
     }
@@ -204,6 +215,7 @@ internal sealed class SegmentDownloader
             if (expectedBytes > 0 && segment.BytesWritten >= expectedBytes)
             {
                 segment.IsCompleted = true;
+                segment.TransferState = DownloadThreadState.Completed;
                 return;
             }
 

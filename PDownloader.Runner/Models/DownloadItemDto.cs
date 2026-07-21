@@ -70,4 +70,31 @@ public class DownloadItemDto
 
     [JsonPropertyName("isActive")]
     public bool IsActive { get; set; }
+
+    private string _progressVisualizationMode = "None";
+    private string _progressVisualizationStage = string.Empty;
+    private List<DownloadThreadProgressDto> _threadProgress = new();
+
+    [JsonPropertyName("progressVisualizationMode")]
+    public string ProgressVisualizationMode
+    {
+        get => _progressVisualizationMode;
+        set => _progressVisualizationMode = string.IsNullOrWhiteSpace(value)
+            ? "None"
+            : value;
+    }
+
+    [JsonPropertyName("progressVisualizationStage")]
+    public string ProgressVisualizationStage
+    {
+        get => _progressVisualizationStage;
+        set => _progressVisualizationStage = value ?? string.Empty;
+    }
+
+    [JsonPropertyName("threadProgress")]
+    public List<DownloadThreadProgressDto> ThreadProgress
+    {
+        get => _threadProgress;
+        set => _threadProgress = value ?? new List<DownloadThreadProgressDto>();
+    }
 }

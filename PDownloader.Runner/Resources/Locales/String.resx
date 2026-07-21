@@ -204,4 +204,46 @@
   <data name="download_status_error_title" xml:space="preserve">
     <value>download_status_error_title</value>
   </data>
+  <data name="download_thread_visualization_title" xml:space="preserve">
+    <value>download_thread_visualization_title</value>
+  </data>
+  <data name="download_thread_visualization_unsupported_ytdlp" xml:space="preserve">
+    <value>download_thread_visualization_unsupported_ytdlp</value>
+  </data>
+  <data name="download_thread_visualization_unsupported_generic" xml:space="preserve">
+    <value>download_thread_visualization_unsupported_generic</value>
+  </data>
+  <data name="download_thread_stage_file" xml:space="preserve">
+    <value>download_thread_stage_file</value>
+  </data>
+  <data name="download_thread_stage_video" xml:space="preserve">
+    <value>download_thread_stage_video</value>
+  </data>
+  <data name="download_thread_stage_audio" xml:space="preserve">
+    <value>download_thread_stage_audio</value>
+  </data>
+  <data name="download_thread_stage_hls" xml:space="preserve">
+    <value>download_thread_stage_hls</value>
+  </data>
+  <data name="download_thread_item_title" xml:space="preserve">
+    <value>download_thread_item_title</value>
+  </data>
+  <data name="download_thread_state_waiting" xml:space="preserve">
+    <value>download_thread_state_waiting</value>
+  </data>
+  <data name="download_thread_state_downloading" xml:space="preserve">
+    <value>download_thread_state_downloading</value>
+  </data>
+  <data name="download_thread_state_retrying" xml:space="preserve">
+    <value>download_thread_state_retrying</value>
+  </data>
+  <data name="download_thread_state_completed" xml:space="preserve">
+    <value>download_thread_state_completed</value>
+  </data>
+  <data name="download_thread_fragment_detail" xml:space="preserve">
+    <value>download_thread_fragment_detail</value>
+  </data>
+  <data name="download_thread_state_failed" xml:space="preserve">
+    <value>download_thread_state_failed</value>
+  </data>
 </root>
