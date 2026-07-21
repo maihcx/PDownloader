@@ -163,7 +163,7 @@
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0"
-                                   Text="{Binding ViewModel.ThreadProgressTitle}"
+                                   Text="{utils:Localization download_thread_visualization_title}"
                                    FontSize="12"
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,6" />

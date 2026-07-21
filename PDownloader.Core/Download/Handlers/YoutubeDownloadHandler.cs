@@ -21,18 +21,21 @@ internal sealed class YoutubeDownloadHandler
     private readonly DownloadPathService _pathService;
     private readonly FfmpegMuxer _ffmpegMuxer;
     private readonly Action<long, double> _reportProgress;
+    private readonly Action<double> _reportMergeProgress;
     private readonly Action<string, IReadOnlyList<DownloadThreadProgress>> _reportThreadProgress;
 
     public YoutubeDownloadHandler(
         DownloadItem item,
         DownloadPathService pathService,
         Action<long, double> reportProgress,
+        Action<double> reportMergeProgress,
         Action<string, IReadOnlyList<DownloadThreadProgress>> reportThreadProgress)
     {
         _item = item;
         _pathService = pathService;
         _ffmpegMuxer = new FfmpegMuxer();
         _reportProgress = reportProgress;
+        _reportMergeProgress = reportMergeProgress;
         _reportThreadProgress = reportThreadProgress;
     }
 
@@ -99,15 +102,23 @@ internal sealed class YoutubeDownloadHandler
 
             cancellationToken.ThrowIfCancellationRequested();
             _item.Status = DownloadStatus.Merging;
-            _reportProgress(_item.DownloadedBytes, 0);
+            _reportMergeProgress(0);
 
-            string finalPath = rawFiles.Count == 1
-                ? MoveSingleStream(rawFiles[0], outputFolder, fileStem)
-                : await _ffmpegMuxer.MuxAsync(
+            string finalPath;
+            if (rawFiles.Count == 1)
+            {
+                finalPath = MoveSingleStream(rawFiles[0], outputFolder, fileStem);
+                _reportMergeProgress(100);
+            }
+            else
+            {
+                finalPath = await _ffmpegMuxer.MuxAsync(
                     rawFiles,
                     outputFolder,
                     fileStem,
+                    _reportMergeProgress,
                     cancellationToken);
+            }
 
             Complete(finalPath, rawFiles);
             DownloadPathService.CleanupTemp(tempDirectory);

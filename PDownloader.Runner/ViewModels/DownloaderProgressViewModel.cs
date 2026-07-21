@@ -68,9 +68,6 @@ public partial class DownloaderProgressViewModel : ObservableObject
     private bool _isThreadVisualizationLayoutExpanded;
 
     [ObservableProperty]
-    private string _threadProgressTitle = string.Empty;
-
-    [ObservableProperty]
     private string _threadProgressUnsupportedText = string.Empty;
 
     [ObservableProperty]
@@ -245,7 +242,6 @@ public partial class DownloaderProgressViewModel : ObservableObject
 
         IsThreadVisualizationLayoutExpanded = true;
         IsThreadProgressUnsupportedVisible = false;
-        ThreadProgressTitle = GetThreadProgressTitle(stage);
 
         if (!_currentProgressVisualizationStage.Equals(
             stage,
@@ -395,21 +391,6 @@ public partial class DownloaderProgressViewModel : ObservableObject
         }
 
         return $"{bytes / (1024.0 * 1024 * 1024):F2} GB";
-    }
-
-    private string GetThreadProgressTitle(string stage)
-    {
-        string stageText = stage?.ToLowerInvariant() switch
-        {
-            "video" => LanguageBase.GetLangValue("download_thread_stage_video"),
-            "audio" => LanguageBase.GetLangValue("download_thread_stage_audio"),
-            "hlsfragments" => LanguageBase.GetLangValue("download_thread_stage_hls"),
-            _ => LanguageBase.GetLangValue("download_thread_stage_file")
-        };
-
-        return LanguageBase.GetLangValue(
-            "download_thread_visualization_title",
-            stageText);
     }
 
     private static string GetUnsupportedVisualizationText(string? stage)

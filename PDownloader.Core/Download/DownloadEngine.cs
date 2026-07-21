@@ -43,11 +43,13 @@ public class DownloadEngine
             _httpClientLease.Client,
             _pathService,
             ReportProgress,
+            ReportMergeProgress,
             ReportThreadProgress);
         _youtubeHandler = new YoutubeDownloadHandler(
             item,
             _pathService,
             ReportProgress,
+            ReportMergeProgress,
             ReportThreadProgress);
     }
 
@@ -136,8 +138,9 @@ public class DownloadEngine
             mergingStarted: () =>
             {
                 _item.Status = DownloadStatus.Merging;
-                ReportProgress(_item.DownloadedBytes, 0);
+                ReportMergeProgress(0);
             },
+            reportMergeProgress: ReportMergeProgress,
             cancellationToken: _cancellationToken);
 
         _cancellationToken.ThrowIfCancellationRequested();
@@ -157,6 +160,17 @@ public class DownloadEngine
         _item.DownloadedBytes = downloadedBytes;
         _item.SpeedBps = speedBps;
         _progress.Report(new DownloadProgress(downloadedBytes, speedBps));
+    }
+
+    private void ReportMergeProgress(double progressPercent)
+    {
+        _item.MergeProgress = progressPercent;
+        _item.SpeedBps = 0;
+
+        // Publish a new snapshot without changing DownloadedBytes. During the
+        // Merging state DownloadItem.Progress is backed by MergeProgress, so the
+        // same DTO/UI progress channel can display the actual merge percentage.
+        _progress.Report(new DownloadProgress(_item.DownloadedBytes, 0));
     }
 
     private void ReportThreadProgress(

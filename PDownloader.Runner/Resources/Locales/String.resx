@@ -213,18 +213,6 @@
   <data name="download_thread_visualization_unsupported_generic" xml:space="preserve">
     <value>download_thread_visualization_unsupported_generic</value>
   </data>
-  <data name="download_thread_stage_file" xml:space="preserve">
-    <value>download_thread_stage_file</value>
-  </data>
-  <data name="download_thread_stage_video" xml:space="preserve">
-    <value>download_thread_stage_video</value>
-  </data>
-  <data name="download_thread_stage_audio" xml:space="preserve">
-    <value>download_thread_stage_audio</value>
-  </data>
-  <data name="download_thread_stage_hls" xml:space="preserve">
-    <value>download_thread_stage_hls</value>
-  </data>
   <data name="download_thread_item_title" xml:space="preserve">
     <value>download_thread_item_title</value>
   </data>

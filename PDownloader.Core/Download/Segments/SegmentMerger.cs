@@ -20,6 +20,7 @@ internal sealed class SegmentMerger
     public async Task MergeAsync(
         IReadOnlyCollection<SegmentInfo> segments,
         string destinationPath,
+        Action<double>? reportProgress,
         CancellationToken cancellationToken)
     {
         ValidateSegments(segments);
@@ -31,6 +32,10 @@ internal sealed class SegmentMerger
         }
 
         string mergingPath = destinationPath + ".merging";
+        long totalBytes = segments.Sum(segment =>
+            new FileInfo(segment.TempFilePath).Length);
+        var mergeProgress = new MergeProgressTracker(totalBytes, reportProgress);
+        mergeProgress.Start();
 
         try
         {
@@ -50,16 +55,18 @@ internal sealed class SegmentMerger
                         FileAccess.Read,
                         FileShare.Read))
                     {
-                        await input.CopyToAsync(output, cancellationToken);
+                        await mergeProgress.CopyToAsync(
+                            input,
+                            output,
+                            cancellationToken);
                     }
 
-                    // Segment đã được nối thành công vào file .merging nên có thể
-                    // giải phóng ngay, tránh giữ đồng thời cả file part và bản ghép.
                     TryDelete(segment.TempFilePath, segment.Index);
                 }
             }
 
             File.Move(mergingPath, destinationPath, overwrite: true);
+            mergeProgress.Complete();
         }
         catch
         {

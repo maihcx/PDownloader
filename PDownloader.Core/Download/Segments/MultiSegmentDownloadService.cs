@@ -58,6 +58,7 @@ internal sealed class MultiSegmentDownloadService
             reportProgress: reportProgress,
             reportThreadProgress: reportThreadProgress,
             mergingStarted: null,
+            reportMergeProgress: null,
             cancellationToken: cancellationToken);
         return probe;
     }
@@ -72,6 +73,7 @@ internal sealed class MultiSegmentDownloadService
         Action<long, double> reportProgress,
         Action<IReadOnlyList<DownloadThreadProgress>>? reportThreadProgress,
         Action? mergingStarted,
+        Action<double>? reportMergeProgress,
         CancellationToken cancellationToken)
     {
         bool useMultipleSegments = probe.SupportsRange
@@ -121,7 +123,11 @@ internal sealed class MultiSegmentDownloadService
 
         cancellationToken.ThrowIfCancellationRequested();
         mergingStarted?.Invoke();
-        await _segmentMerger.MergeAsync(segments, destinationPath, cancellationToken);
+        await _segmentMerger.MergeAsync(
+            segments,
+            destinationPath,
+            reportMergeProgress,
+            cancellationToken);
 
         long finalLength = File.Exists(destinationPath)
             ? new FileInfo(destinationPath).Length
