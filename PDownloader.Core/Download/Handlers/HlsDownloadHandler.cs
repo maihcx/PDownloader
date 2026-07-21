@@ -149,7 +149,11 @@ internal sealed class HlsDownloadHandler
             _item.Threads,
             _reportProgress,
             progress => _reportThreadProgress("HlsFragments", progress),
-            () => _item.Status = DownloadStatus.Merging,
+            () =>
+            {
+                _item.Status = DownloadStatus.Merging;
+                _reportProgress(_item.DownloadedBytes, 0);
+            },
             cancellationToken);
     }
 

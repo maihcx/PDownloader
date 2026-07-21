@@ -133,7 +133,11 @@ public class DownloadEngine
             progressBaseOffset: 0,
             reportProgress: ReportProgress,
             reportThreadProgress: progress => ReportThreadProgress("File", progress),
-            mergingStarted: () => _item.Status = DownloadStatus.Merging,
+            mergingStarted: () =>
+            {
+                _item.Status = DownloadStatus.Merging;
+                ReportProgress(_item.DownloadedBytes, 0);
+            },
             cancellationToken: _cancellationToken);
 
         _cancellationToken.ThrowIfCancellationRequested();
