@@ -60,7 +60,11 @@ public class DownloadItem : INotifyPropertyChanged
 
     public string? FormatId { get; set; }
 
-    public double Progress => TotalBytes > 0 ? (double)DownloadedBytes / TotalBytes * 100 : 0;
+    public double Progress => Status == DownloadStatus.Merging
+        ? MergeProgress
+        : TotalBytes > 0
+            ? (double)DownloadedBytes / TotalBytes * 100
+            : 0;
 
     public bool IsActive => Status is DownloadStatus.Downloading or DownloadStatus.Connecting or DownloadStatus.Merging;
 
@@ -101,6 +105,18 @@ public class DownloadItem : INotifyPropertyChanged
         set { _downloadedBytes = value; OnPropertyChanged(); OnPropertyChanged(nameof(Progress)); OnPropertyChanged(nameof(DownloadedFormatted)); }
     }
 
+    private double _mergeProgress;
+    public double MergeProgress
+    {
+        get => _mergeProgress;
+        set
+        {
+            _mergeProgress = Math.Clamp(value, 0, 100);
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(Progress));
+        }
+    }
+
     private double _speedBps = 0;
     public double SpeedBps
     {
@@ -112,7 +128,13 @@ public class DownloadItem : INotifyPropertyChanged
     public DownloadStatus Status
     {
         get => _status;
-        set { _status = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsActive)); }
+        set
+        {
+            _status = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsActive));
+            OnPropertyChanged(nameof(Progress));
+        }
     }
 
     private string _errorMessage = string.Empty;

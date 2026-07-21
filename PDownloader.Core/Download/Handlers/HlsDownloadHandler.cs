@@ -23,6 +23,7 @@ internal sealed class HlsDownloadHandler
     private readonly YtDlpHlsDownloadService _ytDlpDownloader;
     private readonly DownloadPathService _pathService;
     private readonly Action<long, double> _reportProgress;
+    private readonly Action<double> _reportMergeProgress;
     private readonly Action<string, IReadOnlyList<DownloadThreadProgress>> _reportThreadProgress;
 
     public HlsDownloadHandler(
@@ -30,6 +31,7 @@ internal sealed class HlsDownloadHandler
         HttpClient httpClient,
         DownloadPathService pathService,
         Action<long, double> reportProgress,
+        Action<double> reportMergeProgress,
         Action<string, IReadOnlyList<DownloadThreadProgress>> reportThreadProgress)
     {
         _item = item;
@@ -38,6 +40,7 @@ internal sealed class HlsDownloadHandler
         _ytDlpDownloader = new YtDlpHlsDownloadService();
         _pathService = pathService;
         _reportProgress = reportProgress;
+        _reportMergeProgress = reportMergeProgress;
         _reportThreadProgress = reportThreadProgress;
     }
 
@@ -152,8 +155,9 @@ internal sealed class HlsDownloadHandler
             () =>
             {
                 _item.Status = DownloadStatus.Merging;
-                _reportProgress(_item.DownloadedBytes, 0);
+                _reportMergeProgress(0);
             },
+            _reportMergeProgress,
             cancellationToken);
     }
 

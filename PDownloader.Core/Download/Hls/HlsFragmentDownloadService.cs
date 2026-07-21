@@ -36,6 +36,7 @@ internal sealed class HlsFragmentDownloadService
         Action<long, double> reportProgress,
         Action<IReadOnlyList<DownloadThreadProgress>>? reportThreadProgress,
         Action mergingStarted,
+        Action<double>? reportMergeProgress,
         CancellationToken cancellationToken)
     {
         List<string> urls = fragmentResult.FragmentUrls;
@@ -95,7 +96,11 @@ internal sealed class HlsFragmentDownloadService
             outputFolder,
             $"{fileStem}.{extension}");
 
-        await MergeFragmentsAsync(tempPaths, finalPath, cancellationToken);
+        await MergeFragmentsAsync(
+            tempPaths,
+            finalPath,
+            reportMergeProgress,
+            cancellationToken);
         return finalPath;
     }
 
@@ -204,6 +209,7 @@ internal sealed class HlsFragmentDownloadService
     private static async Task MergeFragmentsAsync(
         IReadOnlyList<string> tempPaths,
         string finalPath,
+        Action<double>? reportProgress,
         CancellationToken cancellationToken)
     {
         string? directory = Path.GetDirectoryName(finalPath);
@@ -213,6 +219,11 @@ internal sealed class HlsFragmentDownloadService
         }
 
         string mergingPath = finalPath + ".merging";
+        long totalBytes = tempPaths
+            .Where(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path))
+            .Sum(path => new FileInfo(path).Length);
+        var mergeProgress = new MergeProgressTracker(totalBytes, reportProgress);
+        mergeProgress.Start();
 
         try
         {
@@ -232,7 +243,10 @@ internal sealed class HlsFragmentDownloadService
                         FileAccess.Read,
                         FileShare.Read))
                     {
-                        await input.CopyToAsync(output, cancellationToken);
+                        await mergeProgress.CopyToAsync(
+                            input,
+                            output,
+                            cancellationToken);
                     }
 
                     TryDeleteFragment(tempPath);
@@ -240,6 +254,7 @@ internal sealed class HlsFragmentDownloadService
             }
 
             File.Move(mergingPath, finalPath, overwrite: true);
+            mergeProgress.Complete();
         }
         catch
         {

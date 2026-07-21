@@ -29,6 +29,9 @@ public partial class DownloaderProgressViewModel : ObservableObject
     private DownloaderServiceStatus _downloaderStatus;
 
     [ObservableProperty]
+    private DownloadStatus _currentDownloadStatus = DownloadStatus.Connecting;
+
+    [ObservableProperty]
     private double _progressPercent;
 
     [ObservableProperty]
@@ -63,9 +66,6 @@ public partial class DownloaderProgressViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isThreadVisualizationLayoutExpanded;
-
-    [ObservableProperty]
-    private string _threadProgressTitle = string.Empty;
 
     [ObservableProperty]
     private string _threadProgressUnsupportedText = string.Empty;
@@ -131,6 +131,8 @@ public partial class DownloaderProgressViewModel : ObservableObject
             UpdateProgressVisualization(obj);
 
             Enum.TryParse(obj.Status, ignoreCase: true, out DownloadStatus status);
+            CurrentDownloadStatus = status;
+
             switch (status)
             {
                 case DownloadStatus.Queued:
@@ -240,7 +242,6 @@ public partial class DownloaderProgressViewModel : ObservableObject
 
         IsThreadVisualizationLayoutExpanded = true;
         IsThreadProgressUnsupportedVisible = false;
-        ThreadProgressTitle = GetThreadProgressTitle(stage);
 
         if (!_currentProgressVisualizationStage.Equals(
             stage,
@@ -390,21 +391,6 @@ public partial class DownloaderProgressViewModel : ObservableObject
         }
 
         return $"{bytes / (1024.0 * 1024 * 1024):F2} GB";
-    }
-
-    private string GetThreadProgressTitle(string stage)
-    {
-        string stageText = stage?.ToLowerInvariant() switch
-        {
-            "video" => LanguageBase.GetLangValue("download_thread_stage_video"),
-            "audio" => LanguageBase.GetLangValue("download_thread_stage_audio"),
-            "hlsfragments" => LanguageBase.GetLangValue("download_thread_stage_hls"),
-            _ => LanguageBase.GetLangValue("download_thread_stage_file")
-        };
-
-        return LanguageBase.GetLangValue(
-            "download_thread_visualization_title",
-            stageText);
     }
 
     private static string GetUnsupportedVisualizationText(string? stage)

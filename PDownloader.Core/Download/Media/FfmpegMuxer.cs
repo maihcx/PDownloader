@@ -21,6 +21,7 @@ internal sealed class FfmpegMuxer
         IReadOnlyList<DownloadedStreamFile> files,
         string outputFolder,
         string fileStem,
+        Action<double>? reportProgress,
         CancellationToken cancellationToken)
     {
         string ffmpegPath = FfmpegExecutableLocator.Instance.Find()
@@ -47,9 +48,25 @@ internal sealed class FfmpegMuxer
             audio?.Path,
             finalPath);
 
+        long expectedOutputBytes = GetFileLength(video.Path)
+            + (audio != null ? GetFileLength(audio.Path) : 0);
+        var mergeProgress = new MergeProgressTracker(
+            expectedOutputBytes,
+            reportProgress,
+            maxProgressBeforeComplete: 99);
+        mergeProgress.Start();
+
         using var process = new Process { StartInfo = startInfo };
+        using var monitorCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
         process.Start();
         Task<string> standardErrorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        Task progressMonitorTask = MonitorOutputProgressAsync(
+            process,
+            finalPath,
+            mergeProgress,
+            monitorCancellation.Token);
 
         try
         {
@@ -59,6 +76,18 @@ internal sealed class FfmpegMuxer
         {
             try { process.Kill(entireProcessTree: true); } catch { }
             throw;
+        }
+        finally
+        {
+            monitorCancellation.Cancel();
+            try
+            {
+                await progressMonitorTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when the process finishes or the download is cancelled.
+            }
         }
 
         string standardError = await standardErrorTask;
@@ -71,12 +100,46 @@ internal sealed class FfmpegMuxer
                 $"ffmpeg ghép thất bại (exit {process.ExitCode}): {tail}");
         }
 
+        mergeProgress.Complete();
+
         foreach (DownloadedStreamFile file in files)
         {
             try { File.Delete(file.Path); } catch { }
         }
 
         return finalPath;
+    }
+
+    private static long GetFileLength(string path) =>
+        File.Exists(path) ? new FileInfo(path).Length : 0;
+
+    private static async Task MonitorOutputProgressAsync(
+        Process process,
+        string outputPath,
+        MergeProgressTracker progress,
+        CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            if (File.Exists(outputPath))
+            {
+                try
+                {
+                    progress.SetProcessedBytes(new FileInfo(outputPath).Length);
+                }
+                catch (IOException)
+                {
+                    // The file may be between filesystem updates. Try again shortly.
+                }
+            }
+
+            if (process.HasExited)
+            {
+                return;
+            }
+
+            await Task.Delay(100, cancellationToken);
+        }
     }
 
     private static ProcessStartInfo BuildStartInfo(

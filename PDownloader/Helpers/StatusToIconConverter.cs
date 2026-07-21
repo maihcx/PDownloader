@@ -22,14 +22,14 @@ internal class StatusToIconConverter : IValueConverter
         //Debug.WriteLine(value);
         return value switch
         {
-            "Queued" => "⏳",
-            "Connecting" => "🔗",
-            "Downloading" => "⬇",
-            "Paused" => "⏸",
-            "Merging" => "🔧",
-            "Completed" => "✅",
-            "Error" => "❌",
-            _ => "?"
+            "Queued" => "HourglassHalf24",
+            "Connecting" => "CloudLink24",
+            "Downloading" => "ArrowDownload24",
+            "Paused" => "Pause24",
+            "Merging" => "Merge24",
+            "Completed" => "Checkmark24",
+            "Error" => "CloudError24",
+            _ => "QuestionCircle24"
         };
         //return "⏳";
     }
