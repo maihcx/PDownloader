@@ -238,18 +238,18 @@ public class DownloadManager : IDisposable
     {
         var item = snapshot.ToDownloadItem();
 
+        if (item.Status is DownloadStatus.Queued
+            or DownloadStatus.Connecting
+            or DownloadStatus.Downloading
+            or DownloadStatus.Merging)
+        {
+            item.Status = DownloadStatus.Paused;
+            item.SpeedBps = 0;
+        }
+
         lock (_lock) { _downloads.Add(item); }
 
         OnItemChanged?.Invoke(item);
-
-        bool isFinal = item.Status is DownloadStatus.Completed or DownloadStatus.Cancelled or DownloadStatus.Paused;
-        if (!isFinal)
-        {
-            item.Status = DownloadStatus.Queued;
-            Task task = StartAsync(item);
-            _runningTaskByItem[item.Id] = task;
-        }
-
         return item;
     }
 
