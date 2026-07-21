@@ -1,3 +1,15 @@
+## v0.4.1
+
+## 🚀 Changelog
+## 🧹 Maintenance
+
+- Add merge progress tracking for download operations (#58) — @maihcx
+- Replace StatusToColorConverter with dynamic resource styles (#57) — @maihcx
+- Replace emoji icons with WinUI symbols (#56) — @maihcx
+
+
+---
+
 ## v0.4.0
 
 ## 🚀 Changelog
