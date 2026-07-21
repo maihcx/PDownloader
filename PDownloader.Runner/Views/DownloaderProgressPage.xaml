@@ -3,6 +3,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:PDownloader.Runner.Views"
+      xmlns:controls="clr-namespace:PDownloader.Runner.Controls"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:utils="clr-namespace:PDownloader.Runner.Utils"
@@ -62,7 +63,8 @@
                 <TextBlock Text="{Binding ViewModel.StatusText}"
                            FontSize="11" />
 
-                <ProgressBar Margin="0 4 0 0"
+                <ProgressBar Height="10"
+                             Margin="0 4 0 0"
                              Value="{Binding ViewModel.ProgressPercent, Mode=OneWay}"
                              Maximum="100" />
 
@@ -135,6 +137,8 @@
                         <ScrollViewer Grid.Row="1"
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled"
+                                      HorizontalContentAlignment="Stretch"
+                                      VerticalContentAlignment="Top"
                                       ui:SmoothScrollBehavior.IsEnabled="True">
                             <ScrollViewer.Resources>
                                 <Style TargetType="{x:Type ScrollBar}"
@@ -173,7 +177,8 @@
                                 </Style>
                             </ScrollViewer.Resources>
 
-                            <ItemsControl ItemsSource="{Binding ViewModel.ThreadProgress}">
+                            <ItemsControl ItemsSource="{Binding ViewModel.ThreadProgress}"
+                                           VerticalAlignment="Top">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <UniformGrid Margin="0,0,-4,-4">
@@ -183,11 +188,15 @@
                                                     <Binding Path="ActualWidth"
                                                              RelativeSource="{RelativeSource AncestorType=ItemsControl}" />
 
-                                                    <!-- MinCardWidth -->
+                                                    <!-- Safety minimum only. Item count decides the preferred column count. -->
                                                     <Binding Source="150" />
 
                                                     <!-- MaxColumns -->
                                                     <Binding Source="4" />
+
+                                                    <!-- ItemCount: used to avoid an orphan card on the last row. -->
+                                                    <Binding Path="Items.Count"
+                                                             RelativeSource="{RelativeSource AncestorType=ItemsControl}" />
                                                 </MultiBinding>
                                             </UniformGrid.Columns>
                                         </UniformGrid>
@@ -196,58 +205,14 @@
                                 
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <ui:CardAction Margin="0,0,4,4"
-                                                       Padding="8 6"
-                                                       IsChevronVisible="False">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-
-                                                <Grid Grid.Row="0">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-
-                                                    <TextBlock Grid.Column="0"
-                                                               Text="{Binding Title}"
-                                                               FontSize="11"
-                                                               FontWeight="SemiBold" />
-
-                                                    <TextBlock Grid.Column="2"
-                                                               Text="{Binding SpeedText}"
-                                                               FontSize="10"
-                                                               Opacity="0.7" />
-                                                </Grid>
-
-                                                <ProgressBar Grid.Row="1"
-                                                             Height="4"
-                                                             Margin="0,4,0,0"
-                                                             Maximum="100"
-                                                             Value="{Binding Progress, Mode=OneWay}"
-                                                             IsIndeterminate="{Binding IsIndeterminate, Mode=OneWay}" />
-
-                                                <Grid Grid.Row="2"
-                                                      Margin="0,2,0,0">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Grid.Column="0"
-                                                               Text="{Binding BytesText}"
-                                                               FontSize="9"
-                                                               Opacity="0.55" />
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{Binding ProgressText}"
-                                                               FontSize="9"
-                                                               Opacity="0.55" />
-                                                </Grid>
-                                            </Grid>
-                                        </ui:CardAction>
+                                        <controls:ThreadProgressCell Margin="0,0,4,4"
+                                                                     Title="{Binding Title}"
+                                                                     SpeedText="{Binding SpeedText}"
+                                                                     BytesText="{Binding BytesText}"
+                                                                     ProgressText="{Binding ProgressText}"
+                                                                     Progress="{Binding Progress, Mode=OneWay}"
+                                                                     State="{Binding State}"
+                                                                     IsIndeterminate="{Binding IsIndeterminate, Mode=OneWay}" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

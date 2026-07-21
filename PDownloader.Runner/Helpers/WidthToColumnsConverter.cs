@@ -4,7 +4,7 @@
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY without even the implied warranty of
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
@@ -23,22 +23,69 @@ public class WidthToColumnsConverter : IMultiValueConverter
         object parameter,
         CultureInfo culture)
     {
-        if (values.Length < 3)
+        if (values.Length < 4
+            || !int.TryParse(values[3]?.ToString(), out int itemCount)
+            || itemCount <= 0)
         {
             return 1;
         }
 
-        if (values[0] is not double width || width <= 0)
+        if (!int.TryParse(values[2]?.ToString(), out int maxColumns)
+            || maxColumns <= 0)
         {
-            return 1;
+            maxColumns = 4;
         }
 
-        double minCardWidth = double.Parse(values[1].ToString()!, CultureInfo.InvariantCulture);
-        int maxColumns = int.Parse(values[2].ToString()!);
+        int desiredColumns = itemCount switch
+        {
+            1 => 1,
+            2 => 2,
+            3 => 3,
+            4 => 2,
+            5 or 6 => 3,
+            7 or 8 => 4,
+            _ => Math.Min(maxColumns, itemCount),
+        };
 
-        var columns = (int)Math.Floor(width / minCardWidth);
+        desiredColumns = Math.Min(desiredColumns, maxColumns);
 
-        return Math.Clamp(columns, 1, maxColumns);
+        // For larger collections, avoid a single orphan card on the last row
+        // when another column count can produce a more balanced layout.
+        if (itemCount > 8
+            && desiredColumns > 2
+            && itemCount % desiredColumns == 1)
+        {
+            for (int candidate = desiredColumns - 1; candidate >= 2; candidate--)
+            {
+                if (itemCount % candidate != 1)
+                {
+                    desiredColumns = candidate;
+                    break;
+                }
+            }
+        }
+
+        // Item count decides the preferred layout first. Width is only a
+        // safety limit so the converter does not unexpectedly turn 5 items
+        // into a 2-column layout while there is enough room for 3 columns.
+        if (values[0] is double width
+            && width > 0
+            && double.TryParse(
+                values[1]?.ToString(),
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double minCardWidth)
+            && minCardWidth > 0)
+        {
+            int availableColumns = Math.Clamp(
+                (int)Math.Floor(width / minCardWidth),
+                1,
+                maxColumns);
+
+            desiredColumns = Math.Min(desiredColumns, availableColumns);
+        }
+
+        return Math.Max(1, desiredColumns);
     }
 
     public object[] ConvertBack(
