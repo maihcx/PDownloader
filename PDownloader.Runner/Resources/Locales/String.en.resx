@@ -246,4 +246,22 @@
   <data name="download_thread_state_failed" xml:space="preserve">
     <value>Failed</value>
   </data>
+  <data name="download_compact_status_completed_title" xml:space="preserve">
+    <value>File ready</value>
+  </data>
+  <data name="download_compact_status_completed_description" xml:space="preserve">
+    <value>You can open the file or its containing folder using the buttons below.</value>
+  </data>
+  <data name="download_compact_status_unsupported_title" xml:space="preserve">
+    <value>Thread visualization unavailable</value>
+  </data>
+  <data name="download_compact_status_single_thread_title" xml:space="preserve">
+    <value>Single-thread download</value>
+  </data>
+  <data name="download_compact_status_single_thread_description" xml:space="preserve">
+    <value>This stage currently uses only one download worker, so there is no multi-thread progress to visualize.</value>
+  </data>
+  <data name="download_compact_status_no_threads_description" xml:space="preserve">
+    <value>Per-thread visualization will appear automatically when more than one download worker is active.</value>
+  </data>
 </root>

@@ -246,4 +246,22 @@
   <data name="download_thread_state_failed" xml:space="preserve">
     <value>Thất bại</value>
   </data>
+  <data name="download_compact_status_completed_title" xml:space="preserve">
+    <value>Tệp đã sẵn sàng</value>
+  </data>
+  <data name="download_compact_status_completed_description" xml:space="preserve">
+    <value>Bạn có thể mở tệp hoặc thư mục chứa tệp bằng các nút bên dưới.</value>
+  </data>
+  <data name="download_compact_status_unsupported_title" xml:space="preserve">
+    <value>Không hỗ trợ hiển thị tiến trình luồng</value>
+  </data>
+  <data name="download_compact_status_single_thread_title" xml:space="preserve">
+    <value>Đang tải bằng một luồng</value>
+  </data>
+  <data name="download_compact_status_single_thread_description" xml:space="preserve">
+    <value>Giai đoạn hiện tại chỉ sử dụng một luồng tải nên không có tiến trình đa luồng để hiển thị trực quan.</value>
+  </data>
+  <data name="download_compact_status_no_threads_description" xml:space="preserve">
+    <value>Tiến trình theo từng luồng sẽ tự động xuất hiện khi có nhiều hơn một luồng tải đang hoạt động.</value>
+  </data>
 </root>

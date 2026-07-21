@@ -246,4 +246,22 @@
   <data name="download_thread_state_failed" xml:space="preserve">
     <value>download_thread_state_failed</value>
   </data>
+  <data name="download_compact_status_completed_title" xml:space="preserve">
+    <value>download_compact_status_completed_title</value>
+  </data>
+  <data name="download_compact_status_completed_description" xml:space="preserve">
+    <value>download_compact_status_completed_description</value>
+  </data>
+  <data name="download_compact_status_unsupported_title" xml:space="preserve">
+    <value>download_compact_status_unsupported_title</value>
+  </data>
+  <data name="download_compact_status_single_thread_title" xml:space="preserve">
+    <value>download_compact_status_single_thread_title</value>
+  </data>
+  <data name="download_compact_status_single_thread_description" xml:space="preserve">
+    <value>download_compact_status_single_thread_description</value>
+  </data>
+  <data name="download_compact_status_no_threads_description" xml:space="preserve">
+    <value>download_compact_status_no_threads_description</value>
+  </data>
 </root>

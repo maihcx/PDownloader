@@ -71,6 +71,15 @@ public partial class DownloaderProgressViewModel : ObservableObject
     private string _threadProgressUnsupportedText = string.Empty;
 
     [ObservableProperty]
+    private bool _isCompactStatusVisible = true;
+
+    [ObservableProperty]
+    private string _compactStatusTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _compactStatusDescription = string.Empty;
+
+    [ObservableProperty]
     private ObservableCollection<object> _threadProgress = new ObservableCollection<object>();
 
     private string CompletedFilePath = string.Empty;
@@ -101,6 +110,10 @@ public partial class DownloaderProgressViewModel : ObservableObject
         DownloaderStatus.State = RunnerState.Downloading;
         ThreadProgressUnsupportedText = LanguageBase.GetLangValue(
             "download_thread_visualization_unsupported_ytdlp");
+        CompactStatusTitle = LanguageBase.GetLangValue(
+            "download_status_connecting_title");
+        CompactStatusDescription = LanguageBase.GetLangValue(
+            "download_compact_status_no_threads_description");
         _downloaderService.OnProgress += _downloaderService_OnProgress;
     }
 
@@ -175,6 +188,8 @@ public partial class DownloaderProgressViewModel : ObservableObject
                     IsActionButtonEnabled = false;
                     break;
             }
+
+            UpdateCompactStatusPanel(status, obj);
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
@@ -206,6 +221,23 @@ public partial class DownloaderProgressViewModel : ObservableObject
             return;
         }
 
+        List<DownloadThreadProgressDto> visibleThreads = threadProgress
+            .OfType<DownloadThreadProgressDto>()
+            .OrderBy(progress => progress.Index)
+            .ToList();
+
+        // A single stream does not provide meaningful per-thread visualization.
+        // Keep the Runner compact and hide the thread panel until at least two
+        // actual download workers are reported by Core.
+        if (visibleThreads.Count < 2)
+        {
+            IsThreadVisualizationLayoutExpanded = false;
+            IsThreadProgressVisible = false;
+            IsThreadProgressUnsupportedVisible = false;
+            ClearThreadProgress();
+            return;
+        }
+
         IsThreadVisualizationLayoutExpanded = true;
         IsThreadProgressUnsupportedVisible = false;
         ThreadProgressTitle = GetThreadProgressTitle(stage);
@@ -219,14 +251,62 @@ public partial class DownloaderProgressViewModel : ObservableObject
         }
 
         ThreadProgress.Clear();
-        foreach (DownloadThreadProgressDto progress in threadProgress
-                     .OfType<DownloadThreadProgressDto>()
-                     .OrderBy(progress => progress.Index))
+        foreach (DownloadThreadProgressDto progress in visibleThreads)
         {
             ThreadProgress.Add(CreateThreadProgressItem(progress));
         }
 
-        IsThreadProgressVisible = ThreadProgress.Count > 0;
+        IsThreadProgressVisible = true;
+    }
+
+    private void UpdateCompactStatusPanel(DownloadStatus status, DownloadItemDto item)
+    {
+        if (IsThreadProgressVisible)
+        {
+            IsCompactStatusVisible = false;
+            return;
+        }
+
+        IsCompactStatusVisible = true;
+
+        string mode = string.IsNullOrWhiteSpace(item.ProgressVisualizationMode)
+            ? "None"
+            : item.ProgressVisualizationMode;
+        string stage = item.ProgressVisualizationStage ?? string.Empty;
+        int threadCount = item.ThreadProgress?.Count ?? 0;
+
+        if (status == DownloadStatus.Completed)
+        {
+            CompactStatusTitle = LanguageBase.GetLangValue(
+                "download_compact_status_completed_title");
+            CompactStatusDescription = LanguageBase.GetLangValue(
+                "download_compact_status_completed_description");
+            return;
+        }
+
+        if (mode.Equals("Unsupported", StringComparison.OrdinalIgnoreCase))
+        {
+            CompactStatusTitle = LanguageBase.GetLangValue(
+                "download_compact_status_unsupported_title");
+            CompactStatusDescription = GetUnsupportedVisualizationText(stage);
+            return;
+        }
+
+        if (mode.Equals("Threads", StringComparison.OrdinalIgnoreCase)
+            && threadCount == 1)
+        {
+            CompactStatusTitle = LanguageBase.GetLangValue(
+                "download_compact_status_single_thread_title");
+            CompactStatusDescription = LanguageBase.GetLangValue(
+                "download_compact_status_single_thread_description");
+            return;
+        }
+
+        CompactStatusTitle = string.IsNullOrWhiteSpace(StatusText)
+            ? LanguageBase.GetLangValue("download_status_downloading_title")
+            : StatusText;
+        CompactStatusDescription = LanguageBase.GetLangValue(
+            "download_compact_status_no_threads_description");
     }
 
     private static object CreateThreadProgressItem(DownloadThreadProgressDto source)

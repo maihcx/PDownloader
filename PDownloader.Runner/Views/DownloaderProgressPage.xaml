@@ -255,31 +255,29 @@
                     </Grid>
                 </Border>
 
-                <!-- yt-dlp owns its worker internals, so no fake per-thread bars. -->
-                <Border Padding="10"
-                        BorderThickness="1"
-                        CornerRadius="{DynamicResource ControlCornerRadius}"
-                        VerticalAlignment="Top"
-                        BorderBrush="{DynamicResource ControlElevationBorderBrush}"
-                        Visibility="{Binding ViewModel.IsThreadProgressUnsupportedVisible,
-                                     Converter={StaticResource BoolToVisibilityConverter}}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0"
-                                   Text="ⓘ"
-                                   FontSize="16"
-                                   VerticalAlignment="Top"
-                                   Margin="0,0,8,0" />
-                        <TextBlock Grid.Column="1"
-                                   Text="{Binding ViewModel.ThreadProgressUnsupportedText}"
-                                   FontSize="11"
-                                   TextWrapping="Wrap"
-                                   Opacity="0.75" />
-                    </Grid>
-                </Border>
+                <!-- Lightweight compact status: no card and no duplicated status icon.
+                     This also fits the smaller Compact window height without clipping. -->
+                <StackPanel MaxWidth="430"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding ViewModel.IsCompactStatusVisible,
+                                         Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock Text="{Binding ViewModel.CompactStatusTitle}"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               HorizontalAlignment="Center" />
+
+                    <TextBlock Text="{Binding ViewModel.CompactStatusDescription}"
+                               Margin="0,5,0,0"
+                               MaxWidth="390"
+                               FontSize="11"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               HorizontalAlignment="Center"
+                               Opacity="0.6" />
+                </StackPanel>
             </Grid>
         </Grid>
         <StackPanel Grid.Row="1" Margin="0 8 0 0">
