@@ -99,6 +99,7 @@ internal sealed class YoutubeDownloadHandler
 
             cancellationToken.ThrowIfCancellationRequested();
             _item.Status = DownloadStatus.Merging;
+            _reportProgress(_item.DownloadedBytes, 0);
 
             string finalPath = rawFiles.Count == 1
                 ? MoveSingleStream(rawFiles[0], outputFolder, fileStem)
