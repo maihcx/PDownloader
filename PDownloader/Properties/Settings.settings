@@ -33,7 +33,7 @@
       <Value Profile="(Default)">en</Value>
     </Setting>
     <Setting Name="ObjectCornerRadius" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">7</Value>
+      <Value Profile="(Default)">6</Value>
     </Setting>
     <Setting Name="IsViewAtBoot" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>

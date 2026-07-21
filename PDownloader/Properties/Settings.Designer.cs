@@ -145,7 +145,7 @@ namespace PDownloader.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("7")]
+        [global::System.Configuration.DefaultSettingValueAttribute("6")]
         public int ObjectCornerRadius {
             get {
                 return ((int)(this["ObjectCornerRadius"]));
