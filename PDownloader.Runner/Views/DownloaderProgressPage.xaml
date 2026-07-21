@@ -4,6 +4,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:PDownloader.Runner.Views"
       xmlns:controls="clr-namespace:PDownloader.Runner.Controls"
+      xmlns:models="clr-namespace:PDownloader.Runner.Models"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:utils="clr-namespace:PDownloader.Runner.Utils"
@@ -17,6 +18,38 @@
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Title="DownloaderPage"
       ScrollViewer.CanContentScroll="False">
+
+    <Page.Resources>
+        <Style x:Key="DownloadProgressBar"
+               TargetType="ProgressBar"
+               BasedOn="{StaticResource {x:Type ProgressBar}}">
+            <Setter Property="Foreground"
+                    Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ViewModel.CurrentDownloadStatus}"
+                             Value="{x:Static models:DownloadStatus.Completed}">
+                    <Setter Property="Foreground"
+                            Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding ViewModel.CurrentDownloadStatus}"
+                             Value="{x:Static models:DownloadStatus.Error}">
+                    <Setter Property="Foreground"
+                            Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding ViewModel.CurrentDownloadStatus}"
+                             Value="{x:Static models:DownloadStatus.Paused}">
+                    <Setter Property="Foreground"
+                            Value="{DynamicResource SystemFillColorCautionBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding ViewModel.CurrentDownloadStatus}"
+                             Value="{x:Static models:DownloadStatus.Merging}">
+                    <Setter Property="Foreground"
+                            Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Page.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -63,7 +96,8 @@
                 <TextBlock Text="{Binding ViewModel.StatusText}"
                            FontSize="11" />
 
-                <ProgressBar Height="10"
+                <ProgressBar Style="{StaticResource DownloadProgressBar}"
+                             Height="10"
                              Margin="0 4 0 0"
                              Value="{Binding ViewModel.ProgressPercent, Mode=OneWay}"
                              Maximum="100" />
@@ -212,6 +246,8 @@
                                                                      ProgressText="{Binding ProgressText}"
                                                                      Progress="{Binding Progress, Mode=OneWay}"
                                                                      State="{Binding State}"
+                                                                     OverallStatus="{Binding DataContext.ViewModel.CurrentDownloadStatus,
+                                                                                     RelativeSource={RelativeSource AncestorType=Page}}"
                                                                      IsIndeterminate="{Binding IsIndeterminate, Mode=OneWay}" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

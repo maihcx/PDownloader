@@ -23,7 +23,6 @@
             <helpers:BoolToStatusText x:Key="BoolToStatusText" />
             <helpers:StringToColorConverter x:Key="StringToColorConverter" />
             <helpers:BooleanToString x:Key="BooleanToString" />
-            <helpers:StatusToColorConverter x:Key="StatusToColorConverter" />
             <helpers:StatusToIconConverter x:Key="StatusToIconConverter" />
             <helpers:StatusToTextConverter x:Key="StatusToTextConverter" />
             <helpers:BoolToVisConverter x:Key="BoolToVisConverter" />

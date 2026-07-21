@@ -29,6 +29,9 @@ public partial class DownloaderProgressViewModel : ObservableObject
     private DownloaderServiceStatus _downloaderStatus;
 
     [ObservableProperty]
+    private DownloadStatus _currentDownloadStatus = DownloadStatus.Connecting;
+
+    [ObservableProperty]
     private double _progressPercent;
 
     [ObservableProperty]
@@ -131,6 +134,8 @@ public partial class DownloaderProgressViewModel : ObservableObject
             UpdateProgressVisualization(obj);
 
             Enum.TryParse(obj.Status, ignoreCase: true, out DownloadStatus status);
+            CurrentDownloadStatus = status;
+
             switch (status)
             {
                 case DownloadStatus.Queued:
