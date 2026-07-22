@@ -89,8 +89,6 @@ internal sealed class DownloadPathService
             return "download";
         }
 
-        // Always collapse user-provided values to a leaf filename. This blocks
-        // both Windows and URL-style traversal regardless of the current OS.
         int lastSeparator = Math.Max(name.LastIndexOf('\\'), name.LastIndexOf('/'));
         if (lastSeparator >= 0 && lastSeparator < name.Length - 1)
         {
@@ -106,8 +104,6 @@ internal sealed class DownloadPathService
             name = name.Replace(invalidCharacter, '_');
         }
 
-        // Windows silently normalizes trailing spaces/dots and treats dot-only
-        // path segments specially, so remove them before combining paths.
         name = name.Trim('"', '\'', ' ').TrimEnd(' ', '.');
         if (string.IsNullOrWhiteSpace(name) || name is "." or "..")
         {
@@ -177,7 +173,7 @@ internal sealed class DownloadPathService
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[Path] Không thể xóa thư mục temp '{tempDirectory}': {ex.Message}");
+                Debug.WriteLine($"[Path] can not delete the temp folder '{tempDirectory}': {ex.Message}");
                 return;
             }
         }
@@ -186,7 +182,15 @@ internal sealed class DownloadPathService
     public static void DeleteTempFiles(string id, string? savePath, string? fileName)
     {
         var pathService = new DownloadPathService();
-        CleanupTemp(pathService.GetTempDirectory(id));
+        string tempDirectory = pathService.GetTempDirectory(id);
+        MergeRecoveryManifest? pendingMerge = MergeRecoveryStore.TryLoad(tempDirectory);
+
+        if (pendingMerge != null)
+        {
+            TryDeleteFile(MergeRecoveryStore.GetPartialOutputPath(pendingMerge));
+        }
+
+        CleanupTemp(tempDirectory);
 
         try
         {
@@ -198,9 +202,21 @@ internal sealed class DownloadPathService
                 string.IsNullOrWhiteSpace(fileName) ? "download" : fileName);
             string mergingPath = Path.Combine(Path.GetFullPath(folder), name) + ".merging";
 
-            if (File.Exists(mergingPath))
+            TryDeleteFile(mergingPath);
+        }
+        catch
+        {
+            // Best effort cleanup.
+        }
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
             {
-                File.Delete(mergingPath);
+                File.Delete(path);
             }
         }
         catch

@@ -60,7 +60,7 @@ public class DownloadItem : INotifyPropertyChanged
 
     public string? FormatId { get; set; }
 
-    public double Progress => Status == DownloadStatus.Merging
+    public double Progress => IsMergeProgressActive
         ? MergeProgress
         : TotalBytes > 0
             ? (double)DownloadedBytes / TotalBytes * 100
@@ -117,6 +117,23 @@ public class DownloadItem : INotifyPropertyChanged
         }
     }
 
+    private bool _isMergeProgressActive;
+    public bool IsMergeProgressActive
+    {
+        get => _isMergeProgressActive;
+        set
+        {
+            if (_isMergeProgressActive == value)
+            {
+                return;
+            }
+
+            _isMergeProgressActive = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(Progress));
+        }
+    }
+
     private double _speedBps = 0;
     public double SpeedBps
     {
@@ -143,6 +160,32 @@ public class DownloadItem : INotifyPropertyChanged
         get => _errorMessage;
         set { _errorMessage = value; OnPropertyChanged(); }
     }
+
+    private string _md5Hash = string.Empty;
+    public string Md5Hash
+    {
+        get => _md5Hash;
+        set { _md5Hash = value; OnPropertyChanged(); }
+    }
+
+    private string _sha1Hash = string.Empty;
+    public string Sha1Hash
+    {
+        get => _sha1Hash;
+        set { _sha1Hash = value; OnPropertyChanged(); }
+    }
+
+    private string _sha256Hash = string.Empty;
+    public string Sha256Hash
+    {
+        get => _sha256Hash;
+        set { _sha256Hash = value; OnPropertyChanged(); }
+    }
+
+    public bool HasFileHashes =>
+        !string.IsNullOrWhiteSpace(Md5Hash)
+        && !string.IsNullOrWhiteSpace(Sha1Hash)
+        && !string.IsNullOrWhiteSpace(Sha256Hash);
 
     private int _threads = 8;
     public int Threads

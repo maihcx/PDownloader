@@ -45,7 +45,7 @@ internal sealed class SegmentStateStore
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[Segments] Không thể lưu trạng thái: {ex.Message}");
+            Debug.WriteLine($"[Segments] Unable to save state: {ex.Message}");
         }
     }
 
@@ -71,7 +71,7 @@ internal sealed class SegmentStateStore
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[Segments] Không thể reset trạng thái: {ex.Message}");
+            Debug.WriteLine($"[Segments] Unable to reset status: {ex.Message}");
         }
     }
 
@@ -111,7 +111,7 @@ internal sealed class SegmentStateStore
                 {
                     Debug.WriteLine(
                         $"[Segments] Segment {segment.Index}: state={segment.BytesWritten}B, " +
-                        $"thực tế={actualLength}B. Đồng bộ theo file.");
+                        $"actual={actualLength}B. Synchronize by file.");
                     segment.BytesWritten = actualLength;
                 }
 
@@ -143,7 +143,7 @@ internal sealed class SegmentStateStore
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[Segments] Không thể khôi phục trạng thái: {ex.Message}");
+            Debug.WriteLine($"[Segments] Unable to restore state: {ex.Message}");
             return null;
         }
     }

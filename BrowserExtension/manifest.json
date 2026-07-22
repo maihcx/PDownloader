@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extName__",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "description": "__MSG_extDescription__",
   "default_locale": "en",
   "permissions": [
@@ -12,7 +12,8 @@
     "contextMenus",
     "webRequest",
     "notifications",
-    "scripting"
+    "scripting",
+    "tabs"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -39,6 +40,7 @@
       "js": [
         "common/i18n.js",
         "content/siteUrlResolver.js",
+        "content/mediaObserver.js",
         "content/content.js"
       ],
       "all_frames": true,

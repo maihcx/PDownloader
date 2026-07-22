@@ -72,13 +72,22 @@ internal sealed class HlsDownloadHandler
 
         string? referer = DownloadPathService.GetHeader(_item.CustomHeaders, "Referer");
         string? cookieHeader = DownloadPathService.GetHeader(_item.CustomHeaders, "Cookie");
+        string? cookieJarJson = DownloadPathService.GetHeader(
+            _item.CustomHeaders,
+            "X-PDownloader-Cookie-Jar");
+        string? userAgent = DownloadPathService.GetHeader(_item.CustomHeaders, "User-Agent");
 
         _item.Status = DownloadStatus.Connecting;
 
         try
         {
             HlsFragmentsResult? fragmentResult =
-                await TryResolveFragmentsAsync(referer, cookieHeader, cancellationToken);
+                await TryResolveFragmentsAsync(
+                    referer,
+                    cookieHeader,
+                    cookieJarJson,
+                    userAgent,
+                    cancellationToken);
 
             _item.Status = DownloadStatus.Downloading;
             _item.StartTime = DateTime.Now;
@@ -97,6 +106,8 @@ internal sealed class HlsDownloadHandler
                     tempDirectory,
                     referer,
                     cookieHeader,
+                    cookieJarJson,
+                    userAgent,
                     cancellationToken);
 
             Complete(finalPath);
@@ -109,7 +120,10 @@ internal sealed class HlsDownloadHandler
         }
         catch (Exception ex)
         {
-            SetError("Không tải được HLS: " + ex.Message);
+            bool mergeCanRetry = MergeRecoveryStore.HasPending(tempDirectory);
+            SetError(mergeCanRetry
+                ? ex.Message
+                : "Không tải được HLS: " + ex.Message);
             return true;
         }
     }
@@ -117,6 +131,8 @@ internal sealed class HlsDownloadHandler
     private async Task<HlsFragmentsResult?> TryResolveFragmentsAsync(
         string? referer,
         string? cookieHeader,
+        string? cookieJarJson,
+        string? userAgent,
         CancellationToken cancellationToken)
     {
         try
@@ -125,6 +141,9 @@ internal sealed class HlsDownloadHandler
                 _item.Url,
                 referer,
                 cookieHeader,
+                cookieJarJson,
+                userAgent,
+                _item.CustomHeaders,
                 cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -158,6 +177,7 @@ internal sealed class HlsDownloadHandler
                 _reportMergeProgress(0);
             },
             _reportMergeProgress,
+            ApplyFileHashes,
             cancellationToken);
     }
 
@@ -167,6 +187,8 @@ internal sealed class HlsDownloadHandler
         string tempDirectory,
         string? referer,
         string? cookieHeader,
+        string? cookieJarJson,
+        string? userAgent,
         CancellationToken cancellationToken)
     {
         _item.SetProgressVisualizationUnsupported("YtDlp");
@@ -189,6 +211,9 @@ internal sealed class HlsDownloadHandler
             outputPathWithoutExtension,
             referer,
             cookieHeader,
+            cookieJarJson,
+            userAgent,
+            _item.CustomHeaders,
             _item.Threads,
             (downloadedBytes, totalBytes, ytDlpSpeedBps) =>
             {
@@ -221,6 +246,13 @@ internal sealed class HlsDownloadHandler
                 }
             },
             cancellationToken);
+    }
+
+    private void ApplyFileHashes(FileHashResult hashes)
+    {
+        _item.Md5Hash = hashes.Md5;
+        _item.Sha1Hash = hashes.Sha1;
+        _item.Sha256Hash = hashes.Sha256;
     }
 
     private void Complete(string finalPath)

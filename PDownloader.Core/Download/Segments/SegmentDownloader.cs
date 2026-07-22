@@ -87,8 +87,8 @@ internal sealed class SegmentDownloader
 
                 int delayMilliseconds = (int)Math.Pow(2, attempt) * 500;
                 Debug.WriteLine(
-                    $"[Segments] Segment {segment.Index}, lần thử {attempt} thất bại: " +
-                    $"{ex.Message}. Thử lại sau {delayMilliseconds}ms.");
+                    $"[Segments] Segment {segment.Index}, attempt {attempt} failed: " +
+                    $"{ex.Message}. Try again after {delayMilliseconds}ms.");
                 await Task.Delay(delayMilliseconds, cancellationToken);
             }
             catch
@@ -113,7 +113,7 @@ internal sealed class SegmentDownloader
             if (segment.BytesWritten > expectedLength)
             {
                 throw new InvalidDataException(
-                    $"Segment {segment.Index} lớn hơn kích thước dự kiến: " +
+                    $"Segment {segment.Index} is larger than the expected size: " +
                     $"{segment.BytesWritten}/{expectedLength} byte.");
             }
 
@@ -153,8 +153,8 @@ internal sealed class SegmentDownloader
         if (DownloadContentInspector.IsHtmlContentType(contentType))
         {
             throw new InvalidOperationException(
-                "Server trả về trang HTML thay vì file. " +
-                "Có thể URL yêu cầu đăng nhập hoặc đã hết hạn.");
+                "The server returned an HTML page instead of the file. " +
+                "The requested URL might require a login or have expired.");
         }
 
         bool serverHonoredRange = response.StatusCode == HttpStatusCode.PartialContent;
@@ -188,8 +188,8 @@ internal sealed class SegmentDownloader
             && DownloadContentInspector.LooksLikeHtml(buffer, firstRead))
         {
             throw new InvalidOperationException(
-                "Nội dung tải về là trang HTML (trang lỗi hoặc yêu cầu đăng nhập), " +
-                "không phải file thật.");
+                "The downloaded content is an HTML page (an error page or a login prompt), " +
+                "not the actual file.");
         }
 
         if (firstRead > 0)
@@ -235,8 +235,8 @@ internal sealed class SegmentDownloader
             }
 
             throw new HttpRequestException(
-                $"Server trả 416 cho segment {segment.Index} " +
-                $"(range {resumeFrom}-{segment.RangeEnd}), đã có {segment.BytesWritten}B.");
+                $"The server returns a 416 for the segment. {segment.Index} " +
+                $"(range {resumeFrom}-{segment.RangeEnd}), {segment.BytesWritten}B written.");
         }
 
         if (!rangeWasRequested)
@@ -247,14 +247,14 @@ internal sealed class SegmentDownloader
         if (response.StatusCode == HttpStatusCode.Forbidden)
         {
             throw new RangeRejectedException(
-                $"Server trả 403 khi request có Range cho segment {segment.Index}.");
+                $"The server returns a 403 error when a request includes a Range header for a segment {segment.Index}.");
         }
 
         if (response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.PartialContent)
         {
             throw new RangeRejectedException(
-                $"Server không hỗ trợ Range ổn định cho segment {segment.Index} " +
-                $"(trả về {(int)response.StatusCode} thay vì 206).");
+                $"The server does not support a stable Range for the segment. {segment.Index} " +
+                $"(returns {(int)response.StatusCode} instead of 206).");
         }
 
         if (response.StatusCode == HttpStatusCode.PartialContent)
@@ -263,12 +263,12 @@ internal sealed class SegmentDownloader
             if (contentRange?.From != resumeFrom)
             {
                 string actualRange = contentRange == null
-                    ? "không có Content-Range"
+                    ? "Content-Range is missing"
                     : contentRange.ToString();
 
                 throw new RangeRejectedException(
-                    $"Server trả sai range cho segment {segment.Index}: " +
-                    $"yêu cầu bắt đầu từ {resumeFrom}, nhận {actualRange}.");
+                    $"The server returned an incorrect range for the segment {segment.Index}: " +
+                    $"Request starting from {resumeFrom}, receiving {actualRange}.");
             }
 
             if (segment.RangeEnd >= 0
@@ -276,8 +276,8 @@ internal sealed class SegmentDownloader
                 && contentRange.To.Value > segment.RangeEnd)
             {
                 throw new RangeRejectedException(
-                    $"Server trả vượt range của segment {segment.Index}: " +
-                    $"{contentRange} (tối đa {segment.RangeEnd}).");
+                    $"The server returned a value exceeding the segment range {segment.Index}: " +
+                    $"{contentRange} (maximum {segment.RangeEnd}).");
             }
         }
     }
@@ -315,12 +315,12 @@ internal sealed class SegmentDownloader
         }
 
         string reason = segment.BytesWritten < expectedLength
-            ? "bị thiếu dữ liệu"
-            : "có dữ liệu vượt quá range";
+            ? "missing data"
+            : "There is data exceeding the range.";
 
         throw new InvalidDataException(
             $"Segment {segment.Index} {reason}: " +
-            $"đã tải {segment.BytesWritten}/{expectedLength} byte.");
+            $"Downloaded {segment.BytesWritten}/{expectedLength} bytes.");
     }
 
     private static long GetExpectedLength(SegmentInfo segment) =>

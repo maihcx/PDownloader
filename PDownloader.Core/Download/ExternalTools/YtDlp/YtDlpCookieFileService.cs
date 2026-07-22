@@ -13,6 +13,8 @@
 //
 // Copyright (C) Song Mai Software.
 
+using System.Globalization;
+
 namespace PDownloader.Core.Download.ExternalTools.YtDlp;
 
 internal sealed class YtDlpCookieFileService
@@ -25,41 +27,23 @@ internal sealed class YtDlpCookieFileService
     {
     }
 
-    public string? Create(string? cookieHeader, string sourceUrl)
+    public string? Create(
+        string? cookieHeader,
+        string sourceUrl,
+        string? cookieJarJson = null)
     {
-        if (string.IsNullOrWhiteSpace(cookieHeader))
-        {
-            return null;
-        }
-
-        CookieScope scope = ResolveCookieScope(sourceUrl);
         var content = new StringBuilder();
         content.AppendLine("# Netscape HTTP Cookie File");
 
-        foreach (string pair in cookieHeader.Split(
-            ';',
-            StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        int cookieCount = AppendStructuredCookies(content, cookieJarJson);
+        if (cookieCount == 0)
         {
-            int separatorIndex = pair.IndexOf('=');
-            if (separatorIndex <= 0)
-            {
-                continue;
-            }
+            cookieCount = AppendCookieHeader(content, cookieHeader, sourceUrl);
+        }
 
-            string name = pair[..separatorIndex].Trim();
-            string value = pair[(separatorIndex + 1)..].Trim();
-            if (name.Length == 0)
-            {
-                continue;
-            }
-
-            content.Append(scope.Domain).Append('\t')
-                .Append(scope.IncludeSubdomains ? "TRUE" : "FALSE").Append('\t')
-                .Append('/').Append('\t')
-                .Append(scope.Secure ? "TRUE" : "FALSE").Append('\t')
-                .Append(CookieExpiry).Append('\t')
-                .Append(name).Append('\t')
-                .Append(value).Append('\n');
+        if (cookieCount == 0)
+        {
+            return null;
         }
 
         string path = Path.Combine(
@@ -91,6 +75,195 @@ internal sealed class YtDlpCookieFileService
         }
     }
 
+    private static int AppendStructuredCookies(
+        StringBuilder content,
+        string? cookieJarJson)
+    {
+        if (string.IsNullOrWhiteSpace(cookieJarJson))
+        {
+            return 0;
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(cookieJarJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (JsonElement element in document.RootElement.EnumerateArray())
+            {
+                if (element.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                string name = GetString(element, "name");
+                string value = GetString(element, "value");
+                string domain = GetString(element, "domain");
+                string path = GetString(element, "path");
+                bool secure = GetBoolean(element, "secure");
+                bool httpOnly = GetBoolean(element, "httpOnly");
+                bool hostOnly = GetBoolean(element, "hostOnly");
+                bool session = GetBoolean(element, "session");
+
+                if (string.IsNullOrWhiteSpace(name)
+                    || string.IsNullOrWhiteSpace(domain)
+                    || HasInvalidCookieField(name)
+                    || HasInvalidCookieField(value)
+                    || HasInvalidCookieField(domain)
+                    || HasInvalidCookieField(path))
+                {
+                    continue;
+                }
+
+                domain = domain.Trim().ToLowerInvariant();
+                if (hostOnly)
+                {
+                    domain = domain.TrimStart('.');
+                }
+                else if (!domain.StartsWith('.'))
+                {
+                    domain = "." + domain;
+                }
+
+                path = string.IsNullOrWhiteSpace(path) ? "/" : path.Trim();
+                string dedupeKey = $"{domain}\n{path}\n{name}";
+                if (!seen.Add(dedupeKey))
+                {
+                    continue;
+                }
+
+                string expiry = session
+                    ? "0"
+                    : GetExpiration(element);
+                string outputDomain = httpOnly
+                    ? "#HttpOnly_" + domain
+                    : domain;
+
+                AppendCookieLine(
+                    content,
+                    outputDomain,
+                    includeSubdomains: !hostOnly,
+                    path,
+                    secure,
+                    expiry,
+                    name.Trim(),
+                    value);
+                count++;
+            }
+
+            return count;
+        }
+        catch (JsonException)
+        {
+            return 0;
+        }
+    }
+
+    private static int AppendCookieHeader(
+        StringBuilder content,
+        string? cookieHeader,
+        string sourceUrl)
+    {
+        if (string.IsNullOrWhiteSpace(cookieHeader))
+        {
+            return 0;
+        }
+
+        CookieScope scope = ResolveCookieScope(sourceUrl);
+        int count = 0;
+
+        foreach (string pair in cookieHeader.Split(
+            ';',
+            StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            int separatorIndex = pair.IndexOf('=');
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+
+            string name = pair[..separatorIndex].Trim();
+            string value = pair[(separatorIndex + 1)..].Trim();
+            if (name.Length == 0
+                || HasInvalidCookieField(name)
+                || HasInvalidCookieField(value))
+            {
+                continue;
+            }
+
+            AppendCookieLine(
+                content,
+                scope.Domain,
+                scope.IncludeSubdomains,
+                "/",
+                scope.Secure,
+                CookieExpiry,
+                name,
+                value);
+            count++;
+        }
+
+        return count;
+    }
+
+    private static void AppendCookieLine(
+        StringBuilder content,
+        string domain,
+        bool includeSubdomains,
+        string path,
+        bool secure,
+        string expiry,
+        string name,
+        string value)
+    {
+        content.Append(domain).Append('\t')
+            .Append(includeSubdomains ? "TRUE" : "FALSE").Append('\t')
+            .Append(path).Append('\t')
+            .Append(secure ? "TRUE" : "FALSE").Append('\t')
+            .Append(expiry).Append('\t')
+            .Append(name).Append('\t')
+            .Append(value).Append('\n');
+    }
+
+    private static string GetString(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out JsonElement value)
+            && value.ValueKind == JsonValueKind.String
+                ? value.GetString() ?? string.Empty
+                : string.Empty;
+    }
+
+    private static bool GetBoolean(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out JsonElement value)
+            && value.ValueKind is JsonValueKind.True or JsonValueKind.False
+            && value.GetBoolean();
+    }
+
+    private static string GetExpiration(JsonElement element)
+    {
+        if (element.TryGetProperty("expirationDate", out JsonElement expiration)
+            && expiration.ValueKind == JsonValueKind.Number
+            && expiration.TryGetDouble(out double seconds)
+            && double.IsFinite(seconds)
+            && seconds > 0)
+        {
+            return Math.Floor(seconds)
+                .ToString(CultureInfo.InvariantCulture);
+        }
+
+        return "0";
+    }
+
+    private static bool HasInvalidCookieField(string value) =>
+        value.IndexOfAny(['\t', '\r', '\n', '\0']) >= 0;
+
     private static CookieScope ResolveCookieScope(string sourceUrl)
     {
         if (!Uri.TryCreate(sourceUrl, UriKind.Absolute, out Uri? uri)
@@ -102,19 +275,24 @@ internal sealed class YtDlpCookieFileService
         string host = uri.IdnHost.ToLowerInvariant();
         bool secure = uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
 
-        if (host.Equals("instagram.com", StringComparison.OrdinalIgnoreCase)
-            || host.EndsWith(".instagram.com", StringComparison.OrdinalIgnoreCase))
+        string? sharedDomain = host switch
         {
-            return new CookieScope(
-                Domain: ".instagram.com",
-                IncludeSubdomains: true,
-                Secure: secure);
-        }
+            "instagram.com" => ".instagram.com",
+            "tiktok.com" => ".tiktok.com",
+            "facebook.com" => ".facebook.com",
+            "x.com" => ".x.com",
+            "twitter.com" => ".twitter.com",
+            _ when host.EndsWith(".instagram.com", StringComparison.OrdinalIgnoreCase) => ".instagram.com",
+            _ when host.EndsWith(".tiktok.com", StringComparison.OrdinalIgnoreCase) => ".tiktok.com",
+            _ when host.EndsWith(".facebook.com", StringComparison.OrdinalIgnoreCase) => ".facebook.com",
+            _ when host.EndsWith(".x.com", StringComparison.OrdinalIgnoreCase) => ".x.com",
+            _ when host.EndsWith(".twitter.com", StringComparison.OrdinalIgnoreCase) => ".twitter.com",
+            _ => null,
+        };
 
-        return new CookieScope(
-            Domain: host,
-            IncludeSubdomains: false,
-            Secure: secure);
+        return sharedDomain != null
+            ? new CookieScope(sharedDomain, IncludeSubdomains: true, Secure: secure)
+            : new CookieScope(host, IncludeSubdomains: false, Secure: secure);
     }
 
     private readonly record struct CookieScope(

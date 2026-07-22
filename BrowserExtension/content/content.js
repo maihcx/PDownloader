@@ -135,19 +135,92 @@ function getBtn() {
         const mediaTitle = getMediaTitle(activeVideo, activeContextNode);
         filename = sanitizeName(mediaTitle) + (hostname.includes('soundcloud.com') ? '.mp3' : '.mp4');
 
+        // On feed/home pages the DOM permalink resolver can still be ambiguous.
+        // Prefer a strong manifest/network candidate in that case instead of
+        // handing yt-dlp the generic page URL.
+        const detected = await sendMessageSafe({
+          action: 'get_best_media_candidate',
+          mediaType: hostname.includes('soundcloud.com') ? 'audio' : 'video',
+          minScore: 80
+        });
+        const candidate = detected?.candidate || null;
+        const isTikTok = hostname.includes('tiktok.com');
+        const isStrongNetworkCandidate = candidate?.source === 'network'
+          && candidate?.kind === 'direct'
+          && !candidate?.likelySegment;
+        const shouldUseCandidate = candidate?.id && (
+          candidate.kind === 'hls'
+          || candidate.kind === 'dash'
+          || !isSpecificMediaPageUrl(url, hostname)
+          || (isTikTok && isStrongNetworkCandidate)
+        );
+        let candidateTried = false;
+
+        if (shouldUseCandidate) {
+          candidateTried = true;
+          const resp = await sendMessageSafe({
+            action: 'download_media_candidate',
+            candidateId: candidate.id,
+            mediaType: hostname.includes('soundcloud.com') ? 'audio' : 'video'
+          });
+
+          showBtnFeedback(
+            resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
+            resp?.success
+          );
+          if (resp?.success) return;
+        }
+
         const resp = await sendMessageSafe({
           action: 'download_via_ytdlp',
           url,
           filename,
           title: mediaTitle,
-          referer: location.href
+          referer: location.href,
+          audioOnly: hostname.includes('soundcloud.com')
         });
+
+        // If the bridge itself rejects the yt-dlp request before a task is
+        // queued, still give a previously captured media candidate a chance.
+        if (!resp?.success && candidate?.id && !candidateTried) {
+          const fallback = await sendMessageSafe({
+            action: 'download_media_candidate',
+            candidateId: candidate.id,
+            mediaType: hostname.includes('soundcloud.com') ? 'audio' : 'video'
+          });
+
+          if (fallback?.success) {
+            showBtnFeedback(PD.I18n.t('ytAdded'), true);
+            return;
+          }
+        }
 
         showBtnFeedback(
           resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
           resp?.success
         );
         return;
+      }
+
+      // Prefer a network-observed candidate. This catches media hidden behind
+      // blob: URLs, player wrappers and manifests that are not exposed in DOM.
+      const detected = await sendMessageSafe({
+        action: 'get_best_media_candidate',
+        mediaType: 'video',
+        minScore: 70
+      });
+      if (detected?.candidate?.id) {
+        const resp = await sendMessageSafe({
+          action: 'download_media_candidate',
+          candidateId: detected.candidate.id,
+          mediaType: 'video'
+        });
+
+        showBtnFeedback(
+          resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
+          resp?.success
+        );
+        if (resp?.success) return;
       }
 
       url = activeVideo.currentSrc || activeVideo.src;
@@ -300,6 +373,31 @@ function clearHide() {
 
 function getSiteUrl(video, contextNode) {
   return PD.SiteUrlResolver?.resolve(video, contextNode || video) || location.href;
+}
+
+function isSpecificMediaPageUrl(rawUrl, hostname = location.hostname) {
+  try {
+    const url = new URL(rawUrl, location.href);
+    const path = url.pathname;
+    const host = String(hostname || url.hostname).toLowerCase();
+
+    if (host.includes('tiktok.com')) return /\/@[^/]+\/video\/\d+/i.test(path);
+    if (host.includes('instagram.com')) return /^\/(?:reel|p|tv)\/[^/]+/i.test(path);
+    if (host.includes('facebook.com') || host.includes('fb.watch')) {
+      return !!url.searchParams.get('v')
+        || /\/(?:reel|videos|watch)\//i.test(path)
+        || /\/video\.php$/i.test(path);
+    }
+    if (host.includes('x.com') || host.includes('twitter.com')) return /\/status\/\d+/i.test(path);
+    if (host.includes('reddit.com')) return /\/comments\/[A-Za-z0-9]+/i.test(path);
+    if (host.includes('vimeo.com')) return /\/\d+(?:$|\/)/.test(path);
+    if (host.includes('bilibili.')) return /\/video\//i.test(path);
+    if (host.includes('soundcloud.com')) return path.split('/').filter(Boolean).length >= 2;
+
+    return rawUrl !== location.href;
+  } catch (_) {
+    return false;
+  }
 }
 
 function getMediaTitle(video, contextNode) {

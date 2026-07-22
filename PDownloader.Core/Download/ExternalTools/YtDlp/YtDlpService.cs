@@ -50,11 +50,17 @@ public sealed class YtDlpService
         string formatId,
         string? referer,
         string? cookieHeader = null,
+        string? cookieJarJson = null,
+        string? userAgent = null,
+        IReadOnlyDictionary<string, string>? extraHeaders = null,
         CancellationToken ct = default)
     {
         string ytDlpPath = RequireYtDlp();
         string quickJsPath = RequireQuickJs();
-        string? cookieFile = _cookieFileService.Create(cookieHeader, pageUrl);
+        string? cookieFile = _cookieFileService.Create(
+            cookieHeader,
+            pageUrl,
+            cookieJarJson);
 
         try
         {
@@ -62,6 +68,8 @@ public sealed class YtDlpService
                 pageUrl,
                 formatId,
                 referer,
+                userAgent,
+                extraHeaders,
                 quickJsPath,
                 cookieFile);
             ExternalProcessResult result = await _processRunner.RunAsync(
@@ -81,6 +89,9 @@ public sealed class YtDlpService
     public async Task<YtAnalyzeResult> AnalyzeAsync(
         string url,
         string? cookieHeader = null,
+        string? cookieJarJson = null,
+        string? userAgent = null,
+        IReadOnlyDictionary<string, string>? extraHeaders = null,
         CancellationToken ct = default)
     {
         string? ytDlpPath = FindYtDlp();
@@ -92,12 +103,17 @@ public sealed class YtDlpService
         }
 
         string quickJsPath = RequireQuickJs();
-        string? cookieFile = _cookieFileService.Create(cookieHeader, url);
+        string? cookieFile = _cookieFileService.Create(
+            cookieHeader,
+            url,
+            cookieJarJson);
 
         try
         {
             IReadOnlyList<string> arguments = YtDlpCommandBuilder.BuildAnalyze(
                 url,
+                userAgent,
+                extraHeaders,
                 quickJsPath,
                 cookieFile);
             ExternalProcessResult result = await _processRunner.RunAsync(
@@ -130,17 +146,25 @@ public sealed class YtDlpService
         string url,
         string? referer,
         string? cookieHeader,
+        string? cookieJarJson,
+        string? userAgent,
+        IReadOnlyDictionary<string, string>? extraHeaders,
         CancellationToken ct = default)
     {
         string ytDlpPath = RequireYtDlp();
         string quickJsPath = RequireQuickJs();
-        string? cookieFile = _cookieFileService.Create(cookieHeader, url);
+        string? cookieFile = _cookieFileService.Create(
+            cookieHeader,
+            url,
+            cookieJarJson);
 
         try
         {
             IReadOnlyList<string> arguments = YtDlpCommandBuilder.BuildResolveHlsFragments(
                 url,
                 referer,
+                userAgent,
+                extraHeaders,
                 quickJsPath,
                 cookieFile);
             ExternalProcessResult result = await _processRunner.RunAsync(

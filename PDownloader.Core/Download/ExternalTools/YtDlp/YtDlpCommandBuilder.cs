@@ -21,6 +21,8 @@ internal static class YtDlpCommandBuilder
         string pageUrl,
         string formatId,
         string? referer,
+        string? userAgent,
+        IReadOnlyDictionary<string, string>? extraHeaders,
         string quickJsPath,
         string? cookieFile)
     {
@@ -34,6 +36,8 @@ internal static class YtDlpCommandBuilder
         };
 
         AddReferer(arguments, referer);
+        AddUserAgent(arguments, userAgent);
+        AddExtraHeaders(arguments, extraHeaders);
         AddQuickJs(arguments, quickJsPath);
         AddCookieFile(arguments, cookieFile);
         AddUrl(arguments, pageUrl);
@@ -42,6 +46,8 @@ internal static class YtDlpCommandBuilder
 
     public static IReadOnlyList<string> BuildAnalyze(
         string url,
+        string? userAgent,
+        IReadOnlyDictionary<string, string>? extraHeaders,
         string quickJsPath,
         string? cookieFile)
     {
@@ -52,6 +58,8 @@ internal static class YtDlpCommandBuilder
             "--no-playlist",
         };
 
+        AddUserAgent(arguments, userAgent);
+        AddExtraHeaders(arguments, extraHeaders);
         AddQuickJs(arguments, quickJsPath);
         AddCookieFile(arguments, cookieFile);
         AddUrl(arguments, url);
@@ -61,6 +69,8 @@ internal static class YtDlpCommandBuilder
     public static IReadOnlyList<string> BuildResolveHlsFragments(
         string url,
         string? referer,
+        string? userAgent,
+        IReadOnlyDictionary<string, string>? extraHeaders,
         string quickJsPath,
         string? cookieFile)
     {
@@ -72,6 +82,8 @@ internal static class YtDlpCommandBuilder
         };
 
         AddReferer(arguments, referer);
+        AddUserAgent(arguments, userAgent);
+        AddExtraHeaders(arguments, extraHeaders);
         AddQuickJs(arguments, quickJsPath);
         AddCookieFile(arguments, cookieFile);
         AddUrl(arguments, url);
@@ -87,6 +99,63 @@ internal static class YtDlpCommandBuilder
 
         arguments.Add("--referer");
         arguments.Add(referer);
+    }
+
+    private static void AddUserAgent(List<string> arguments, string? userAgent)
+    {
+        if (string.IsNullOrWhiteSpace(userAgent))
+        {
+            return;
+        }
+
+        arguments.Add("--user-agent");
+        arguments.Add(userAgent);
+    }
+
+
+    private static void AddExtraHeaders(
+        List<string> arguments,
+        IReadOnlyDictionary<string, string>? extraHeaders)
+    {
+        if (extraHeaders == null || extraHeaders.Count == 0)
+        {
+            return;
+        }
+
+        string[] allowedNames =
+        {
+            "Accept",
+            "Accept-Language",
+            "Authorization",
+            "Origin",
+        };
+
+        foreach (string name in allowedNames)
+        {
+            string? value = GetHeader(extraHeaders, name);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            arguments.Add("--add-header");
+            arguments.Add($"{name}:{value}");
+        }
+    }
+
+    private static string? GetHeader(
+        IReadOnlyDictionary<string, string> headers,
+        string name)
+    {
+        foreach ((string key, string value) in headers)
+        {
+            if (string.Equals(key, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return value;
+            }
+        }
+
+        return null;
     }
 
     private static void AddQuickJs(List<string> arguments, string quickJsPath)

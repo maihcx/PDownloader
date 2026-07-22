@@ -54,6 +54,10 @@ internal sealed class YoutubeDownloadHandler
 
         string? referer = DownloadPathService.GetHeader(_item.CustomHeaders, "Referer");
         string? cookieHeader = DownloadPathService.GetHeader(_item.CustomHeaders, "Cookie");
+        string? cookieJarJson = DownloadPathService.GetHeader(
+            _item.CustomHeaders,
+            "X-PDownloader-Cookie-Jar");
+        string? userAgent = DownloadPathService.GetHeader(_item.CustomHeaders, "User-Agent");
         string fileStem = string.IsNullOrWhiteSpace(_item.FileName)
             ? DownloadPathService.SanitizeFileName(
                 DownloadPathService.GuessFileName(_item.Url))
@@ -72,6 +76,9 @@ internal sealed class YoutubeDownloadHandler
                     _item.FormatId ?? "bestvideo+bestaudio/best",
                     referer,
                     cookieHeader,
+                    cookieJarJson,
+                    userAgent,
+                    _item.CustomHeaders,
                     cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -171,6 +178,7 @@ internal sealed class YoutubeDownloadHandler
                 progressBaseOffset,
                 _reportProgress,
                 progress => _reportThreadProgress(progressStage, progress),
+                streams.Count == 1 ? ApplyFileHashes : null,
                 cancellationToken);
 
             long actualLength = File.Exists(rawPath)
@@ -187,6 +195,13 @@ internal sealed class YoutubeDownloadHandler
         }
 
         return files;
+    }
+
+    private void ApplyFileHashes(FileHashResult hashes)
+    {
+        _item.Md5Hash = hashes.Md5;
+        _item.Sha1Hash = hashes.Sha1;
+        _item.Sha256Hash = hashes.Sha256;
     }
 
     private static Dictionary<string, string>? MergeHeaders(

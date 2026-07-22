@@ -40,6 +40,9 @@ internal sealed class YtDlpHlsDownloadService
         string outputPathWithoutExtension,
         string? referer,
         string? cookieHeader,
+        string? cookieJarJson,
+        string? userAgent,
+        IReadOnlyDictionary<string, string>? extraHeaders,
         int preferredFragmentCount,
         Action<long, long, double>? reportProgress,
         CancellationToken cancellationToken)
@@ -49,7 +52,10 @@ internal sealed class YtDlpHlsDownloadService
 
         string fileStem = Path.GetFileName(outputPathWithoutExtension);
         string temporaryOutputWithoutExtension = Path.Combine(tempDirectory, fileStem);
-        string? cookieFile = _cookieFileService.Create(cookieHeader, url);
+        string? cookieFile = _cookieFileService.Create(
+            cookieHeader,
+            url,
+            cookieJarJson);
 
         try
         {
@@ -58,6 +64,8 @@ internal sealed class YtDlpHlsDownloadService
                 url,
                 temporaryOutputWithoutExtension,
                 referer,
+                userAgent,
+                extraHeaders,
                 cookieFile,
                 preferredFragmentCount);
 
@@ -108,6 +116,8 @@ internal sealed class YtDlpHlsDownloadService
         string url,
         string outputPathWithoutExtension,
         string? referer,
+        string? userAgent,
+        IReadOnlyDictionary<string, string>? extraHeaders,
         string? cookieFile,
         int preferredFragmentCount)
     {
@@ -150,6 +160,14 @@ internal sealed class YtDlpHlsDownloadService
             startInfo.ArgumentList.Add($"Referer:{referer}");
         }
 
+        if (!string.IsNullOrWhiteSpace(userAgent))
+        {
+            startInfo.ArgumentList.Add("--user-agent");
+            startInfo.ArgumentList.Add(userAgent);
+        }
+
+        AddForwardedHeaders(startInfo, extraHeaders);
+
         if (!string.IsNullOrWhiteSpace(cookieFile))
         {
             startInfo.ArgumentList.Add("--cookies");
@@ -162,6 +180,52 @@ internal sealed class YtDlpHlsDownloadService
         startInfo.ArgumentList.Add(url);
 
         return startInfo;
+    }
+
+
+    private static void AddForwardedHeaders(
+        ProcessStartInfo startInfo,
+        IReadOnlyDictionary<string, string>? extraHeaders)
+    {
+        if (extraHeaders == null || extraHeaders.Count == 0)
+        {
+            return;
+        }
+
+        string[] allowedNames =
+        {
+            "Accept",
+            "Accept-Language",
+            "Authorization",
+            "Origin",
+        };
+
+        foreach (string name in allowedNames)
+        {
+            string? value = GetHeader(extraHeaders, name);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            startInfo.ArgumentList.Add("--add-header");
+            startInfo.ArgumentList.Add($"{name}:{value}");
+        }
+    }
+
+    private static string? GetHeader(
+        IReadOnlyDictionary<string, string> headers,
+        string name)
+    {
+        foreach ((string key, string value) in headers)
+        {
+            if (string.Equals(key, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return value;
+            }
+        }
+
+        return null;
     }
 
     private static async Task<YtDlpProcessResult> RunProcessAsync(

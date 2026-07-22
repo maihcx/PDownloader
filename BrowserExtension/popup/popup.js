@@ -17,11 +17,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const siteChk         = document.getElementById('autoInterceptSite');
   const siteSub         = document.getElementById('autoInterceptSiteSub');
   const blList          = document.getElementById('blList');
+  const mediaList       = document.getElementById('mediaList');
 
   let currentTabUrl = '';
+  let currentTabTitle = '';
+  let currentTabId = -1;
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     currentTabUrl = tab?.url || '';
+    currentTabTitle = tab?.title || '';
+    currentTabId = Number.isInteger(tab?.id) ? tab.id : -1;
   } catch (_) { /* ignore */ }
 
   chrome.runtime.sendMessage({ action: 'get_popup_init' }, res => {
@@ -38,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     notifChk.checked = data.showNotifications !== false;
     renderBlacklist(data.blacklistedDomains || []);
     refreshSiteToggle();
+    refreshDetectedMedia();
   });
 
   chrome.runtime.sendMessage({ action: 'reset_badge' });
@@ -95,6 +101,138 @@ document.addEventListener('DOMContentLoaded', async () => {
     siteChk.checked = checked;
     siteRow.classList.toggle('is-disabled', !enabled);
     siteSub.textContent = PD.I18n.t(subKey, sub);
+  }
+
+
+  function formatBytes(bytes) {
+    const value = Number(bytes) || 0;
+    if (value <= 0) return '';
+    if (value >= 1024 ** 3) return `${(value / (1024 ** 3)).toFixed(2)} GB`;
+    if (value >= 1024 ** 2) return `${(value / (1024 ** 2)).toFixed(1)} MB`;
+    if (value >= 1024) return `${(value / 1024).toFixed(0)} KB`;
+    return `${value} B`;
+  }
+
+  function mediaTypeLabel(candidate) {
+    if (candidate.kind === 'hls' || candidate.kind === 'dash' || candidate.mediaType === 'manifest') {
+      return PD.I18n.t('popupMediaStream');
+    }
+    if (candidate.mediaType === 'audio') return PD.I18n.t('popupMediaAudio');
+    if (candidate.mediaType === 'video') return PD.I18n.t('popupMediaVideo');
+    return PD.I18n.t('popupMediaDirect');
+  }
+
+  function mediaIcon(candidate) {
+    if (candidate.kind === 'hls' || candidate.kind === 'dash' || candidate.mediaType === 'manifest') return '◉';
+    return candidate.mediaType === 'audio' ? '♪' : '▶';
+  }
+
+  function candidateName(candidate) {
+    const isManifest = candidate.kind === 'hls'
+      || candidate.kind === 'dash'
+      || candidate.mediaType === 'manifest';
+
+    if (isManifest) {
+      return candidate.title || currentTabTitle || PD.I18n.t('popupMediaStream');
+    }
+
+    if (candidate.filename) return candidate.filename.split(/[/\\]/).pop();
+    if (candidate.title) return candidate.title;
+    try {
+      const path = decodeURIComponent(new URL(candidate.url).pathname);
+      return path.substring(path.lastIndexOf('/') + 1) || candidate.url;
+    } catch (_) {
+      return candidate.url || 'Media';
+    }
+  }
+
+  function renderDetectedMedia(candidates, playback = null) {
+    mediaList.innerHTML = '';
+
+    const visible = (candidates || [])
+      .filter(candidate => !candidate.likelySegment)
+      .slice(0, 8);
+
+    if (!visible.length) {
+      const empty = document.createElement('div');
+      empty.className = 'media-empty';
+      empty.textContent = PD.I18n.t('popupDetectedMediaEmpty');
+      mediaList.appendChild(empty);
+      return;
+    }
+
+    for (const candidate of visible) {
+      const row = document.createElement('div');
+      row.className = 'media-item';
+
+      const icon = document.createElement('div');
+      icon.className = 'media-icon';
+      icon.textContent = mediaIcon(candidate);
+
+      const main = document.createElement('div');
+      main.className = 'media-main';
+
+      const name = document.createElement('div');
+      name.className = 'media-name';
+      name.textContent = candidateName(candidate);
+      name.title = candidate.url || '';
+
+      const meta = document.createElement('div');
+      meta.className = 'media-meta';
+      meta.textContent = [
+        mediaTypeLabel(candidate),
+        candidate.extension ? candidate.extension.toUpperCase() : '',
+        formatBytes(candidate.size)
+      ].filter(Boolean).join(' · ');
+
+      main.append(name, meta);
+
+      const button = document.createElement('button');
+      button.className = 'media-download';
+      button.title = PD.I18n.t('popupMediaDownloadTitle');
+      button.textContent = '↓';
+      button.addEventListener('click', () => {
+        button.disabled = true;
+        chrome.runtime.sendMessage({
+          action: 'download_media_candidate',
+          tabId: currentTabId,
+          candidateId: candidate.id,
+          mediaType: candidate.mediaType === 'audio'
+            || ((candidate.kind === 'hls' || candidate.kind === 'dash') && playback?.playingAudio && !playback?.playingVideo)
+              ? 'audio'
+              : undefined
+        }, response => {
+          button.disabled = false;
+          button.textContent = response?.success ? '✓' : '!';
+          setTimeout(() => { button.textContent = '↓'; }, 1400);
+        });
+      });
+
+      row.append(icon, main, button);
+      mediaList.appendChild(row);
+    }
+  }
+
+  function refreshDetectedMedia(allowRescan = true) {
+    if (currentTabId < 0) {
+      renderDetectedMedia([], null);
+      return;
+    }
+
+    chrome.runtime.sendMessage({
+      action: 'get_media_candidates',
+      tabId: currentTabId,
+      minScore: 45
+    }, response => {
+      const candidates = response?.candidates || [];
+      renderDetectedMedia(candidates, response?.playback || null);
+
+      if (!candidates.length && allowRescan) {
+        chrome.tabs.sendMessage(currentTabId, { action: 'pd_rescan_media' }, () => {
+          setTimeout(() => refreshDetectedMedia(false), 250);
+        });
+      }
+    });
   }
 
   function renderBlacklist(domains) {

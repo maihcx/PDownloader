@@ -359,32 +359,49 @@
                                             </ui:Button.Visibility>
                                         </ui:Button>
 
-                                        <ui:Button Icon="{ui:SymbolIcon ArrowCounterclockwise24}"
-                                                   ToolTip="{utils:Localization page_downloads_retry}"
-                                                   Margin="0 0 2 0"
-                                                   Command="{Binding DataContext.ViewModel.RetryCommand,
-                                         RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                   CommandParameter="{Binding}">
-                                            <ui:Button.Visibility>
-                                                <Binding Path="Status"
-                                                         Converter="{StaticResource BoolToVisConverter}"
-                                                         ConverterParameter="Error" />
-                                            </ui:Button.Visibility>
-                                        </ui:Button>
+                                        <!-- Destructive/non-essential actions stay disabled while merging. -->
+                                        <StackPanel Orientation="Horizontal">
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="IsEnabled"
+                                                            Value="True" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Status}"
+                                                                     Value="Merging">
+                                                            <Setter Property="IsEnabled"
+                                                                    Value="False" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
 
-                                        <ui:Button Icon="{ui:SymbolIcon FolderOpen24}"
-                                                   ToolTip="{utils:Localization page_downloads_open_folder}"
-                                                   Margin="0 0 2 0"
-                                                   Command="{Binding DataContext.ViewModel.OpenFolderCommand,
-                                         RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                   CommandParameter="{Binding}" />
+                                            <ui:Button Icon="{ui:SymbolIcon ArrowCounterclockwise24}"
+                                                       ToolTip="{utils:Localization page_downloads_retry}"
+                                                       Margin="0 0 2 0"
+                                                       Command="{Binding DataContext.ViewModel.RetryCommand,
+                                             RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       CommandParameter="{Binding}">
+                                                <ui:Button.Visibility>
+                                                    <Binding Path="Status"
+                                                             Converter="{StaticResource BoolToVisConverter}"
+                                                             ConverterParameter="Error" />
+                                                </ui:Button.Visibility>
+                                            </ui:Button>
 
-                                        <ui:Button Icon="{ui:SymbolIcon Delete24}"
-                                                   ToolTip="{utils:Localization page_downloads_cancel}"
-                                                   Foreground="#AAEF5350"
-                                                   Command="{Binding DataContext.ViewModel.CancelCommand,
-                                         RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                   CommandParameter="{Binding}" />
+                                            <ui:Button Icon="{ui:SymbolIcon FolderOpen24}"
+                                                       ToolTip="{utils:Localization page_downloads_open_folder}"
+                                                       Margin="0 0 2 0"
+                                                       Command="{Binding DataContext.ViewModel.OpenFolderCommand,
+                                             RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       CommandParameter="{Binding}" />
+
+                                            <ui:Button Icon="{ui:SymbolIcon Delete24}"
+                                                       ToolTip="{utils:Localization page_downloads_cancel}"
+                                                       Foreground="#AAEF5350"
+                                                       Command="{Binding DataContext.ViewModel.CancelCommand,
+                                             RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       CommandParameter="{Binding}" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
                             </Grid>
@@ -399,6 +416,15 @@
                                                   ValueText="{Binding SavePath}" />
                                 <controls:InfoRow LabelText="{utils:Localization download_view_file_url_title}"
                                                   ValueText="{Binding Url}" />
+                                <controls:InfoRow LabelText="MD5"
+                                                  ValueText="{Binding Md5Hash}"
+                                                  Visibility="{Binding Md5Hash, Converter={StaticResource NullOrEmptyToVisibilityConverter}}" />
+                                <controls:InfoRow LabelText="SHA-1"
+                                                  ValueText="{Binding Sha1Hash}"
+                                                  Visibility="{Binding Sha1Hash, Converter={StaticResource NullOrEmptyToVisibilityConverter}}" />
+                                <controls:InfoRow LabelText="SHA-256"
+                                                  ValueText="{Binding Sha256Hash}"
+                                                  Visibility="{Binding Sha256Hash, Converter={StaticResource NullOrEmptyToVisibilityConverter}}" />
                                 <controls:InfoRow LabelText="{utils:Localization download_view_file_cap_loaded_title}">
                                     <controls:InfoRow.ValueContent>
                                         <StackPanel Orientation="Horizontal"

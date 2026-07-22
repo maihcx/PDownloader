@@ -37,6 +37,7 @@ internal sealed class HlsFragmentDownloadService
         Action<IReadOnlyList<DownloadThreadProgress>>? reportThreadProgress,
         Action mergingStarted,
         Action<double>? reportMergeProgress,
+        Action<FileHashResult>? reportFileHashes,
         CancellationToken cancellationToken)
     {
         List<string> urls = fragmentResult.FragmentUrls;
@@ -100,6 +101,7 @@ internal sealed class HlsFragmentDownloadService
             tempPaths,
             finalPath,
             reportMergeProgress,
+            reportFileHashes,
             cancellationToken);
         return finalPath;
     }
@@ -210,83 +212,16 @@ internal sealed class HlsFragmentDownloadService
         IReadOnlyList<string> tempPaths,
         string finalPath,
         Action<double>? reportProgress,
+        Action<FileHashResult>? reportFileHashes,
         CancellationToken cancellationToken)
     {
-        string? directory = Path.GetDirectoryName(finalPath);
-        if (directory != null)
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        string mergingPath = finalPath + ".merging";
-        long totalBytes = tempPaths
-            .Where(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path))
-            .Sum(path => new FileInfo(path).Length);
-        var mergeProgress = new MergeProgressTracker(totalBytes, reportProgress);
-        mergeProgress.Start();
-
-        try
-        {
-            await using (var output = new FileStream(
-                mergingPath,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None))
-            {
-                foreach (string tempPath in tempPaths)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    await using (var input = new FileStream(
-                        tempPath,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.Read))
-                    {
-                        await mergeProgress.CopyToAsync(
-                            input,
-                            output,
-                            cancellationToken);
-                    }
-
-                    TryDeleteFragment(tempPath);
-                }
-            }
-
-            File.Move(mergingPath, finalPath, overwrite: true);
-            mergeProgress.Complete();
-        }
-        catch
-        {
-            try
-            {
-                if (File.Exists(mergingPath))
-                {
-                    File.Delete(mergingPath);
-                }
-            }
-            catch
-            {
-                // Best effort cleanup.
-            }
-
-            throw;
-        }
-    }
-
-    private static void TryDeleteFragment(string path)
-    {
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[HLS] Không thể xóa fragment ngay sau khi ghép: {ex.Message}");
-        }
+        var merger = new RecoverableFileMerger();
+        await merger.MergeAsync(
+            tempPaths,
+            finalPath,
+            reportProgress,
+            reportFileHashes,
+            cancellationToken);
     }
 
     private sealed class HlsWorkerState

@@ -5,6 +5,7 @@
   const CLIENT_HEADER = 'X-PDownloader-Client';
   const CLIENT_VALUE = 'browser-extension';
   const TOKEN_HEADER = 'X-PDownloader-Token';
+  const COOKIE_JAR_HEADER = 'X-PDownloader-Cookie-Jar';
 
   let sessionToken = null;
   let sessionPromise = null;
@@ -72,17 +73,120 @@
     }
   }
 
-  async function sendDownload(url, filename, referer) {
-    const cookies = await getCookieHeader(url);
+  function cookieKey(cookie) {
+    return [
+      cookie?.storeId || '',
+      cookie?.domain || '',
+      cookie?.path || '/',
+      cookie?.name || ''
+    ].join('|');
+  }
+
+  function toPortableCookie(cookie) {
+    if (!cookie?.name) return null;
+
+    return {
+      name: cookie.name,
+      value: cookie.value || '',
+      domain: cookie.domain || '',
+      path: cookie.path || '/',
+      secure: !!cookie.secure,
+      httpOnly: !!cookie.httpOnly,
+      hostOnly: !!cookie.hostOnly,
+      session: !!cookie.session,
+      expirationDate: Number.isFinite(cookie.expirationDate)
+        ? cookie.expirationDate
+        : null,
+      sameSite: cookie.sameSite || '',
+      storeId: cookie.storeId || ''
+    };
+  }
+
+  function getKnownCookieDomains(url) {
+    let host = '';
+    try { host = new URL(url).hostname.toLowerCase(); } catch (_) { return []; }
+
+    const domains = [
+      'tiktok.com',
+      'instagram.com',
+      'facebook.com',
+      'x.com',
+      'twitter.com'
+    ];
+
+    return domains.filter(domain => host === domain || host.endsWith(`.${domain}`));
+  }
+
+  async function getCookieContext(primaryUrl, relatedUrl = '') {
+    const urls = [...new Set([primaryUrl, relatedUrl]
+      .filter(url => /^https?:/i.test(String(url || ''))))];
+    const jar = new Map();
+    let primaryCookies = [];
+
+    for (let index = 0; index < urls.length; index++) {
+      try {
+        const cookies = await chrome.cookies.getAll({ url: urls[index] });
+        if (index === 0) primaryCookies = cookies;
+
+        for (const cookie of cookies) {
+          const portable = toPortableCookie(cookie);
+          if (portable) jar.set(cookieKey(portable), portable);
+        }
+      } catch (_) { }
+    }
+
+    // Site extractors such as TikTok can touch several sibling hosts while
+    // resolving a permalink. Preserve every cookie from the site's parent
+    // domain in the Netscape jar; each cookie keeps its original path/domain,
+    // so yt-dlp will still only send it where it is applicable.
+    const cookieDomains = [...new Set(urls.flatMap(getKnownCookieDomains))];
+    for (const domain of cookieDomains) {
+      try {
+        const cookies = await chrome.cookies.getAll({ domain });
+        for (const cookie of cookies) {
+          const portable = toPortableCookie(cookie);
+          if (portable) jar.set(cookieKey(portable), portable);
+        }
+      } catch (_) { }
+    }
+
+    return {
+      header: primaryCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; '),
+      cookies: [...jar.values()]
+    };
+  }
+
+  function applyBrowserHeaders(headers) {
+    headers['User-Agent'] = navigator.userAgent;
+
+    if (!headers['Accept-Language'] && !headers['accept-language']) {
+      const languages = Array.isArray(navigator.languages) && navigator.languages.length
+        ? navigator.languages
+        : [navigator.language].filter(Boolean);
+      if (languages.length) headers['Accept-Language'] = languages.join(',');
+    }
+  }
+
+  async function sendDownload(url, filename, referer, extraHeaders = {}) {
+    const cookieContext = await getCookieContext(url, referer);
+
+    const headers = {
+      ...extraHeaders,
+      Cookie: cookieContext.header,
+      Referer: referer || extraHeaders.Referer || extraHeaders.referer || ''
+    };
+    applyBrowserHeaders(headers);
+    if (cookieContext.cookies.length) headers[COOKIE_JAR_HEADER] = JSON.stringify(cookieContext.cookies);
+
+    // Do not send empty optional headers.
+    for (const key of Object.keys(headers)) {
+      if (headers[key] == null || headers[key] === '') delete headers[key];
+    }
 
     const payload = {
       url,
       fileName: filename || null,
-      headers: {
-        Cookie: cookies,
-        Referer: referer || '',
-        'User-Agent': navigator.userAgent
-      }
+      headers
     };
 
     try {
@@ -98,12 +202,7 @@
   }
 
   async function getCookieHeader(url) {
-    try {
-      const all = await chrome.cookies.getAll({ url });
-      return all.map(c => `${c.name}=${c.value}`).join('; ');
-    } catch (_) {
-      return '';
-    }
+    return (await getCookieContext(url)).header;
   }
 
   async function postJson(url, body) {
@@ -133,19 +232,26 @@
   }
 
   async function ytAnalyze(url) {
-    const cookies = await getCookieHeader(url);
+    const cookieContext = await getCookieContext(url);
+    const headers = {};
+    applyBrowserHeaders(headers);
+    if (cookieContext.header) headers.Cookie = cookieContext.header;
+    if (cookieContext.cookies.length) headers[COOKIE_JAR_HEADER] = JSON.stringify(cookieContext.cookies);
+
     return postJson(C.YT_ANALYZE_URL, {
       url,
-      headers: cookies ? { Cookie: cookies } : undefined
+      headers
     });
   }
 
-  async function ytDownload({ url, formatId, filename, title, filesize, referer }) {
-    const cookies = await getCookieHeader(url);
+  async function ytDownload({ url, formatId, filename, title, filesize, referer, extraHeaders }) {
+    const cookieContext = await getCookieContext(url, referer);
 
-    const headers = {};
-    if (cookies) headers.Cookie = cookies;
+    const headers = { ...(extraHeaders || {}) };
+    if (cookieContext.header) headers.Cookie = cookieContext.header;
     if (referer) headers.Referer = referer;
+    applyBrowserHeaders(headers);
+    if (cookieContext.cookies.length) headers[COOKIE_JAR_HEADER] = JSON.stringify(cookieContext.cookies);
 
     return postJson(C.YT_DOWNLOAD_URL, {
       url,

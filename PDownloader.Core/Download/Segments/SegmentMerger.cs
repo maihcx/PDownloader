@@ -17,62 +17,28 @@ namespace PDownloader.Core.Download.Segments;
 
 internal sealed class SegmentMerger
 {
+    private readonly RecoverableFileMerger _fileMerger = new();
+
     public async Task MergeAsync(
         IReadOnlyCollection<SegmentInfo> segments,
         string destinationPath,
         Action<double>? reportProgress,
+        Action<FileHashResult>? reportFileHashes,
         CancellationToken cancellationToken)
     {
         ValidateSegments(segments);
 
-        string? directory = Path.GetDirectoryName(destinationPath);
-        if (directory != null)
-        {
-            Directory.CreateDirectory(directory);
-        }
+        List<string> sourcePaths = segments
+            .OrderBy(segment => segment.Index)
+            .Select(segment => segment.TempFilePath)
+            .ToList();
 
-        string mergingPath = destinationPath + ".merging";
-        long totalBytes = segments.Sum(segment =>
-            new FileInfo(segment.TempFilePath).Length);
-        var mergeProgress = new MergeProgressTracker(totalBytes, reportProgress);
-        mergeProgress.Start();
-
-        try
-        {
-            await using (var output = new FileStream(
-                mergingPath,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None))
-            {
-                foreach (SegmentInfo segment in segments.OrderBy(segment => segment.Index))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    await using (var input = new FileStream(
-                        segment.TempFilePath,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.Read))
-                    {
-                        await mergeProgress.CopyToAsync(
-                            input,
-                            output,
-                            cancellationToken);
-                    }
-
-                    TryDelete(segment.TempFilePath, segment.Index);
-                }
-            }
-
-            File.Move(mergingPath, destinationPath, overwrite: true);
-            mergeProgress.Complete();
-        }
-        catch
-        {
-            TryDelete(mergingPath, segmentIndex: null);
-            throw;
-        }
+        await _fileMerger.MergeAsync(
+            sourcePaths,
+            destinationPath,
+            reportProgress,
+            reportFileHashes,
+            cancellationToken);
     }
 
     private static void ValidateSegments(IReadOnlyCollection<SegmentInfo> segments)
@@ -82,7 +48,7 @@ internal sealed class SegmentMerger
         {
             string indexes = string.Join(", ", incomplete.Select(segment => segment.Index));
             throw new InvalidOperationException(
-                $"Tải chưa hoàn tất: {incomplete.Count} segment chưa xong " +
+                $"Download incomplete: {incomplete.Count} segments remaining " +
                 $"(index: {indexes}).");
         }
 
@@ -93,26 +59,8 @@ internal sealed class SegmentMerger
         {
             string indexes = string.Join(", ", missing.Select(segment => segment.Index));
             throw new InvalidOperationException(
-                $"Không thể ghép file: thiếu {missing.Count} segment " +
+                $"Cannot merge files: {missing.Count} segments missing " +
                 $"(index: {indexes}).");
-        }
-    }
-
-    private static void TryDelete(string path, int? segmentIndex)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (Exception ex)
-        {
-            string target = segmentIndex.HasValue
-                ? $"segment {segmentIndex.Value}"
-                : "file .merging";
-            Debug.WriteLine($"[Merge] Không thể xóa {target}: {ex.Message}");
         }
     }
 }
