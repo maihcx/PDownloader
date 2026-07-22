@@ -205,13 +205,25 @@
     <value>Error: {0}</value>
   </data>
   <data name="download_thread_visualization_title" xml:space="preserve">
-    <value>Download threads</value>
+    <value>Download threads · {0}</value>
   </data>
   <data name="download_thread_visualization_unsupported_ytdlp" xml:space="preserve">
     <value>This transfer is handled directly by yt-dlp, so visual per-thread progress is not available.</value>
   </data>
   <data name="download_thread_visualization_unsupported_generic" xml:space="preserve">
     <value>Visual per-thread progress is not available for this transfer.</value>
+  </data>
+  <data name="download_thread_stage_file" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="download_thread_stage_video" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="download_thread_stage_audio" xml:space="preserve">
+    <value>Audio</value>
+  </data>
+  <data name="download_thread_stage_hls" xml:space="preserve">
+    <value>HLS</value>
   </data>
   <data name="download_thread_item_title" xml:space="preserve">
     <value>Thread {0}</value>
@@ -251,5 +263,26 @@
   </data>
   <data name="download_compact_status_no_threads_description" xml:space="preserve">
     <value>Per-thread visualization will appear automatically when more than one download worker is active.</value>
+  </data>
+  <data name="download_compact_status_paused_merge_title" xml:space="preserve">
+    <value>File merge paused</value>
+  </data>
+  <data name="download_compact_status_paused_merge_description" xml:space="preserve">
+    <value>The file merge is paused at {0}%. Select Resume to continue from the latest saved checkpoint.</value>
+  </data>
+  <data name="download_compact_status_merging_description" xml:space="preserve">
+    <value>The downloaded parts are being combined into the final file. You can pause and resume this process.</value>
+  </data>
+  <data name="download_compact_status_paused_download_description" xml:space="preserve">
+    <value>The download is paused. Select Resume to continue downloading.</value>
+  </data>
+  <data name="download_compact_status_queued_description" xml:space="preserve">
+    <value>This task is waiting to start.</value>
+  </data>
+  <data name="download_compact_status_connecting_description" xml:space="preserve">
+    <value>Connecting to the server and preparing the download.</value>
+  </data>
+  <data name="download_compact_status_error_description" xml:space="preserve">
+    <value>The task encountered an error. You can retry to continue.</value>
   </data>
 </root>

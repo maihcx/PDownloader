@@ -205,6 +205,7 @@ public class DownloadManager : IDisposable
         item.ErrorMessage = string.Empty;
         item.SpeedBps = 0;
         item.MergeProgress = 0;
+        item.IsMergeProgressActive = hasPendingMerge;
 
         if (!hasPendingMerge)
         {
@@ -255,6 +256,15 @@ public class DownloadManager : IDisposable
         {
             item.Status = DownloadStatus.Paused;
             item.SpeedBps = 0;
+        }
+
+        if ((item.Status is DownloadStatus.Paused or DownloadStatus.Error)
+            && DownloadEngine.TryGetPendingMergeProgress(
+                item.Id,
+                out double pendingMergeProgress))
+        {
+            item.MergeProgress = pendingMergeProgress;
+            item.IsMergeProgressActive = true;
         }
 
         lock (_lock) { _downloads.Add(item); }

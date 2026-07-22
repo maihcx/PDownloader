@@ -24,6 +24,10 @@ public record DownloadItemSnapshot(
 {
     public string? ResolvedUrl { get; init; }
 
+    public double MergeProgress { get; init; }
+
+    public bool IsMergeProgressActive { get; init; }
+
     public static DownloadItemSnapshot From(DownloadItem i) => new(
         i.Id, i.Url, i.FileName, i.SavePath,
         i.Threads, i.IsYoutube, i.FormatId,
@@ -31,7 +35,9 @@ public record DownloadItemSnapshot(
         i.Status.ToString(), i.ErrorMessage,
         i.StartTime, i.EndTime)
     {
-        ResolvedUrl = i.ResolvedUrl
+        ResolvedUrl = i.ResolvedUrl,
+        MergeProgress = i.MergeProgress,
+        IsMergeProgressActive = i.IsMergeProgressActive
     };
 
     public DownloadItem ToDownloadItem()
@@ -49,6 +55,8 @@ public record DownloadItemSnapshot(
             FormatId = FormatId,
             TotalBytes = TotalBytes,
             DownloadedBytes = DownloadedBytes,
+            MergeProgress = MergeProgress,
+            IsMergeProgressActive = IsMergeProgressActive,
             Status = status,
             ErrorMessage = ErrorMessage,
             StartTime = StartTime,

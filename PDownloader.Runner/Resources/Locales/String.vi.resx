@@ -205,13 +205,25 @@
     <value>Lỗi: {0}</value>
   </data>
   <data name="download_thread_visualization_title" xml:space="preserve">
-    <value>Tiến trình luồng tải</value>
+    <value>Tiến trình luồng tải · {0}</value>
   </data>
   <data name="download_thread_visualization_unsupported_ytdlp" xml:space="preserve">
     <value>Phiên tải này được xử lý trực tiếp bởi yt-dlp nên không hỗ trợ hiển thị tiến trình trực quan theo từng luồng.</value>
   </data>
   <data name="download_thread_visualization_unsupported_generic" xml:space="preserve">
     <value>Phiên tải này không hỗ trợ hiển thị tiến trình trực quan theo từng luồng.</value>
+  </data>
+  <data name="download_thread_stage_file" xml:space="preserve">
+    <value>Tệp</value>
+  </data>
+  <data name="download_thread_stage_video" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="download_thread_stage_audio" xml:space="preserve">
+    <value>Âm thanh</value>
+  </data>
+  <data name="download_thread_stage_hls" xml:space="preserve">
+    <value>HLS</value>
   </data>
   <data name="download_thread_item_title" xml:space="preserve">
     <value>Luồng {0}</value>
@@ -251,5 +263,26 @@
   </data>
   <data name="download_compact_status_no_threads_description" xml:space="preserve">
     <value>Tiến trình theo từng luồng sẽ tự động xuất hiện khi có nhiều hơn một luồng tải đang hoạt động.</value>
+  </data>
+  <data name="download_compact_status_paused_merge_title" xml:space="preserve">
+    <value>Đã tạm dừng ghép tệp</value>
+  </data>
+  <data name="download_compact_status_paused_merge_description" xml:space="preserve">
+    <value>Quá trình ghép tệp đang tạm dừng ở {0}%. Nhấn Tiếp tục để tiếp tục từ điểm đã lưu gần nhất.</value>
+  </data>
+  <data name="download_compact_status_merging_description" xml:space="preserve">
+    <value>Các phần đã tải đang được ghép thành tệp hoàn chỉnh. Bạn có thể tạm dừng và tiếp tục quá trình này.</value>
+  </data>
+  <data name="download_compact_status_paused_download_description" xml:space="preserve">
+    <value>Quá trình tải xuống đang tạm dừng. Nhấn Tiếp tục để tiếp tục tải.</value>
+  </data>
+  <data name="download_compact_status_queued_description" xml:space="preserve">
+    <value>Tác vụ đang chờ được bắt đầu.</value>
+  </data>
+  <data name="download_compact_status_connecting_description" xml:space="preserve">
+    <value>Đang kết nối đến máy chủ và chuẩn bị quá trình tải xuống.</value>
+  </data>
+  <data name="download_compact_status_error_description" xml:space="preserve">
+    <value>Tác vụ gặp lỗi. Bạn có thể thử lại để tiếp tục.</value>
   </data>
 </root>
