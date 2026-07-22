@@ -18,6 +18,16 @@
     return sender.tab?.id ?? -1;
   }
 
+  function normalizeCandidateUrl(url) {
+    try {
+      const parsed = new URL(String(url || ''));
+      parsed.hash = '';
+      return parsed.href;
+    } catch (_) {
+      return String(url || '').split('#')[0];
+    }
+  }
+
   function sanitizeMediaName(value, fallback = 'media') {
     const base = String(value || fallback)
       .replace(/[\\/:*?"<>|]/g, '_')
@@ -226,7 +236,7 @@
 
     get_media_candidates(msg, sender, sendResponse) {
       const tabId = resolveTabId(msg, sender);
-      const candidates = MediaCandidateRegistry.getAll(tabId, {
+      const candidates = MediaCapture.getCandidatesForPlayback(tabId, {
         mediaType: msg.mediaType || '',
         minScore: Number.isFinite(msg.minScore) ? msg.minScore : 35,
         includeSegments: false
@@ -237,7 +247,7 @@
 
     get_best_media_candidate(msg, sender, sendResponse) {
       const tabId = resolveTabId(msg, sender);
-      const candidate = MediaCandidateRegistry.getBest(tabId, {
+      const candidate = MediaCapture.getBestCandidate(tabId, {
         mediaType: msg.mediaType || '',
         minScore: Number.isFinite(msg.minScore) ? msg.minScore : 45,
         includeSegments: false
@@ -248,7 +258,16 @@
 
     download_media_candidate(msg, sender, sendResponse) {
       const tabId = resolveTabId(msg, sender);
-      const found = MediaCandidateRegistry.getById(tabId, msg.candidateId)
+      const preferredUrl = normalizeCandidateUrl(msg.preferredUrl || '');
+      const preferredCandidate = preferredUrl
+        ? MediaCapture.getCandidatesForPlayback(tabId, {
+            mediaType: msg.mediaType || '',
+            minScore: -Infinity,
+            includeSegments: false
+          }).find(item => normalizeCandidateUrl(item.url) === preferredUrl)
+        : null;
+      const found = preferredCandidate
+        || MediaCandidateRegistry.getById(tabId, msg.candidateId)
         || (msg.candidate?.url ? msg.candidate : null);
       const candidate = found && msg.mediaType
         ? { ...found, mediaType: msg.mediaType }
