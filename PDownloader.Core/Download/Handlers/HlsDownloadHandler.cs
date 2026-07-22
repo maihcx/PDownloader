@@ -161,6 +161,7 @@ internal sealed class HlsDownloadHandler
                 _reportMergeProgress(0);
             },
             _reportMergeProgress,
+            ApplyFileHashes,
             cancellationToken);
     }
 
@@ -224,6 +225,13 @@ internal sealed class HlsDownloadHandler
                 }
             },
             cancellationToken);
+    }
+
+    private void ApplyFileHashes(FileHashResult hashes)
+    {
+        _item.Md5Hash = hashes.Md5;
+        _item.Sha1Hash = hashes.Sha1;
+        _item.Sha256Hash = hashes.Sha256;
     }
 
     private void Complete(string finalPath)

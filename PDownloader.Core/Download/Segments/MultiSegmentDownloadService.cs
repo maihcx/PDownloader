@@ -45,6 +45,7 @@ internal sealed class MultiSegmentDownloadService
         long progressBaseOffset,
         Action<long, double> reportProgress,
         Action<IReadOnlyList<DownloadThreadProgress>>? reportThreadProgress,
+        Action<FileHashResult>? reportFileHashes,
         CancellationToken cancellationToken)
     {
         MergeRecoveryManifest? pendingMerge = MergeRecoveryStore.TryLoad(tempDirectory);
@@ -56,7 +57,8 @@ internal sealed class MultiSegmentDownloadService
             await new RecoverableFileMerger().RetryAsync(
                 pendingMerge,
                 reportProgress: null,
-                cancellationToken);
+                reportFileHashes: reportFileHashes,
+                cancellationToken: cancellationToken);
 
             long recoveredLength = File.Exists(destinationPath)
                 ? new FileInfo(destinationPath).Length
@@ -82,6 +84,7 @@ internal sealed class MultiSegmentDownloadService
             reportThreadProgress: reportThreadProgress,
             mergingStarted: null,
             reportMergeProgress: null,
+            reportFileHashes: reportFileHashes,
             cancellationToken: cancellationToken);
         return probe;
     }
@@ -97,6 +100,7 @@ internal sealed class MultiSegmentDownloadService
         Action<IReadOnlyList<DownloadThreadProgress>>? reportThreadProgress,
         Action? mergingStarted,
         Action<double>? reportMergeProgress,
+        Action<FileHashResult>? reportFileHashes,
         CancellationToken cancellationToken)
     {
         bool useMultipleSegments = probe.SupportsRange
@@ -150,6 +154,7 @@ internal sealed class MultiSegmentDownloadService
             segments,
             destinationPath,
             reportMergeProgress,
+            reportFileHashes,
             cancellationToken);
 
         long finalLength = File.Exists(destinationPath)

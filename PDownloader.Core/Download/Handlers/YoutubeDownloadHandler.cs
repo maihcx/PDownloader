@@ -171,6 +171,7 @@ internal sealed class YoutubeDownloadHandler
                 progressBaseOffset,
                 _reportProgress,
                 progress => _reportThreadProgress(progressStage, progress),
+                streams.Count == 1 ? ApplyFileHashes : null,
                 cancellationToken);
 
             long actualLength = File.Exists(rawPath)
@@ -187,6 +188,13 @@ internal sealed class YoutubeDownloadHandler
         }
 
         return files;
+    }
+
+    private void ApplyFileHashes(FileHashResult hashes)
+    {
+        _item.Md5Hash = hashes.Md5;
+        _item.Sha1Hash = hashes.Sha1;
+        _item.Sha256Hash = hashes.Sha256;
     }
 
     private static Dictionary<string, string>? MergeHeaders(

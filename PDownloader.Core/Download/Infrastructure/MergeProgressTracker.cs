@@ -69,6 +69,7 @@ internal sealed class MergeProgressTracker
     public async Task CopyToAsync(
         Stream source,
         Stream destination,
+        Action<byte[], int>? onBytesWritten,
         CancellationToken cancellationToken)
     {
         byte[] buffer = ArrayPool<byte>.Shared.Rent(CopyBufferSize);
@@ -90,6 +91,7 @@ internal sealed class MergeProgressTracker
                     buffer.AsMemory(0, read),
                     cancellationToken);
 
+                onBytesWritten?.Invoke(buffer, read);
                 AddProcessedBytes(read);
             }
         }
