@@ -56,7 +56,10 @@ public partial class DownloaderProgressViewModel : ObservableObject
     private string _statusText = string.Empty;
 
     [ObservableProperty]
-    private bool _isActionButtonEnabled = true;
+    private bool _isPauseResumeButtonEnabled = true;
+
+    [ObservableProperty]
+    private bool _isCancelButtonEnabled = true;
 
     [ObservableProperty]
     private bool _isThreadProgressVisible;
@@ -66,6 +69,9 @@ public partial class DownloaderProgressViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isThreadVisualizationLayoutExpanded;
+
+    [ObservableProperty]
+    private string _threadProgressTitle = string.Empty;
 
     [ObservableProperty]
     private string _threadProgressUnsupportedText = string.Empty;
@@ -138,31 +144,36 @@ public partial class DownloaderProgressViewModel : ObservableObject
                 case DownloadStatus.Queued:
                     StatusText = LanguageBase.GetLangValue("download_status_queued_title");
                     DownloaderStatus.State = RunnerState.Form;
-                    IsActionButtonEnabled = false;
+                    IsPauseResumeButtonEnabled = false;
+                    IsCancelButtonEnabled = false;
                     break;
 
                 case DownloadStatus.Connecting:
                     StatusText = LanguageBase.GetLangValue("download_status_connecting_title");
                     DownloaderStatus.State = RunnerState.Downloading;
-                    IsActionButtonEnabled = false;
+                    IsPauseResumeButtonEnabled = false;
+                    IsCancelButtonEnabled = false;
                     break;
 
                 case DownloadStatus.Downloading:
                     StatusText = LanguageBase.GetLangValue("download_status_downloading_title");
                     DownloaderStatus.State = RunnerState.Downloading;
-                    IsActionButtonEnabled = true;
+                    IsPauseResumeButtonEnabled = true;
+                    IsCancelButtonEnabled = true;
                     break;
 
                 case DownloadStatus.Paused:
                     StatusText = LanguageBase.GetLangValue("download_status_paused_title");
                     DownloaderStatus.State = RunnerState.Downloading;
-                    IsActionButtonEnabled = true;
+                    IsPauseResumeButtonEnabled = true;
+                    IsCancelButtonEnabled = true;
                     break;
 
                 case DownloadStatus.Merging:
                     StatusText = LanguageBase.GetLangValue("download_status_merging_title");
                     DownloaderStatus.State = RunnerState.Downloading;
-                    IsActionButtonEnabled = false;
+                    IsPauseResumeButtonEnabled = true;
+                    IsCancelButtonEnabled = false;
                     break;
 
                 case DownloadStatus.Completed:
@@ -173,21 +184,24 @@ public partial class DownloaderProgressViewModel : ObservableObject
                     StatusText = LanguageBase.GetLangValue("download_status_completed_title");
                     CompletedFilePath = obj.SavePath;
                     DownloaderStatus.State = RunnerState.Completed;
-                    IsActionButtonEnabled = false;
+                    IsPauseResumeButtonEnabled = false;
+                    IsCancelButtonEnabled = false;
                     break;
 
                 case DownloadStatus.Cancelled:
                     StatusText = LanguageBase.GetLangValue("download_status_cancelled_title");
                     DownloaderStatus.State = RunnerState.Cancelled;
                     Application.Current.Shutdown();
-                    IsActionButtonEnabled = false;
+                    IsPauseResumeButtonEnabled = false;
+                    IsCancelButtonEnabled = false;
                     break;
 
                 case DownloadStatus.Error:
                     StatusText = LanguageBase.GetLangValue(
                         "download_status_error_title",
                         obj.ErrorMessage);
-                    IsActionButtonEnabled = false;
+                    IsPauseResumeButtonEnabled = false;
+                    IsCancelButtonEnabled = false;
                     break;
             }
 
@@ -228,9 +242,6 @@ public partial class DownloaderProgressViewModel : ObservableObject
             .OrderBy(progress => progress.Index)
             .ToList();
 
-        // A single stream does not provide meaningful per-thread visualization.
-        // Keep the Runner compact and hide the thread panel until at least two
-        // actual download workers are reported by Core.
         if (visibleThreads.Count < 2)
         {
             IsThreadVisualizationLayoutExpanded = false;
@@ -242,6 +253,7 @@ public partial class DownloaderProgressViewModel : ObservableObject
 
         IsThreadVisualizationLayoutExpanded = true;
         IsThreadProgressUnsupportedVisible = false;
+        ThreadProgressTitle = GetThreadProgressTitle(stage);
 
         if (!_currentProgressVisualizationStage.Equals(
             stage,
@@ -393,6 +405,21 @@ public partial class DownloaderProgressViewModel : ObservableObject
         return $"{bytes / (1024.0 * 1024 * 1024):F2} GB";
     }
 
+    private string GetThreadProgressTitle(string stage)
+    {
+        string stageText = stage?.ToLowerInvariant() switch
+        {
+            "video" => LanguageBase.GetLangValue("download_thread_stage_video"),
+            "audio" => LanguageBase.GetLangValue("download_thread_stage_audio"),
+            "hlsfragments" => LanguageBase.GetLangValue("download_thread_stage_hls"),
+            _ => LanguageBase.GetLangValue("download_thread_stage_file")
+        };
+
+        return LanguageBase.GetLangValue(
+            "download_thread_visualization_title",
+            stageText);
+    }
+
     private static string GetUnsupportedVisualizationText(string? stage)
     {
         return string.Equals(stage, "YtDlp", StringComparison.OrdinalIgnoreCase)
@@ -411,7 +438,8 @@ public partial class DownloaderProgressViewModel : ObservableObject
     [RelayCommand]
     private void CancelDownload()
     {
-        IsActionButtonEnabled = false;
+        IsPauseResumeButtonEnabled = false;
+        IsCancelButtonEnabled = false;
         _downloaderService.CancelDownload();
     }
 
@@ -441,14 +469,14 @@ public partial class DownloaderProgressViewModel : ObservableObject
     [RelayCommand]
     private void Pause()
     {
-        IsActionButtonEnabled = false;
+        IsPauseResumeButtonEnabled = false;
         _downloaderService.PauseDownload();
     }
 
     [RelayCommand]
     private void Resume()
     {
-        IsActionButtonEnabled = false;
+        IsPauseResumeButtonEnabled = false;
         _downloaderService.ResumeDownload();
     }
 }

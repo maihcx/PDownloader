@@ -60,7 +60,7 @@ public class DownloadItem : INotifyPropertyChanged
 
     public string? FormatId { get; set; }
 
-    public double Progress => Status == DownloadStatus.Merging
+    public double Progress => IsMergeProgressActive
         ? MergeProgress
         : TotalBytes > 0
             ? (double)DownloadedBytes / TotalBytes * 100
@@ -112,6 +112,23 @@ public class DownloadItem : INotifyPropertyChanged
         set
         {
             _mergeProgress = Math.Clamp(value, 0, 100);
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(Progress));
+        }
+    }
+
+    private bool _isMergeProgressActive;
+    public bool IsMergeProgressActive
+    {
+        get => _isMergeProgressActive;
+        set
+        {
+            if (_isMergeProgressActive == value)
+            {
+                return;
+            }
+
+            _isMergeProgressActive = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(Progress));
         }

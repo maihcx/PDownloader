@@ -65,6 +65,8 @@ public class DownloadEngine
                 return;
             }
 
+            _item.IsMergeProgressActive = false;
+
             if (_item.IsYoutube)
             {
                 if (await _hlsHandler.TryHandleAsync(tempDirectory, _cancellationToken))
@@ -99,6 +101,16 @@ public class DownloadEngine
     {
         var pathService = new DownloadPathService();
         return MergeRecoveryStore.HasPendingInTree(pathService.GetTempDirectory(id));
+    }
+
+    public static bool TryGetPendingMergeProgress(
+        string id,
+        out double progress)
+    {
+        var pathService = new DownloadPathService();
+        return MergeRecoveryStore.TryGetPendingProgressInTree(
+            pathService.GetTempDirectory(id),
+            out progress);
     }
 
     public static Task<string?> GetRemoteFileNameAsync(string url) =>
@@ -210,6 +222,7 @@ public class DownloadEngine
 
     private void ReportProgress(long downloadedBytes, double speedBps)
     {
+        _item.IsMergeProgressActive = false;
         _item.DownloadedBytes = downloadedBytes;
         _item.SpeedBps = speedBps;
         _progress.Report(new DownloadProgress(downloadedBytes, speedBps));
@@ -217,6 +230,7 @@ public class DownloadEngine
 
     private void ReportMergeProgress(double progressPercent)
     {
+        _item.IsMergeProgressActive = true;
         _item.MergeProgress = progressPercent;
         _item.SpeedBps = 0;
 

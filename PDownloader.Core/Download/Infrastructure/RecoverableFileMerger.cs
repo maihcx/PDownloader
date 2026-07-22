@@ -150,10 +150,6 @@ internal sealed class RecoverableFileMerger
                             $"{output.Position} B, dự kiến {expectedCommittedLength} B.");
                     }
 
-                    // Commit protocol:
-                    // 1. Flush all copied bytes to the physical disk.
-                    // 2. Atomically persist the checkpoint.
-                    // 3. Only then delete the source that is now recoverable from .merging.
                     await output.FlushAsync(cancellationToken);
                     output.Flush(flushToDisk: true);
 
@@ -166,9 +162,6 @@ internal sealed class RecoverableFileMerger
                     }
                     catch
                     {
-                        // The source has not been deleted yet. Restore the in-memory
-                        // checkpoint so the outer rollback also returns to the last
-                        // checkpoint that was actually persisted.
                         manifest.CommittedOutputBytes = previousCommittedLength;
                         manifest.NextSourceIndex = previousNextSourceIndex;
                         throw;
@@ -206,6 +199,12 @@ internal sealed class RecoverableFileMerger
         catch (OperationCanceledException)
         {
             RollBackUncommittedBytes(mergingPath, manifest.CommittedOutputBytes);
+
+            double checkpointProgress = manifest.ExpectedOutputBytes > 0
+                ? manifest.CommittedOutputBytes
+                    / (double)manifest.ExpectedOutputBytes * 100.0
+                : 0;
+            reportProgress?.Invoke(Math.Clamp(checkpointProgress, 0, 100));
             throw;
         }
         catch (Exception ex)

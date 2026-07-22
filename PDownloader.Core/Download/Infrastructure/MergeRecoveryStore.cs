@@ -99,6 +99,112 @@ internal static class MergeRecoveryStore
         }
     }
 
+    public static bool TryGetPendingProgressInTree(
+        string recoveryDirectory,
+        out double progress)
+    {
+        progress = 0;
+
+        MergeRecoveryManifest? rootManifest = TryLoad(recoveryDirectory);
+        if (rootManifest != null)
+        {
+            progress = GetRecoverableProgress(rootManifest);
+            return true;
+        }
+
+        if (!Directory.Exists(recoveryDirectory))
+        {
+            return false;
+        }
+
+        try
+        {
+            IEnumerable<string> recoveryDirectories = Directory
+                .EnumerateFiles(
+                    recoveryDirectory,
+                    StateFileName,
+                    SearchOption.AllDirectories)
+                .Select(Path.GetDirectoryName)
+                .Where(directory => !string.IsNullOrWhiteSpace(directory))
+                .Cast<string>()
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(GetRecoveryStateTimestampUtc);
+
+            foreach (string directory in recoveryDirectories)
+            {
+                MergeRecoveryManifest? manifest = TryLoad(directory);
+                if (manifest == null)
+                {
+                    continue;
+                }
+
+                progress = GetRecoverableProgress(manifest);
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(
+                $"[MergeRecovery] Unable to read the pending merge process: {ex.Message}");
+        }
+
+        return false;
+    }
+
+    private static double GetRecoverableProgress(MergeRecoveryManifest manifest)
+    {
+        try
+        {
+            if (File.Exists(manifest.DestinationPath)
+                && new FileInfo(manifest.DestinationPath).Length > 0)
+            {
+                return 100;
+            }
+        }
+        catch
+        {
+            // Fall back to the durable checkpoint below.
+        }
+
+        if (manifest.Kind == MergeRecoveryKind.Concatenate
+            && manifest.ExpectedOutputBytes > 0)
+        {
+            return Math.Clamp(
+                manifest.CommittedOutputBytes
+                    / (double)manifest.ExpectedOutputBytes * 100.0,
+                0,
+                100);
+        }
+
+        return 0;
+    }
+
+    private static DateTime GetRecoveryStateTimestampUtc(string recoveryDirectory)
+    {
+        DateTime stateTimestamp = GetLastWriteTimeUtcSafe(
+            GetStateFilePath(recoveryDirectory));
+        DateTime checkpointTimestamp = GetLastWriteTimeUtcSafe(
+            GetCheckpointFilePath(recoveryDirectory));
+
+        return stateTimestamp >= checkpointTimestamp
+            ? stateTimestamp
+            : checkpointTimestamp;
+    }
+
+    private static DateTime GetLastWriteTimeUtcSafe(string path)
+    {
+        try
+        {
+            return File.Exists(path)
+                ? File.GetLastWriteTimeUtc(path)
+                : DateTime.MinValue;
+        }
+        catch
+        {
+            return DateTime.MinValue;
+        }
+    }
+
     public static void Save(
         string recoveryDirectory,
         MergeRecoveryManifest manifest)

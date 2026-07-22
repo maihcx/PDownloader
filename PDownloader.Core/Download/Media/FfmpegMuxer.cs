@@ -191,6 +191,8 @@ internal sealed class FfmpegMuxer
         catch (OperationCanceledException)
         {
             TryDeletePartialOutput(mergingPath);
+
+            reportProgress?.Invoke(0);
             throw;
         }
         catch (Exception ex)
