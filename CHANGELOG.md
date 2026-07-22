@@ -1,3 +1,14 @@
+## v0.6.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- Add Zen Browser policy entry (#71) — @maihcx
+- Add cross-browser support and extension signing for Firefox (#69) — @maihcx
+
+
+---
+
 ## v0.5.0
 
 ## 🚀 Changelog
