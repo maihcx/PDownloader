@@ -277,7 +277,7 @@
         let fallbackTitle = sender.tab?.title || '';
         if (!fallbackTitle && tabId >= 0) {
           try {
-            fallbackTitle = (await chrome.tabs.get(tabId))?.title || '';
+            fallbackTitle = (await PDWebExt.tabs.get(tabId))?.title || '';
           } catch (_) { }
         }
 
@@ -321,7 +321,7 @@
   };
 
   function init() {
-    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    PDWebExt.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const handler = handlers[msg?.action];
       if (!handler) return false;
       return handler(msg, sender, sendResponse);

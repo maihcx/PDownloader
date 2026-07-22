@@ -5,21 +5,21 @@
     return new Promise((resolve, reject) => {
       const id = `${idPrefix}-${Date.now()}`;
 
-      chrome.notifications.create(id, {
+      PDWebExt.notifications.create(id, {
         type: 'basic',
         iconUrl: 'icons/icon128.png',
         title,
         message,
         priority
       }, createdId => {
-        const error = chrome.runtime.lastError;
+        const error = PDWebExt.runtime.lastError;
         if (error) {
           reject(new Error(error.message));
           return;
         }
 
         if (autoClearMs > 0) {
-          setTimeout(() => chrome.notifications.clear(createdId || id), autoClearMs);
+          setTimeout(() => PDWebExt.notifications.clear(createdId || id), autoClearMs);
         }
 
         resolve(createdId || id);
@@ -28,7 +28,7 @@
   }
 
   async function show(label) {
-    const s = await chrome.storage.local.get(['showNotifications']);
+    const s = await PDWebExt.storage.local.get(['showNotifications']);
     if (s.showNotifications === false) return;
 
     const fallback = PD.I18n.t('notifDefaultLabel');

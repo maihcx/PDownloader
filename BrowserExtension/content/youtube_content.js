@@ -1,6 +1,6 @@
 const _yt_themeLink = document.createElement('link');
 _yt_themeLink.rel  = 'stylesheet';
-_yt_themeLink.href = chrome.runtime.getURL('common/theme.css');
+_yt_themeLink.href = PDWebExt.runtime.getURL('common/theme.css');
 document.head.appendChild(_yt_themeLink);
 
 const _yt_style = document.createElement('style');
@@ -170,7 +170,7 @@ function prefetchFormats(vid) {
     ? `https://www.youtube.com/shorts/${vid}`
     : `https://www.youtube.com/watch?v=${vid}`;
   _prefetchProm = new Promise(res => {
-    chrome.runtime.sendMessage({ action: 'analyze_youtube', url }, data => {
+    PDWebExt.runtime.sendMessage({ action: 'analyze_youtube', url }, data => {
       _prefetchProm = null;
       if (data?.success) _formatsCache[vid] = data;
       res(data);
@@ -266,7 +266,7 @@ function renderDropdown(dd, data) {
         let fmtId = f.id;
         if (f.note === 'Video Only' && filter !== 'video') fmtId += '+bestaudio';
 
-        const resp = await chrome.runtime.sendMessage({
+        const resp = await PDWebExt.runtime.sendMessage({
           action:   'download_youtube',
           url:      location.href,
           formatId: fmtId,
@@ -357,7 +357,7 @@ function injectPanel() {
       : location.href;
 
     const resp = await (_prefetchProm || new Promise(res =>
-      chrome.runtime.sendMessage({ action: 'analyze_youtube', url: analyzeUrl }, res)
+      PDWebExt.runtime.sendMessage({ action: 'analyze_youtube', url: analyzeUrl }, res)
     ));
 
     mainBtn.innerHTML = origHtml;

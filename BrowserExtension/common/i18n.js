@@ -3,7 +3,7 @@
 
   function t(key, substitutions) {
     try {
-      return chrome.i18n.getMessage(key, substitutions) || key;
+      return PDWebExt.i18n.getMessage(key, substitutions) || key;
     } catch (_) {
       return key;
     }

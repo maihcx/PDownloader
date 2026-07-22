@@ -1,6 +1,6 @@
 const _themeLink = document.createElement('link');
 _themeLink.rel = 'stylesheet';
-_themeLink.href = chrome.runtime.getURL('common/theme.css');
+_themeLink.href = PDWebExt.runtime.getURL('common/theme.css');
 document.head.appendChild(_themeLink);
 
 const _style = document.createElement('style');
@@ -283,10 +283,10 @@ async function sendMessageSafe(message) {
   }
 
   try {
-    if (!chrome.runtime?.id) {
+    if (!PDWebExt.runtime?.id) {
       throw new Error('Extension context invalidated.');
     }
-    return await chrome.runtime.sendMessage(message);
+    return await PDWebExt.runtime.sendMessage(message);
   } catch (error) {
     const text = String(error?.message || error || '');
     if (/extension context invalidated|receiving end does not exist|message port closed/i.test(text)) {

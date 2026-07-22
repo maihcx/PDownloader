@@ -18,9 +18,9 @@
   const reportedPerformanceUrls = new Set();
 
   function sendMessage(message) {
-    if (contextInvalidated || !chrome.runtime?.id) return Promise.resolve(null);
+    if (contextInvalidated || !PDWebExt.runtime?.id) return Promise.resolve(null);
 
-    return chrome.runtime.sendMessage(message).catch(error => {
+    return PDWebExt.runtime.sendMessage(message).catch(error => {
       const text = String(error?.message || error || '');
       if (/extension context invalidated|receiving end does not exist|message port closed/i.test(text)) {
         contextInvalidated = true;
@@ -368,7 +368,7 @@
     setTimeout(() => scanMediaElements(), 250);
   }
 
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  PDWebExt.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.action === 'media_candidates_updated') {
       handleCandidateUpdate(message);
       return false;

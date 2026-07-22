@@ -4,7 +4,7 @@ function getDomainFromUrl(url) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  document.documentElement.lang = chrome.i18n.getUILanguage();
+  document.documentElement.lang = PDWebExt.i18n.getUILanguage();
   PD.I18n.applyToDom(document);
 
   const statusCard      = document.getElementById('statusCard');
@@ -23,13 +23,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   let currentTabTitle = '';
   let currentTabId = -1;
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [tab] = await PDWebExt.tabs.query({ active: true, currentWindow: true });
     currentTabUrl = tab?.url || '';
     currentTabTitle = tab?.title || '';
     currentTabId = Number.isInteger(tab?.id) ? tab.id : -1;
   } catch (_) { /* ignore */ }
 
-  chrome.runtime.sendMessage({ action: 'get_popup_init' }, res => {
+  PDWebExt.runtime.sendMessage({ action: 'get_popup_init' }, res => {
     const ok = res?.connected;
     statusCard.className = 'status-card ' + (ok ? 'ok' : 'err');
     statusText.textContent = PD.I18n.t(ok ? 'popupStatusConnected' : 'popupStatusDisconnected');
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     refreshDetectedMedia();
   });
 
-  chrome.runtime.sendMessage({ action: 'reset_badge' });
+  PDWebExt.runtime.sendMessage({ action: 'reset_badge' });
 
   autoChk.addEventListener('change', () => {
     save();
@@ -59,15 +59,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!domain) return;
 
     const action = siteChk.checked ? 'remove_blacklist' : 'add_blacklist';
-    chrome.runtime.sendMessage({ action, domain }, () => {
-      chrome.runtime.sendMessage({ action: 'get_settings' }, data => {
+    PDWebExt.runtime.sendMessage({ action, domain }, () => {
+      PDWebExt.runtime.sendMessage({ action: 'get_settings' }, data => {
         renderBlacklist(data.blacklistedDomains || []);
       });
     });
   });
 
   function save() {
-    chrome.runtime.sendMessage({
+    PDWebExt.runtime.sendMessage({
       action: 'save_settings',
       settings: {
         autoIntercept:     autoChk.checked,
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function refreshSiteToggle() {
-    chrome.runtime.sendMessage({ action: 'get_site_status', url: currentTabUrl }, status => {
+    PDWebExt.runtime.sendMessage({ action: 'get_site_status', url: currentTabUrl }, status => {
       const { domain, autoIntercept, incompatible, blacklisted } = status || {};
 
       if (!autoIntercept) {
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       button.textContent = '↓';
       button.addEventListener('click', () => {
         button.disabled = true;
-        chrome.runtime.sendMessage({
+        PDWebExt.runtime.sendMessage({
           action: 'download_media_candidate',
           tabId: currentTabId,
           candidateId: candidate.id,
@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    chrome.runtime.sendMessage({
+    PDWebExt.runtime.sendMessage({
       action: 'get_media_candidates',
       tabId: currentTabId,
       minScore: 45
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderDetectedMedia(candidates, response?.playback || null);
 
       if (!candidates.length && allowRescan) {
-        chrome.tabs.sendMessage(currentTabId, { action: 'pd_rescan_media' }, () => {
+        PDWebExt.tabs.sendMessage(currentTabId, { action: 'pd_rescan_media' }, () => {
           setTimeout(() => refreshDetectedMedia(false), 250);
         });
       }
@@ -257,8 +257,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       rmBtn.title = PD.I18n.t('popupBlacklistRemoveTitle');
       rmBtn.textContent = '✕';
       rmBtn.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ action: 'remove_blacklist', domain: d }, () => {
-          chrome.runtime.sendMessage({ action: 'get_settings' }, data => renderBlacklist(data.blacklistedDomains || []));
+        PDWebExt.runtime.sendMessage({ action: 'remove_blacklist', domain: d }, () => {
+          PDWebExt.runtime.sendMessage({ action: 'get_settings' }, data => renderBlacklist(data.blacklistedDomains || []));
           refreshSiteToggle();
         });
       });

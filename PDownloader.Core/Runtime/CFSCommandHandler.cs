@@ -22,6 +22,7 @@ public static class CFSCommandHandler
     public record YoutubePendingMeta(string FormatId);
 
     private static readonly ConcurrentDictionary<string, YoutubePendingMeta> _youtubePending = new();
+    private static readonly ConcurrentDictionary<string, Dictionary<string, string>> _runnerPendingHeaders = new();
     private static readonly ConcurrentDictionary<string, object> _broadcastLocks = new();
 
     public static DownloadConfigService DownloadConfigService { get; set; } = Program.GetRequiredService<DownloadConfigService>();
@@ -194,19 +195,8 @@ public static class CFSCommandHandler
 
             _youtubePending.TryRemove(req.Id, out YoutubePendingMeta? ytMeta);
 
-            Dictionary<string, string>? customHeaders = null;
-            if (req.Headers is { Count: > 0 })
-            {
-                customHeaders = req.Headers
-                    .Where(kv => !string.IsNullOrWhiteSpace(kv.Key)
-                              && !string.IsNullOrWhiteSpace(kv.Value))
-                    .ToDictionary(kv => kv.Key, kv => kv.Value);
-
-                if (customHeaders.Count == 0)
-                {
-                    customHeaders = null;
-                }
-            }
+            Dictionary<string, string>? customHeaders = TakeRunnerPendingHeaders(req.Id)
+                ?? NormalizeHeaders(req.Headers);
 
             int defaultThreads = DownloadConfigService.DownloadConfigs?.DefaultThreadCount ?? 0;
 
@@ -237,6 +227,71 @@ public static class CFSCommandHandler
             AppRuntime.cfsMain?.Send("muxt-download-progress", json);
             cfsDowloaderUI?.Send("muxt-download-progress", json);
         }
+    }
+
+    public static void RegisterRunnerPendingHeaders(
+        string id,
+        Dictionary<string, string>? headers)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return;
+        }
+
+        Dictionary<string, string>? normalized = NormalizeHeaders(headers);
+        if (normalized == null)
+        {
+            _runnerPendingHeaders.TryRemove(id, out _);
+            return;
+        }
+
+        // Store an independent copy because the original FileTask may be reused or
+        // mutated after the Runner has been launched.
+        _runnerPendingHeaders[id] = normalized;
+    }
+
+    public static void ClearRunnerPendingContext(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return;
+        }
+
+        _runnerPendingHeaders.TryRemove(id, out _);
+        _youtubePending.TryRemove(id, out _);
+    }
+
+    private static Dictionary<string, string>? TakeRunnerPendingHeaders(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id)
+            || !_runnerPendingHeaders.TryRemove(id, out Dictionary<string, string>? headers))
+        {
+            return null;
+        }
+
+        return headers;
+    }
+
+    private static Dictionary<string, string>? NormalizeHeaders(
+        Dictionary<string, string>? headers)
+    {
+        if (headers is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        var normalized = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach ((string key, string value) in headers)
+        {
+            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            normalized[key] = value;
+        }
+
+        return normalized.Count == 0 ? null : normalized;
     }
 
     public static void RegisterYoutubePending(string id, string formatId)
