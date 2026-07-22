@@ -54,6 +54,10 @@ internal sealed class YoutubeDownloadHandler
 
         string? referer = DownloadPathService.GetHeader(_item.CustomHeaders, "Referer");
         string? cookieHeader = DownloadPathService.GetHeader(_item.CustomHeaders, "Cookie");
+        string? cookieJarJson = DownloadPathService.GetHeader(
+            _item.CustomHeaders,
+            "X-PDownloader-Cookie-Jar");
+        string? userAgent = DownloadPathService.GetHeader(_item.CustomHeaders, "User-Agent");
         string fileStem = string.IsNullOrWhiteSpace(_item.FileName)
             ? DownloadPathService.SanitizeFileName(
                 DownloadPathService.GuessFileName(_item.Url))
@@ -72,6 +76,9 @@ internal sealed class YoutubeDownloadHandler
                     _item.FormatId ?? "bestvideo+bestaudio/best",
                     referer,
                     cookieHeader,
+                    cookieJarJson,
+                    userAgent,
+                    _item.CustomHeaders,
                     cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

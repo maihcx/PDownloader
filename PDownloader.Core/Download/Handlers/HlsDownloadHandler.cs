@@ -72,13 +72,22 @@ internal sealed class HlsDownloadHandler
 
         string? referer = DownloadPathService.GetHeader(_item.CustomHeaders, "Referer");
         string? cookieHeader = DownloadPathService.GetHeader(_item.CustomHeaders, "Cookie");
+        string? cookieJarJson = DownloadPathService.GetHeader(
+            _item.CustomHeaders,
+            "X-PDownloader-Cookie-Jar");
+        string? userAgent = DownloadPathService.GetHeader(_item.CustomHeaders, "User-Agent");
 
         _item.Status = DownloadStatus.Connecting;
 
         try
         {
             HlsFragmentsResult? fragmentResult =
-                await TryResolveFragmentsAsync(referer, cookieHeader, cancellationToken);
+                await TryResolveFragmentsAsync(
+                    referer,
+                    cookieHeader,
+                    cookieJarJson,
+                    userAgent,
+                    cancellationToken);
 
             _item.Status = DownloadStatus.Downloading;
             _item.StartTime = DateTime.Now;
@@ -97,6 +106,8 @@ internal sealed class HlsDownloadHandler
                     tempDirectory,
                     referer,
                     cookieHeader,
+                    cookieJarJson,
+                    userAgent,
                     cancellationToken);
 
             Complete(finalPath);
@@ -120,6 +131,8 @@ internal sealed class HlsDownloadHandler
     private async Task<HlsFragmentsResult?> TryResolveFragmentsAsync(
         string? referer,
         string? cookieHeader,
+        string? cookieJarJson,
+        string? userAgent,
         CancellationToken cancellationToken)
     {
         try
@@ -128,6 +141,9 @@ internal sealed class HlsDownloadHandler
                 _item.Url,
                 referer,
                 cookieHeader,
+                cookieJarJson,
+                userAgent,
+                _item.CustomHeaders,
                 cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -171,6 +187,8 @@ internal sealed class HlsDownloadHandler
         string tempDirectory,
         string? referer,
         string? cookieHeader,
+        string? cookieJarJson,
+        string? userAgent,
         CancellationToken cancellationToken)
     {
         _item.SetProgressVisualizationUnsupported("YtDlp");
@@ -193,6 +211,9 @@ internal sealed class HlsDownloadHandler
             outputPathWithoutExtension,
             referer,
             cookieHeader,
+            cookieJarJson,
+            userAgent,
+            _item.CustomHeaders,
             _item.Threads,
             (downloadedBytes, totalBytes, ytDlpSpeedBps) =>
             {
