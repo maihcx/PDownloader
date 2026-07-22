@@ -370,7 +370,7 @@
         });
       },
       { urls: ['<all_urls>'] },
-      ['requestHeaders', 'extraHeaders']
+      PDWebExtCompat.webRequestExtraInfoSpec('requestHeaders', 'extraHeaders')
     );
 
     PDWebExt.webRequest.onHeadersReceived.addListener(
@@ -379,7 +379,7 @@
         requestMetadata.delete(details.requestId);
       },
       { urls: ['<all_urls>'] },
-      ['responseHeaders', 'extraHeaders']
+      PDWebExtCompat.webRequestExtraInfoSpec('responseHeaders', 'extraHeaders')
     );
 
     PDWebExt.webRequest.onErrorOccurred.addListener(

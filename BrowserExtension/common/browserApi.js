@@ -108,5 +108,24 @@
     return proxy;
   }
 
+  const isFirefox = !!globalThis.browser?.runtime?.getBrowserInfo;
+
+  globalThis.PDWebExtPlatform = Object.freeze({
+    isFirefox,
+    isChromium: !isFirefox
+  });
+
+  globalThis.PDWebExtCompat = Object.freeze({
+    webRequestExtraInfoSpec(...items) {
+      // Chromium supports the `extraHeaders` enum value. Firefox rejects it
+      // with NS_ERROR_INVALID_ARG / Invalid enumeration value. Keep the
+      // strongest available header visibility on each browser without
+      // preventing the background runtime from starting.
+      return isFirefox
+        ? items.filter(item => item !== 'extraHeaders')
+        : items;
+    }
+  });
+
   globalThis.PDWebExt = createApiProxy(promiseApi, callbackApi);
 })();

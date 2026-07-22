@@ -226,7 +226,8 @@
         success: false,
         error: data?.error || `Server ${response.status}`
       };
-    } catch (_) {
+    } catch (error) {
+      console.error('[PDownloader] Bridge JSON request failed:', url, error);
       return { success: false, error: PD.I18n.t('connErrorGeneric') };
     }
   }
