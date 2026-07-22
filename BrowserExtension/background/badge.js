@@ -4,10 +4,10 @@
   function update() {
     const n = PD.State.getInterceptCount();
     if (n > 0) {
-      chrome.action.setBadgeText({ text: String(n) });
-      chrome.action.setBadgeBackgroundColor({ color: '#4FC3F7' });
+      PDWebExt.action.setBadgeText({ text: String(n) });
+      PDWebExt.action.setBadgeBackgroundColor({ color: '#4FC3F7' });
     } else {
-      chrome.action.setBadgeText({ text: '' });
+      PDWebExt.action.setBadgeText({ text: '' });
     }
   }
 

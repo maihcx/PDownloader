@@ -3,7 +3,7 @@
   const C = PD.Constants;
 
   function init() {
-    chrome.webRequest.onHeadersReceived.addListener(
+    PDWebExt.webRequest.onHeadersReceived.addListener(
       (details) => {
         if (!details.responseHeaders) return;
         for (const h of details.responseHeaders) {

@@ -11,10 +11,11 @@ REM Chay o REPO ROOT (thu muc chua BrowserExtension\ va signing-key.pem):
 REM   pack-crx.bat
 REM ============================================================
 
-set EXT_DIR=%~dp0BrowserExtension
+set EXT_SOURCE_DIR=%~dp0BrowserExtension
+set EXT_DIR=%EXT_SOURCE_DIR%\dist\chromium
 set KEY_FILE=%~dp0signing-key.pem
-set OUT_CRX=%EXT_DIR%\PDownloader.crx
-set TMP_CRX=%~dp0BrowserExtension.crx
+set OUT_CRX=%EXT_SOURCE_DIR%\PDownloader.crx
+set TMP_CRX=%EXT_SOURCE_DIR%\dist\chromium.crx
 
 REM --- Tim chrome.exe ---
 set CHROME_EXE=
@@ -30,6 +31,14 @@ if "%CHROME_EXE%"=="" (
 
 if not exist "%KEY_FILE%" (
     echo [ERROR] Khong tim thay %KEY_FILE%
+    pause
+    exit /b 1
+)
+
+echo Building Chromium extension...
+call "%EXT_SOURCE_DIR%\build-extension.bat" chromium
+if errorlevel 1 (
+    echo [ERROR] Build Chromium extension that bai.
     pause
     exit /b 1
 )

@@ -241,11 +241,11 @@
       let audible = false;
 
       try {
-        const tab = await chrome.tabs.get(tabId);
+        const tab = await PDWebExt.tabs.get(tabId);
         audible = !!tab?.audible;
       } catch (_) { }
 
-      chrome.tabs.sendMessage(tabId, {
+      PDWebExt.tabs.sendMessage(tabId, {
         action: 'media_candidates_updated',
         bestAudio,
         bestVideo,
@@ -348,7 +348,7 @@
   function init() {
     void Registry.restoreSession?.();
 
-    chrome.webRequest.onBeforeRequest.addListener(
+    PDWebExt.webRequest.onBeforeRequest.addListener(
       details => {
         if (details.type === 'main_frame' && details.tabId >= 0) {
           Registry.clear(details.tabId);
@@ -359,7 +359,7 @@
       { urls: ['<all_urls>'] }
     );
 
-    chrome.webRequest.onBeforeSendHeaders.addListener(
+    PDWebExt.webRequest.onBeforeSendHeaders.addListener(
       details => {
         if (details.tabId < 0) return;
 
@@ -370,24 +370,24 @@
         });
       },
       { urls: ['<all_urls>'] },
-      ['requestHeaders', 'extraHeaders']
+      PDWebExtCompat.webRequestExtraInfoSpec('requestHeaders', 'extraHeaders')
     );
 
-    chrome.webRequest.onHeadersReceived.addListener(
+    PDWebExt.webRequest.onHeadersReceived.addListener(
       details => {
         registerNetworkCandidate(details);
         requestMetadata.delete(details.requestId);
       },
       { urls: ['<all_urls>'] },
-      ['responseHeaders', 'extraHeaders']
+      PDWebExtCompat.webRequestExtraInfoSpec('responseHeaders', 'extraHeaders')
     );
 
-    chrome.webRequest.onErrorOccurred.addListener(
+    PDWebExt.webRequest.onErrorOccurred.addListener(
       details => requestMetadata.delete(details.requestId),
       { urls: ['<all_urls>'] }
     );
 
-    chrome.tabs.onRemoved.addListener(tabId => {
+    PDWebExt.tabs.onRemoved.addListener(tabId => {
       Registry.clear(tabId);
       playbackStateByTab.delete(tabId);
       const timer = notifyTimers.get(tabId);
@@ -395,7 +395,7 @@
       notifyTimers.delete(tabId);
     });
 
-    chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    PDWebExt.tabs.onUpdated.addListener((tabId, changeInfo) => {
       if (typeof changeInfo.audible === 'boolean') scheduleNotify(tabId);
     });
 

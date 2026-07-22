@@ -3,15 +3,15 @@
   const { SETTINGS_KEYS, DEFAULT_SETTINGS, DEFAULT_EXTENSIONS } = PD.Constants;
 
   function getSettings(keys = SETTINGS_KEYS) {
-    return chrome.storage.local.get(keys);
+    return PDWebExt.storage.local.get(keys);
   }
 
   function saveSettings(partial) {
-    return chrome.storage.local.set(partial);
+    return PDWebExt.storage.local.set(partial);
   }
 
   async function getBlacklist() {
-    const { blacklistedDomains } = await chrome.storage.local.get(['blacklistedDomains']);
+    const { blacklistedDomains } = await PDWebExt.storage.local.get(['blacklistedDomains']);
     return blacklistedDomains || [];
   }
 
@@ -36,7 +36,7 @@
       extensions: DEFAULT_EXTENSIONS
     };
 
-    const existing = await chrome.storage.local.get(Object.keys(defaults));
+    const existing = await PDWebExt.storage.local.get(Object.keys(defaults));
     const missing = {};
 
     for (const [key, value] of Object.entries(defaults)) {
@@ -46,7 +46,7 @@
     }
 
     if (Object.keys(missing).length > 0) {
-      await chrome.storage.local.set(missing);
+      await PDWebExt.storage.local.set(missing);
     }
   }
 

@@ -125,7 +125,7 @@
 
     for (let index = 0; index < urls.length; index++) {
       try {
-        const cookies = await chrome.cookies.getAll({ url: urls[index] });
+        const cookies = await PDWebExt.cookies.getAll({ url: urls[index] });
         if (index === 0) primaryCookies = cookies;
 
         for (const cookie of cookies) {
@@ -142,7 +142,7 @@
     const cookieDomains = [...new Set(urls.flatMap(getKnownCookieDomains))];
     for (const domain of cookieDomains) {
       try {
-        const cookies = await chrome.cookies.getAll({ domain });
+        const cookies = await PDWebExt.cookies.getAll({ domain });
         for (const cookie of cookies) {
           const portable = toPortableCookie(cookie);
           if (portable) jar.set(cookieKey(portable), portable);
@@ -226,7 +226,8 @@
         success: false,
         error: data?.error || `Server ${response.status}`
       };
-    } catch (_) {
+    } catch (error) {
+      console.error('[PDownloader] Bridge JSON request failed:', url, error);
       return { success: false, error: PD.I18n.t('connErrorGeneric') };
     }
   }

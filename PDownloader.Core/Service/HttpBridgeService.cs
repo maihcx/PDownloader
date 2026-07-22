@@ -20,7 +20,7 @@ namespace PDownloader.Core.Service;
 public sealed class HttpBridgeService : IDisposable
 {
     private const string Prefix = "http://localhost:6287/";
-    private const string AllowedExtensionOrigin =
+    private const string AllowedChromiumExtensionOrigin =
         "chrome-extension://nliblbkhgljcpdboininiepogjaegien";
 
     private const string ClientHeaderName = "X-PDownloader-Client";
@@ -406,7 +406,7 @@ public sealed class HttpBridgeService : IDisposable
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
 
-        using var memoryStream = contentLength > 0
+        using MemoryStream memoryStream = contentLength > 0
             ? new MemoryStream((int)contentLength)
             : new MemoryStream();
 
@@ -473,8 +473,27 @@ public sealed class HttpBridgeService : IDisposable
     {
         if (string.Equals(
             origin,
-            AllowedExtensionOrigin,
+            AllowedChromiumExtensionOrigin,
             StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!Uri.TryCreate(origin, UriKind.Absolute, out Uri? uri))
+        {
+            return false;
+        }
+
+        // Firefox exposes extension pages under a per-profile moz-extension://
+        // UUID. That UUID is intentionally not the add-on's Gecko ID and is not
+        // stable across Firefox profiles, so a single fixed origin cannot be
+        // whitelisted the same way as the signed Chromium extension ID.
+        //
+        // Restrict this exception to the moz-extension scheme. Requests must
+        // still originate from loopback and pass the PDownloader client-header
+        // and per-process session-token checks before any bridge action runs.
+        if (uri.Scheme.Equals("moz-extension", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(uri.Host))
         {
             return true;
         }
@@ -482,8 +501,8 @@ public sealed class HttpBridgeService : IDisposable
 #if DEBUG
         // Unpacked Chromium extensions can have a different generated ID while
         // developing. Keep release builds locked to the signed extension ID.
-        return Uri.TryCreate(origin, UriKind.Absolute, out Uri? uri)
-            && uri.Scheme.Equals("chrome-extension", StringComparison.OrdinalIgnoreCase);
+        return uri.Scheme.Equals("chrome-extension", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(uri.Host);
 #else
         return false;
 #endif
@@ -491,9 +510,11 @@ public sealed class HttpBridgeService : IDisposable
 
     private static bool IsAllowedCallerOrigin(string? origin)
     {
-        // Chromium extensions with host permissions may omit Origin entirely.
-        // Normal web pages send their own Origin and cannot spoof the custom
-        // client header without first passing the CORS preflight below.
+        // Chromium extensions with host permissions may omit Origin entirely,
+        // while Firefox extension background pages normally send a
+        // moz-extension:// Origin. Normal web pages send their own Origin and
+        // cannot spoof the custom client header without first passing the CORS
+        // preflight below.
         return string.IsNullOrWhiteSpace(origin) || IsAllowedOrigin(origin);
     }
 

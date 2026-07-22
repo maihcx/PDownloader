@@ -49,23 +49,23 @@
   }
 
   function schedulePersist(tabId) {
-    if (!chrome.storage?.session || persistTimers.has(tabId)) return;
+    if (!PDWebExt.storage?.session || persistTimers.has(tabId)) return;
 
     persistTimers.set(tabId, setTimeout(() => {
       persistTimers.delete(tabId);
       const list = candidatesByTab.get(tabId) || [];
-      chrome.storage.session.set({ [storageKey(tabId)]: list }).catch(() => {});
+      PDWebExt.storage.session.set({ [storageKey(tabId)]: list }).catch(() => {});
     }, 250));
   }
 
   async function restoreSession() {
-    if (!chrome.storage?.session) {
+    if (!PDWebExt.storage?.session) {
       restoreCompleted = true;
       return;
     }
 
     try {
-      const stored = await chrome.storage.session.get(null);
+      const stored = await PDWebExt.storage.session.get(null);
       for (const [key, value] of Object.entries(stored || {})) {
         if (!key.startsWith(STORAGE_PREFIX) || !Array.isArray(value)) continue;
         const tabId = Number(key.slice(STORAGE_PREFIX.length));
@@ -185,7 +185,7 @@
     const timer = persistTimers.get(tabId);
     if (timer) clearTimeout(timer);
     persistTimers.delete(tabId);
-    chrome.storage?.session?.remove(storageKey(tabId)).catch(() => {});
+    PDWebExt.storage?.session?.remove(storageKey(tabId)).catch(() => {});
   }
 
   function onChange(listener) {

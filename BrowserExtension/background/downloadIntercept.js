@@ -12,8 +12,8 @@
       console.error('[PDownloader] Failed to initialize download interception boundary:', error);
     });
 
-    if (!chrome.downloads.onCreated.hasListener(onCreated)) {
-      chrome.downloads.onCreated.addListener(onCreated);
+    if (!PDWebExt.downloads.onCreated.hasListener(onCreated)) {
+      PDWebExt.downloads.onCreated.addListener(onCreated);
     }
   }
 
@@ -23,14 +23,14 @@
     const firstActivationAt = Date.now();
 
     interceptSincePromise = (async () => {
-      const stored = await chrome.storage.local.get([INTERCEPT_SINCE_KEY]);
+      const stored = await PDWebExt.storage.local.get([INTERCEPT_SINCE_KEY]);
       const existing = Number(stored[INTERCEPT_SINCE_KEY]);
 
       if (Number.isFinite(existing) && existing > 0) {
         return existing;
       }
 
-      await chrome.storage.local.set({
+      await PDWebExt.storage.local.set({
         [INTERCEPT_SINCE_KEY]: firstActivationAt
       });
 
@@ -71,7 +71,7 @@
 
       let activeTabUrl = '';
       try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const [tab] = await PDWebExt.tabs.query({ active: true, currentWindow: true });
         activeTabUrl = tab?.url || '';
       } catch (_) {}
 
@@ -93,8 +93,8 @@
 
       if (!byExt && !bySize && !byMime) return;
 
-      await chrome.downloads.cancel(item.id).catch(() => {});
-      await chrome.downloads.erase({ id: item.id }).catch(() => {});
+      await PDWebExt.downloads.cancel(item.id).catch(() => {});
+      await PDWebExt.downloads.erase({ id: item.id }).catch(() => {});
 
       const referer = activeTabUrl;
 

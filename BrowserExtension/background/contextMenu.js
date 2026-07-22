@@ -2,17 +2,17 @@
   const PD = root.PD || (root.PD = {});
 
   function createMenus() {
-    chrome.contextMenus.removeAll(() => {
-      chrome.contextMenus.create({ id: 'pd-link',      title: PD.I18n.t('contextMenuLink'),  contexts: ['link'] });
-      chrome.contextMenus.create({ id: 'pd-image',     title: PD.I18n.t('contextMenuImage'), contexts: ['image'] });
-      chrome.contextMenus.create({ id: 'pd-media',     title: PD.I18n.t('contextMenuMedia'), contexts: ['video','audio'] });
-      chrome.contextMenus.create({ id: 'pd-separator', type: 'separator',                    contexts: ['link','image','video','audio','page'] });
-      chrome.contextMenus.create({ id: 'pd-page',      title: PD.I18n.t('contextMenuPage'),  contexts: ['page'] });
+    PDWebExt.contextMenus.removeAll(() => {
+      PDWebExt.contextMenus.create({ id: 'pd-link',      title: PD.I18n.t('contextMenuLink'),  contexts: ['link'] });
+      PDWebExt.contextMenus.create({ id: 'pd-image',     title: PD.I18n.t('contextMenuImage'), contexts: ['image'] });
+      PDWebExt.contextMenus.create({ id: 'pd-media',     title: PD.I18n.t('contextMenuMedia'), contexts: ['video','audio'] });
+      PDWebExt.contextMenus.create({ id: 'pd-separator', type: 'separator',                    contexts: ['link','image','video','audio','page'] });
+      PDWebExt.contextMenus.create({ id: 'pd-page',      title: PD.I18n.t('contextMenuPage'),  contexts: ['page'] });
     });
   }
 
   function init() {
-    chrome.contextMenus.onClicked.addListener(handleClick);
+    PDWebExt.contextMenus.onClicked.addListener(handleClick);
   }
 
   async function handleClick(info, tab) {
