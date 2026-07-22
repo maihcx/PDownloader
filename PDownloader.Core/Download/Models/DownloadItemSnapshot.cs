@@ -28,6 +28,12 @@ public record DownloadItemSnapshot(
 
     public bool IsMergeProgressActive { get; init; }
 
+    public string Md5Hash { get; init; } = string.Empty;
+
+    public string Sha1Hash { get; init; } = string.Empty;
+
+    public string Sha256Hash { get; init; } = string.Empty;
+
     public static DownloadItemSnapshot From(DownloadItem i) => new(
         i.Id, i.Url, i.FileName, i.SavePath,
         i.Threads, i.IsYoutube, i.FormatId,
@@ -37,7 +43,10 @@ public record DownloadItemSnapshot(
     {
         ResolvedUrl = i.ResolvedUrl,
         MergeProgress = i.MergeProgress,
-        IsMergeProgressActive = i.IsMergeProgressActive
+        IsMergeProgressActive = i.IsMergeProgressActive,
+        Md5Hash = i.Md5Hash,
+        Sha1Hash = i.Sha1Hash,
+        Sha256Hash = i.Sha256Hash
     };
 
     public DownloadItem ToDownloadItem()
@@ -57,6 +66,9 @@ public record DownloadItemSnapshot(
             DownloadedBytes = DownloadedBytes,
             MergeProgress = MergeProgress,
             IsMergeProgressActive = IsMergeProgressActive,
+            Md5Hash = Md5Hash,
+            Sha1Hash = Sha1Hash,
+            Sha256Hash = Sha256Hash,
             Status = status,
             ErrorMessage = ErrorMessage,
             StartTime = StartTime,

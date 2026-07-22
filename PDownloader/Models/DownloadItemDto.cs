@@ -94,6 +94,15 @@ public partial class DownloadItemDto : ObservableObject
     [JsonPropertyName("isActive")]
     public bool IsActive { get; set; }
 
+    [JsonPropertyName("md5Hash")]
+    public string Md5Hash { get; set; } = string.Empty;
+
+    [JsonPropertyName("sha1Hash")]
+    public string Sha1Hash { get; set; } = string.Empty;
+
+    [JsonPropertyName("sha256Hash")]
+    public string Sha256Hash { get; set; } = string.Empty;
+
     private void RefreshStatusText()
     {
         if (Status == "Error")

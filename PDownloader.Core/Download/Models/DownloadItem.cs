@@ -161,6 +161,32 @@ public class DownloadItem : INotifyPropertyChanged
         set { _errorMessage = value; OnPropertyChanged(); }
     }
 
+    private string _md5Hash = string.Empty;
+    public string Md5Hash
+    {
+        get => _md5Hash;
+        set { _md5Hash = value; OnPropertyChanged(); }
+    }
+
+    private string _sha1Hash = string.Empty;
+    public string Sha1Hash
+    {
+        get => _sha1Hash;
+        set { _sha1Hash = value; OnPropertyChanged(); }
+    }
+
+    private string _sha256Hash = string.Empty;
+    public string Sha256Hash
+    {
+        get => _sha256Hash;
+        set { _sha256Hash = value; OnPropertyChanged(); }
+    }
+
+    public bool HasFileHashes =>
+        !string.IsNullOrWhiteSpace(Md5Hash)
+        && !string.IsNullOrWhiteSpace(Sha1Hash)
+        && !string.IsNullOrWhiteSpace(Sha256Hash);
+
     private int _threads = 8;
     public int Threads
     {
