@@ -109,7 +109,10 @@ internal sealed class HlsDownloadHandler
         }
         catch (Exception ex)
         {
-            SetError("Không tải được HLS: " + ex.Message);
+            bool mergeCanRetry = MergeRecoveryStore.HasPending(tempDirectory);
+            SetError(mergeCanRetry
+                ? ex.Message
+                : "Không tải được HLS: " + ex.Message);
             return true;
         }
     }

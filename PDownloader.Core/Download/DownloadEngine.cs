@@ -60,6 +60,11 @@ public class DownloadEngine
 
         try
         {
+            if (await TryRecoverPendingMergeAsync(tempDirectory))
+            {
+                return;
+            }
+
             if (_item.IsYoutube)
             {
                 if (await _hlsHandler.TryHandleAsync(tempDirectory, _cancellationToken))
@@ -90,8 +95,59 @@ public class DownloadEngine
         string? fileName) =>
         DownloadPathService.DeleteTempFiles(id, savePath, fileName);
 
+    public static bool HasPendingMerge(string id)
+    {
+        var pathService = new DownloadPathService();
+        return MergeRecoveryStore.HasPendingInTree(pathService.GetTempDirectory(id));
+    }
+
     public static Task<string?> GetRemoteFileNameAsync(string url) =>
         HttpDownloadProbe.GetRemoteFileNameAsync(url);
+
+
+    private async Task<bool> TryRecoverPendingMergeAsync(string tempDirectory)
+    {
+        MergeRecoveryManifest? manifest = MergeRecoveryStore.TryLoad(tempDirectory);
+        if (manifest == null)
+        {
+            return false;
+        }
+
+        _item.Status = DownloadStatus.Merging;
+        _item.ErrorMessage = string.Empty;
+        _item.SpeedBps = 0;
+        ReportMergeProgress(0);
+
+        string finalPath = manifest.Kind switch
+        {
+            MergeRecoveryKind.Concatenate => await new RecoverableFileMerger().RetryAsync(
+                manifest,
+                ReportMergeProgress,
+                _cancellationToken),
+            MergeRecoveryKind.FfmpegMux => await new FfmpegMuxer().RetryAsync(
+                manifest,
+                ReportMergeProgress,
+                _cancellationToken),
+            _ => throw new InvalidOperationException(
+                $"Merge-style recovery is not supported: {manifest.Kind}.")
+        };
+
+        CompleteRecoveredMerge(finalPath);
+        DownloadPathService.CleanupTemp(tempDirectory);
+        return true;
+    }
+
+    private void CompleteRecoveredMerge(string finalPath)
+    {
+        long fileLength = new FileInfo(finalPath).Length;
+        _item.FileName = Path.GetFileName(finalPath);
+        _item.SavePath = finalPath;
+        _item.TotalBytes = Math.Max(_item.TotalBytes, fileLength);
+        ReportProgress(_item.TotalBytes, 0);
+        _item.MergeProgress = 100;
+        _item.Status = DownloadStatus.Completed;
+        _item.EndTime = DateTime.Now;
+    }
 
     private async Task RunHttpDownloadAsync(string tempDirectory)
     {
@@ -103,9 +159,6 @@ public class DownloadEngine
             probeUrl,
             _cancellationToken);
 
-        // Mirror URLs (for example SourceForge) are pinned after the first redirect.
-        // If a previously resolved mirror is no longer reachable, fall back to the
-        // original URL so the provider can select a new mirror.
         if (probe.TotalBytes <= 0
             && !string.Equals(probeUrl, _item.Url, StringComparison.Ordinal))
         {
@@ -167,9 +220,6 @@ public class DownloadEngine
         _item.MergeProgress = progressPercent;
         _item.SpeedBps = 0;
 
-        // Publish a new snapshot without changing DownloadedBytes. During the
-        // Merging state DownloadItem.Progress is backed by MergeProgress, so the
-        // same DTO/UI progress channel can display the actual merge percentage.
         _progress.Report(new DownloadProgress(_item.DownloadedBytes, 0));
     }
 

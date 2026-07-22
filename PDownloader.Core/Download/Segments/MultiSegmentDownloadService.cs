@@ -47,6 +47,29 @@ internal sealed class MultiSegmentDownloadService
         Action<IReadOnlyList<DownloadThreadProgress>>? reportThreadProgress,
         CancellationToken cancellationToken)
     {
+        MergeRecoveryManifest? pendingMerge = MergeRecoveryStore.TryLoad(tempDirectory);
+        if (pendingMerge is { Kind: MergeRecoveryKind.Concatenate }
+            && Path.GetFullPath(pendingMerge.DestinationPath).Equals(
+                Path.GetFullPath(destinationPath),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            await new RecoverableFileMerger().RetryAsync(
+                pendingMerge,
+                reportProgress: null,
+                cancellationToken);
+
+            long recoveredLength = File.Exists(destinationPath)
+                ? new FileInfo(destinationPath).Length
+                : pendingMerge.ExpectedOutputBytes;
+            reportProgress(progressBaseOffset + recoveredLength, 0);
+
+            return new DownloadProbeResult(
+                recoveredLength,
+                true,
+                Path.GetFileName(destinationPath),
+                url);
+        }
+
         DownloadProbeResult probe = await _probe.ProbeAsync(url, cancellationToken);
         await DownloadAsync(
             url,
@@ -102,7 +125,7 @@ internal sealed class MultiSegmentDownloadService
         catch (RangeRejectedException ex)
         {
             Debug.WriteLine(
-                $"[Segments] Range không ổn định, chuyển về tải một luồng: {ex.Message}");
+                $"[Segments] Unstable range; switching to single-stream download: {ex.Message}");
 
             _stateStore.Reset(tempDirectory);
             segments = _stateStore.BuildOrRestore(

@@ -4,7 +4,7 @@
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// but WITHOUT ANY WARRANTY without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
@@ -17,11 +17,6 @@ using System.Buffers;
 
 namespace PDownloader.Core.Download.Infrastructure;
 
-/// <summary>
-/// Tracks the number of bytes physically written during a merge and publishes
-/// a throttled 0..100 percentage. This keeps merge progress tied to real I/O
-/// instead of estimating it from elapsed time.
-/// </summary>
 internal sealed class MergeProgressTracker
 {
     private const int CopyBufferSize = 1024 * 1024;
@@ -49,10 +44,26 @@ internal sealed class MergeProgressTracker
             100);
     }
 
-    public void Start()
+    public void Start() => Start(0);
+
+    public void Start(long initialProcessedBytes)
     {
-        _processedBytes = 0;
-        Publish(0, force: true);
+        long processedBytes = Math.Clamp(
+            initialProcessedBytes,
+            0,
+            _totalBytes);
+
+        Interlocked.Exchange(ref _processedBytes, processedBytes);
+
+        double progress = _totalBytes > 0
+            ? processedBytes / (double)_totalBytes * 100.0
+            : 0;
+
+        progress = Math.Min(
+            Math.Clamp(progress, 0, 100),
+            _maxProgressBeforeComplete);
+
+        Publish(progress, force: true);
     }
 
     public async Task CopyToAsync(
