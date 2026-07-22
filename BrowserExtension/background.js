@@ -12,6 +12,8 @@ importScripts(
   'background/api.js',
 
   'background/contextMenu.js',
+  'background/mediaCandidateRegistry.js',
+  'background/mediaCapture.js',
   'background/hlsCapture.js',
   'background/contentDisposition.js',
   'background/downloadIntercept.js',
@@ -40,6 +42,7 @@ chrome.runtime.onStartup.addListener(() => {
 });
 
 self.PD.ContextMenu.init();
+self.PD.MediaCapture.init();
 self.PD.HlsCapture.init();
 self.PD.ContentDisposition.init();
 self.PD.DownloadIntercept.init();

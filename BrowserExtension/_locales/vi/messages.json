@@ -154,5 +154,32 @@
   },
   "extensionUpdatedNotificationMessage": {
     "message": "Phần mở rộng của PDownloader Webhook vừa được cập nhật! Vui lòng cập nhật ứng dụng PDownloader trên PC của bạn"
+  },
+  "popupSectionDetectedMedia": {
+    "message": "Media đã phát hiện"
+  },
+  "popupDetectedMediaEmpty": {
+    "message": "Chưa phát hiện media trên trang này"
+  },
+  "popupMediaDownloadTitle": {
+    "message": "Tải bằng PDownloader"
+  },
+  "popupMediaAudio": {
+    "message": "Audio"
+  },
+  "popupMediaVideo": {
+    "message": "Video"
+  },
+  "popupMediaStream": {
+    "message": "Luồng phát"
+  },
+  "popupMediaDirect": {
+    "message": "Media trực tiếp"
+  },
+  "contentDownloadAudio": {
+    "message": "Tải audio này"
+  },
+  "contentAddingAudio": {
+    "message": "Đang thêm audio…"
   }
 }

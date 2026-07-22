@@ -154,5 +154,32 @@
   },
   "extensionUpdatedNotificationMessage": {
     "message": "The PDownloader Webhook extension has just been updated! Please update the PDownloader app on your PC."
+  },
+  "popupSectionDetectedMedia": {
+    "message": "Detected media"
+  },
+  "popupDetectedMediaEmpty": {
+    "message": "No media detected on this page"
+  },
+  "popupMediaDownloadTitle": {
+    "message": "Download with PDownloader"
+  },
+  "popupMediaAudio": {
+    "message": "Audio"
+  },
+  "popupMediaVideo": {
+    "message": "Video"
+  },
+  "popupMediaStream": {
+    "message": "Stream"
+  },
+  "popupMediaDirect": {
+    "message": "Direct media"
+  },
+  "contentDownloadAudio": {
+    "message": "Download this audio"
+  },
+  "contentAddingAudio": {
+    "message": "Adding audio…"
   }
 }
