@@ -50,6 +50,52 @@
     return match?.[1]?.toLowerCase() || '';
   }
 
+  function normalizeComparableUrl(url) {
+    try {
+      const parsed = new URL(String(url || ''));
+      parsed.hash = '';
+      return parsed.href;
+    } catch (_) {
+      return String(url || '').split('#')[0];
+    }
+  }
+
+  function activeUrlsForMediaType(playback, mediaType) {
+    if (mediaType === 'audio') return playback?.activeAudioUrls || [];
+    if (mediaType === 'video') return playback?.activeVideoUrls || [];
+    return [
+      ...(playback?.activeAudioUrls || []),
+      ...(playback?.activeVideoUrls || [])
+    ];
+  }
+
+  function orderCandidatesForPlayback(tabId, candidates, mediaType = '') {
+    const playback = aggregatePlaybackState(tabId);
+    const activeUrls = new Set(
+      activeUrlsForMediaType(playback, mediaType)
+        .map(normalizeComparableUrl)
+        .filter(Boolean)
+    );
+
+    if (!activeUrls.size) return candidates;
+
+    return [...candidates].sort((a, b) => {
+      const aActive = activeUrls.has(normalizeComparableUrl(a.url)) ? 1 : 0;
+      const bActive = activeUrls.has(normalizeComparableUrl(b.url)) ? 1 : 0;
+      if (aActive !== bActive) return bActive - aActive;
+      return (b.score - a.score) || (b.lastSeenAt - a.lastSeenAt);
+    });
+  }
+
+  function getCandidatesForPlayback(tabId, options = {}) {
+    const candidates = Registry.getAll(tabId, options);
+    return orderCandidatesForPlayback(tabId, candidates, options.mediaType || '');
+  }
+
+  function getBestCandidate(tabId, options = {}) {
+    return getCandidatesForPlayback(tabId, options)[0] || null;
+  }
+
   function classify(url, mime, filename = '', requestType = '', fallbackMediaType = 'video') {
     const normalizedMime = String(mime || '').split(';')[0].trim().toLowerCase();
     const extension = extensionOf(filename) || extensionOf(url);
@@ -190,8 +236,8 @@
     notifyTimers.set(tabId, setTimeout(async () => {
       notifyTimers.delete(tabId);
 
-      const bestAudio = Registry.getBest(tabId, { mediaType: 'audio', minScore: 45 });
-      const bestVideo = Registry.getBest(tabId, { mediaType: 'video', minScore: 45 });
+      const bestAudio = getBestCandidate(tabId, { mediaType: 'audio', minScore: 45 });
+      const bestVideo = getBestCandidate(tabId, { mediaType: 'video', minScore: 45 });
       let audible = false;
 
       try {
@@ -250,18 +296,27 @@
       playingAudio: false,
       playingVideo: false,
       visibleVideo: false,
+      activeAudioUrls: [],
+      activeVideoUrls: [],
       pageUrl: '',
       updatedAt: 0
     };
+
+    const activeAudioUrls = new Set();
+    const activeVideoUrls = new Set();
 
     for (const state of frames.values()) {
       result.playingAudio ||= !!state.playingAudio;
       result.playingVideo ||= !!state.playingVideo;
       result.visibleVideo ||= !!state.visibleVideo;
+      for (const url of state.activeAudioUrls || []) activeAudioUrls.add(url);
+      for (const url of state.activeVideoUrls || []) activeVideoUrls.add(url);
       if (!result.pageUrl && state.pageUrl) result.pageUrl = state.pageUrl;
       result.updatedAt = Math.max(result.updatedAt, state.updatedAt || 0);
     }
 
+    result.activeAudioUrls = [...activeAudioUrls];
+    result.activeVideoUrls = [...activeVideoUrls];
     return result;
   }
 
@@ -278,6 +333,12 @@
       playingAudio: !!state?.playingAudio,
       playingVideo: !!state?.playingVideo,
       visibleVideo: !!state?.visibleVideo,
+      activeAudioUrls: Array.isArray(state?.activeAudioUrls)
+        ? state.activeAudioUrls.filter(url => /^https?:/i.test(String(url || ''))).slice(0, 8)
+        : [],
+      activeVideoUrls: Array.isArray(state?.activeVideoUrls)
+        ? state.activeVideoUrls.filter(url => /^https?:/i.test(String(url || ''))).slice(0, 8)
+        : [],
       pageUrl: state?.pageUrl || '',
       updatedAt: Date.now()
     });
@@ -357,6 +418,8 @@
     updatePlaybackState,
     getPlaybackState(tabId) {
       return aggregatePlaybackState(tabId);
-    }
+    },
+    getCandidatesForPlayback,
+    getBestCandidate
   };
 })(self);
