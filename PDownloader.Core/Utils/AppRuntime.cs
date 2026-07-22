@@ -45,25 +45,22 @@ public static class AppRuntime
             if (name == "runner-cancel-exp")
             {
                 _ = svc.StopServiceAsync();
-                svc.GetProcess().Kill();
+                CFSCommandHandler.ClearRunnerPendingContext(token);
                 DownloaderCFSRest.Remove(token);
+                svc.GetProcess().Kill();
             }
             else if (name == "runner-ui-closed")
             {
                 _ = svc.StopServiceAsync();
-                svc.GetProcess().Kill();
+                CFSCommandHandler.ClearRunnerPendingContext(token);
                 DownloaderCFSRest.Remove(token);
+                svc.GetProcess().Kill();
             }
         };
         svc.OnMessageReceived += CFSCommandHandler.Handle;
         _ = svc.StartServiceAsync();
 
-        string headersArg = string.Empty;
-        if (fileTask.headers is { Count: > 0 })
-        {
-            string headersJson = System.Text.Json.JsonSerializer.Serialize(fileTask.headers);
-            headersArg = $" --headers {Helpers.Base64Encode(headersJson)}";
-        }
+        CFSCommandHandler.RegisterRunnerPendingHeaders(token, fileTask.headers);
 
         if (fileTask.threads == 0)
         {
@@ -75,7 +72,7 @@ public static class AppRuntime
             fileTask.threads = 8;
         }
 
-        svc.StartApp($"--token {token} --url {Helpers.Base64Encode(fileTask.url)} --threads {Helpers.Base64Encode(fileTask.threads.ToString())} --save-to {Helpers.Base64Encode(fileTask.saveTo)} --filename {Helpers.Base64Encode(fileTask.fileName)} --download-runner {Helpers.Base64Encode(fileTask.downloadRunner)}{headersArg}");
+        svc.StartApp($"--token {token} --url {Helpers.Base64Encode(fileTask.url)} --threads {Helpers.Base64Encode(fileTask.threads.ToString())} --save-to {Helpers.Base64Encode(fileTask.saveTo)} --filename {Helpers.Base64Encode(fileTask.fileName)} --download-runner {Helpers.Base64Encode(fileTask.downloadRunner)}");
 
         DownloaderCFSRest.Add(token, svc);
 

@@ -100,7 +100,11 @@ public class ConfluxService : IDisposable
             };
             _currProcess = Process.Start(psi);
         }
-        catch { }
+        catch (Exception exception)
+        {
+            Debug.WriteLine(
+                $"[ConfluxService] Failed to start '{ProcessPackage}': {exception}");
+        }
     }
 
     public Process GetProcess()
