@@ -11,7 +11,7 @@
   let operationQueue = Promise.resolve();
 
   function currentVersion() {
-    return chrome.runtime.getManifest().version;
+    return PDWebExt.runtime.getManifest().version;
   }
 
   function nowIso() {
@@ -98,7 +98,7 @@
   }
 
   async function loadState() {
-    const result = await chrome.storage.local.get(Object.values(STORAGE_KEYS));
+    const result = await PDWebExt.storage.local.get(Object.values(STORAGE_KEYS));
     return {
       history: normalizeHistory(result[STORAGE_KEYS.history]),
       lastKnownVersion:
@@ -113,7 +113,7 @@
   }
 
   async function saveState(state) {
-    await chrome.storage.local.set({
+    await PDWebExt.storage.local.set({
       [STORAGE_KEYS.history]: state.history,
       [STORAGE_KEYS.lastKnownVersion]: state.lastKnownVersion,
       [STORAGE_KEYS.lastNotifiedVersion]: state.lastNotifiedVersion
@@ -193,7 +193,7 @@
   }
 
   function getHistory() {
-    return chrome.storage.local.get([STORAGE_KEYS.history]).then(result =>
+    return PDWebExt.storage.local.get([STORAGE_KEYS.history]).then(result =>
       normalizeHistory(result[STORAGE_KEYS.history])
     );
   }

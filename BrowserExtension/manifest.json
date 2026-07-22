@@ -38,6 +38,7 @@
         "<all_urls>"
       ],
       "js": [
+        "common/browserApi.js",
         "common/i18n.js",
         "content/siteUrlResolver.js",
         "content/mediaObserver.js",
@@ -51,6 +52,7 @@
         "*://*.youtube.com/*"
       ],
       "js": [
+        "common/browserApi.js",
         "common/i18n.js",
         "content/youtube_content.js"
       ],
