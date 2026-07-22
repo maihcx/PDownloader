@@ -52,6 +52,7 @@ public static class BrowserExtensionInstallerService
         ("Cốc Cốc",         BrowserEngine.Chromium, @"SOFTWARE\Policies\CocCoc\CocCoc"),
 
         ("Mozilla Firefox", BrowserEngine.Gecko,    @"SOFTWARE\Policies\Mozilla\Firefox"),
+        ("Zen Browser",     BrowserEngine.Gecko,    @"SOFTWARE\Policies\Mozilla\Zen"),
     };
 
     public static void InstallForAllBrowsers(string installDir)
