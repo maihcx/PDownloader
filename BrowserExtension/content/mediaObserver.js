@@ -124,17 +124,39 @@
     let playingAudio = false;
     let playingVideo = false;
     let visibleVideo = false;
+    const activeAudioUrls = [];
+    const mutedAudioUrls = [];
+    const activeVideoUrls = [];
 
     for (const video of document.querySelectorAll('video')) {
       if (isVisibleVideo(video)) visibleVideo = true;
-      if (!video.paused && !video.ended && video.readyState > 0) playingVideo = true;
+
+      if (!video.paused && !video.ended && video.readyState > 0) {
+        playingVideo = true;
+        const url = getMediaUrl(video);
+        if (url) activeVideoUrls.push(url);
+      }
     }
 
     for (const audio of document.querySelectorAll('audio')) {
-      if (!audio.paused && !audio.ended && audio.readyState > 0) playingAudio = true;
+      if (!audio.paused && !audio.ended && audio.readyState > 0) {
+        playingAudio = true;
+        const url = getMediaUrl(audio);
+        if (url) {
+          if (!audio.muted && audio.volume > 0) activeAudioUrls.push(url);
+          else mutedAudioUrls.push(url);
+        }
+      }
     }
 
-    return { playingAudio, playingVideo, visibleVideo, pageUrl: location.href };
+    return {
+      playingAudio,
+      playingVideo,
+      visibleVideo,
+      activeAudioUrls: [...new Set([...activeAudioUrls, ...mutedAudioUrls])],
+      activeVideoUrls: [...new Set(activeVideoUrls)],
+      pageUrl: location.href
+    };
   }
 
   function publishPlaybackState(force = false) {
@@ -290,10 +312,14 @@
       label.textContent = PD.I18n.t('contentAddingAudio');
 
       let response = null;
-      if (bestAudioCandidate?.id) {
+      const playback = collectPlaybackState();
+      const preferredUrl = playback.activeAudioUrls?.[0] || '';
+
+      if (bestAudioCandidate?.id || preferredUrl) {
         response = await sendMessage({
           action: 'download_media_candidate',
-          candidateId: bestAudioCandidate.id,
+          candidateId: bestAudioCandidate?.id || '',
+          preferredUrl,
           mediaType: 'audio'
         });
       } else {
