@@ -23,6 +23,7 @@ internal sealed class SegmentMerger
         IReadOnlyCollection<SegmentInfo> segments,
         string destinationPath,
         Action<double>? reportProgress,
+        Action<FileHashResult>? reportFileHashes,
         CancellationToken cancellationToken)
     {
         ValidateSegments(segments);
@@ -36,6 +37,7 @@ internal sealed class SegmentMerger
             sourcePaths,
             destinationPath,
             reportProgress,
+            reportFileHashes,
             cancellationToken);
     }
 

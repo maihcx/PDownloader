@@ -17,10 +17,23 @@ namespace PDownloader.Core.Download.Infrastructure;
 
 internal sealed class RecoverableFileMerger
 {
+    public Task<string> MergeAsync(
+        IReadOnlyList<string> sourcePaths,
+        string destinationPath,
+        Action<double>? reportProgress,
+        CancellationToken cancellationToken) =>
+        MergeAsync(
+            sourcePaths,
+            destinationPath,
+            reportProgress,
+            reportFileHashes: null,
+            cancellationToken: cancellationToken);
+
     public async Task<string> MergeAsync(
         IReadOnlyList<string> sourcePaths,
         string destinationPath,
         Action<double>? reportProgress,
+        Action<FileHashResult>? reportFileHashes,
         CancellationToken cancellationToken)
     {
         ValidateAllSources(sourcePaths);
@@ -48,12 +61,24 @@ internal sealed class RecoverableFileMerger
         return await ExecuteAsync(
             manifest,
             reportProgress,
+            reportFileHashes,
             cancellationToken);
     }
 
     public Task<string> RetryAsync(
         MergeRecoveryManifest manifest,
         Action<double>? reportProgress,
+        CancellationToken cancellationToken) =>
+        RetryAsync(
+            manifest,
+            reportProgress,
+            reportFileHashes: null,
+            cancellationToken: cancellationToken);
+
+    public Task<string> RetryAsync(
+        MergeRecoveryManifest manifest,
+        Action<double>? reportProgress,
+        Action<FileHashResult>? reportFileHashes,
         CancellationToken cancellationToken)
     {
         if (manifest.Kind != MergeRecoveryKind.Concatenate)
@@ -65,12 +90,14 @@ internal sealed class RecoverableFileMerger
         return ExecuteAsync(
             manifest,
             reportProgress,
+            reportFileHashes,
             cancellationToken);
     }
 
     private static async Task<string> ExecuteAsync(
         MergeRecoveryManifest manifest,
         Action<double>? reportProgress,
+        Action<FileHashResult>? reportFileHashes,
         CancellationToken cancellationToken)
     {
         string destinationPath = manifest.DestinationPath;
@@ -80,6 +107,12 @@ internal sealed class RecoverableFileMerger
         if (IsAlreadyFinalized(manifest))
         {
             reportProgress?.Invoke(100);
+            FileHashResult? persistedHashes = GetPersistedHashes(manifest);
+            if (persistedHashes != null)
+            {
+                reportFileHashes?.Invoke(persistedHashes);
+            }
+
             CleanupSources(manifest.SourcePaths);
             return destinationPath;
         }
@@ -107,6 +140,28 @@ internal sealed class RecoverableFileMerger
 
         try
         {
+            FileHashResult? completedHashes = GetPersistedHashes(manifest);
+            using FileHashAccumulator? hashAccumulator =
+                reportFileHashes != null && completedHashes == null
+                    ? new FileHashAccumulator()
+                    : null;
+
+            if (hashAccumulator != null && manifest.CommittedOutputBytes > 0)
+            {
+                // IncrementalHash cannot serialize its internal state. On a resumed merge,
+                // rebuild only the already-committed prefix, then keep hashing new buffers
+                // while they are copied. A normal uninterrupted merge never rereads output.
+                await FileHashCalculator.AppendFilePrefixAsync(
+                    hashAccumulator,
+                    mergingPath,
+                    manifest.CommittedOutputBytes,
+                    cancellationToken);
+            }
+
+            Action<byte[], int>? appendHash = hashAccumulator == null
+                ? null
+                : hashAccumulator.AppendData;
+
             await using (var output = new FileStream(
                 mergingPath,
                 FileMode.OpenOrCreate,
@@ -135,6 +190,7 @@ internal sealed class RecoverableFileMerger
                         await mergeProgress.CopyToAsync(
                             input,
                             output,
+                            appendHash,
                             cancellationToken);
                     }
 
@@ -182,6 +238,15 @@ internal sealed class RecoverableFileMerger
                         $"Invalid file size after merging: " +
                         $"{mergedLength} B, dự kiến {manifest.ExpectedOutputBytes} B.");
                 }
+
+                if (hashAccumulator != null)
+                {
+                    completedHashes = hashAccumulator.Complete();
+                    SaveCompletedHashes(
+                        recoveryDirectory,
+                        manifest,
+                        completedHashes);
+                }
             }
 
             if (File.Exists(destinationPath))
@@ -192,6 +257,11 @@ internal sealed class RecoverableFileMerger
 
             File.Move(mergingPath, destinationPath);
             mergeProgress.Complete();
+
+            if (completedHashes != null)
+            {
+                reportFileHashes?.Invoke(completedHashes);
+            }
 
             CleanupSources(manifest.SourcePaths);
             return destinationPath;
@@ -368,7 +438,8 @@ internal sealed class RecoverableFileMerger
     {
         manifest.NextSourceIndex = 0;
         manifest.CommittedOutputBytes = 0;
-        MergeRecoveryStore.SaveCheckpoint(recoveryDirectory, manifest);
+        ClearPersistedHashes(manifest);
+        MergeRecoveryStore.Save(recoveryDirectory, manifest);
     }
 
     private static void ValidateRemainingSources(MergeRecoveryManifest manifest)
@@ -419,6 +490,44 @@ internal sealed class RecoverableFileMerger
                 $"Segment {index} has an invalid size: " +
                 $"{actualLength} B, expected {expectedLength} B.");
         }
+    }
+
+    private static void SaveCompletedHashes(
+        string recoveryDirectory,
+        MergeRecoveryManifest manifest,
+        FileHashResult hashes)
+    {
+        manifest.Md5Hash = hashes.Md5;
+        manifest.Sha1Hash = hashes.Sha1;
+        manifest.Sha256Hash = hashes.Sha256;
+        MergeRecoveryStore.Save(recoveryDirectory, manifest);
+    }
+
+    private static FileHashResult? GetPersistedHashes(
+        MergeRecoveryManifest manifest)
+    {
+        bool mergeIsFullyCommitted = manifest.NextSourceIndex == manifest.SourcePaths.Count
+            && manifest.CommittedOutputBytes == manifest.ExpectedOutputBytes;
+
+        if (!mergeIsFullyCommitted
+            || string.IsNullOrWhiteSpace(manifest.Md5Hash)
+            || string.IsNullOrWhiteSpace(manifest.Sha1Hash)
+            || string.IsNullOrWhiteSpace(manifest.Sha256Hash))
+        {
+            return null;
+        }
+
+        return new FileHashResult(
+            manifest.Md5Hash,
+            manifest.Sha1Hash,
+            manifest.Sha256Hash);
+    }
+
+    private static void ClearPersistedHashes(MergeRecoveryManifest manifest)
+    {
+        manifest.Md5Hash = string.Empty;
+        manifest.Sha1Hash = string.Empty;
+        manifest.Sha256Hash = string.Empty;
     }
 
     private static bool IsAlreadyFinalized(MergeRecoveryManifest manifest)

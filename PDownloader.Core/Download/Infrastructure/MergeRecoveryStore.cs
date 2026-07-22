@@ -40,6 +40,12 @@ internal sealed class MergeRecoveryManifest
     public int NextSourceIndex { get; set; }
 
     public long CommittedOutputBytes { get; set; }
+
+    public string Md5Hash { get; set; } = string.Empty;
+
+    public string Sha1Hash { get; set; } = string.Empty;
+
+    public string Sha256Hash { get; set; } = string.Empty;
 }
 
 internal sealed class MergeRecoveryCheckpoint

@@ -26,7 +26,10 @@ public record DownloadItemDto(
     string ProgressVisualizationMode,
     string ProgressVisualizationStage,
     IReadOnlyList<DownloadThreadProgress> ThreadProgress,
-    bool IsMergeProgressActive)
+    bool IsMergeProgressActive,
+    string Md5Hash,
+    string Sha1Hash,
+    string Sha256Hash)
 {
     public static DownloadItemDto From(DownloadItem i) => new(
         i.Id.ToString(), i.Url, i.FileName, i.SavePath,
@@ -39,5 +42,8 @@ public record DownloadItemDto(
         i.ProgressVisualizationMode,
         i.ProgressVisualizationStage,
         i.GetThreadProgressSnapshot(),
-        i.IsMergeProgressActive);
+        i.IsMergeProgressActive,
+        i.Md5Hash,
+        i.Sha1Hash,
+        i.Sha256Hash);
 }

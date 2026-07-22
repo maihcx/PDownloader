@@ -27,6 +27,8 @@ public class DownloadManager : IDisposable
     private bool _disposed;
 
     private readonly ConcurrentDictionary<string, Task> _runningTaskByItem = new();
+    private readonly ConcurrentDictionary<string, Task> _hashTaskByItem = new();
+    private readonly SemaphoreSlim _hashSemaphore = new(1, 1);
 
     public event Action<DownloadItem>? OnItemChanged;
 
@@ -108,6 +110,11 @@ public class DownloadManager : IDisposable
             if (item.Status != DownloadStatus.Cancelled)
             {
                 OnItemChanged?.Invoke(item);
+
+                if (item.Status == DownloadStatus.Completed)
+                {
+                    QueueHashCalculation(item);
+                }
             }
         }
         finally
@@ -270,7 +277,68 @@ public class DownloadManager : IDisposable
         lock (_lock) { _downloads.Add(item); }
 
         OnItemChanged?.Invoke(item);
+
+        if (item.Status == DownloadStatus.Completed)
+        {
+            QueueHashCalculation(item);
+        }
+
         return item;
+    }
+
+    private void QueueHashCalculation(DownloadItem item)
+    {
+        if (item.Status != DownloadStatus.Completed
+            || item.HasFileHashes
+            || string.IsNullOrWhiteSpace(item.SavePath)
+            || !File.Exists(item.SavePath))
+        {
+            return;
+        }
+
+        _hashTaskByItem.GetOrAdd(
+            item.Id,
+            _ => Task.Run(() => CalculateFileHashesAsync(item)));
+    }
+
+    private async Task CalculateFileHashesAsync(DownloadItem item)
+    {
+        string filePath = item.SavePath;
+
+        try
+        {
+            await _hashSemaphore.WaitAsync();
+
+            FileHashResult hashes;
+            try
+            {
+                hashes = await FileHashCalculator.ComputeAsync(filePath);
+            }
+            finally
+            {
+                _hashSemaphore.Release();
+            }
+
+            if (item.Status != DownloadStatus.Completed
+                || !string.Equals(item.SavePath, filePath, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            item.Md5Hash = hashes.Md5;
+            item.Sha1Hash = hashes.Sha1;
+            item.Sha256Hash = hashes.Sha256;
+            OnItemChanged?.Invoke(item);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(
+                $"[DownloadManager] Không thể tính hash cho '{filePath}': {ex.Message}");
+        }
+        finally
+        {
+            _hashTaskByItem.TryRemove(item.Id, out _);
+        }
     }
 
     public List<DownloadItem> RestoreHistory(string json)
@@ -342,6 +410,7 @@ public class DownloadManager : IDisposable
         if (disposing)
         {
             _sem.Dispose();
+            _hashSemaphore.Dispose();
         }
 
         _disposed = true;

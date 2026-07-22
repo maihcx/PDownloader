@@ -416,6 +416,15 @@
                                                   ValueText="{Binding SavePath}" />
                                 <controls:InfoRow LabelText="{utils:Localization download_view_file_url_title}"
                                                   ValueText="{Binding Url}" />
+                                <controls:InfoRow LabelText="MD5"
+                                                  ValueText="{Binding Md5Hash}"
+                                                  Visibility="{Binding Md5Hash, Converter={StaticResource NullOrEmptyToVisibilityConverter}}" />
+                                <controls:InfoRow LabelText="SHA-1"
+                                                  ValueText="{Binding Sha1Hash}"
+                                                  Visibility="{Binding Sha1Hash, Converter={StaticResource NullOrEmptyToVisibilityConverter}}" />
+                                <controls:InfoRow LabelText="SHA-256"
+                                                  ValueText="{Binding Sha256Hash}"
+                                                  Visibility="{Binding Sha256Hash, Converter={StaticResource NullOrEmptyToVisibilityConverter}}" />
                                 <controls:InfoRow LabelText="{utils:Localization download_view_file_cap_loaded_title}">
                                     <controls:InfoRow.ValueContent>
                                         <StackPanel Orientation="Horizontal"

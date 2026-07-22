@@ -135,6 +135,7 @@ public class DownloadEngine
             MergeRecoveryKind.Concatenate => await new RecoverableFileMerger().RetryAsync(
                 manifest,
                 ReportMergeProgress,
+                ApplyFileHashes,
                 _cancellationToken),
             MergeRecoveryKind.FfmpegMux => await new FfmpegMuxer().RetryAsync(
                 manifest,
@@ -206,6 +207,7 @@ public class DownloadEngine
                 ReportMergeProgress(0);
             },
             reportMergeProgress: ReportMergeProgress,
+            reportFileHashes: ApplyFileHashes,
             cancellationToken: _cancellationToken);
 
         _cancellationToken.ThrowIfCancellationRequested();
@@ -218,6 +220,13 @@ public class DownloadEngine
         ReportProgress(_item.TotalBytes, 0);
         _item.Status = DownloadStatus.Completed;
         _item.EndTime = DateTime.Now;
+    }
+
+    private void ApplyFileHashes(FileHashResult hashes)
+    {
+        _item.Md5Hash = hashes.Md5;
+        _item.Sha1Hash = hashes.Sha1;
+        _item.Sha256Hash = hashes.Sha256;
     }
 
     private void ReportProgress(long downloadedBytes, double speedBps)
