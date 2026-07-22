@@ -155,6 +155,15 @@ internal static class MergeRecoveryStore
                 return null;
             }
 
+            if (manifest.Kind == MergeRecoveryKind.FfmpegMux
+                && !File.Exists(manifest.DestinationPath)
+                && manifest.SourcePaths.Any(path =>
+                    string.IsNullOrWhiteSpace(path) || !File.Exists(path)))
+            {
+                TryDeleteInvalidRecoveryState(recoveryDirectory);
+                return null;
+            }
+
             if (manifest.Kind == MergeRecoveryKind.Concatenate
                 && manifest.Version >= 2)
             {
@@ -169,7 +178,6 @@ internal static class MergeRecoveryStore
             return null;
         }
     }
-
 
     public static string GetPartialOutputPath(MergeRecoveryManifest manifest)
     {
@@ -265,6 +273,12 @@ internal static class MergeRecoveryStore
         }
     }
 
+    private static void TryDeleteInvalidRecoveryState(string recoveryDirectory)
+    {
+        TryDeleteTemporaryState(GetStateFilePath(recoveryDirectory));
+        TryDeleteTemporaryState(GetCheckpointFilePath(recoveryDirectory));
+    }
+
     private static void TryDeleteTemporaryState(string path)
     {
         try
@@ -276,7 +290,7 @@ internal static class MergeRecoveryStore
         }
         catch
         {
-            // Best effort cleanup only. The committed state is never touched.
+            // Best effort cleanup only.
         }
     }
 }

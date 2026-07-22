@@ -43,6 +43,8 @@ internal sealed class FfmpegMuxer
             sourcePaths.Add(audio.Path);
         }
 
+        ValidateSources(sourcePaths);
+
         string recoveryDirectory = MergeRecoveryStore.GetRecoveryDirectory(sourcePaths);
         var manifest = new MergeRecoveryManifest
         {
@@ -145,6 +147,7 @@ internal sealed class FfmpegMuxer
             catch (OperationCanceledException)
             {
                 try { process.Kill(entireProcessTree: true); } catch { }
+
                 throw;
             }
             finally
