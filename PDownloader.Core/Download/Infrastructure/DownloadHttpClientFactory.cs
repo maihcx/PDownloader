@@ -77,6 +77,10 @@ internal static class DownloadHttpClientFactory
                         client.DefaultRequestHeaders.UserAgent.Clear();
                         client.DefaultRequestHeaders.UserAgent.ParseAdd(value);
                         break;
+                    case "x-pdownloader-cookie-jar":
+                        // Internal bridge metadata used only to build yt-dlp's
+                        // Netscape cookie jar. Never forward it to remote servers.
+                        break;
                     default:
                         client.DefaultRequestHeaders.TryAddWithoutValidation(key, value);
                         break;

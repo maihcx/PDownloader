@@ -41,6 +41,7 @@ public sealed class HttpBridgeService : IDisposable
             "Origin",
             "Accept",
             "Accept-Language",
+            "X-PDownloader-Cookie-Jar",
         };
 
     private readonly HttpListener _bridgeListener = new();
@@ -244,11 +245,18 @@ public sealed class HttpBridgeService : IDisposable
         string url = ValidateHttpUrl(payload.Url);
         Dictionary<string, string>? headers = SanitizeForwardedHeaders(payload.Headers);
         string? cookieHeader = DownloadPathService.GetHeader(headers, "Cookie");
+        string? cookieJarJson = DownloadPathService.GetHeader(
+            headers,
+            "X-PDownloader-Cookie-Jar");
+        string? userAgent = DownloadPathService.GetHeader(headers, "User-Agent");
 
         YtAnalyzeResult result = await YtDlpService.Instance.AnalyzeAsync(
             url,
             cookieHeader,
-            ct: ct);
+            cookieJarJson,
+            userAgent,
+            headers,
+            ct);
 
         await Json(response, result);
     }
