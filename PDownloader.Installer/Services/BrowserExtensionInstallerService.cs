@@ -14,17 +14,29 @@
 // Copyright (C) Song Mai Software.
 
 using Microsoft.Win32;
-using System.IO;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace PDownloader.Installer.Services;
 
 public static class BrowserExtensionInstallerService
 {
     public const string ExtensionId = "nliblbkhgljcpdboininiepogjaegien";
+    public const string FirefoxExtensionId = "pdownloader@maisoft.io.vn";
 
     private const string ExtensionSettingsSubKey = "ExtensionSettings";
 
-    private const string UpdateURI = "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/update.xml";
+    private const string UpdateURI =
+        "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/update.xml";
+
+    private const string FirefoxPolicyRoot =
+        @"SOFTWARE\Policies\Mozilla\Firefox";
+
+    private const string FirefoxExtensionSettingsValue =
+        "ExtensionSettings";
+
+    private const string FirefoxInstallUrl =
+        "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/PDownloader.xpi";
 
     private static readonly (string DisplayName, string PolicyRoot)[] SupportedBrowsers =
     {
@@ -36,38 +48,59 @@ public static class BrowserExtensionInstallerService
 
     public static void InstallForAllBrowsers(string installDir)
     {
-        if (string.IsNullOrWhiteSpace(ExtensionId) ||
-            ExtensionId.StartsWith("REPLACE_", StringComparison.Ordinal))
+        _ = installDir;
+
+        if (!string.IsNullOrWhiteSpace(ExtensionId) &&
+            !ExtensionId.StartsWith("REPLACE_", StringComparison.Ordinal))
         {
-            return;
+            foreach ((string _, string policyRoot) in SupportedBrowsers)
+            {
+                try
+                {
+                    RegisterExtensionPolicy(policyRoot, UpdateURI);
+                }
+                catch
+                {
+                    // Ignore unsupported Chromium-based browser policy.
+                }
+            }
         }
 
-        foreach ((string _, string policyRoot) in SupportedBrowsers)
+        if (!string.IsNullOrWhiteSpace(FirefoxExtensionId))
         {
             try
             {
-                RegisterExtensionPolicy(policyRoot, UpdateURI);
+                RegisterFirefoxExtensionPolicy();
             }
             catch
             {
-                // Ignore unsupported browser policy
+                // Ignore unsupported Firefox policy or malformed pre-existing policy.
             }
         }
     }
 
     public static void UninstallForAllBrowsers()
     {
-        if (string.IsNullOrWhiteSpace(ExtensionId) ||
-            ExtensionId.StartsWith("REPLACE_", StringComparison.Ordinal))
+        if (!string.IsNullOrWhiteSpace(ExtensionId) &&
+            !ExtensionId.StartsWith("REPLACE_", StringComparison.Ordinal))
         {
-            return;
+            foreach ((string _, string policyRoot) in SupportedBrowsers)
+            {
+                try
+                {
+                    RemoveExtensionPolicy(policyRoot);
+                }
+                catch
+                {
+                }
+            }
         }
 
-        foreach ((string _, string policyRoot) in SupportedBrowsers)
+        if (!string.IsNullOrWhiteSpace(FirefoxExtensionId))
         {
             try
             {
-                RemoveExtensionPolicy(policyRoot);
+                RemoveFirefoxExtensionPolicy();
             }
             catch
             {
@@ -135,5 +168,107 @@ public static class BrowserExtensionInstallerService
         extensionSettings.DeleteSubKey(
             ExtensionId,
             throwOnMissingSubKey: false);
+    }
+
+    private static void RegisterFirefoxExtensionPolicy()
+    {
+        using RegistryKey? firefoxPolicy =
+            Registry.LocalMachine.CreateSubKey(
+                FirefoxPolicyRoot,
+                writable: true);
+
+        if (firefoxPolicy == null)
+        {
+            return;
+        }
+
+        JsonObject extensionSettings =
+            ReadFirefoxExtensionSettings(firefoxPolicy);
+
+        extensionSettings[FirefoxExtensionId] = new JsonObject
+        {
+            ["installation_mode"] = "force_installed",
+            ["install_url"] = FirefoxInstallUrl,
+            ["updates_disabled"] = false,
+        };
+
+        WriteFirefoxExtensionSettings(
+            firefoxPolicy,
+            extensionSettings);
+    }
+
+    private static void RemoveFirefoxExtensionPolicy()
+    {
+        using RegistryKey? firefoxPolicy =
+            Registry.LocalMachine.OpenSubKey(
+                FirefoxPolicyRoot,
+                writable: true);
+
+        if (firefoxPolicy == null)
+        {
+            return;
+        }
+
+        JsonObject extensionSettings =
+            ReadFirefoxExtensionSettings(firefoxPolicy);
+
+        if (!extensionSettings.Remove(FirefoxExtensionId))
+        {
+            return;
+        }
+
+        if (extensionSettings.Count == 0)
+        {
+            firefoxPolicy.DeleteValue(
+                FirefoxExtensionSettingsValue,
+                throwOnMissingValue: false);
+            return;
+        }
+
+        WriteFirefoxExtensionSettings(
+            firefoxPolicy,
+            extensionSettings);
+    }
+
+    private static JsonObject ReadFirefoxExtensionSettings(
+        RegistryKey firefoxPolicy)
+    {
+        object? rawValue =
+            firefoxPolicy.GetValue(FirefoxExtensionSettingsValue);
+
+        string? json = rawValue switch
+        {
+            string[] lines when lines.Length > 0 => string.Join("", lines),
+            string value when !string.IsNullOrWhiteSpace(value) => value,
+            null => null,
+            _ => throw new InvalidDataException(
+                $"Unsupported Firefox {FirefoxExtensionSettingsValue} registry value type."),
+        };
+
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new JsonObject();
+        }
+
+        JsonNode? parsed = JsonNode.Parse(json);
+        return parsed as JsonObject
+            ?? throw new InvalidDataException(
+                $"Firefox {FirefoxExtensionSettingsValue} policy is not a JSON object.");
+    }
+
+    private static void WriteFirefoxExtensionSettings(
+        RegistryKey firefoxPolicy,
+        JsonObject extensionSettings)
+    {
+        string json = extensionSettings.ToJsonString(
+            new JsonSerializerOptions
+            {
+                WriteIndented = false,
+            });
+
+        firefoxPolicy.SetValue(
+            FirefoxExtensionSettingsValue,
+            new[] { json },
+            RegistryValueKind.MultiString);
     }
 }
