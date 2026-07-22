@@ -410,6 +410,7 @@ public class DownloadManager : IDisposable
         if (disposing)
         {
             _sem.Dispose();
+            _hashSemaphore.Dispose();
         }
 
         _disposed = true;
