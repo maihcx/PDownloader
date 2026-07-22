@@ -24,11 +24,6 @@ internal sealed class FfmpegMuxer
         Action<double>? reportProgress,
         CancellationToken cancellationToken)
     {
-        string ffmpegPath = FfmpegExecutableLocator.Instance.Find()
-            ?? throw new InvalidOperationException(
-                "ffmpeg không tìm thấy — cần ffmpeg để ghép video+audio tải riêng thành 1 file. " +
-                "Đặt ffmpeg.exe cạnh PDownloader.Core.exe hoặc thêm vào PATH.");
-
         DownloadedStreamFile video = files.FirstOrDefault(file => file.Stream.HasVideo)
             ?? files[0];
         DownloadedStreamFile? audio = files.FirstOrDefault(
@@ -42,14 +37,87 @@ internal sealed class FfmpegMuxer
             outputFolder,
             $"{fileStem}.{outputExtension}");
 
+        var sourcePaths = new List<string> { video.Path };
+        if (audio != null)
+        {
+            sourcePaths.Add(audio.Path);
+        }
+
+        string recoveryDirectory = MergeRecoveryStore.GetRecoveryDirectory(sourcePaths);
+        var manifest = new MergeRecoveryManifest
+        {
+            Kind = MergeRecoveryKind.FfmpegMux,
+            DestinationPath = finalPath,
+            SourcePaths = sourcePaths,
+            ExpectedOutputBytes = sourcePaths.Sum(GetFileLength),
+            OutputLengthIsExact = false
+        };
+
+        MergeRecoveryStore.Save(recoveryDirectory, manifest);
+        return await ExecuteAsync(
+            manifest,
+            reportProgress,
+            cancellationToken);
+    }
+
+    public Task<string> RetryAsync(
+        MergeRecoveryManifest manifest,
+        Action<double>? reportProgress,
+        CancellationToken cancellationToken)
+    {
+        if (manifest.Kind != MergeRecoveryKind.FfmpegMux)
+        {
+            throw new InvalidOperationException(
+                $"Trạng thái merge không hợp lệ: {manifest.Kind}.");
+        }
+
+        return ExecuteAsync(
+            manifest,
+            reportProgress,
+            cancellationToken);
+    }
+
+    private static async Task<string> ExecuteAsync(
+        MergeRecoveryManifest manifest,
+        Action<double>? reportProgress,
+        CancellationToken cancellationToken)
+    {
+        if (File.Exists(manifest.DestinationPath)
+            && new FileInfo(manifest.DestinationPath).Length > 0)
+        {
+            reportProgress?.Invoke(100);
+            CleanupSources(manifest.SourcePaths);
+            return manifest.DestinationPath;
+        }
+
+        ValidateSources(manifest.SourcePaths);
+
+        string ffmpegPath = FfmpegExecutableLocator.Instance.Find()
+            ?? throw new InvalidOperationException(
+                "ffmpeg không tìm thấy — cần ffmpeg để ghép video+audio tải riêng thành 1 file. " +
+                "Đặt ffmpeg.exe cạnh PDownloader.Core.exe hoặc thêm vào PATH.");
+
+        string videoPath = manifest.SourcePaths[0];
+        string? audioPath = manifest.SourcePaths.Count > 1
+            ? manifest.SourcePaths[1]
+            : null;
+        string mergingPath = MergeRecoveryStore.GetPartialOutputPath(manifest);
+
+        string? outputDirectory = Path.GetDirectoryName(manifest.DestinationPath);
+        if (!string.IsNullOrWhiteSpace(outputDirectory))
+        {
+            Directory.CreateDirectory(outputDirectory);
+        }
+
         ProcessStartInfo startInfo = BuildStartInfo(
             ffmpegPath,
-            video.Path,
-            audio?.Path,
-            finalPath);
+            videoPath,
+            audioPath,
+            mergingPath);
 
-        long expectedOutputBytes = GetFileLength(video.Path)
-            + (audio != null ? GetFileLength(audio.Path) : 0);
+        long expectedOutputBytes = manifest.ExpectedOutputBytes > 0
+            ? manifest.ExpectedOutputBytes
+            : manifest.SourcePaths.Sum(GetFileLength);
         var mergeProgress = new MergeProgressTracker(
             expectedOutputBytes,
             reportProgress,
@@ -60,54 +128,95 @@ internal sealed class FfmpegMuxer
         using var monitorCancellation =
             CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        process.Start();
-        Task<string> standardErrorTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        Task progressMonitorTask = MonitorOutputProgressAsync(
-            process,
-            finalPath,
-            mergeProgress,
-            monitorCancellation.Token);
-
         try
         {
-            await process.WaitForExitAsync(cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            try { process.Kill(entireProcessTree: true); } catch { }
-            throw;
-        }
-        finally
-        {
-            monitorCancellation.Cancel();
+            process.Start();
+            Task<string> standardErrorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            Task progressMonitorTask = MonitorOutputProgressAsync(
+                process,
+                mergingPath,
+                mergeProgress,
+                monitorCancellation.Token);
+
             try
             {
-                await progressMonitorTask;
+                await process.WaitForExitAsync(cancellationToken);
             }
             catch (OperationCanceledException)
             {
-                // Expected when the process finishes or the download is cancelled.
+                try { process.Kill(entireProcessTree: true); } catch { }
+                throw;
             }
-        }
+            finally
+            {
+                monitorCancellation.Cancel();
+                try
+                {
+                    await progressMonitorTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when the process finishes or the download is cancelled.
+                }
+            }
 
-        string standardError = await standardErrorTask;
-        if (process.ExitCode != 0 || !File.Exists(finalPath))
+            string standardError = await standardErrorTask;
+            if (process.ExitCode != 0
+                || !File.Exists(mergingPath)
+                || new FileInfo(mergingPath).Length <= 0)
+            {
+                string tail = standardError.Length > 500
+                    ? standardError[^500..]
+                    : standardError;
+                throw new InvalidOperationException(
+                    $"ffmpeg ghép thất bại (exit {process.ExitCode}): {tail}");
+            }
+
+            if (File.Exists(manifest.DestinationPath))
+            {
+                throw new IOException(
+                    $"Không thể hoàn tất ghép file vì file đích đã tồn tại: " +
+                    manifest.DestinationPath);
+            }
+
+            File.Move(mergingPath, manifest.DestinationPath);
+            mergeProgress.Complete();
+
+            CleanupSources(manifest.SourcePaths);
+            return manifest.DestinationPath;
+        }
+        catch (OperationCanceledException)
         {
-            string tail = standardError.Length > 500
-                ? standardError[^500..]
-                : standardError;
+            TryDeletePartialOutput(mergingPath);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            TryDeletePartialOutput(mergingPath);
             throw new InvalidOperationException(
-                $"ffmpeg ghép thất bại (exit {process.ExitCode}): {tail}");
+                "Ghép video/audio thất bại. Các stream đã tải vẫn được giữ nguyên. " +
+                "Nhấn Thử lại để chỉ chạy lại bước ghép. " +
+                ex.Message,
+                ex);
         }
+    }
 
-        mergeProgress.Complete();
-
-        foreach (DownloadedStreamFile file in files)
+    private static void ValidateSources(IReadOnlyList<string> sourcePaths)
+    {
+        if (sourcePaths.Count == 0 || !File.Exists(sourcePaths[0]))
         {
-            try { File.Delete(file.Path); } catch { }
+            throw new InvalidOperationException(
+                "Không thể thử lại quá trình ghép vì thiếu stream video đã tải.");
         }
 
-        return finalPath;
+        List<string> missing = sourcePaths
+            .Where(path => string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            .ToList();
+        if (missing.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Không thể thử lại quá trình ghép vì thiếu {missing.Count} stream đã tải.");
+        }
     }
 
     private static long GetFileLength(string path) =>
@@ -170,6 +279,41 @@ internal sealed class FfmpegMuxer
         startInfo.ArgumentList.Add("copy");
         startInfo.ArgumentList.Add(outputPath);
         return startInfo;
+    }
+
+    private static void CleanupSources(IEnumerable<string> sourcePaths)
+    {
+        foreach (string sourcePath in sourcePaths)
+        {
+            try
+            {
+                if (File.Exists(sourcePath))
+                {
+                    File.Delete(sourcePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(
+                    $"[MergeRecovery] Không thể xóa stream nguồn '{sourcePath}': {ex.Message}");
+            }
+        }
+    }
+
+    private static void TryDeletePartialOutput(string mergingPath)
+    {
+        try
+        {
+            if (File.Exists(mergingPath))
+            {
+                File.Delete(mergingPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(
+                $"[MergeRecovery] Không thể xóa file ffmpeg dở '{mergingPath}': {ex.Message}");
+        }
     }
 }
 

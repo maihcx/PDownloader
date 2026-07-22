@@ -199,11 +199,22 @@ public class DownloadManager : IDisposable
             return;
         }
 
+        bool hasPendingMerge = DownloadEngine.HasPendingMerge(item.Id);
+
         item.Status = DownloadStatus.Queued;
         item.ErrorMessage = string.Empty;
-        item.DownloadedBytes = 0;
+        item.SpeedBps = 0;
         item.MergeProgress = 0;
-        _ = StartAsync(item);
+
+        // Khi lỗi xảy ra trong bước merge, dữ liệu tải đã hoàn tất vẫn còn trong
+        // thư mục tạm. Giữ nguyên DownloadedBytes để Retry chỉ chạy lại merge.
+        if (!hasPendingMerge)
+        {
+            item.DownloadedBytes = 0;
+        }
+
+        Task task = StartAsync(item);
+        _runningTaskByItem[item.Id] = task;
     }
 
     public DownloadItem? Find(string id)

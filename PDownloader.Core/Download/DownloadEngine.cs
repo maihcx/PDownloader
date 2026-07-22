@@ -60,6 +60,11 @@ public class DownloadEngine
 
         try
         {
+            if (await TryRecoverPendingMergeAsync(tempDirectory))
+            {
+                return;
+            }
+
             if (_item.IsYoutube)
             {
                 if (await _hlsHandler.TryHandleAsync(tempDirectory, _cancellationToken))
@@ -90,8 +95,59 @@ public class DownloadEngine
         string? fileName) =>
         DownloadPathService.DeleteTempFiles(id, savePath, fileName);
 
+    public static bool HasPendingMerge(string id)
+    {
+        var pathService = new DownloadPathService();
+        return MergeRecoveryStore.HasPendingInTree(pathService.GetTempDirectory(id));
+    }
+
     public static Task<string?> GetRemoteFileNameAsync(string url) =>
         HttpDownloadProbe.GetRemoteFileNameAsync(url);
+
+
+    private async Task<bool> TryRecoverPendingMergeAsync(string tempDirectory)
+    {
+        MergeRecoveryManifest? manifest = MergeRecoveryStore.TryLoad(tempDirectory);
+        if (manifest == null)
+        {
+            return false;
+        }
+
+        _item.Status = DownloadStatus.Merging;
+        _item.ErrorMessage = string.Empty;
+        _item.SpeedBps = 0;
+        ReportMergeProgress(0);
+
+        string finalPath = manifest.Kind switch
+        {
+            MergeRecoveryKind.Concatenate => await new RecoverableFileMerger().RetryAsync(
+                manifest,
+                ReportMergeProgress,
+                _cancellationToken),
+            MergeRecoveryKind.FfmpegMux => await new FfmpegMuxer().RetryAsync(
+                manifest,
+                ReportMergeProgress,
+                _cancellationToken),
+            _ => throw new InvalidOperationException(
+                $"Không hỗ trợ khôi phục kiểu merge: {manifest.Kind}.")
+        };
+
+        CompleteRecoveredMerge(finalPath);
+        DownloadPathService.CleanupTemp(tempDirectory);
+        return true;
+    }
+
+    private void CompleteRecoveredMerge(string finalPath)
+    {
+        long fileLength = new FileInfo(finalPath).Length;
+        _item.FileName = Path.GetFileName(finalPath);
+        _item.SavePath = finalPath;
+        _item.TotalBytes = Math.Max(_item.TotalBytes, fileLength);
+        ReportProgress(_item.TotalBytes, 0);
+        _item.MergeProgress = 100;
+        _item.Status = DownloadStatus.Completed;
+        _item.EndTime = DateTime.Now;
+    }
 
     private async Task RunHttpDownloadAsync(string tempDirectory)
     {

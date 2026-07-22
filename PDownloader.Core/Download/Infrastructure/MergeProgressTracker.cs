@@ -49,10 +49,26 @@ internal sealed class MergeProgressTracker
             100);
     }
 
-    public void Start()
+    public void Start() => Start(0);
+
+    public void Start(long initialProcessedBytes)
     {
-        _processedBytes = 0;
-        Publish(0, force: true);
+        long processedBytes = Math.Clamp(
+            initialProcessedBytes,
+            0,
+            _totalBytes);
+
+        Interlocked.Exchange(ref _processedBytes, processedBytes);
+
+        double progress = _totalBytes > 0
+            ? processedBytes / (double)_totalBytes * 100.0
+            : 0;
+
+        progress = Math.Min(
+            Math.Clamp(progress, 0, 100),
+            _maxProgressBeforeComplete);
+
+        Publish(progress, force: true);
     }
 
     public async Task CopyToAsync(

@@ -186,7 +186,15 @@ internal sealed class DownloadPathService
     public static void DeleteTempFiles(string id, string? savePath, string? fileName)
     {
         var pathService = new DownloadPathService();
-        CleanupTemp(pathService.GetTempDirectory(id));
+        string tempDirectory = pathService.GetTempDirectory(id);
+        MergeRecoveryManifest? pendingMerge = MergeRecoveryStore.TryLoad(tempDirectory);
+
+        if (pendingMerge != null)
+        {
+            TryDeleteFile(MergeRecoveryStore.GetPartialOutputPath(pendingMerge));
+        }
+
+        CleanupTemp(tempDirectory);
 
         try
         {
@@ -198,9 +206,21 @@ internal sealed class DownloadPathService
                 string.IsNullOrWhiteSpace(fileName) ? "download" : fileName);
             string mergingPath = Path.Combine(Path.GetFullPath(folder), name) + ".merging";
 
-            if (File.Exists(mergingPath))
+            TryDeleteFile(mergingPath);
+        }
+        catch
+        {
+            // Best effort cleanup.
+        }
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
             {
-                File.Delete(mergingPath);
+                File.Delete(path);
             }
         }
         catch
