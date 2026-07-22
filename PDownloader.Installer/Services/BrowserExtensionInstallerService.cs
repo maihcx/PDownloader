@@ -25,87 +25,95 @@ public static class BrowserExtensionInstallerService
     public const string ExtensionId = "nliblbkhgljcpdboininiepogjaegien";
     public const string FirefoxExtensionId = "pdownloader@maisoft.io.vn";
 
+    private const string ChromiumExtensionId = ExtensionId;
+    private const string GeckoExtensionId = FirefoxExtensionId;
+
     private const string ExtensionSettingsSubKey = "ExtensionSettings";
 
-    private const string UpdateURI = "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/update.xml";
+    private const string ChromiumUpdateUri =
+        "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/update.xml";
 
-    private const string FirefoxPolicyRoot = @"SOFTWARE\Policies\Mozilla\Firefox";
+    private const string GeckoExtensionSettingsValue = "ExtensionSettings";
 
-    private const string FirefoxExtensionSettingsValue = "ExtensionSettings";
+    private const string GeckoInstallUrl =
+        "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/PDownloader.xpi";
 
-    private const string FirefoxInstallUrl = "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/PDownloader.xpi";
-
-    private static readonly (string DisplayName, string PolicyRoot)[] SupportedBrowsers =
+    private enum BrowserEngine
     {
-        ("Google Chrome",   @"SOFTWARE\Policies\Google\Chrome"),
-        ("Microsoft Edge",  @"SOFTWARE\Policies\Microsoft\Edge"),
-        ("Brave",           @"SOFTWARE\Policies\BraveSoftware\Brave"),
-        ("Cốc Cốc",         @"SOFTWARE\Policies\CocCoc\CocCoc"),
+        Chromium,
+        Gecko,
+    }
+
+    private static readonly (string DisplayName, BrowserEngine Engine, string PolicyRoot)[] SupportedBrowsers =
+    {
+        ("Google Chrome",   BrowserEngine.Chromium, @"SOFTWARE\Policies\Google\Chrome"),
+        ("Microsoft Edge",  BrowserEngine.Chromium, @"SOFTWARE\Policies\Microsoft\Edge"),
+        ("Brave",           BrowserEngine.Chromium, @"SOFTWARE\Policies\BraveSoftware\Brave"),
+        ("Cốc Cốc",         BrowserEngine.Chromium, @"SOFTWARE\Policies\CocCoc\CocCoc"),
+
+        ("Mozilla Firefox", BrowserEngine.Gecko,    @"SOFTWARE\Policies\Mozilla\Firefox"),
     };
 
     public static void InstallForAllBrowsers(string installDir)
     {
         _ = installDir;
 
-        if (!string.IsNullOrWhiteSpace(ExtensionId) &&
-            !ExtensionId.StartsWith("REPLACE_", StringComparison.Ordinal))
-        {
-            foreach ((string _, string policyRoot) in SupportedBrowsers)
-            {
-                try
-                {
-                    RegisterExtensionPolicy(policyRoot, UpdateURI);
-                }
-                catch
-                {
-                    // Ignore unsupported Chromium-based browser policy.
-                }
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(FirefoxExtensionId))
+        foreach ((string _, BrowserEngine engine, string policyRoot) in SupportedBrowsers)
         {
             try
             {
-                RegisterFirefoxExtensionPolicy();
+                switch (engine)
+                {
+                    case BrowserEngine.Chromium when IsValidChromiumExtensionId():
+                        RegisterChromiumExtensionPolicy(policyRoot, ChromiumUpdateUri);
+                        break;
+
+                    case BrowserEngine.Gecko when !string.IsNullOrWhiteSpace(GeckoExtensionId):
+                        RegisterGeckoExtensionPolicy(policyRoot);
+                        break;
+                }
             }
             catch
             {
-                // Ignore unsupported Firefox policy or malformed pre-existing policy.
+                // A browser may not support the expected enterprise-policy
+                // surface or an existing third-party policy may be malformed.
+                // Extension installation must never abort the main installer.
             }
         }
     }
 
     public static void UninstallForAllBrowsers()
     {
-        if (!string.IsNullOrWhiteSpace(ExtensionId) &&
-            !ExtensionId.StartsWith("REPLACE_", StringComparison.Ordinal))
-        {
-            foreach ((string _, string policyRoot) in SupportedBrowsers)
-            {
-                try
-                {
-                    RemoveExtensionPolicy(policyRoot);
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(FirefoxExtensionId))
+        foreach ((string _, BrowserEngine engine, string policyRoot) in SupportedBrowsers)
         {
             try
             {
-                RemoveFirefoxExtensionPolicy();
+                switch (engine)
+                {
+                    case BrowserEngine.Chromium when IsValidChromiumExtensionId():
+                        RemoveChromiumExtensionPolicy(policyRoot);
+                        break;
+
+                    case BrowserEngine.Gecko when !string.IsNullOrWhiteSpace(GeckoExtensionId):
+                        RemoveGeckoExtensionPolicy(policyRoot);
+                        break;
+                }
             }
             catch
             {
+                // Best-effort cleanup. Do not make uninstall fail because a
+                // browser policy key is inaccessible or was changed externally.
             }
         }
     }
 
-    private static void RegisterExtensionPolicy(
+    private static bool IsValidChromiumExtensionId()
+    {
+        return !string.IsNullOrWhiteSpace(ChromiumExtensionId)
+            && !ChromiumExtensionId.StartsWith("REPLACE_", StringComparison.Ordinal);
+    }
+
+    private static void RegisterChromiumExtensionPolicy(
         string policyRoot,
         string updateUrl)
     {
@@ -121,7 +129,7 @@ public static class BrowserExtensionInstallerService
 
         using RegistryKey? extension =
             extensionSettings.CreateSubKey(
-                ExtensionId,
+                ChromiumExtensionId,
                 writable: true);
 
         if (extension == null)
@@ -150,7 +158,7 @@ public static class BrowserExtensionInstallerService
             RegistryValueKind.DWord);
     }
 
-    private static void RemoveExtensionPolicy(string policyRoot)
+    private static void RemoveChromiumExtensionPolicy(string policyRoot)
     {
         using RegistryKey? extensionSettings =
             Registry.LocalMachine.OpenSubKey(
@@ -163,75 +171,75 @@ public static class BrowserExtensionInstallerService
         }
 
         extensionSettings.DeleteSubKey(
-            ExtensionId,
+            ChromiumExtensionId,
             throwOnMissingSubKey: false);
     }
 
-    private static void RegisterFirefoxExtensionPolicy()
+    private static void RegisterGeckoExtensionPolicy(string policyRoot)
     {
-        using RegistryKey? firefoxPolicy =
+        using RegistryKey? browserPolicy =
             Registry.LocalMachine.CreateSubKey(
-                FirefoxPolicyRoot,
+                policyRoot,
                 writable: true);
 
-        if (firefoxPolicy == null)
+        if (browserPolicy == null)
         {
             return;
         }
 
         JsonObject extensionSettings =
-            ReadFirefoxExtensionSettings(firefoxPolicy);
+            ReadGeckoExtensionSettings(browserPolicy);
 
-        extensionSettings[FirefoxExtensionId] = new JsonObject
+        extensionSettings[GeckoExtensionId] = new JsonObject
         {
             ["installation_mode"] = "force_installed",
-            ["install_url"] = FirefoxInstallUrl,
+            ["install_url"] = GeckoInstallUrl,
             ["updates_disabled"] = false,
         };
 
-        WriteFirefoxExtensionSettings(
-            firefoxPolicy,
+        WriteGeckoExtensionSettings(
+            browserPolicy,
             extensionSettings);
     }
 
-    private static void RemoveFirefoxExtensionPolicy()
+    private static void RemoveGeckoExtensionPolicy(string policyRoot)
     {
-        using RegistryKey? firefoxPolicy =
+        using RegistryKey? browserPolicy =
             Registry.LocalMachine.OpenSubKey(
-                FirefoxPolicyRoot,
+                policyRoot,
                 writable: true);
 
-        if (firefoxPolicy == null)
+        if (browserPolicy == null)
         {
             return;
         }
 
         JsonObject extensionSettings =
-            ReadFirefoxExtensionSettings(firefoxPolicy);
+            ReadGeckoExtensionSettings(browserPolicy);
 
-        if (!extensionSettings.Remove(FirefoxExtensionId))
+        if (!extensionSettings.Remove(GeckoExtensionId))
         {
             return;
         }
 
         if (extensionSettings.Count == 0)
         {
-            firefoxPolicy.DeleteValue(
-                FirefoxExtensionSettingsValue,
+            browserPolicy.DeleteValue(
+                GeckoExtensionSettingsValue,
                 throwOnMissingValue: false);
             return;
         }
 
-        WriteFirefoxExtensionSettings(
-            firefoxPolicy,
+        WriteGeckoExtensionSettings(
+            browserPolicy,
             extensionSettings);
     }
 
-    private static JsonObject ReadFirefoxExtensionSettings(
-        RegistryKey firefoxPolicy)
+    private static JsonObject ReadGeckoExtensionSettings(
+        RegistryKey browserPolicy)
     {
         object? rawValue =
-            firefoxPolicy.GetValue(FirefoxExtensionSettingsValue);
+            browserPolicy.GetValue(GeckoExtensionSettingsValue);
 
         string? json = rawValue switch
         {
@@ -239,7 +247,7 @@ public static class BrowserExtensionInstallerService
             string value when !string.IsNullOrWhiteSpace(value) => value,
             null => null,
             _ => throw new InvalidDataException(
-                $"Unsupported Firefox {FirefoxExtensionSettingsValue} registry value type."),
+                $"Unsupported Gecko {GeckoExtensionSettingsValue} registry value type."),
         };
 
         if (string.IsNullOrWhiteSpace(json))
@@ -250,11 +258,11 @@ public static class BrowserExtensionInstallerService
         JsonNode? parsed = JsonNode.Parse(json);
         return parsed as JsonObject
             ?? throw new InvalidDataException(
-                $"Firefox {FirefoxExtensionSettingsValue} policy is not a JSON object.");
+                $"Gecko {GeckoExtensionSettingsValue} policy is not a JSON object.");
     }
 
-    private static void WriteFirefoxExtensionSettings(
-        RegistryKey firefoxPolicy,
+    private static void WriteGeckoExtensionSettings(
+        RegistryKey browserPolicy,
         JsonObject extensionSettings)
     {
         string json = extensionSettings.ToJsonString(
@@ -263,8 +271,8 @@ public static class BrowserExtensionInstallerService
                 WriteIndented = false,
             });
 
-        firefoxPolicy.SetValue(
-            FirefoxExtensionSettingsValue,
+        browserPolicy.SetValue(
+            GeckoExtensionSettingsValue,
             new[] { json },
             RegistryValueKind.MultiString);
     }
