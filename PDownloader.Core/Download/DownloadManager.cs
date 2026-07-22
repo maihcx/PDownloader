@@ -206,8 +206,6 @@ public class DownloadManager : IDisposable
         item.SpeedBps = 0;
         item.MergeProgress = 0;
 
-        // Khi lỗi xảy ra trong bước merge, dữ liệu tải đã hoàn tất vẫn còn trong
-        // thư mục tạm. Giữ nguyên DownloadedBytes để Retry chỉ chạy lại merge.
         if (!hasPendingMerge)
         {
             item.DownloadedBytes = 0;
@@ -250,10 +248,6 @@ public class DownloadManager : IDisposable
     {
         var item = snapshot.ToDownloadItem();
 
-        // A restored item must never start automatically.
-        // Jobs that were still in a transient/running state when the application
-        // was closed are exposed as Paused so the user can explicitly resume them.
-        // Error items remain Error and can only be restarted through Retry.
         if (item.Status is DownloadStatus.Queued
             or DownloadStatus.Connecting
             or DownloadStatus.Downloading
@@ -347,71 +341,4 @@ public class DownloadManager : IDisposable
     {
         Dispose(true);
     }
-}
-
-public record DownloadItemSnapshot(
-    string Id, string Url, string FileName, string SavePath,
-    int Threads, bool IsYoutube, string? FormatId,
-    long TotalBytes, long DownloadedBytes,
-    string Status, string ErrorMessage,
-    DateTime StartTime, DateTime EndTime)
-{
-    public string? ResolvedUrl { get; init; }
-
-    public static DownloadItemSnapshot From(DownloadItem i) => new(
-        i.Id, i.Url, i.FileName, i.SavePath,
-        i.Threads, i.IsYoutube, i.FormatId,
-        i.TotalBytes, i.DownloadedBytes,
-        i.Status.ToString(), i.ErrorMessage,
-        i.StartTime, i.EndTime)
-    {
-        ResolvedUrl = i.ResolvedUrl
-    };
-
-    public DownloadItem ToDownloadItem()
-    {
-        DownloadStatus status = Enum.TryParse<DownloadStatus>(Status, out DownloadStatus s) ? s : DownloadStatus.Queued;
-        return new DownloadItem
-        {
-            Id = Id,
-            Url = Url,
-            ResolvedUrl = ResolvedUrl ?? string.Empty,
-            FileName = FileName,
-            SavePath = SavePath,
-            Threads = Threads,
-            IsYoutube = IsYoutube,
-            FormatId = FormatId,
-            TotalBytes = TotalBytes,
-            DownloadedBytes = DownloadedBytes,
-            Status = status,
-            ErrorMessage = ErrorMessage,
-            StartTime = StartTime,
-            EndTime = EndTime
-        };
-    }
-}
-
-public record DownloadItemDto(
-    string Id, string Url, string FileName, string SavePath,
-    DateTime StartTime, DateTime EndTime,
-    long TotalBytes, long DownloadedBytes, double SpeedBps,
-    double Progress, string Status,
-    string SpeedFormatted, string EtaFormatted,
-    string TotalFormatted, string DownloadedFormatted,
-    string ErrorMessage, bool IsActive,
-    string ProgressVisualizationMode,
-    string ProgressVisualizationStage,
-    IReadOnlyList<DownloadThreadProgress> ThreadProgress)
-{
-    public static DownloadItemDto From(DownloadItem i) => new(
-        i.Id.ToString(), i.Url, i.FileName, i.SavePath,
-        i.StartTime, i.EndTime,
-        i.TotalBytes, i.DownloadedBytes, i.SpeedBps,
-        i.Progress, i.Status.ToString(),
-        i.SpeedFormatted, i.EtaFormatted,
-        i.TotalFormatted, i.DownloadedFormatted,
-        i.ErrorMessage, i.IsActive,
-        i.ProgressVisualizationMode,
-        i.ProgressVisualizationStage,
-        i.GetThreadProgressSnapshot());
 }

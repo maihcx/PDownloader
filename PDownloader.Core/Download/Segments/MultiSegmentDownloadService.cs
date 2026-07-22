@@ -125,7 +125,7 @@ internal sealed class MultiSegmentDownloadService
         catch (RangeRejectedException ex)
         {
             Debug.WriteLine(
-                $"[Segments] Range không ổn định, chuyển về tải một luồng: {ex.Message}");
+                $"[Segments] Unstable range; switching to single-stream download: {ex.Message}");
 
             _stateStore.Reset(tempDirectory);
             segments = _stateStore.BuildOrRestore(

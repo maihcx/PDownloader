@@ -129,7 +129,7 @@ public class DownloadEngine
                 ReportMergeProgress,
                 _cancellationToken),
             _ => throw new InvalidOperationException(
-                $"Không hỗ trợ khôi phục kiểu merge: {manifest.Kind}.")
+                $"Merge-style recovery is not supported: {manifest.Kind}.")
         };
 
         CompleteRecoveredMerge(finalPath);
@@ -159,9 +159,6 @@ public class DownloadEngine
             probeUrl,
             _cancellationToken);
 
-        // Mirror URLs (for example SourceForge) are pinned after the first redirect.
-        // If a previously resolved mirror is no longer reachable, fall back to the
-        // original URL so the provider can select a new mirror.
         if (probe.TotalBytes <= 0
             && !string.Equals(probeUrl, _item.Url, StringComparison.Ordinal))
         {
@@ -223,9 +220,6 @@ public class DownloadEngine
         _item.MergeProgress = progressPercent;
         _item.SpeedBps = 0;
 
-        // Publish a new snapshot without changing DownloadedBytes. During the
-        // Merging state DownloadItem.Progress is backed by MergeProgress, so the
-        // same DTO/UI progress channel can display the actual merge percentage.
         _progress.Report(new DownloadProgress(_item.DownloadedBytes, 0));
     }
 

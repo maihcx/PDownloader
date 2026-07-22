@@ -46,7 +46,7 @@ internal sealed class SegmentMerger
         {
             string indexes = string.Join(", ", incomplete.Select(segment => segment.Index));
             throw new InvalidOperationException(
-                $"Tải chưa hoàn tất: {incomplete.Count} segment chưa xong " +
+                $"Download incomplete: {incomplete.Count} segments remaining " +
                 $"(index: {indexes}).");
         }
 
@@ -57,7 +57,7 @@ internal sealed class SegmentMerger
         {
             string indexes = string.Join(", ", missing.Select(segment => segment.Index));
             throw new InvalidOperationException(
-                $"Không thể ghép file: thiếu {missing.Count} segment " +
+                $"Cannot merge files: {missing.Count} segments missing " +
                 $"(index: {indexes}).");
         }
     }

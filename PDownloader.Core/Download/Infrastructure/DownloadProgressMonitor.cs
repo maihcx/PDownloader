@@ -43,7 +43,7 @@ internal sealed class DownloadProgressMonitor : IDisposable
             throw new ArgumentOutOfRangeException(
                 nameof(intervalMilliseconds),
                 intervalMilliseconds,
-                "Khoảng thời gian cập nhật tiến độ phải lớn hơn 0.");
+                "The progress update interval must be greater than 0.");
         }
 
         _getDownloadedBytes = getDownloadedBytes;
@@ -134,7 +134,7 @@ internal sealed class DownloadProgressMonitor : IDisposable
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[Progress] Không thể cập nhật tiến độ: {ex.Message}");
+            Debug.WriteLine($"[Progress] Unable to update progress: {ex.Message}");
         }
         finally
         {

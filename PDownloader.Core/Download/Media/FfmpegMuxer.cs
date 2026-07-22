@@ -68,7 +68,7 @@ internal sealed class FfmpegMuxer
         if (manifest.Kind != MergeRecoveryKind.FfmpegMux)
         {
             throw new InvalidOperationException(
-                $"Trạng thái merge không hợp lệ: {manifest.Kind}.");
+                $"Invalid merge state: {manifest.Kind}.");
         }
 
         return ExecuteAsync(
@@ -94,8 +94,8 @@ internal sealed class FfmpegMuxer
 
         string ffmpegPath = FfmpegExecutableLocator.Instance.Find()
             ?? throw new InvalidOperationException(
-                "ffmpeg không tìm thấy — cần ffmpeg để ghép video+audio tải riêng thành 1 file. " +
-                "Đặt ffmpeg.exe cạnh PDownloader.Core.exe hoặc thêm vào PATH.");
+                "ffmpeg not found — ffmpeg is required to merge separately downloaded video and audio into a single file. " +
+                "Place ffmpeg.exe next to PDownloader.Core.exe or add it to the PATH.");
 
         string videoPath = manifest.SourcePaths[0];
         string? audioPath = manifest.SourcePaths.Count > 1
@@ -169,13 +169,13 @@ internal sealed class FfmpegMuxer
                     ? standardError[^500..]
                     : standardError;
                 throw new InvalidOperationException(
-                    $"ffmpeg ghép thất bại (exit {process.ExitCode}): {tail}");
+                    $"FFmpeg merging failed (exit {process.ExitCode}): {tail}");
             }
 
             if (File.Exists(manifest.DestinationPath))
             {
                 throw new IOException(
-                    $"Không thể hoàn tất ghép file vì file đích đã tồn tại: " +
+                    $"Cannot complete file merging because the destination file already exists: " +
                     manifest.DestinationPath);
             }
 
@@ -194,8 +194,8 @@ internal sealed class FfmpegMuxer
         {
             TryDeletePartialOutput(mergingPath);
             throw new InvalidOperationException(
-                "Ghép video/audio thất bại. Các stream đã tải vẫn được giữ nguyên. " +
-                "Nhấn Thử lại để chỉ chạy lại bước ghép. " +
+                "Video/audio merging failed. The downloaded streams have been retained. " +
+                "Click Retry to re-run only the merge step. " +
                 ex.Message,
                 ex);
         }
@@ -206,7 +206,7 @@ internal sealed class FfmpegMuxer
         if (sourcePaths.Count == 0 || !File.Exists(sourcePaths[0]))
         {
             throw new InvalidOperationException(
-                "Không thể thử lại quá trình ghép vì thiếu stream video đã tải.");
+                "Cannot retry the merging process due to the missing downloaded video stream.");
         }
 
         List<string> missing = sourcePaths
@@ -215,7 +215,7 @@ internal sealed class FfmpegMuxer
         if (missing.Count > 0)
         {
             throw new InvalidOperationException(
-                $"Không thể thử lại quá trình ghép vì thiếu {missing.Count} stream đã tải.");
+                $"Cannot retry the merging process due to {missing.Count} missing downloaded streams.");
         }
     }
 
@@ -295,7 +295,7 @@ internal sealed class FfmpegMuxer
             catch (Exception ex)
             {
                 Debug.WriteLine(
-                    $"[MergeRecovery] Không thể xóa stream nguồn '{sourcePath}': {ex.Message}");
+                    $"[MergeRecovery] Cannot delete the source stream '{sourcePath}': {ex.Message}");
             }
         }
     }
@@ -312,7 +312,7 @@ internal sealed class FfmpegMuxer
         catch (Exception ex)
         {
             Debug.WriteLine(
-                $"[MergeRecovery] Không thể xóa file ffmpeg dở '{mergingPath}': {ex.Message}");
+                $"[MergeRecovery] Unable to delete the incomplete ffmpeg file '{mergingPath}': {ex.Message}");
         }
     }
 }

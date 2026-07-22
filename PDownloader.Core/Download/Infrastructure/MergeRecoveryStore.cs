@@ -37,17 +37,8 @@ internal sealed class MergeRecoveryManifest
 
     public bool OutputLengthIsExact { get; set; }
 
-    /// <summary>
-    /// Index of the first source that has not been durably committed to the
-    /// partial output yet. Sources before this index may already be deleted.
-    /// </summary>
     public int NextSourceIndex { get; set; }
 
-    /// <summary>
-    /// Number of bytes that have been flushed to disk and recorded in the
-    /// checkpoint. The partial output is truncated back to this length before
-    /// a retry resumes.
-    /// </summary>
     public long CommittedOutputBytes { get; set; }
 }
 
@@ -103,7 +94,7 @@ internal static class MergeRecoveryStore
         catch (Exception ex)
         {
             Debug.WriteLine(
-                $"[MergeRecovery] Không thể quét trạng thái merge: {ex.Message}");
+                $"[MergeRecovery] Unable to scan merge status: {ex.Message}");
             return false;
         }
     }
@@ -137,9 +128,6 @@ internal static class MergeRecoveryStore
             CommittedOutputBytes = manifest.CommittedOutputBytes
         };
 
-        // Checkpoints are intentionally stored separately from the full manifest.
-        // HLS downloads may contain thousands of fragment paths, so rewriting the
-        // complete manifest after every committed fragment would cause avoidable I/O.
         WriteJsonAtomically(
             GetCheckpointFilePath(recoveryDirectory),
             checkpoint,
@@ -177,7 +165,7 @@ internal static class MergeRecoveryStore
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[MergeRecovery] Không thể đọc trạng thái merge: {ex.Message}");
+            Debug.WriteLine($"[MergeRecovery] Unable to read merge status: {ex.Message}");
             return null;
         }
     }
@@ -210,7 +198,7 @@ internal static class MergeRecoveryStore
         if (string.IsNullOrWhiteSpace(directory))
         {
             throw new InvalidOperationException(
-                "Không xác định được thư mục tạm để lưu trạng thái ghép file.");
+                "Unable to determine the temporary directory for saving the file merging state.");
         }
 
         return directory;
@@ -242,7 +230,7 @@ internal static class MergeRecoveryStore
         catch (Exception ex)
         {
             Debug.WriteLine(
-                $"[MergeRecovery] Không thể đọc checkpoint merge: {ex.Message}");
+                $"[MergeRecovery] Unable to read checkpoint merge: {ex.Message}");
         }
     }
 
@@ -291,5 +279,4 @@ internal static class MergeRecoveryStore
             // Best effort cleanup only. The committed state is never touched.
         }
     }
-
 }

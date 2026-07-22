@@ -186,7 +186,7 @@ internal sealed class RecoverableFileMerger
                     && mergedLength != manifest.ExpectedOutputBytes)
                 {
                     throw new IOException(
-                        $"Kích thước file sau khi ghép không hợp lệ: " +
+                        $"Invalid file size after merging: " +
                         $"{mergedLength} B, dự kiến {manifest.ExpectedOutputBytes} B.");
                 }
             }
@@ -194,7 +194,7 @@ internal sealed class RecoverableFileMerger
             if (File.Exists(destinationPath))
             {
                 throw new IOException(
-                    $"Không thể hoàn tất ghép file vì file đích đã tồn tại: {destinationPath}");
+                    $"Cannot complete file merging because the destination file already exists: {destinationPath}");
             }
 
             File.Move(mergingPath, destinationPath);
@@ -212,9 +212,9 @@ internal sealed class RecoverableFileMerger
         {
             RollBackUncommittedBytes(mergingPath, manifest.CommittedOutputBytes);
             throw new InvalidOperationException(
-                "Ghép file thất bại. Các phần đã commit vẫn được giữ trong file .merging " +
-                "và các segment chưa commit vẫn còn nguyên. Nhấn Thử lại để tiếp tục ghép " +
-                "từ checkpoint gần nhất. " + ex.Message,
+                "File merging failed. Committed parts remain in the .merging file, " +
+                "and uncommitted segments remain intact. Click Retry to resume merging " +
+                "the last checkpoint. " + ex.Message,
                 ex);
         }
     }
@@ -230,8 +230,6 @@ internal sealed class RecoverableFileMerger
             return;
         }
 
-        // Version 1 never deleted sources before the whole merge completed, so it is
-        // safe to rebuild the per-source length table and start checkpointing from 0.
         ValidateAllSources(manifest.SourcePaths);
 
         manifest.Version = 2;
@@ -273,8 +271,8 @@ internal sealed class RecoverableFileMerger
             || new FileInfo(mergingPath).Length < minimumCommittedBytes)
         {
             throw new InvalidOperationException(
-                "Checkpoint merge bị thiếu hoặc cũ, và file .merging không còn đủ dữ liệu " +
-                "để khôi phục các segment nguồn đã được giải phóng.");
+                "The merge checkpoint is missing or outdated, and the .merging file no longer contains sufficient data " +
+                "to recover the source segments that have been released.");
         }
 
         manifest.NextSourceIndex = minimumCommittedSourceCount;
@@ -286,20 +284,20 @@ internal sealed class RecoverableFileMerger
     {
         if (manifest.SourcePaths.Count == 0)
         {
-            throw new InvalidOperationException("Không có dữ liệu nguồn để ghép file.");
+            throw new InvalidOperationException("No source data available to merge files..");
         }
 
         if (manifest.SourceLengths.Count != manifest.SourcePaths.Count)
         {
             throw new InvalidOperationException(
-                "Trạng thái phục hồi merge không hợp lệ: số lượng kích thước source không khớp.");
+                "Invalid merge recovery state: source dimension count mismatch.");
         }
 
         if (manifest.NextSourceIndex < 0
             || manifest.NextSourceIndex > manifest.SourcePaths.Count)
         {
             throw new InvalidOperationException(
-                "Trạng thái phục hồi merge không hợp lệ: checkpoint source vượt phạm vi.");
+                "Invalid merge recovery state: checkpoint source out of range.");
         }
 
         long expectedCommittedBytes = manifest.SourceLengths
@@ -308,14 +306,14 @@ internal sealed class RecoverableFileMerger
         if (manifest.CommittedOutputBytes != expectedCommittedBytes)
         {
             throw new InvalidOperationException(
-                "Trạng thái phục hồi merge không hợp lệ: kích thước checkpoint không khớp " +
+                "Invalid merge recovery state: checkpoint size mismatch " +
                 $"({manifest.CommittedOutputBytes} B != {expectedCommittedBytes} B).");
         }
 
         if (manifest.ExpectedOutputBytes != manifest.SourceLengths.Sum())
         {
             throw new InvalidOperationException(
-                "Trạng thái phục hồi merge không hợp lệ: tổng kích thước nguồn không khớp.");
+                "Invalid merge recovery state: total source size mismatch.");
         }
     }
 
@@ -339,8 +337,8 @@ internal sealed class RecoverableFileMerger
             }
 
             throw new InvalidOperationException(
-                "Không thể tiếp tục merge: file .merging chứa dữ liệu đã commit không còn tồn tại, " +
-                "trong khi một số segment nguồn đã được giải phóng để tiết kiệm dung lượng.");
+                "\r\nCannot continue merging: the .merging file containing committed data no longer exists, " +
+                "while some source segments have been released to save space.");
         }
 
         long partialLength = new FileInfo(mergingPath).Length;
@@ -354,9 +352,9 @@ internal sealed class RecoverableFileMerger
             }
 
             throw new InvalidOperationException(
-                "Không thể tiếp tục merge: file .merging ngắn hơn checkpoint đã commit " +
-                $"({partialLength} B < {manifest.CommittedOutputBytes} B). Dữ liệu nguồn đã commit " +
-                "không còn đầy đủ để xây dựng lại từ đầu.");
+                "Cannot continue merging: the .merging file is shorter than the committed checkpoint. " +
+                $"({partialLength} B < {manifest.CommittedOutputBytes} B). The committed source data " +
+                "is no longer sufficient to rebuild from scratch.");
         }
 
         RollBackUncommittedBytes(mergingPath, manifest.CommittedOutputBytes);
@@ -391,7 +389,7 @@ internal sealed class RecoverableFileMerger
     {
         if (sourcePaths.Count == 0)
         {
-            throw new InvalidOperationException("Không có dữ liệu nguồn để ghép file.");
+            throw new InvalidOperationException("No source data available to merge files.");
         }
 
         List<string> missing = sourcePaths
@@ -400,7 +398,7 @@ internal sealed class RecoverableFileMerger
         if (missing.Count > 0)
         {
             throw new InvalidOperationException(
-                $"Không thể thử lại quá trình ghép vì thiếu {missing.Count} file dữ liệu tạm.");
+                $"Cannot retry the merging process due to {missing.Count} missing temporary data files.");
         }
     }
 
@@ -412,15 +410,15 @@ internal sealed class RecoverableFileMerger
         if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
         {
             throw new InvalidOperationException(
-                $"Không thể tiếp tục merge vì thiếu segment chưa commit ở index {index}.");
+                $"Cannot continue merging due to missing uncommitted segments in the index {index}.");
         }
 
         long actualLength = new FileInfo(sourcePath).Length;
         if (actualLength != expectedLength)
         {
             throw new IOException(
-                $"Segment {index} có kích thước không hợp lệ: " +
-                $"{actualLength} B, dự kiến {expectedLength} B.");
+                $"Segment {index} has an invalid size: " +
+                $"{actualLength} B, expected {expectedLength} B.");
         }
     }
 
@@ -468,7 +466,7 @@ internal sealed class RecoverableFileMerger
         catch (Exception ex)
         {
             Debug.WriteLine(
-                $"[MergeRecovery] Không thể xóa dữ liệu nguồn '{sourcePath}': {ex.Message}");
+                $"[MergeRecovery] Cannot delete source data '{sourcePath}': {ex.Message}");
         }
     }
 
@@ -498,7 +496,7 @@ internal sealed class RecoverableFileMerger
         catch (Exception ex)
         {
             Debug.WriteLine(
-                $"[MergeRecovery] Không thể rollback file merge dở '{mergingPath}' " +
+                $"[MergeRecovery] Cannot roll back an incomplete file merge '{mergingPath}' " +
                 $"về {committedLength} B: {ex.Message}");
         }
     }
