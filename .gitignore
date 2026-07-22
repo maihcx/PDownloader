@@ -59,4 +59,6 @@ nunit-*.xml
 
 # Browser extension signing key - KHONG BAO GIO commit private key nay
 BrowserExtension/_packaging/signing-key.pem
-/BrowserExtension/dist
+BrowserExtension/dist
+BrowserExtension/web-ext-artifacts/
+BrowserExtension/.web-extension-id
