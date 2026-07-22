@@ -27,17 +27,13 @@ public static class BrowserExtensionInstallerService
 
     private const string ExtensionSettingsSubKey = "ExtensionSettings";
 
-    private const string UpdateURI =
-        "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/update.xml";
+    private const string UpdateURI = "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/update.xml";
 
-    private const string FirefoxPolicyRoot =
-        @"SOFTWARE\Policies\Mozilla\Firefox";
+    private const string FirefoxPolicyRoot = @"SOFTWARE\Policies\Mozilla\Firefox";
 
-    private const string FirefoxExtensionSettingsValue =
-        "ExtensionSettings";
+    private const string FirefoxExtensionSettingsValue = "ExtensionSettings";
 
-    private const string FirefoxInstallUrl =
-        "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/PDownloader.xpi";
+    private const string FirefoxInstallUrl = "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/PDownloader.xpi";
 
     private static readonly (string DisplayName, string PolicyRoot)[] SupportedBrowsers =
     {
@@ -248,7 +244,7 @@ public static class BrowserExtensionInstallerService
 
         if (string.IsNullOrWhiteSpace(json))
         {
-            return new JsonObject();
+            return [];
         }
 
         JsonNode? parsed = JsonNode.Parse(json);
