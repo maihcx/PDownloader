@@ -406,7 +406,7 @@ public sealed class HttpBridgeService : IDisposable
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
 
-        using var memoryStream = contentLength > 0
+        using MemoryStream memoryStream = contentLength > 0
             ? new MemoryStream((int)contentLength)
             : new MemoryStream();
 
