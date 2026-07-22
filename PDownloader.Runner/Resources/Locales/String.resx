@@ -252,4 +252,37 @@
   <data name="download_compact_status_no_threads_description" xml:space="preserve">
     <value>download_compact_status_no_threads_description</value>
   </data>
+  <data name="download_thread_stage_file" xml:space="preserve">
+    <value>download_thread_stage_file</value>
+  </data>
+  <data name="download_thread_stage_video" xml:space="preserve">
+    <value>download_thread_stage_video</value>
+  </data>
+  <data name="download_thread_stage_audio" xml:space="preserve">
+    <value>download_thread_stage_audio</value>
+  </data>
+  <data name="download_thread_stage_hls" xml:space="preserve">
+    <value>download_thread_stage_hls</value>
+  </data>
+  <data name="download_compact_status_paused_merge_title" xml:space="preserve">
+    <value>download_compact_status_paused_merge_title</value>
+  </data>
+  <data name="download_compact_status_paused_merge_description" xml:space="preserve">
+    <value>download_compact_status_paused_merge_description</value>
+  </data>
+  <data name="download_compact_status_merging_description" xml:space="preserve">
+    <value>download_compact_status_merging_description</value>
+  </data>
+  <data name="download_compact_status_paused_download_description" xml:space="preserve">
+    <value>download_compact_status_paused_download_description</value>
+  </data>
+  <data name="download_compact_status_queued_description" xml:space="preserve">
+    <value>download_compact_status_queued_description</value>
+  </data>
+  <data name="download_compact_status_connecting_description" xml:space="preserve">
+    <value>download_compact_status_connecting_description</value>
+  </data>
+  <data name="download_compact_status_error_description" xml:space="preserve">
+    <value>download_compact_status_error_description</value>
+  </data>
 </root>

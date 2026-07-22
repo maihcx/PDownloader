@@ -25,7 +25,8 @@ public record DownloadItemDto(
     string ErrorMessage, bool IsActive,
     string ProgressVisualizationMode,
     string ProgressVisualizationStage,
-    IReadOnlyList<DownloadThreadProgress> ThreadProgress)
+    IReadOnlyList<DownloadThreadProgress> ThreadProgress,
+    bool IsMergeProgressActive)
 {
     public static DownloadItemDto From(DownloadItem i) => new(
         i.Id.ToString(), i.Url, i.FileName, i.SavePath,
@@ -37,5 +38,6 @@ public record DownloadItemDto(
         i.ErrorMessage, i.IsActive,
         i.ProgressVisualizationMode,
         i.ProgressVisualizationStage,
-        i.GetThreadProgressSnapshot());
+        i.GetThreadProgressSnapshot(),
+        i.IsMergeProgressActive);
 }

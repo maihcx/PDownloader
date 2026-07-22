@@ -71,6 +71,9 @@ public class DownloadItemDto
     [JsonPropertyName("isActive")]
     public bool IsActive { get; set; }
 
+    [JsonPropertyName("isMergeProgressActive")]
+    public bool IsMergeProgressActive { get; set; }
+
     private string _progressVisualizationMode = "None";
     private string _progressVisualizationStage = string.Empty;
     private List<DownloadThreadProgressDto> _threadProgress = new();

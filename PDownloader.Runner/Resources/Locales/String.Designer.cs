@@ -97,11 +97,74 @@ namespace PDownloader.Runner.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to download_compact_status_connecting_description.
+        /// </summary>
+        internal static string download_compact_status_connecting_description {
+            get {
+                return ResourceManager.GetString("download_compact_status_connecting_description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_compact_status_error_description.
+        /// </summary>
+        internal static string download_compact_status_error_description {
+            get {
+                return ResourceManager.GetString("download_compact_status_error_description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_compact_status_merging_description.
+        /// </summary>
+        internal static string download_compact_status_merging_description {
+            get {
+                return ResourceManager.GetString("download_compact_status_merging_description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to download_compact_status_no_threads_description.
         /// </summary>
         internal static string download_compact_status_no_threads_description {
             get {
                 return ResourceManager.GetString("download_compact_status_no_threads_description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_compact_status_paused_download_description.
+        /// </summary>
+        internal static string download_compact_status_paused_download_description {
+            get {
+                return ResourceManager.GetString("download_compact_status_paused_download_description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_compact_status_paused_merge_description.
+        /// </summary>
+        internal static string download_compact_status_paused_merge_description {
+            get {
+                return ResourceManager.GetString("download_compact_status_paused_merge_description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_compact_status_paused_merge_title.
+        /// </summary>
+        internal static string download_compact_status_paused_merge_title {
+            get {
+                return ResourceManager.GetString("download_compact_status_paused_merge_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_compact_status_queued_description.
+        /// </summary>
+        internal static string download_compact_status_queued_description {
+            get {
+                return ResourceManager.GetString("download_compact_status_queued_description", resourceCulture);
             }
         }
         
@@ -228,6 +291,42 @@ namespace PDownloader.Runner.Resources.Locales {
         internal static string download_thread_item_title {
             get {
                 return ResourceManager.GetString("download_thread_item_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_stage_audio.
+        /// </summary>
+        internal static string download_thread_stage_audio {
+            get {
+                return ResourceManager.GetString("download_thread_stage_audio", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_stage_file.
+        /// </summary>
+        internal static string download_thread_stage_file {
+            get {
+                return ResourceManager.GetString("download_thread_stage_file", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_stage_hls.
+        /// </summary>
+        internal static string download_thread_stage_hls {
+            get {
+                return ResourceManager.GetString("download_thread_stage_hls", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to download_thread_stage_video.
+        /// </summary>
+        internal static string download_thread_stage_video {
+            get {
+                return ResourceManager.GetString("download_thread_stage_video", resourceCulture);
             }
         }
         

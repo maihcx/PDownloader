@@ -297,6 +297,66 @@ public partial class DownloaderProgressViewModel : ObservableObject
             return;
         }
 
+        if (status == DownloadStatus.Paused && item.IsMergeProgressActive)
+        {
+            CompactStatusTitle = LanguageBase.GetLangValue(
+                "download_compact_status_paused_merge_title");
+            CompactStatusDescription = LanguageBase.GetLangValue(
+                "download_compact_status_paused_merge_description",
+                Math.Clamp(item.Progress, 0, 100).ToString("F0"));
+            return;
+        }
+
+        if (status == DownloadStatus.Merging)
+        {
+            CompactStatusTitle = string.IsNullOrWhiteSpace(StatusText)
+                ? LanguageBase.GetLangValue("download_status_merging_title")
+                : StatusText;
+            CompactStatusDescription = LanguageBase.GetLangValue(
+                "download_compact_status_merging_description");
+            return;
+        }
+
+        if (status == DownloadStatus.Paused)
+        {
+            CompactStatusTitle = string.IsNullOrWhiteSpace(StatusText)
+                ? LanguageBase.GetLangValue("download_status_paused_title")
+                : StatusText;
+            CompactStatusDescription = LanguageBase.GetLangValue(
+                "download_compact_status_paused_download_description");
+            return;
+        }
+
+        if (status == DownloadStatus.Queued)
+        {
+            CompactStatusTitle = string.IsNullOrWhiteSpace(StatusText)
+                ? LanguageBase.GetLangValue("download_status_queued_title")
+                : StatusText;
+            CompactStatusDescription = LanguageBase.GetLangValue(
+                "download_compact_status_queued_description");
+            return;
+        }
+
+        if (status == DownloadStatus.Connecting)
+        {
+            CompactStatusTitle = string.IsNullOrWhiteSpace(StatusText)
+                ? LanguageBase.GetLangValue("download_status_connecting_title")
+                : StatusText;
+            CompactStatusDescription = LanguageBase.GetLangValue(
+                "download_compact_status_connecting_description");
+            return;
+        }
+
+        if (status == DownloadStatus.Error)
+        {
+            CompactStatusTitle = string.IsNullOrWhiteSpace(StatusText)
+                ? LanguageBase.GetLangValue("download_status_error_title", item.ErrorMessage)
+                : StatusText;
+            CompactStatusDescription = LanguageBase.GetLangValue(
+                "download_compact_status_error_description");
+            return;
+        }
+
         if (mode.Equals("Unsupported", StringComparison.OrdinalIgnoreCase))
         {
             CompactStatusTitle = LanguageBase.GetLangValue(
