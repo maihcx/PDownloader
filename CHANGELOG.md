@@ -1,3 +1,21 @@
+## v0.5.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- Add user-agent and structured cookie jar support (#65) — @maihcx
+- [extension] Add media candidate registry and detection system (#64) — @maihcx
+- Add file hash calculation for downloads (#63) — @maihcx
+- Add merge progress recovery and pause support (#62) — @maihcx
+- Add recoverable merge support for downloads (#61) — @maihcx
+
+## 🐛 Bug Fixes
+
+- Disable download controls during merging (#60) — @maihcx
+
+
+---
+
 ## v0.4.1
 
 ## 🚀 Changelog
