@@ -29,6 +29,7 @@ public sealed class HttpBridgeService : IDisposable
 
     private const int MaxRequestBodyBytes = 1024 * 1024;
     private const int MaxForwardedHeaderValueLength = 64 * 1024;
+    private const int MaxCookieJarValueLength = 512 * 1024;
     private const int MaxFileNameLength = 180;
 
     private static readonly HashSet<string> AllowedForwardedHeaders =
@@ -617,9 +618,15 @@ public sealed class HttpBridgeService : IDisposable
         var sanitized = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach ((string key, string value) in headers)
         {
+            int maxValueLength = key.Equals(
+                "X-PDownloader-Cookie-Jar",
+                StringComparison.OrdinalIgnoreCase)
+                    ? MaxCookieJarValueLength
+                    : MaxForwardedHeaderValueLength;
+
             if (!AllowedForwardedHeaders.Contains(key)
                 || string.IsNullOrWhiteSpace(value)
-                || value.Length > MaxForwardedHeaderValueLength
+                || value.Length > maxValueLength
                 || ContainsControlCharacters(value, allowTab: true))
             {
                 continue;
