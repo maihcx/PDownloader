@@ -506,12 +506,7 @@ public partial class DownloaderProgressViewModel : ObservableObject
     [RelayCommand]
     private void OpenFile()
     {
-        if (!File.Exists(CompletedFilePath))
-        {
-            return;
-        }
-
-        Process.Start(new ProcessStartInfo(CompletedFilePath) { UseShellExecute = true });
+        ShellProcessLauncher.OpenFile(CompletedFilePath);
     }
 
     [RelayCommand]

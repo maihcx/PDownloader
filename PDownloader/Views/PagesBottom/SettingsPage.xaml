@@ -24,7 +24,7 @@
         <helpers:NullOrEmptyToVisibilityConverter x:Key="NullToCollapsedConverter" />
     </Page.Resources>
 
-    <StackPanel>
+    <StackPanel Margin="0 0 0 30">
         <ui:TextBlock
             Margin="0,24,0,8"
             FontTypography="BodyStrong"
@@ -250,7 +250,8 @@
                          TextWrapping="Wrap"
                          VerticalScrollBarVisibility="Auto"
                          Text="{Binding ViewModel.ReleaseNotes, Mode=OneWay}"
-                         Visibility="{Binding ViewModel.ReleaseNotes, Converter={StaticResource NullToCollapsedConverter}}" />
+                         Visibility="{Binding ViewModel.ReleaseNotes, Converter={StaticResource NullToCollapsedConverter}}"
+                         ui:SmoothScrollBehavior.IsEnabled="True" />
             </Grid>
         </ui:Card>
     </StackPanel>
