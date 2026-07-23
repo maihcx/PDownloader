@@ -1,11 +1,13 @@
 {
   "extension_id": "pdownloader@maisoft.io.vn",
-  "strict_min_version": "128.0",
+  "strict_min_version": "140.0",
   "data_collection_permissions": {
     "required": [
       "authenticationInfo",
+      "browsingActivity",
       "websiteActivity",
       "websiteContent"
     ]
-  }
+  },
+  "strict_min_version_android": "142.0"
 }

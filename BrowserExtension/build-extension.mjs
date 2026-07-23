@@ -97,6 +97,9 @@ async function buildFirefox(baseManifest, firefoxConfig) {
       id: firefoxConfig.extension_id,
       strict_min_version: firefoxConfig.strict_min_version,
       data_collection_permissions: firefoxConfig.data_collection_permissions
+    },
+    gecko_android: {
+      strict_min_version: firefoxConfig.strict_min_version_android
     }
   };
 

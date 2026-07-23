@@ -188,7 +188,7 @@ function showToast(parent, msg, err = false) {
 }
 
 function renderDropdown(dd, data) {
-  dd.innerHTML = '';
+  dd.replaceChildren();
   let filter = 'all', query = '';
 
   const search = document.createElement('input');
@@ -204,12 +204,22 @@ function renderDropdown(dd, data) {
 
   const filterBar = document.createElement('div');
   filterBar.className = 'pd-yt-filters';
-  filterBar.innerHTML = `
-    <button class="pd-yt-filter-btn active" data-f="all">${PD.I18n.t('ytFilterAll')}</button>
-    <button class="pd-yt-filter-btn" data-f="muxed">${PD.I18n.t('ytFilterMuxed')}</button>
-    <button class="pd-yt-filter-btn" data-f="video">${PD.I18n.t('ytFilterVideo')}</button>
-    <button class="pd-yt-filter-btn" data-f="audio">${PD.I18n.t('ytFilterAudio')}</button>`;
-  filterBar.querySelectorAll('.pd-yt-filter-btn').forEach(b => {
+
+  const filterButtons = [
+    ['all', 'ytFilterAll'],
+    ['muxed', 'ytFilterMuxed'],
+    ['video', 'ytFilterVideo'],
+    ['audio', 'ytFilterAudio']
+  ].map(([value, labelKey], index) => {
+    const button = document.createElement('button');
+    button.className = 'pd-yt-filter-btn' + (index === 0 ? ' active' : '');
+    button.dataset.f = value;
+    button.textContent = PD.I18n.t(labelKey);
+    filterBar.appendChild(button);
+    return button;
+  });
+
+  filterButtons.forEach(b => {
     b.addEventListener('click', e => {
       e.stopPropagation();
       filterBar.querySelectorAll('.pd-yt-filter-btn').forEach(x => x.classList.remove('active'));
@@ -225,7 +235,7 @@ function renderDropdown(dd, data) {
   dd.appendChild(list);
 
   function draw() {
-    list.innerHTML = '';
+    list.replaceChildren();
     const items = (data.formats || []).filter(f => {
       if (filter === 'muxed' && f.note === 'Audio Only') return false;
       if (filter === 'video' && f.note !== 'Video Only') return false;
@@ -240,7 +250,10 @@ function renderDropdown(dd, data) {
     });
 
     if (!items.length) {
-      list.innerHTML = `<div class="pd-yt-empty">${PD.I18n.t('ytNoFormats')}</div>`;
+      const empty = document.createElement('div');
+      empty.className = 'pd-yt-empty';
+      empty.textContent = PD.I18n.t('ytNoFormats');
+      list.appendChild(empty);
       return;
     }
 
@@ -311,21 +324,34 @@ function injectPanel() {
   const panel = document.createElement('div');
   panel.className = 'pd-yt-panel pd-theme-root' + (isS ? ' shorts' : '');
 
-  panel.innerHTML = `
-    <button class="pd-yt-main-btn" id="pd-dl-btn">
-      <span class="pd-yt-icon"></span>
-      <span>${PD.I18n.t('ytDownloadThisVideo')}</span>
-    </button>
-    <div class="pd-yt-sep"></div>
-    <button class="pd-yt-ctrl-btn" id="pd-close-btn" title="${PD.I18n.t('ytClose')}">✕</button>
-  `;
+  const mainBtn = document.createElement('button');
+  mainBtn.className = 'pd-yt-main-btn';
+  mainBtn.id = 'pd-dl-btn';
+
+  const setMainButtonContent = loading => {
+    const icon = document.createElement(loading ? 'div' : 'span');
+    icon.className = loading ? 'pd-yt-spinner' : 'pd-yt-icon';
+
+    const label = document.createElement('span');
+    label.textContent = PD.I18n.t(loading ? 'ytAnalyzing' : 'ytDownloadThisVideo');
+
+    mainBtn.replaceChildren(icon, label);
+  };
+  setMainButtonContent(false);
+
+  const separator = document.createElement('div');
+  separator.className = 'pd-yt-sep';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'pd-yt-ctrl-btn';
+  closeBtn.id = 'pd-close-btn';
+  closeBtn.title = PD.I18n.t('ytClose');
+  closeBtn.textContent = '✕';
 
   const dd = document.createElement('div');
   dd.className = 'pd-yt-dropdown';
-  panel.appendChild(dd);
 
-  const mainBtn  = panel.querySelector('#pd-dl-btn');
-  const closeBtn = panel.querySelector('#pd-close-btn');
+  panel.append(mainBtn, separator, closeBtn, dd);
 
   closeBtn.addEventListener('click', e => { e.stopPropagation(); panel.style.display = 'none'; });
 
@@ -348,8 +374,7 @@ function injectPanel() {
     }
 
     // Waiting for analysis
-    const origHtml = mainBtn.innerHTML;
-    mainBtn.innerHTML = `<div class="pd-yt-spinner"></div> <span>${PD.I18n.t('ytAnalyzing')}</span>`;
+    setMainButtonContent(true);
     mainBtn.disabled = true;
 
     const analyzeUrl = isS
@@ -360,7 +385,7 @@ function injectPanel() {
       PDWebExt.runtime.sendMessage({ action: 'analyze_youtube', url: analyzeUrl }, res)
     ));
 
-    mainBtn.innerHTML = origHtml;
+    setMainButtonContent(false);
     mainBtn.disabled = false;
 
     if (resp?.success && resp.formats) {
