@@ -1,3 +1,20 @@
+## v0.7.1
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- [vulnerability] Add ShellProcessLauncher and use for OpenFile (#82) — @maihcx
+- [vulnerability] Make NativeMethods internal and partial (#81) — @maihcx
+- [vulnerability] Add unelevated process launcher for post-install (#80) — @maihcx
+
+## 🧹 Maintenance
+
+- Enable smooth scrolling for release notes (#79) — @maihcx
+- Add bottom margin to SettingsPage StackPanel (#78) — @maihcx
+
+
+---
+
 ## v0.7.0
 
 ## 🚀 Changelog
