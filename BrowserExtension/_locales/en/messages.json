@@ -156,10 +156,10 @@
     "message": "The PDownloader Webhook extension has just been updated! Please update the PDownloader app on your PC."
   },
   "popupSectionDetectedMedia": {
-    "message": "Detected media"
+    "message": "Detected files"
   },
   "popupDetectedMediaEmpty": {
-    "message": "No media detected on this page"
+    "message": "No supported files detected on this page"
   },
   "popupMediaDownloadTitle": {
     "message": "Download with PDownloader"
@@ -169,6 +169,9 @@
   },
   "popupMediaVideo": {
     "message": "Video"
+  },
+  "popupMediaPdf": {
+    "message": "PDF document"
   },
   "popupMediaStream": {
     "message": "Stream"

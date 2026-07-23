@@ -4,6 +4,16 @@
 
   const AUDIO_EXTENSIONS = new Set(['mp3', 'm4a', 'aac', 'flac', 'wav', 'ogg', 'oga', 'opus', 'weba', 'wma', 'alac']);
   const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'mkv', 'mov', 'm4v', 'avi', 'flv', 'wmv', '3gp', 'mpeg', 'mpg', 'ogv']);
+  const PDF_EXTENSIONS = new Set(['pdf']);
+  const PDF_MIME_TYPES = new Set([
+    'application/pdf',
+    'application/x-pdf',
+    'application/acrobat',
+    'application/vnd.pdf',
+    'applications/vnd.pdf',
+    'text/pdf',
+    'text/x-pdf'
+  ]);
   const MANIFEST_EXTENSIONS = new Set(['m3u8', 'mpd']);
   const SEGMENT_EXTENSIONS = new Set(['m4s', 'cmfv', 'cmfa', 'm4f', 'part', 'frag']);
   const requestMetadata = new Map();
@@ -117,6 +127,10 @@
       return { mediaType: 'video', kind: 'direct', extension, inferred: false };
     }
 
+    if (PDF_MIME_TYPES.has(normalizedMime) || PDF_EXTENSIONS.has(extension)) {
+      return { mediaType: 'pdf', kind: 'direct', extension: extension || 'pdf', inferred: false };
+    }
+
     // Some protected players (notably short-video sites) respond to a genuine
     // <video>/<audio> request with application/octet-stream or without a useful
     // MIME type. requestType=media is still a strong browser-level signal, so
@@ -150,9 +164,12 @@
     let score = 0;
 
     if (kind === 'hls' || kind === 'dash') score += 150;
-    if (String(mime || '').startsWith('video/')) score += 115;
-    if (String(mime || '').startsWith('audio/')) score += 115;
+    const normalizedMime = String(mime || '').split(';')[0].trim().toLowerCase();
+    if (normalizedMime.startsWith('video/')) score += 115;
+    if (normalizedMime.startsWith('audio/')) score += 115;
+    if (PDF_MIME_TYPES.has(normalizedMime)) score += 115;
     if (VIDEO_EXTENSIONS.has(extension) || AUDIO_EXTENSIONS.has(extension)) score += 40;
+    if (PDF_EXTENSIONS.has(extension)) score += 60;
     if (requestType === 'media') score += 35;
     else if (requestType === 'xmlhttprequest' || requestType === 'other') score += 12;
     if (filename) score += 20;
@@ -162,6 +179,7 @@
     else if (size > 0 && size < 64 * 1024) score -= 30;
     if (source === 'dom-playing') score += 55;
     if (source === 'performance') score -= 10;
+    if (mediaType === 'pdf' && ['main_frame', 'sub_frame', 'object'].includes(requestType)) score += 25;
     if (mediaType === 'manifest') score += 15;
     if (likelySegment) score -= 140;
 

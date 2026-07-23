@@ -224,6 +224,11 @@ body {
   background: rgba(124, 92, 252, 0.10);
   font-size: 14px;
 }
+.media-icon.is-pdf {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
 .media-main { min-width: 0; }
 .media-name {
   overflow: hidden;
