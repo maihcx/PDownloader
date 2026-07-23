@@ -57,10 +57,6 @@ public class RelayCommand : ICommand
 
 public class InstallerViewModel : INotifyPropertyChanged
 {
-    // ------------------------------------------------------------------ //
-    //  State
-    // ------------------------------------------------------------------ //
-
     private InstallerStep _step = InstallerStep.Language;
     public InstallerStep Step
     {
@@ -188,10 +184,6 @@ public class InstallerViewModel : INotifyPropertyChanged
 
     private readonly string _uninstallDir = "";
 
-    // ------------------------------------------------------------------ //
-    //  Commands
-    // ------------------------------------------------------------------ //
-
     public ICommand SelectLanguageCmd { get; }
     public ICommand NextFromWelcomeCmd { get; }
     public ICommand NextFromLicenseCmd { get; }
@@ -205,10 +197,6 @@ public class InstallerViewModel : INotifyPropertyChanged
     public ICommand UninstallConfirmCmd { get; }
     public ICommand UninstallCancelCmd { get; }
     public ICommand UninstallDoneCmd { get; }
-
-    // ------------------------------------------------------------------ //
-    //  Constructor
-    // ------------------------------------------------------------------ //
 
     public InstallerViewModel(bool uninstallMode = false)
     {
@@ -341,8 +329,6 @@ SOFTWARE.
 
     private void OnBrowseFolder()
     {
-        // WPF không có FolderBrowserDialog built-in → dùng OpenFileDialog trick hoặc
-        // WinForms FolderBrowserDialog (safe trong WPF).
         using var dlg = new System.Windows.Forms.FolderBrowserDialog
         {
             Description = LocalizationHelper.Get("path_label"),
@@ -409,23 +395,15 @@ SOFTWARE.
     {
         if (LaunchAfterInstall)
         {
-            string exe = System.IO.Path.Combine(InstallPath, "PDownloader.exe");
-            if (System.IO.File.Exists(exe))
+            string exe = Path.Combine(InstallPath, "PDownloader.exe");
+            if (File.Exists(exe))
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe)
-                {
-                    UseShellExecute = true,
-                    WorkingDirectory = InstallPath,
-                });
+                _ = UnelevatedProcessLauncher.TryStart(exe, InstallPath);
             }
         }
 
         System.Windows.Application.Current.Shutdown();
     }
-
-    // ------------------------------------------------------------------ //
-    //  INotifyPropertyChanged
-    // ------------------------------------------------------------------ //
 
     public event PropertyChangedEventHandler? PropertyChanged;
     private void OnPropertyChanged([CallerMemberName] string? name = null) =>
