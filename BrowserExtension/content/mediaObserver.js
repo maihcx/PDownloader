@@ -296,8 +296,16 @@
     audioButton = document.createElement('button');
     audioButton.type = 'button';
     audioButton.className = 'pd-audio-grab-btn pd-theme-root';
-    audioButton.innerHTML = `<span class="pd-audio-grab-note">♪</span><span class="pd-audio-grab-label"></span>`;
-    audioButton.querySelector('.pd-audio-grab-label').textContent = PD.I18n.t('contentDownloadAudio');
+
+    const note = document.createElement('span');
+    note.className = 'pd-audio-grab-note';
+    note.textContent = '♪';
+
+    const audioLabel = document.createElement('span');
+    audioLabel.className = 'pd-audio-grab-label';
+    audioLabel.textContent = PD.I18n.t('contentDownloadAudio');
+
+    audioButton.append(note, audioLabel);
 
     audioButton.addEventListener('pointerenter', () => {
       if (audioHideTimer) clearTimeout(audioHideTimer);

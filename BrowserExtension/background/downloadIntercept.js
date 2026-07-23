@@ -40,6 +40,42 @@
     return interceptSincePromise;
   }
 
+
+  function normalizeDocumentUrl(value) {
+    try {
+      const url = new URL(String(value || ''));
+      url.hash = '';
+      return url.href;
+    } catch (_) {
+      return String(value || '').split('#')[0];
+    }
+  }
+
+  async function resolveDownloadSourceTab(item) {
+    let activeTab = null;
+    try {
+      [activeTab] = await PDWebExt.tabs.query({ active: true, currentWindow: true });
+    } catch (_) { }
+
+    const referrer = normalizeDocumentUrl(item?.referrer || '');
+    if (!referrer) return activeTab;
+
+    if (normalizeDocumentUrl(activeTab?.url || '') === referrer) {
+      return activeTab;
+    }
+
+    try {
+      const tabs = await PDWebExt.tabs.query({});
+      const matches = tabs.filter(tab => normalizeDocumentUrl(tab?.url || '') === referrer);
+      if (matches.length) {
+        matches.sort((a, b) => Number(b?.lastAccessed || 0) - Number(a?.lastAccessed || 0));
+        return matches[0];
+      }
+    } catch (_) { }
+
+    return activeTab;
+  }
+
   function isNewDownloadItem(item, interceptSince) {
     if (!item || typeof item.id !== 'number') return false;
 
@@ -69,11 +105,8 @@
       if (!url || url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('chrome-extension:')) return;
       if (await Utils.isBlacklisted(url, settings.blacklistedDomains || [])) return;
 
-      let activeTabUrl = '';
-      try {
-        const [tab] = await PDWebExt.tabs.query({ active: true, currentWindow: true });
-        activeTabUrl = tab?.url || '';
-      } catch (_) {}
+      const activeTab = await resolveDownloadSourceTab(item);
+      const activeTabUrl = activeTab?.url || '';
 
       if (Utils.isIncompatibleSite(url) ||
           Utils.isIncompatibleSite(item.referrer || '') ||
@@ -102,7 +135,7 @@
         ? filename.split(/[/\\]/).pop()
         : (Utils.getFilenameFromUrl(finalUrl) || Utils.getFilenameFromUrl(url) || null);
 
-      const ok = await PD.Api.sendDownload(url, displayName, referer);
+      const ok = await PD.Api.sendDownload(url, displayName, referer, {}, activeTab?.id ?? -1);
       if (ok) {
         PD.State.incrementInterceptCount();
         PD.Badge.update();

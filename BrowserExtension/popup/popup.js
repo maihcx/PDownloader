@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderDetectedMedia(candidates, playback = null) {
-    mediaList.innerHTML = '';
+    mediaList.replaceChildren();
 
     const visible = (candidates || [])
       .filter(candidate => !candidate.likelySegment)
@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderBlacklist(domains) {
-    blList.innerHTML = '';
+    blList.replaceChildren();
     if (!domains.length) {
       const empty = document.createElement('div');
       empty.className = 'bl-empty';

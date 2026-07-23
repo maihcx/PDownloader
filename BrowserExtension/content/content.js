@@ -84,7 +84,15 @@ function getBtn() {
 
   _btn = document.createElement('div');
   _btn.className = 'pd-grab-btn pd-theme-root';
-  _btn.innerHTML = `<span class="pd-grab-icon"></span><span class="pd-grab-label">${PD.I18n.t('ytDownloadThisVideo')}</span>`;
+
+  const icon = document.createElement('span');
+  icon.className = 'pd-grab-icon';
+
+  const label = document.createElement('span');
+  label.className = 'pd-grab-label';
+  label.textContent = PD.I18n.t('ytDownloadThisVideo');
+
+  _btn.append(icon, label);
 
   _btn.addEventListener('pointerenter', () => {
     clearHide();
