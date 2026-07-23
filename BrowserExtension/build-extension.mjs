@@ -68,6 +68,14 @@ async function writeManifest(outputDir, manifest) {
   );
 }
 
+function requireHttpsUrl(value, fieldName) {
+  if (typeof value !== 'string' || !value.startsWith('https://')) {
+    throw new Error(`[PDownloader] ${fieldName} must be an HTTPS URL.`);
+  }
+
+  return value;
+}
+
 async function buildChromium(baseManifest) {
   const outputDir = path.join(distRoot, 'chromium');
   await copyRuntimeFiles(outputDir);
@@ -96,6 +104,7 @@ async function buildFirefox(baseManifest, firefoxConfig) {
     gecko: {
       id: firefoxConfig.extension_id,
       strict_min_version: firefoxConfig.strict_min_version,
+      update_url: requireHttpsUrl(firefoxConfig.update_url, 'Firefox update_url'),
       data_collection_permissions: firefoxConfig.data_collection_permissions
     },
     gecko_android: {

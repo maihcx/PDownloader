@@ -92,4 +92,5 @@ if errorlevel 1 (
 
 echo.
 echo [OK] Mozilla signing and publishing completed.
+echo [INFO] Commit and push BrowserExtension\PDownloader.xpi and BrowserExtension\updates.json together.
 exit /b 0
