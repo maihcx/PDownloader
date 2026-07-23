@@ -250,7 +250,8 @@
                          TextWrapping="Wrap"
                          VerticalScrollBarVisibility="Auto"
                          Text="{Binding ViewModel.ReleaseNotes, Mode=OneWay}"
-                         Visibility="{Binding ViewModel.ReleaseNotes, Converter={StaticResource NullToCollapsedConverter}}" />
+                         Visibility="{Binding ViewModel.ReleaseNotes, Converter={StaticResource NullToCollapsedConverter}}"
+                         ui:SmoothScrollBehavior.IsEnabled="True" />
             </Grid>
         </ui:Card>
     </StackPanel>
