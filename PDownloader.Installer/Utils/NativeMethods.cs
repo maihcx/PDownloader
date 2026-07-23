@@ -18,7 +18,7 @@ using System.Text;
 
 namespace PDownloader.Installer.Utils;
 
-public static class NativeMethods
+internal static partial class NativeMethods
 {
     [DllImport("user32.dll")]
     public static extern nint GetShellWindow();
