@@ -184,5 +184,11 @@
   },
   "contentAddingAudio": {
     "message": "Adding audio…"
+  },
+  "contentDownloadPdf": {
+    "message": "Download this PDF"
+  },
+  "contentAddingPdf": {
+    "message": "Adding PDF…"
   }
 }

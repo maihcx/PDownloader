@@ -184,5 +184,11 @@
   },
   "contentAddingAudio": {
     "message": "Đang thêm audio…"
+  },
+  "contentDownloadPdf": {
+    "message": "Tải PDF này"
+  },
+  "contentAddingPdf": {
+    "message": "Đang thêm PDF…"
   }
 }

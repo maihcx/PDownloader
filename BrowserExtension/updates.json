@@ -3,9 +3,9 @@
                    "pdownloader@maisoft.io.vn":  {
                                                      "updates":  [
                                                                      {
-                                                                         "version":  "0.3.11",
+                                                                         "version":  "0.3.12",
                                                                          "update_link":  "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/PDownloader.xpi",
-                                                                         "update_hash":  "sha256:8fa8158a28ca02df4af417e1dbf4ed6470bb6571a7fdcafdacabeb38d681becc",
+                                                                         "update_hash":  "sha256:d0e218274833fb15e548008b07a13c43b71bd076172c86ade83e74df6141bf6b",
                                                                          "applications":  {
                                                                                               "gecko":  {
                                                                                                             "strict_min_version":  "140.0"
