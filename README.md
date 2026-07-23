@@ -46,7 +46,7 @@ PDownloader.Core  (background service)
 | `PDownloader.CFS` | Shared library implementing the inter-process communication layer used by all components. |
 | `PDownloader.Installer` | Windows installer/setup application. |
 | `PDownloader.BugTracker` | Companion crash-reporting window launched on unhandled exceptions. |
-| `BrowserExtension` | Manifest V3 extension (Chrome, Edge, Brave, Cốc Cốc) that captures links and posts them to Core's HTTP bridge. |
+| `BrowserExtension` | Cross-browser Manifest V3 extension (Chrome, Edge, Brave, Cốc Cốc, Firefox, Zen Browser) that captures links and posts them to Core's HTTP bridge. |
 | `WPF-UI.LIB` | Forked/customized WPF-UI controls used across the desktop apps. |
 
 ---
@@ -69,15 +69,21 @@ If a server doesn't support ranged requests at all, the engine transparently fal
 
 ## Browser Extension
 
-The extension lives in `BrowserExtension/` and is built as a Manifest V3 extension. It is officially supported on **Google Chrome**, **Microsoft Edge**, **Brave**, and **Cốc Cốc**.
+The extension lives in `BrowserExtension/` and is built as a Manifest V3 extension. It is officially supported on **Google Chrome**, **Microsoft Edge**, **Brave**, **Cốc Cốc**, **Mozilla Firefox**, and **Zen Browser**.
 
 **Installation**
 When PDownloader is installed correctly, the extension is installed and enabled automatically for all supported browsers (via Windows registry policy) — no manual setup is required.
 
 **Manual/development install** (for contributors or debugging)
+For Chromium browsers:
 1. Open `chrome://extensions` (`edge://extensions`, `brave://extensions`, or the Cốc Cốc equivalent).
 2. Enable Developer Mode.
-3. Click **Load unpacked** and select the `BrowserExtension/` folder.
+3. Click **Load unpacked** and select `BrowserExtension/dist/chromium/`.
+
+For Firefox/Zen Browser:
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on**.
+3. Select `BrowserExtension/dist/firefox/manifest.json`.
 
 **How a link reaches the download engine**
 ```

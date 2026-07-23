@@ -92,8 +92,8 @@ internal sealed class YtDlpCookieFileService
                 return 0;
             }
 
-            int count = 0;
-            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var selected = new Dictionary<string, StructuredCookie>(StringComparer.Ordinal);
+            var insertionOrder = new List<string>();
 
             foreach (JsonElement element in document.RootElement.EnumerateArray())
             {
@@ -132,32 +132,47 @@ internal sealed class YtDlpCookieFileService
                 }
 
                 path = string.IsNullOrWhiteSpace(path) ? "/" : path.Trim();
-                string dedupeKey = $"{domain}\n{path}\n{name}";
-                if (!seen.Add(dedupeKey))
+                name = name.Trim();
+
+                string netscapeIdentity = $"{domain}\n{path}\n{name}";
+                var candidate = new StructuredCookie(
+                    Domain: httpOnly ? "#HttpOnly_" + domain : domain,
+                    IncludeSubdomains: !hostOnly,
+                    Path: path,
+                    Secure: secure,
+                    Expiry: session ? "0" : GetExpiration(element),
+                    Name: name,
+                    Value: value,
+                    ContextSpecificity: GetContextSpecificity(element));
+
+                if (!selected.TryGetValue(netscapeIdentity, out StructuredCookie? existing))
                 {
+                    selected[netscapeIdentity] = candidate;
+                    insertionOrder.Add(netscapeIdentity);
                     continue;
                 }
 
-                string expiry = session
-                    ? "0"
-                    : GetExpiration(element);
-                string outputDomain = httpOnly
-                    ? "#HttpOnly_" + domain
-                    : domain;
-
-                AppendCookieLine(
-                    content,
-                    outputDomain,
-                    includeSubdomains: !hostOnly,
-                    path,
-                    secure,
-                    expiry,
-                    name.Trim(),
-                    value);
-                count++;
+                if (candidate.ContextSpecificity > existing.ContextSpecificity)
+                {
+                    selected[netscapeIdentity] = candidate;
+                }
             }
 
-            return count;
+            foreach (string identity in insertionOrder)
+            {
+                StructuredCookie cookie = selected[identity];
+                AppendCookieLine(
+                    content,
+                    cookie.Domain,
+                    cookie.IncludeSubdomains,
+                    cookie.Path,
+                    cookie.Secure,
+                    cookie.Expiry,
+                    cookie.Name,
+                    cookie.Value);
+            }
+
+            return selected.Count;
         }
         catch (JsonException)
         {
@@ -246,6 +261,35 @@ internal sealed class YtDlpCookieFileService
             && value.GetBoolean();
     }
 
+    private static int GetContextSpecificity(JsonElement element)
+    {
+        int score = 0;
+
+        if (!string.IsNullOrWhiteSpace(GetString(element, "firstPartyDomain")))
+        {
+            score += 2;
+        }
+
+        if (element.TryGetProperty("partitionKey", out JsonElement partitionKey)
+            && partitionKey.ValueKind == JsonValueKind.Object)
+        {
+            if (!string.IsNullOrWhiteSpace(GetString(partitionKey, "topLevelSite")))
+            {
+                score += 4;
+            }
+
+            if (partitionKey.TryGetProperty(
+                    "hasCrossSiteAncestor",
+                    out JsonElement crossSiteAncestor)
+                && crossSiteAncestor.ValueKind == JsonValueKind.True)
+            {
+                score += 1;
+            }
+        }
+
+        return score;
+    }
+
     private static string GetExpiration(JsonElement element)
     {
         if (element.TryGetProperty("expirationDate", out JsonElement expiration)
@@ -294,6 +338,16 @@ internal sealed class YtDlpCookieFileService
             ? new CookieScope(sharedDomain, IncludeSubdomains: true, Secure: secure)
             : new CookieScope(host, IncludeSubdomains: false, Secure: secure);
     }
+
+    private sealed record StructuredCookie(
+        string Domain,
+        bool IncludeSubdomains,
+        string Path,
+        bool Secure,
+        string Expiry,
+        string Name,
+        string Value,
+        int ContextSpecificity);
 
     private readonly record struct CookieScope(
         string Domain,
