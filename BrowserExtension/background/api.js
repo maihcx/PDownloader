@@ -73,17 +73,51 @@
     }
   }
 
+  function normalizeTabId(value) {
+    const tabId = Number(value);
+    return Number.isInteger(tabId) && tabId >= 0 ? tabId : -1;
+  }
+
+  function normalizePartitionKey(partitionKey) {
+    if (!partitionKey || typeof partitionKey !== 'object') return null;
+
+    const topLevelSite = typeof partitionKey.topLevelSite === 'string'
+      ? partitionKey.topLevelSite
+      : '';
+    const hasCrossSiteAncestor = typeof partitionKey.hasCrossSiteAncestor === 'boolean'
+      ? partitionKey.hasCrossSiteAncestor
+      : undefined;
+
+    if (!topLevelSite && hasCrossSiteAncestor === undefined) return null;
+
+    return {
+      ...(topLevelSite ? { topLevelSite } : {}),
+      ...(hasCrossSiteAncestor !== undefined ? { hasCrossSiteAncestor } : {})
+    };
+  }
+
   function cookieKey(cookie) {
-    return [
+    const partitionKey = normalizePartitionKey(cookie?.partitionKey);
+    return JSON.stringify([
       cookie?.storeId || '',
+      cookie?.firstPartyDomain || '',
+      partitionKey?.topLevelSite || '',
+      partitionKey?.hasCrossSiteAncestor === true ? '1'
+        : partitionKey?.hasCrossSiteAncestor === false ? '0' : '',
       cookie?.domain || '',
       cookie?.path || '/',
       cookie?.name || ''
-    ].join('|');
+    ]);
   }
 
   function toPortableCookie(cookie) {
     if (!cookie?.name) return null;
+
+    const partitionKey = normalizePartitionKey(cookie.partitionKey);
+
+    const firstPartyDomain = typeof cookie.firstPartyDomain === 'string'
+      ? cookie.firstPartyDomain
+      : '';
 
     return {
       name: cookie.name,
@@ -98,7 +132,9 @@
         ? cookie.expirationDate
         : null,
       sameSite: cookie.sameSite || '',
-      storeId: cookie.storeId || ''
+      storeId: cookie.storeId || '',
+      ...(firstPartyDomain ? { firstPartyDomain } : {}),
+      ...(partitionKey ? { partitionKey } : {})
     };
   }
 
@@ -117,37 +153,214 @@
     return domains.filter(domain => host === domain || host.endsWith(`.${domain}`));
   }
 
-  async function getCookieContext(primaryUrl, relatedUrl = '') {
+  function getHttpUrl(value) {
+    try {
+      const url = new URL(String(value || ''));
+      return /^https?:$/i.test(url.protocol) ? url : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function hostMatchesSite(host, siteValue) {
+    const normalizedHost = String(host || '').toLowerCase().replace(/^\.+|\.+$/g, '');
+    if (!normalizedHost || !siteValue) return false;
+
+    let siteHost = '';
+    try {
+      siteHost = new URL(siteValue).hostname.toLowerCase();
+    } catch (_) {
+      siteHost = String(siteValue).toLowerCase().replace(/^\.+|\.+$/g, '');
+    }
+
+    if (!siteHost) return false;
+    return normalizedHost === siteHost
+      || normalizedHost.endsWith(`.${siteHost}`)
+      || siteHost.endsWith(`.${normalizedHost}`);
+  }
+
+  async function resolveCookieSourceContext(sourceTabId, fallbackTopLevelUrl = '') {
+    const tabId = normalizeTabId(sourceTabId);
+    let tab = null;
+
+    if (tabId >= 0) {
+      try {
+        tab = await PDWebExt.tabs.get(tabId);
+      } catch (_) { }
+    }
+
+    const tabUrl = getHttpUrl(tab?.url);
+    const fallbackUrl = getHttpUrl(fallbackTopLevelUrl);
+    const topLevelUrl = tabUrl?.href || fallbackUrl?.href || '';
+    const topLevelHost = tabUrl?.hostname || fallbackUrl?.hostname || '';
+
+    let storeId = typeof tab?.cookieStoreId === 'string'
+      ? tab.cookieStoreId
+      : '';
+
+    // Firefox exposes cookieStoreId directly on tabs (including Containers).
+    // Chromium exposes the tab membership through CookieStore.tabIds instead.
+    if (!storeId && tabId >= 0) {
+      try {
+        const stores = await PDWebExt.cookies.getAllCookieStores();
+        const matchingStore = stores.find(store =>
+          Array.isArray(store?.tabIds) && store.tabIds.includes(tabId));
+        storeId = matchingStore?.id || '';
+      } catch (_) { }
+    }
+
+    let partitionKey = null;
+
+    // Chromium 132+ can resolve the actual schemeful partition key for a tab.
+    // Use only topLevelSite when querying so both cross-site-ancestor variants
+    // remain eligible; the returned cookie metadata is retained separately.
+    if (tabId >= 0 && typeof PDWebExt.cookies?.getPartitionKey === 'function') {
+      try {
+        const resolved = normalizePartitionKey(
+          await PDWebExt.cookies.getPartitionKey({ tabId, frameId: 0 }));
+        if (resolved?.topLevelSite) {
+          partitionKey = { topLevelSite: resolved.topLevelSite };
+        }
+      } catch (_) { }
+    }
+
+    if (!partitionKey && topLevelUrl) {
+      try {
+        partitionKey = { topLevelSite: new URL(topLevelUrl).origin };
+      } catch (_) { }
+    }
+
+    return {
+      tabId,
+      storeId,
+      topLevelUrl,
+      topLevelHost: topLevelHost.toLowerCase(),
+      partitionKey
+    };
+  }
+
+  function cookieMatchesSourceContext(cookie, context) {
+    if (context.storeId && cookie?.storeId && cookie.storeId !== context.storeId) {
+      return false;
+    }
+
+    const firstPartyDomain = typeof cookie?.firstPartyDomain === 'string'
+      ? cookie.firstPartyDomain
+      : '';
+    if (firstPartyDomain) {
+      if (!context.topLevelHost || !hostMatchesSite(context.topLevelHost, firstPartyDomain)) {
+        return false;
+      }
+    }
+
+    const partitionKey = normalizePartitionKey(cookie?.partitionKey);
+    if (partitionKey?.topLevelSite) {
+      if (!context.topLevelHost || !hostMatchesSite(context.topLevelHost, partitionKey.topLevelSite)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function mergeCookies(...collections) {
+    const merged = new Map();
+    for (const collection of collections) {
+      for (const cookie of collection || []) {
+        if (cookie) merged.set(cookieKey(cookie), cookie);
+      }
+    }
+    return [...merged.values()].sort((a, b) =>
+      String(b?.path || '/').length - String(a?.path || '/').length);
+  }
+
+  async function queryCookies(details, context) {
+    const scopedDetails = { ...details };
+    if (context.storeId) scopedDetails.storeId = context.storeId;
+
+    if (globalThis.PDWebExtPlatform?.isFirefox) {
+      // Firefox can return every partition with partitionKey: {}. Combined with
+      // firstPartyDomain: null this also works when First-Party Isolation is on.
+      // Filter the result back to the source tab's top-level context so cookies
+      // from other Containers/partitions are never flattened into the yt-dlp jar.
+      try {
+        const cookies = await PDWebExt.cookies.getAll({
+          ...scopedDetails,
+          firstPartyDomain: null,
+          partitionKey: {}
+        });
+        return mergeCookies(cookies.filter(cookie => cookieMatchesSourceContext(cookie, context)));
+      } catch (error) {
+        console.warn('[PDownloader] Firefox contextual cookie query failed; falling back:', error);
+      }
+
+      try {
+        const cookies = await PDWebExt.cookies.getAll({
+          ...scopedDetails,
+          firstPartyDomain: null
+        });
+        return mergeCookies(cookies.filter(cookie => cookieMatchesSourceContext(cookie, context)));
+      } catch (_) { }
+    }
+
+    const unpartitioned = await PDWebExt.cookies.getAll(scopedDetails);
+    let partitioned = [];
+
+    if (context.partitionKey?.topLevelSite) {
+      try {
+        partitioned = await PDWebExt.cookies.getAll({
+          ...scopedDetails,
+          partitionKey: {
+            topLevelSite: context.partitionKey.topLevelSite
+          }
+        });
+      } catch (_) { }
+    }
+
+    return mergeCookies(
+      unpartitioned.filter(cookie => cookieMatchesSourceContext(cookie, context)),
+      partitioned.filter(cookie => cookieMatchesSourceContext(cookie, context))
+    );
+  }
+
+  async function getCookieContext(primaryUrl, relatedUrl = '', sourceTabId = -1) {
     const urls = [...new Set([primaryUrl, relatedUrl]
       .filter(url => /^https?:/i.test(String(url || ''))))];
+    const context = await resolveCookieSourceContext(
+      sourceTabId,
+      relatedUrl || primaryUrl);
     const jar = new Map();
     let primaryCookies = [];
 
     for (let index = 0; index < urls.length; index++) {
       try {
-        const cookies = await PDWebExt.cookies.getAll({ url: urls[index] });
+        const cookies = await queryCookies({ url: urls[index] }, context);
         if (index === 0) primaryCookies = cookies;
 
         for (const cookie of cookies) {
           const portable = toPortableCookie(cookie);
           if (portable) jar.set(cookieKey(portable), portable);
         }
-      } catch (_) { }
+      } catch (error) {
+        console.warn('[PDownloader] Cookie query failed for URL:', urls[index], error);
+      }
     }
 
     // Site extractors such as TikTok can touch several sibling hosts while
-    // resolving a permalink. Preserve every cookie from the site's parent
-    // domain in the Netscape jar; each cookie keeps its original path/domain,
-    // so yt-dlp will still only send it where it is applicable.
+    // resolving a permalink. Preserve cookies from the site's parent domain,
+    // but only from the same browser cookie store and top-level partition as
+    // the tab that initiated the download.
     const cookieDomains = [...new Set(urls.flatMap(getKnownCookieDomains))];
     for (const domain of cookieDomains) {
       try {
-        const cookies = await PDWebExt.cookies.getAll({ domain });
+        const cookies = await queryCookies({ domain }, context);
         for (const cookie of cookies) {
           const portable = toPortableCookie(cookie);
           if (portable) jar.set(cookieKey(portable), portable);
         }
-      } catch (_) { }
+      } catch (error) {
+        console.warn('[PDownloader] Cookie query failed for domain:', domain, error);
+      }
     }
 
     return {
@@ -167,8 +380,8 @@
     }
   }
 
-  async function sendDownload(url, filename, referer, extraHeaders = {}) {
-    const cookieContext = await getCookieContext(url, referer);
+  async function sendDownload(url, filename, referer, extraHeaders = {}, sourceTabId = -1) {
+    const cookieContext = await getCookieContext(url, referer, sourceTabId);
 
     const headers = {
       ...extraHeaders,
@@ -201,8 +414,8 @@
     }
   }
 
-  async function getCookieHeader(url) {
-    return (await getCookieContext(url)).header;
+  async function getCookieHeader(url, sourceTabId = -1) {
+    return (await getCookieContext(url, '', sourceTabId)).header;
   }
 
   async function postJson(url, body) {
@@ -232,8 +445,8 @@
     }
   }
 
-  async function ytAnalyze(url) {
-    const cookieContext = await getCookieContext(url);
+  async function ytAnalyze(url, sourceTabId = -1) {
+    const cookieContext = await getCookieContext(url, '', sourceTabId);
     const headers = {};
     applyBrowserHeaders(headers);
     if (cookieContext.header) headers.Cookie = cookieContext.header;
@@ -245,8 +458,17 @@
     });
   }
 
-  async function ytDownload({ url, formatId, filename, title, filesize, referer, extraHeaders }) {
-    const cookieContext = await getCookieContext(url, referer);
+  async function ytDownload({
+    url,
+    formatId,
+    filename,
+    title,
+    filesize,
+    referer,
+    extraHeaders,
+    sourceTabId = -1
+  }) {
+    const cookieContext = await getCookieContext(url, referer, sourceTabId);
 
     const headers = { ...(extraHeaders || {}) };
     if (cookieContext.header) headers.Cookie = cookieContext.header;
