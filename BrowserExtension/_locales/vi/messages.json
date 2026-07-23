@@ -156,10 +156,10 @@
     "message": "Phần mở rộng của PDownloader Webhook vừa được cập nhật! Vui lòng cập nhật ứng dụng PDownloader trên PC của bạn"
   },
   "popupSectionDetectedMedia": {
-    "message": "Media đã phát hiện"
+    "message": "Tệp đã phát hiện"
   },
   "popupDetectedMediaEmpty": {
-    "message": "Chưa phát hiện media trên trang này"
+    "message": "Chưa phát hiện tệp được hỗ trợ trên trang này"
   },
   "popupMediaDownloadTitle": {
     "message": "Tải bằng PDownloader"
@@ -169,6 +169,9 @@
   },
   "popupMediaVideo": {
     "message": "Video"
+  },
+  "popupMediaPdf": {
+    "message": "Tài liệu PDF"
   },
   "popupMediaStream": {
     "message": "Luồng phát"

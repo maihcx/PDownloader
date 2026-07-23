@@ -119,12 +119,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (candidate.mediaType === 'audio') return PD.I18n.t('popupMediaAudio');
     if (candidate.mediaType === 'video') return PD.I18n.t('popupMediaVideo');
+    if (candidate.mediaType === 'pdf') return PD.I18n.t('popupMediaPdf');
     return PD.I18n.t('popupMediaDirect');
   }
 
   function mediaIcon(candidate) {
     if (candidate.kind === 'hls' || candidate.kind === 'dash' || candidate.mediaType === 'manifest') return '◉';
-    return candidate.mediaType === 'audio' ? '♪' : '▶';
+    if (candidate.mediaType === 'audio') return '♪';
+    if (candidate.mediaType === 'pdf') return 'PDF';
+    return '▶';
   }
 
   function candidateName(candidate) {
@@ -167,6 +170,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const icon = document.createElement('div');
       icon.className = 'media-icon';
+      icon.classList.toggle('is-pdf', candidate.mediaType === 'pdf');
       icon.textContent = mediaIcon(candidate);
 
       const main = document.createElement('div');

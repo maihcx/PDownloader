@@ -59,6 +59,26 @@
       return `${sanitizeMediaName(title, candidate?.mediaType === 'audio' ? 'audio' : 'video')}${extension}`;
     }
 
+    const isPdf = candidate?.mediaType === 'pdf'
+      || candidate?.extension === 'pdf'
+      || /^(?:application\/(?:pdf|x-pdf|acrobat|vnd\.pdf)|applications\/vnd\.pdf|text\/(?:pdf|x-pdf))(?:;|$)/i.test(candidate?.mime || '');
+
+    if (isPdf) {
+      const explicitFilename = candidate?.filename?.split(/[/\\]/).pop() || '';
+      if (explicitFilename) {
+        return /\.pdf$/i.test(explicitFilename)
+          ? explicitFilename
+          : `${sanitizeMediaName(explicitFilename, 'document')}.pdf`;
+      }
+
+      const fromUrl = Utils.getFilenameFromUrl(candidate?.url || '');
+      if (/\.pdf$/i.test(fromUrl)) return fromUrl;
+
+      const base = sanitizeMediaName(candidate?.title || fallbackTitle || 'document', 'document')
+        .replace(/\.pdf$/i, '');
+      return `${base}.pdf`;
+    }
+
     if (candidate?.filename) return candidate.filename.split(/[/\\]/).pop();
 
     const fromUrl = Utils.getFilenameFromUrl(candidate?.url || '');

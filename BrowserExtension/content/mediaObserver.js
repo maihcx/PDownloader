@@ -1,6 +1,7 @@
 (function () {
   const AUDIO_EXTENSIONS = /\.(?:mp3|m4a|aac|flac|wav|ogg|oga|opus|weba|wma|alac)(?:[?#]|$)/i;
   const VIDEO_EXTENSIONS = /\.(?:mp4|webm|mkv|mov|m4v|avi|flv|wmv|3gp|mpeg|mpg|ogv)(?:[?#]|$)/i;
+  const PDF_EXTENSIONS = /\.pdf(?:[?#]|$)/i;
   const MANIFEST_EXTENSIONS = /\.(?:m3u8|mpd)(?:[?#]|$)/i;
   const AUDIO_SITE_HINTS = [
     'soundcloud.com', 'bandcamp.com', 'mixcloud.com', 'audiomack.com'
@@ -196,6 +197,7 @@
     if (MANIFEST_EXTENSIONS.test(url)) return { mediaType: 'manifest', kind: /\.mpd(?:[?#]|$)/i.test(url) ? 'dash' : 'hls', score: 85 };
     if (AUDIO_EXTENSIONS.test(url)) return { mediaType: 'audio', kind: 'direct', score: 70 };
     if (VIDEO_EXTENSIONS.test(url)) return { mediaType: 'video', kind: 'direct', score: 70 };
+    if (PDF_EXTENSIONS.test(url)) return { mediaType: 'pdf', kind: 'direct', score: 80 };
     return null;
   }
 
