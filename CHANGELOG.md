@@ -1,3 +1,14 @@
+## v0.7.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- Improve cookie dedup and expand browser support (#74) — @maihcx
+- [extension] improve cookie & tab context (#73) — @maihcx
+
+
+---
+
 ## v0.6.0
 
 ## 🚀 Changelog
