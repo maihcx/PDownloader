@@ -25,7 +25,7 @@
 
     const filename = PD.Utils.getFilenameFromUrl(url);
     const referer   = tab?.url || '';
-    const ok = await PD.Api.sendDownload(url, filename, referer);
+    const ok = await PD.Api.sendDownload(url, filename, referer, {}, tab?.id ?? -1);
     if (ok) {
       PD.State.incrementInterceptCount();
       PD.Badge.update();

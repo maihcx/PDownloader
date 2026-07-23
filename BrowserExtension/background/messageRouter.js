@@ -74,7 +74,7 @@
     await Notify.show(label || candidateFilename(candidate));
   }
 
-  async function downloadCandidate(candidate, fallbackTitle = '') {
+  async function downloadCandidate(candidate, fallbackTitle = '', sourceTabId = -1) {
     if (!candidate?.url) return { success: false, error: 'Media candidate is unavailable.' };
 
     const filename = candidateFilename(candidate, fallbackTitle);
@@ -91,7 +91,8 @@
         candidate.url,
         filename,
         candidate.referer || candidate.pageUrl || '',
-        candidate.requestHeaders || {}
+        candidate.requestHeaders || {},
+        sourceTabId
       );
 
       if (ok) await markSuccessfulCapture(candidate, filename);
@@ -106,7 +107,8 @@
         title: candidate.title || filename,
         filesize: candidate.size || 0,
         referer: candidate.referer || candidate.pageUrl || '',
-        extraHeaders: candidate.requestHeaders || undefined
+        extraHeaders: candidate.requestHeaders || undefined,
+        sourceTabId
       });
 
       if (result?.success) await markSuccessfulCapture(candidate, filename);
@@ -117,7 +119,8 @@
       candidate.url,
       filename,
       candidate.referer || candidate.pageUrl || '',
-      candidate.requestHeaders || {}
+      candidate.requestHeaders || {},
+      sourceTabId
     );
 
     if (ok) await markSuccessfulCapture(candidate, filename);
@@ -130,8 +133,9 @@
       return true;
     },
 
-    download(msg, _sender, sendResponse) {
-      Api.sendDownload(msg.url, msg.filename || null, msg.referer || '', msg.headers || {}).then(ok => {
+    download(msg, sender, sendResponse) {
+      const tabId = resolveTabId(msg, sender);
+      Api.sendDownload(msg.url, msg.filename || null, msg.referer || '', msg.headers || {}, tabId).then(ok => {
         if (ok) {
           State.incrementInterceptCount();
           Badge.update();
@@ -142,8 +146,8 @@
       return true;
     },
 
-    download_magnet(msg) {
-      Api.sendDownload(msg.url, null, '').then(() => {});
+    download_magnet(msg, sender) {
+      Api.sendDownload(msg.url, null, '', {}, resolveTabId(msg, sender)).then(() => {});
       return false;
     },
 
@@ -281,12 +285,12 @@
           } catch (_) { }
         }
 
-        return downloadCandidate(candidate, fallbackTitle);
+        return downloadCandidate(candidate, fallbackTitle, tabId);
       })().then(sendResponse);
       return true;
     },
 
-    download_via_ytdlp(msg, _sender, sendResponse) {
+    download_via_ytdlp(msg, sender, sendResponse) {
       Api.ytDownload({
         url: msg.url,
         formatId: msg.audioOnly ? 'bestaudio/best' : 'bestvideo+bestaudio/best',
@@ -294,7 +298,8 @@
         title: msg.title || msg.filename,
         filesize: 0,
         referer: msg.referer,
-        extraHeaders: msg.headers || undefined
+        extraHeaders: msg.headers || undefined,
+        sourceTabId: resolveTabId(msg, sender)
       }).then(result => {
         if (result.success) {
           State.incrementInterceptCount();
@@ -306,15 +311,16 @@
       return true;
     },
 
-    analyze_youtube(msg, _sender, sendResponse) {
-      Api.ytAnalyze(msg.url).then(sendResponse);
+    analyze_youtube(msg, sender, sendResponse) {
+      Api.ytAnalyze(msg.url, resolveTabId(msg, sender)).then(sendResponse);
       return true;
     },
 
-    download_youtube(msg, _sender, sendResponse) {
+    download_youtube(msg, sender, sendResponse) {
       Api.ytDownload({
         url: msg.url, formatId: msg.formatId, filename: msg.filename,
-        title: msg.title, filesize: msg.filesize || 0
+        title: msg.title, filesize: msg.filesize || 0,
+        sourceTabId: resolveTabId(msg, sender)
       }).then(sendResponse);
       return true;
     }
