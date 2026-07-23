@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extName__",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "description": "__MSG_extDescription__",
   "default_locale": "en",
   "permissions": [
@@ -42,6 +42,7 @@
         "common/i18n.js",
         "content/siteUrlResolver.js",
         "content/mediaObserver.js",
+        "content/pdfObserver.js",
         "content/content.js"
       ],
       "all_frames": true,

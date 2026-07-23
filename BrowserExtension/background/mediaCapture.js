@@ -256,6 +256,7 @@
 
       const bestAudio = getBestCandidate(tabId, { mediaType: 'audio', minScore: 45 });
       const bestVideo = getBestCandidate(tabId, { mediaType: 'video', minScore: 45 });
+      const bestPdf = getBestCandidate(tabId, { mediaType: 'pdf', minScore: 45 });
       let audible = false;
 
       try {
@@ -267,6 +268,7 @@
         action: 'media_candidates_updated',
         bestAudio,
         bestVideo,
+        bestPdf,
         audible,
         playback: aggregatePlaybackState(tabId)
       }).catch(() => {});
