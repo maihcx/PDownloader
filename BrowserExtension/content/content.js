@@ -75,8 +75,56 @@ let _lastPointerEvent = null;
 let _forcePointerRefresh = false;
 let _contextInvalidated = false;
 
+function isYouTubeHost(hostname = location.hostname) {
+  const host = String(hostname || '').toLowerCase().replace(/^www\./, '');
+  return host === 'youtube.com'
+    || host.endsWith('.youtube.com')
+    || host === 'youtube-nocookie.com'
+    || host.endsWith('.youtube-nocookie.com')
+    || host === 'youtu.be'
+    || host.endsWith('.youtu.be');
+}
+
+function getYouTubeVideoId(rawUrl = location.href) {
+  let url;
+  try {
+    url = new URL(rawUrl, location.href);
+  } catch (_) {
+    return '';
+  }
+
+  const host = url.hostname.toLowerCase().replace(/^www\./, '');
+  const isYouTubeDomain = host === 'youtube.com'
+    || host.endsWith('.youtube.com')
+    || host === 'youtube-nocookie.com'
+    || host.endsWith('.youtube-nocookie.com');
+
+  if (host === 'youtu.be' || host.endsWith('.youtu.be')) {
+    const id = url.pathname.split('/').filter(Boolean)[0] || '';
+    return /^[A-Za-z0-9_-]{6,20}$/.test(id) ? id : '';
+  }
+
+  if (!isYouTubeDomain) return '';
+
+  const queryId = url.searchParams.get('v') || '';
+  if (/^[A-Za-z0-9_-]{6,20}$/.test(queryId)) return queryId;
+
+  const pathMatch = url.pathname.match(/^\/(?:embed|shorts|live)\/([A-Za-z0-9_-]{6,20})(?:[/?]|$)/i);
+  return pathMatch?.[1] || '';
+}
+
+function getCanonicalYouTubeUrl(rawUrl = location.href) {
+  const videoId = getYouTubeVideoId(rawUrl);
+  return videoId ? `https://www.youtube.com/watch?v=${videoId}` : '';
+}
+
 function isYouTubeWatch() {
-  return location.hostname.includes('youtube.com') && !location.pathname.startsWith('/shorts/');
+  const host = location.hostname.toLowerCase();
+  const isRegularYouTube = host === 'youtube.com' || host.endsWith('.youtube.com');
+
+  return window === window.top
+    && isRegularYouTube
+    && !location.pathname.startsWith('/shorts/');
 }
 
 function getBtn() {
@@ -100,8 +148,6 @@ function getBtn() {
   });
   _btn.addEventListener('pointerleave', () => scheduleHide(300));
 
-  // Khóa video ngay khi người dùng nhấn nút. Khi sự kiện click chạy, con trỏ
-  // đang nằm trên nút overlay chứ không còn nằm trực tiếp trên video nữa.
   _btn.addEventListener('pointerdown', () => {
     if (!_activeVideo || !isRenderedVideo(_activeVideo)) {
       refreshActiveVideoFromPointer();
@@ -138,14 +184,41 @@ function getBtn() {
       let url;
       let filename;
 
+      if (isYouTubeHost(hostname)) {
+        const videoId = getYouTubeVideoId(location.href);
+        const youtubeUrl = getCanonicalYouTubeUrl(location.href);
+
+        if (!youtubeUrl) {
+          showBtnFeedback(PD.I18n.t('genericError'), false);
+          return;
+        }
+
+        const rawTitle = String(document.title || '').trim();
+        const mediaTitle = rawTitle && !/^youtube$/i.test(rawTitle)
+          ? rawTitle
+          : `YouTube_${videoId}`;
+        filename = sanitizeName(mediaTitle) + '.mp4';
+
+        const resp = await sendMessageSafe({
+          action: 'download_via_ytdlp',
+          url: youtubeUrl,
+          filename,
+          title: mediaTitle,
+          referer: location.href
+        });
+
+        showBtnFeedback(
+          resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
+          resp?.success
+        );
+        return;
+      }
+
       if (isSpecial) {
         url = getSiteUrl(activeVideo, activeContextNode);
         const mediaTitle = getMediaTitle(activeVideo, activeContextNode);
         filename = sanitizeName(mediaTitle) + (hostname.includes('soundcloud.com') ? '.mp3' : '.mp4');
 
-        // On feed/home pages the DOM permalink resolver can still be ambiguous.
-        // Prefer a strong manifest/network candidate in that case instead of
-        // handing yt-dlp the generic page URL.
         const detected = await sendMessageSafe({
           action: 'get_best_media_candidate',
           mediaType: hostname.includes('soundcloud.com') ? 'audio' : 'video',
@@ -188,8 +261,6 @@ function getBtn() {
           audioOnly: hostname.includes('soundcloud.com')
         });
 
-        // If the bridge itself rejects the yt-dlp request before a task is
-        // queued, still give a previously captured media candidate a chance.
         if (!resp?.success && candidate?.id && !candidateTried) {
           const fallback = await sendMessageSafe({
             action: 'download_media_candidate',
@@ -210,8 +281,6 @@ function getBtn() {
         return;
       }
 
-      // Prefer a network-observed candidate. This catches media hidden behind
-      // blob: URLs, player wrappers and manifests that are not exposed in DOM.
       const detected = await sendMessageSafe({
         action: 'get_best_media_candidate',
         mediaType: 'video',
