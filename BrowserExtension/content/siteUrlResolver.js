@@ -49,8 +49,10 @@
 
     if (current && getUrlQuality(current, site) > 0) return current;
 
-    const canonical = getCanonicalUrl(site);
-    if (canonical && getUrlQuality(canonical, site) > 0) return canonical;
+    if (site !== 'instagram') {
+      const canonical = getCanonicalUrl(site);
+      if (canonical && getUrlQuality(canonical, site) > 0) return canonical;
+    }
 
     return current || location.href;
   }
@@ -104,11 +106,6 @@
     add(safeClosest(contextNode, 'a[href]'));
     add(safeClosest(video, 'article'));
     add(safeClosest(contextNode, 'article'));
-    add(safeClosest(video, 'article'));
-    add(safeClosest(contextNode, 'article'));
-    add(safeClosest(video, 'div[role="dialog"]'));
-    add(safeClosest(contextNode, 'div[role="dialog"]'));
-    add(video?.parentElement);
     add(contextNode);
     add(video);
 
@@ -132,21 +129,9 @@
         const quality = url ? getUrlQuality(url, 'instagram') : 0;
         if (quality <= 0) continue;
 
-        const anchorRect = safeRect(anchor);
-        if (anchorRect && (
-          anchorRect.width <= 0
-          || anchorRect.height <= 0
-          || anchorRect.bottom < -4
-          || anchorRect.top > window.innerHeight + 4
-        )) continue;
-
-        const videoArticle = safeClosest(video, 'article');
-        const anchorArticle = safeClosest(anchor, 'article');
-        if (videoArticle && anchorArticle && videoArticle !== anchorArticle) continue;
-
-        let score = quality + getProximityBonus(videoRect, anchorRect);
+        let score = quality + getProximityBonus(videoRect, safeRect(anchor));
         if (anchor.contains?.(video)) score += 120;
-        if (videoArticle && anchorArticle === videoArticle) score += 160;
+        if (safeClosest(anchor, 'article') === safeClosest(video, 'article')) score += 80;
 
         if (!best || score > best.score) best = { url, score };
       }
@@ -610,6 +595,8 @@
       url.hostname = 'www.tiktok.com';
     } else if (site === 'instagram') {
       url.hostname = 'www.instagram.com';
+      const reelsMatch = url.pathname.match(/^\/reels\/([A-Za-z0-9_-]+)\/?$/i);
+      if (reelsMatch) url.pathname = `/reel/${reelsMatch[1]}/`;
     }
 
     url.pathname = url.pathname.replace(/\/{2,}/g, '/');
@@ -657,7 +644,7 @@
     }
 
     if (site === 'instagram') {
-      if (/^\/(?:reel|p|tv)\/[A-Za-z0-9_-]+\/?$/i.test(path)) return 150;
+      if (/^\/(?:reel|reels|p|tv)\/[A-Za-z0-9_-]+\/?$/i.test(path)) return 150;
       return 0;
     }
 

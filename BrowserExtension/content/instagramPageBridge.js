@@ -298,7 +298,7 @@
       try { pathname = new URL(raw, location.href).pathname; } catch (_) { }
 
       if (!code) {
-        code = validCode(pathname.match(/^\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)\/?$/i)?.[1]);
+        code = validCode(pathname.match(/^\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)\/?$/i)?.[1]);
       }
 
       if (!username) {
@@ -348,7 +348,7 @@
       }
     }
 
-    return best && bestScore >= 10000 ? best : null;
+    return best && bestScore >= 700 ? best : null;
   }
 
   function collectReactCandidates(node, signature) {
@@ -412,7 +412,7 @@
     }
 
     const best = [...candidates.values()].sort((a, b) => b.score - a.score)[0];
-    return best && best.matchScore >= 10000 ? best.media : null;
+    return best && best.matchScore >= 700 ? best.media : null;
   }
 
   function resolveMedia(video) {
