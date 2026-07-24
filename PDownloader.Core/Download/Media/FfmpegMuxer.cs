@@ -345,9 +345,6 @@ internal sealed class FfmpegMuxer
             stream.Flush(flushToDisk: true);
         }
 
-        // A complete reread catches truncated or unreadable output before the source
-        // streams are released. The hash is intentionally not persisted because the
-        // normal completed-file hash pipeline remains the source of user-visible hashes.
         _ = await FileHashCalculator.ComputeAsync(outputPath, cancellationToken);
     }
 
