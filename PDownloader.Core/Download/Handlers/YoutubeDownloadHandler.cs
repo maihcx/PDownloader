@@ -45,7 +45,7 @@ internal sealed class YoutubeDownloadHandler
     {
         if (YtDlpService.Instance.FindYtDlp() == null)
         {
-            SetError("yt-dlp không tìm thấy.");
+            SetError("yt-dlp not found.");
             return;
         }
 
@@ -88,13 +88,13 @@ internal sealed class YoutubeDownloadHandler
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
-                    "Không resolve được URL từ yt-dlp: " + ex.Message,
+                    "Unable to resolve URL from yt-dlp: " + ex.Message,
                     ex);
             }
 
             if (streams.Count == 0)
             {
-                SetError("yt-dlp không trả về stream nào để tải.");
+                SetError("yt-dlp does not return any stream to download.");
                 return;
             }
 
