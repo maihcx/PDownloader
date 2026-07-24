@@ -30,31 +30,6 @@
                       Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,8">
             <StackPanel>
 
-                <!-- Header status card -->
-                <ui:Card Margin="0,8,0,8">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <ui:SymbolIcon Grid.Column="0" Symbol="ArrowDownload24" FontSize="32"
-                                       Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{utils:Localization page_config_header_title}"
-                                       FontSize="18" FontWeight="SemiBold"/>
-                            <TextBlock Text="{utils:Localization page_config_header_summary}"
-                                       Opacity="0.6" FontSize="13" Margin="0,2,0,0"/>
-                        </StackPanel>
-                        <Border Grid.Column="2" VerticalAlignment="Center"
-                                Background="{Binding ViewModel.IsDaemonRunning, Converter={StaticResource BoolToGreenRedBrush}}"
-                                CornerRadius="12" Padding="10,4">
-                            <TextBlock Text="{Binding ViewModel.IsDaemonRunning, Converter={StaticResource BoolToStatusText}}"
-                                       FontSize="12" Foreground="White"/>
-                        </Border>
-                    </Grid>
-                </ui:Card>
-
                 <!-- Download folder -->
                 <ui:CardExpander Icon="{ui:SymbolIcon Folder24}"
                                  Margin="0,0,0,8" IsExpanded="True">
