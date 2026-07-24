@@ -265,7 +265,7 @@
     <value>PDownloader — Download Settings</value>
   </data>
   <data name="page_config_header_summary" xml:space="preserve">
-    <value>Configure default folder, threads and behaviour</value>
+    <value>Configure download folders, temporary data and thread count</value>
   </data>
   <data name="page_config_folder_title" xml:space="preserve">
     <value>Download Folder</value>
@@ -278,6 +278,18 @@
   </data>
   <data name="page_config_folder_browse" xml:space="preserve">
     <value>Browse...</value>
+  </data>
+  <data name="page_config_temp_folder_title" xml:space="preserve">
+    <value>Temporary data folder</value>
+  </data>
+  <data name="page_config_temp_folder_summary" xml:space="preserve">
+    <value>Each download uses its own subfolder for segments, HLS fragments and merge recovery data. Existing downloads keep their original location so they can resume safely.</value>
+  </data>
+  <data name="page_config_temp_folder_placeholder" xml:space="preserve">
+    <value>Folder used for temporary download data</value>
+  </data>
+  <data name="page_config_temp_folder_default" xml:space="preserve">
+    <value>Default</value>
   </data>
   <data name="page_config_threads_title" xml:space="preserve">
     <value>Default thread count</value>
@@ -302,6 +314,12 @@
   </data>
   <data name="page_config_save" xml:space="preserve">
     <value>Save settings</value>
+  </data>
+  <data name="page_config_save_success" xml:space="preserve">
+    <value>Settings saved ✓</value>
+  </data>
+  <data name="page_config_save_error" xml:space="preserve">
+    <value>Unable to save settings: {0}</value>
   </data>
   <data name="page_config_svc_active_title" xml:space="preserve">
     <value>Active</value>

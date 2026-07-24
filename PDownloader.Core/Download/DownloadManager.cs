@@ -47,6 +47,8 @@ public class DownloadManager : IDisposable
             CustomHeaders = customHeaders
         };
 
+        _ = new DownloadPathService().GetTempDirectory(item);
+
         lock (_lock) { _downloads.Add(item); }
 
         OnItemChanged?.Invoke(item);
@@ -84,8 +86,6 @@ public class DownloadManager : IDisposable
 
             var progress = new Progress<DownloadProgress>(_ =>
             {
-                // DownloadEngine already owns and updates the DownloadItem.
-                // This callback only publishes the latest snapshot.
                 OnItemChanged?.Invoke(item);
             });
 
@@ -189,7 +189,7 @@ public class DownloadManager : IDisposable
             await runningTask;
         }
 
-        DownloadEngine.DeleteTempFiles(id, item.SavePath, item.FileName);
+        DownloadEngine.DeleteTempFiles(item);
 
         _runningTaskByItem.TryRemove(id, out _);
     }
@@ -206,7 +206,7 @@ public class DownloadManager : IDisposable
             return;
         }
 
-        bool hasPendingMerge = DownloadEngine.HasPendingMerge(item.Id);
+        bool hasPendingMerge = DownloadEngine.HasPendingMerge(item);
 
         item.Status = DownloadStatus.Queued;
         item.ErrorMessage = string.Empty;
@@ -267,7 +267,7 @@ public class DownloadManager : IDisposable
 
         if ((item.Status is DownloadStatus.Paused or DownloadStatus.Error)
             && DownloadEngine.TryGetPendingMergeProgress(
-                item.Id,
+                item,
                 out double pendingMergeProgress))
         {
             item.MergeProgress = pendingMergeProgress;

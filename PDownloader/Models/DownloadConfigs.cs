@@ -21,5 +21,8 @@ public partial class DownloadConfigs : ObservableObject
     public string _defaultDownloadFolder = string.Empty;
 
     [ObservableProperty]
+    public string _defaultTempFolder = string.Empty;
+
+    [ObservableProperty]
     public int _defaultThreadCount = 8;
 }
