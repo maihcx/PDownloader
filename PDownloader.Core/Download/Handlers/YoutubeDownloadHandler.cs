@@ -181,6 +181,8 @@ internal sealed class YoutubeDownloadHandler
                 streams.Count == 1 ? ApplyFileHashes : null,
                 cancellationToken);
 
+            DownloadContentInspector.EnsureDownloadedMediaFile(rawPath, stream);
+
             long actualLength = File.Exists(rawPath)
                 ? new FileInfo(rawPath).Length
                 : probe.TotalBytes;

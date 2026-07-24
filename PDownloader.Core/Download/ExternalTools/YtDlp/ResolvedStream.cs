@@ -17,6 +17,10 @@ namespace PDownloader.Core.Download.ExternalTools.YtDlp;
 
 public sealed class ResolvedStream
 {
+    public string FormatId { get; set; } = string.Empty;
+
+    public string Protocol { get; set; } = string.Empty;
+
     public string Url { get; set; } = string.Empty;
 
     public string Ext { get; set; } = "mp4";
@@ -29,4 +33,21 @@ public sealed class ResolvedStream
 
     public Dictionary<string, string> HttpHeaders { get; set; } =
         new(StringComparer.OrdinalIgnoreCase);
+
+    public bool IsDirectHttp
+    {
+        get
+        {
+            if (!Uri.TryCreate(Url, UriKind.Absolute, out Uri? uri)
+                || (uri.Scheme != Uri.UriSchemeHttp
+                    && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                return false;
+            }
+
+            return string.IsNullOrWhiteSpace(Protocol)
+                || Protocol.Equals("http", StringComparison.OrdinalIgnoreCase)
+                || Protocol.Equals("https", StringComparison.OrdinalIgnoreCase);
+        }
+    }
 }

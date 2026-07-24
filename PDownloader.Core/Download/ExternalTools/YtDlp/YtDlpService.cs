@@ -55,18 +55,20 @@ public sealed class YtDlpService
         IReadOnlyDictionary<string, string>? extraHeaders = null,
         CancellationToken ct = default)
     {
+        string effectivePageUrl = VimeoUrlNormalizer.Normalize(pageUrl, referer);
+        string effectiveFormatId = YtDlpFormatSelector.Normalize(pageUrl, formatId);
         string ytDlpPath = RequireYtDlp();
         string quickJsPath = RequireQuickJs();
         string? cookieFile = _cookieFileService.Create(
             cookieHeader,
-            pageUrl,
+            effectivePageUrl,
             cookieJarJson);
 
         try
         {
             IReadOnlyList<string> arguments = YtDlpCommandBuilder.BuildResolveDirectUrls(
-                pageUrl,
-                formatId,
+                effectivePageUrl,
+                effectiveFormatId,
                 referer,
                 userAgent,
                 extraHeaders,
@@ -78,7 +80,10 @@ public sealed class YtDlpService
                 ct);
 
             EnsureSuccessful(result);
-            return YtDlpJsonParser.ParseResolvedStreams(result.StandardOutput);
+            List<ResolvedStream> streams =
+                YtDlpJsonParser.ParseResolvedStreams(result.StandardOutput);
+            EnsureDirectHttpStreams(streams);
+            return streams;
         }
         finally
         {
@@ -102,16 +107,19 @@ public sealed class YtDlpService
                 "hoặc thêm vào PATH rồi khởi động lại.");
         }
 
+        string? referer = GetHeader(extraHeaders, "Referer");
+        string effectiveUrl = VimeoUrlNormalizer.Normalize(url, referer);
         string quickJsPath = RequireQuickJs();
         string? cookieFile = _cookieFileService.Create(
             cookieHeader,
-            url,
+            effectiveUrl,
             cookieJarJson);
 
         try
         {
             IReadOnlyList<string> arguments = YtDlpCommandBuilder.BuildAnalyze(
-                url,
+                effectiveUrl,
+                referer,
                 userAgent,
                 extraHeaders,
                 quickJsPath,
@@ -151,17 +159,18 @@ public sealed class YtDlpService
         IReadOnlyDictionary<string, string>? extraHeaders,
         CancellationToken ct = default)
     {
+        string effectiveUrl = VimeoUrlNormalizer.Normalize(url, referer);
         string ytDlpPath = RequireYtDlp();
         string quickJsPath = RequireQuickJs();
         string? cookieFile = _cookieFileService.Create(
             cookieHeader,
-            url,
+            effectiveUrl,
             cookieJarJson);
 
         try
         {
             IReadOnlyList<string> arguments = YtDlpCommandBuilder.BuildResolveHlsFragments(
-                url,
+                effectiveUrl,
                 referer,
                 userAgent,
                 extraHeaders,
@@ -179,6 +188,48 @@ public sealed class YtDlpService
         {
             _cookieFileService.DeleteSafe(cookieFile);
         }
+    }
+
+    private static void EnsureDirectHttpStreams(
+        IReadOnlyCollection<ResolvedStream> streams)
+    {
+        ResolvedStream? unsupported = streams.FirstOrDefault(stream => !stream.IsDirectHttp);
+        if (unsupported == null)
+        {
+            return;
+        }
+
+        string format = string.IsNullOrWhiteSpace(unsupported.FormatId)
+            ? "unknown"
+            : unsupported.FormatId;
+        string protocol = string.IsNullOrWhiteSpace(unsupported.Protocol)
+            ? "unknown"
+            : unsupported.Protocol;
+
+        throw new InvalidOperationException(
+            $"yt-dlp selected a manifest/fragmented stream " +
+            $"(format {format}, protocol {protocol}) instead of a complete HTTP file. " +
+            "PDownloader cannot add this URL to the standard segment downloader.");
+    }
+
+    private static string? GetHeader(
+        IReadOnlyDictionary<string, string>? headers,
+        string name)
+    {
+        if (headers == null)
+        {
+            return null;
+        }
+
+        foreach ((string key, string value) in headers)
+        {
+            if (string.Equals(key, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return value;
+            }
+        }
+
+        return null;
     }
 
     private string RequireYtDlp()
