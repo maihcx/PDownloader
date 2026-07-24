@@ -1,3 +1,21 @@
+## v0.9.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- Add configurable file merge modes (#112) — @maihcx
+
+## 🐛 Bug Fixes
+
+- [extension] Improve Instagram resolver (#111) — @maihcx
+
+## 🧹 Maintenance
+
+- Translate error messages to English (#113) — @maihcx
+
+
+---
+
 ## v0.8.0
 
 ## 🚀 Changelog
