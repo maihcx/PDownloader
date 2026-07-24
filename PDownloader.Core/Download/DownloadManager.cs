@@ -57,8 +57,6 @@ public class DownloadManager : IDisposable
             MergeMode = mergeMode
         };
 
-        // Pin the temp root at enqueue time. A later settings change must not move
-        // an active/queued download away from its resumable segment files.
         _ = new DownloadPathService().GetTempDirectory(item);
 
         lock (_lock) { _downloads.Add(item); }
@@ -98,8 +96,6 @@ public class DownloadManager : IDisposable
 
             var progress = new Progress<DownloadProgress>(_ =>
             {
-                // DownloadEngine already owns and updates the DownloadItem.
-                // This callback only publishes the latest snapshot.
                 OnItemChanged?.Invoke(item);
             });
 

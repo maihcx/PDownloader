@@ -15,12 +15,6 @@
 
 namespace PDownloader.Core.Download.Infrastructure;
 
-/// <summary>
-/// Fast, non-recoverable concatenation path. It intentionally avoids durable
-/// checkpoints, per-part disk flushes, and inline hashing. Source parts are
-/// released as soon as they have been copied, so an interrupted merge may not
-/// be recoverable.
-/// </summary>
 internal sealed class HighPerformanceFileMerger
 {
     public async Task<string> MergeAsync(

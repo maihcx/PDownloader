@@ -154,9 +154,6 @@ internal sealed class YoutubeDownloadHandler
             string extension = string.IsNullOrWhiteSpace(stream.Ext) ? "bin" : stream.Ext;
             string kind = stream.HasVideo ? "video" : "audio";
 
-            // Giữ nguyên cấu trúc temp của phiên bản cũ:
-            //   video.<ext> + video_segs/
-            //   audio.<ext> + audio_segs/
             string rawPath = Path.Combine(tempDirectory, $"{kind}.{extension}");
             string segmentDirectory = Path.Combine(tempDirectory, $"{kind}_segs");
 

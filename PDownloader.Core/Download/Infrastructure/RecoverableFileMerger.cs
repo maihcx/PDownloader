@@ -211,9 +211,6 @@ internal sealed class RecoverableFileMerger
 
             if (hashAccumulator != null && manifest.CommittedOutputBytes > 0)
             {
-                // IncrementalHash cannot serialize its internal state. On a resumed merge,
-                // rebuild only the already-committed prefix, then keep hashing new buffers
-                // while they are copied. A normal uninterrupted merge never rereads output.
                 await FileHashCalculator.AppendFilePrefixAsync(
                     hashAccumulator,
                     mergingPath,
@@ -532,7 +529,6 @@ internal sealed class RecoverableFileMerger
         MergeRecoveryStore.Save(recoveryDirectory, manifest);
     }
 
-
     private static async Task ValidateCommittedPrefixOrRestartAsync(
         string recoveryDirectory,
         MergeRecoveryManifest manifest,
@@ -548,9 +544,6 @@ internal sealed class RecoverableFileMerger
             return;
         }
 
-        // Data-integrity mode retains every source part. If the durable output
-        // prefix was deleted, truncated, or modified, discard it and rebuild
-        // from the original parts instead of trusting a damaged checkpoint.
         RollBackUncommittedBytes(mergingPath, 0);
         ResetCheckpoint(recoveryDirectory, manifest);
     }

@@ -290,6 +290,7 @@ internal sealed class FfmpegMuxer
             catch (OperationCanceledException)
             {
                 try { process.Kill(entireProcessTree: true); } catch { }
+
                 throw;
             }
             finally
