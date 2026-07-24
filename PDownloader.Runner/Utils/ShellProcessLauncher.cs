@@ -77,6 +77,42 @@ internal static class ShellProcessLauncher
         }
     }
 
+    public static bool OpenContainingFolder(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return false;
+        }
+
+        string? folder = Path.GetDirectoryName(filePath);
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+        {
+            return false;
+        }
+
+        try
+        {
+            string arguments = File.Exists(filePath)
+                ? $"/select,\"{filePath}\""
+                : $"\"{folder}\"";
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = arguments,
+                UseShellExecute = true
+            });
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(
+                $"[ShellProcessLauncher] Failed to open containing folder for '{filePath}': {ex}");
+            return false;
+        }
+    }
+
     private static bool OpenFileFallback(string filePath)
     {
         try

@@ -112,6 +112,71 @@
                     </StackPanel>
                 </ui:CardExpander>
 
+                <!-- Download progress window behavior -->
+                <ui:CardExpander Icon="{ui:SymbolIcon WindowSettings20}"
+                                 Margin="0,0,0,8" IsExpanded="True">
+                    <ui:CardExpander.Header>
+                        <StackPanel>
+                            <ui:TextBlock FontTypography="Body"
+                                         Text="{utils:Localization page_config_progress_window_title}"
+                                         FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock Text="{utils:Localization page_config_progress_window_summary}"
+                                       Opacity="0.6" FontSize="12" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </ui:CardExpander.Header>
+
+                    <StackPanel>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                <TextBlock Text="{utils:Localization page_config_progress_window_close_completed_title}"
+                                           FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="{utils:Localization page_config_progress_window_close_completed_summary}"
+                                           Opacity="0.6" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Center"
+                                             IsChecked="{Binding ViewModel.DownloadConfigs.CloseProgressWindowWhenDownloadCompletes, Mode=TwoWay}"/>
+                        </Grid>
+
+                        <Separator Opacity="0.16" Margin="0,0,0,12"/>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                <TextBlock Text="{utils:Localization page_config_progress_window_close_open_file_title}"
+                                           FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="{utils:Localization page_config_progress_window_close_open_file_summary}"
+                                           Opacity="0.6" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Center"
+                                             IsChecked="{Binding ViewModel.DownloadConfigs.CloseProgressWindowAfterOpeningFile, Mode=TwoWay}"/>
+                        </Grid>
+
+                        <Separator Opacity="0.16" Margin="0,0,0,12"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                <TextBlock Text="{utils:Localization page_config_progress_window_close_open_folder_title}"
+                                           FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="{utils:Localization page_config_progress_window_close_open_folder_summary}"
+                                           Opacity="0.6" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Center"
+                                             IsChecked="{Binding ViewModel.DownloadConfigs.CloseProgressWindowAfterOpeningFolder, Mode=TwoWay}"/>
+                        </Grid>
+                    </StackPanel>
+                </ui:CardExpander>
+
                 <!-- Concurrent downloads -->
                 <!--<ui:CardExpander Icon="{ui:SymbolIcon DocumentMultiple24}"
                                  Margin="0,0,0,8" IsExpanded="True">

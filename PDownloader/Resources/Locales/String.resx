@@ -501,4 +501,28 @@
   <data name="about_app_title" xml:space="preserve">
     <value>about_app_title</value>
   </data>
+  <data name="page_config_progress_window_title" xml:space="preserve">
+    <value>Cửa sổ tiến trình tải xuống</value>
+  </data>
+  <data name="page_config_progress_window_summary" xml:space="preserve">
+    <value>Tùy chỉnh thời điểm cửa sổ theo dõi tác vụ tự động đóng</value>
+  </data>
+  <data name="page_config_progress_window_close_completed_title" xml:space="preserve">
+    <value>Đóng khi tải hoàn tất</value>
+  </data>
+  <data name="page_config_progress_window_close_completed_summary" xml:space="preserve">
+    <value>Tự động đóng cửa sổ tiến trình sau khi tệp được tải xuống thành công.</value>
+  </data>
+  <data name="page_config_progress_window_close_open_file_title" xml:space="preserve">
+    <value>Đóng sau khi mở tệp</value>
+  </data>
+  <data name="page_config_progress_window_close_open_file_summary" xml:space="preserve">
+    <value>Đóng cửa sổ tiến trình sau khi mở tệp đã tải xuống.</value>
+  </data>
+  <data name="page_config_progress_window_close_open_folder_title" xml:space="preserve">
+    <value>Đóng sau khi mở thư mục chứa tệp</value>
+  </data>
+  <data name="page_config_progress_window_close_open_folder_summary" xml:space="preserve">
+    <value>Đóng cửa sổ tiến trình sau khi File Explorer mở vị trí của tệp đã tải xuống.</value>
+  </data>
 </root>
