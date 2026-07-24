@@ -62,7 +62,7 @@
                                  Margin="0,0,0,8"
                                  IsExpanded="False">
                     <ui:CardExpander.Header>
-                        <StackPanel>
+                        <StackPanel Margin="0 0 4 0">
                             <ui:TextBlock FontTypography="Body"
                                          Text="{utils:Localization page_config_temp_folder_title}"
                                          FontWeight="SemiBold" TextWrapping="Wrap"/>
