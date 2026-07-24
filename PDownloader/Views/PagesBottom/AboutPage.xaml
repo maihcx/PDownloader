@@ -165,13 +165,14 @@
                                                    Symbol="Link24" />
                                 </Grid>
                             </ui:Anchor>
-                            <TextBlock Margin="16"
-                                       Text="{Binding ViewModel.AppVersion, Mode=OneWay}" />
+                            <ui:TextBlock Margin="16 8 0 16">
+                                <Run Text="{utils:Localization version_title}" /><Run Text=":" />
+                                <Run Text="{Binding ViewModel.AppVersion, Mode=OneWay}" />
+                            </ui:TextBlock>
                         </StackPanel>
                     </ui:CardExpander>
 
-                    <ui:InfoBar Title="PDownloader"
-                                Margin="0,0,0,8"
+                    <ui:InfoBar Margin="0,0,0,8"
                                 Message="{utils:Localization open_source_summary}"
                                 Severity="Informational"
                                 IsOpen="True"
@@ -185,7 +186,6 @@
                         </Grid.ColumnDefinitions>
 
                         <ui:InfoBar Grid.Column="0"
-                                    Title="PDownloader"
                                     Message="{utils:Localization issue_report_summary}"
                                     Severity="Warning"
                                     IsOpen="True"
