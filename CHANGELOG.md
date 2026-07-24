@@ -1,3 +1,31 @@
+## v0.8.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- Add progress window auto-close behavior (#106) — @maihcx
+- Add configurable temporary folder setting (#104) — @maihcx
+- [extension] [extension] Bump browser extension to v0.3.15 (#103) — @maihcx
+- Add Vimeo handling and content inspection (#97) — @maihcx
+- [extension] Bump browser extension to v0.3.14 (#96) — @maihcx
+
+## 🐛 Bug Fixes
+
+- [extension] remove TikTok override (#102) — @maihcx
+- [extension] Vimeo video download support (#94) — @maihcx
+- [extension] Fix button mounting for videos in different contexts (#93) — @maihcx
+
+## 🧹 Maintenance
+
+- Add margin to ConfigPage StackPanel header (#109) — @maihcx
+- Update About page version text and layout (#108) — @maihcx
+- Collapse all ConfigPage CardExpanders by default (#107) — @maihcx
+- Remove header status card from ConfigPage (#105) — @maihcx
+- Translate yt-dlp messages to English (#98) — @maihcx
+
+
+---
+
 ## v0.7.1
 
 ## 🚀 Changelog
