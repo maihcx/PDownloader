@@ -56,8 +56,8 @@ internal sealed class HlsDownloadHandler
         if (YtDlpService.Instance.FindYtDlp() == null)
         {
             SetError(
-                "Phát hiện đây là playlist HLS (m3u8) nhưng cần yt-dlp để tải/ghép. " +
-                "Đặt yt-dlp.exe cạnh PDownloader.Core.exe hoặc thêm vào PATH.");
+                "Detected an HLS (m3u8) playlist, but yt-dlp is required to download/merge it. " +
+                "Place yt-dlp.exe next to PDownloader.Core.exe or add it to your PATH.");
             return true;
         }
 
@@ -123,7 +123,7 @@ internal sealed class HlsDownloadHandler
             bool mergeCanRetry = MergeRecoveryStore.HasPending(tempDirectory);
             SetError(mergeCanRetry
                 ? ex.Message
-                : "Không tải được HLS: " + ex.Message);
+                : "Unable to load HLS: " + ex.Message);
             return true;
         }
     }

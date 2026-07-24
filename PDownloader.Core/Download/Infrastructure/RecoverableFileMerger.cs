@@ -109,7 +109,7 @@ internal sealed class RecoverableFileMerger
         if (manifest.Kind != MergeRecoveryKind.Concatenate)
         {
             throw new InvalidOperationException(
-                $"Trạng thái merge không hợp lệ: {manifest.Kind}.");
+                $"Invalid merge state: {manifest.Kind}.");
         }
 
         return ExecuteAsync(
@@ -262,8 +262,8 @@ internal sealed class RecoverableFileMerger
                     if (output.Position != expectedCommittedLength)
                     {
                         throw new IOException(
-                            $"Kích thước dữ liệu sau khi ghép segment {index} không hợp lệ: " +
-                            $"{output.Position} B, dự kiến {expectedCommittedLength} B.");
+                            $"Invalid data size after merging segment {index}: " +
+                            $"{output.Position} B, expected {expectedCommittedLength} B.");
                     }
 
                     await output.FlushAsync(cancellationToken);
@@ -299,7 +299,7 @@ internal sealed class RecoverableFileMerger
                 {
                     throw new IOException(
                         $"Invalid file size after merging: " +
-                        $"{mergedLength} B, dự kiến {manifest.ExpectedOutputBytes} B.");
+                        $"{mergedLength} B, expected {manifest.ExpectedOutputBytes} B.");
                 }
 
                 if (hashAccumulator != null)
@@ -493,7 +493,7 @@ internal sealed class RecoverableFileMerger
             }
 
             throw new InvalidOperationException(
-                "\r\nCannot continue merging: the .merging file containing committed data no longer exists, " +
+                "Cannot continue merging: the .merging file containing committed data no longer exists, " +
                 "while some source segments have been released to save space.");
         }
 

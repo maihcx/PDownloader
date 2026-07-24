@@ -348,7 +348,7 @@ public class DownloadManager : IDisposable
         catch (Exception ex)
         {
             Debug.WriteLine(
-                $"[DownloadManager] Không thể tính hash cho '{filePath}': {ex.Message}");
+                $"[DownloadManager] Cannot calculate hash for '{filePath}': {ex.Message}");
         }
         finally
         {
