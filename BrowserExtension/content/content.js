@@ -396,6 +396,40 @@ function showButton() {
   btn.style.opacity = '1';
 }
 
+function getButtonHost(video) {
+  if (!(video instanceof Element)) {
+    return document.body || document.documentElement;
+  }
+
+  const dialog = video.closest?.('dialog[open]');
+  if (dialog) {
+    return dialog.querySelector?.('.fancybox__container') || dialog;
+  }
+
+  const fullscreen = document.fullscreenElement;
+  if (fullscreen instanceof Element && fullscreen.contains(video)) {
+    return fullscreen;
+  }
+
+  try {
+    const popover = video.closest?.(':popover-open');
+    if (popover) return popover;
+  } catch (_) { }
+
+  return document.body || document.documentElement;
+}
+
+function mountButtonForVideo(video) {
+  const btn = getBtn();
+  const host = getButtonHost(video);
+
+  if (host && btn.parentNode !== host) {
+    host.appendChild(btn);
+  }
+
+  return btn;
+}
+
 function hideButton(clearActive = true) {
   if (_btn) {
     _btn.style.opacity = '0';
@@ -417,7 +451,7 @@ function positionBtn(video) {
   }
 
   const rect = video.getBoundingClientRect();
-  const btn = getBtn();
+  const btn = mountButtonForVideo(video);
   const isVertical = ['tiktok.com', 'instagram.com', 'facebook.com'].some(h => location.hostname.includes(h))
     || location.pathname.startsWith('/shorts/');
 
@@ -562,7 +596,6 @@ function findVideoAtPoint(x, y, target) {
   const targetContext = targetElement?.closest?.(VIDEO_CONTEXT_SELECTOR);
   addVideosFromRoot(targetContext, candidates);
 
-  // Fallback for players whose transparent controls are not nested under the video container.
   if (candidates.size === 0) {
     let ancestor = targetElement;
     for (let level = 0; level < 12 && ancestor; level++, ancestor = ancestor.parentElement) {
