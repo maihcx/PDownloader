@@ -525,4 +525,28 @@
   <data name="page_config_progress_window_close_open_folder_summary" xml:space="preserve">
     <value>Đóng cửa sổ tiến trình sau khi File Explorer mở vị trí của tệp đã tải xuống.</value>
   </data>
+  <data name="page_config_merge_mode_title" xml:space="preserve">
+    <value>Chế độ gộp tệp</value>
+  </data>
+  <data name="page_config_merge_mode_summary" xml:space="preserve">
+    <value>Chọn mức ưu tiên giữa tốc độ gộp và khả năng bảo vệ dữ liệu tạm. Áp dụng cho các lượt tải được thêm sau khi lưu.</value>
+  </data>
+  <data name="page_config_merge_mode_high_performance_title" xml:space="preserve">
+    <value>Hiệu suất cao</value>
+  </data>
+  <data name="page_config_merge_mode_high_performance_description" xml:space="preserve">
+    <value>Gộp nhanh nhất, không tạo checkpoint an toàn. Không thể tạm dừng khi đang gộp và dữ liệu có thể không phục hồi nếu quá trình bị gián đoạn.</value>
+  </data>
+  <data name="page_config_merge_mode_balanced_title" xml:space="preserve">
+    <value>Cân bằng</value>
+  </data>
+  <data name="page_config_merge_mode_balanced_description" xml:space="preserve">
+    <value>Duy trì checkpoint theo từng phần và giải phóng dữ liệu đã gộp để cân đối tốc độ, dung lượng và khả năng tiếp tục.</value>
+  </data>
+  <data name="page_config_merge_mode_data_integrity_title" xml:space="preserve">
+    <value>Toàn vẹn dữ liệu</value>
+  </data>
+  <data name="page_config_merge_mode_data_integrity_description" xml:space="preserve">
+    <value>Giữ toàn bộ dữ liệu nguồn đến khi hoàn tất và xác minh lại tệp đã gộp. Tốn thời gian và dung lượng hơn nhưng có thể dựng lại nếu tệp đang gộp bị xóa.</value>
+  </data>
 </root>

@@ -298,7 +298,7 @@
       try { pathname = new URL(raw, location.href).pathname; } catch (_) { }
 
       if (!code) {
-        code = validCode(pathname.match(/^\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)\/?$/i)?.[1]);
+        code = validCode(pathname.match(/^\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)\/?$/i)?.[1]);
       }
 
       if (!username) {
@@ -348,8 +348,6 @@
       }
     }
 
-    // Không ánh xạ theo thứ tự toàn cục của video/media: Instagram tái sử dụng DOM
-    // khi cuộn Reel, nên index rất dễ trỏ về video đã xem trước đó.
     return best && bestScore >= 700 ? best : null;
   }
 

@@ -49,16 +49,18 @@
 
     if (current && getUrlQuality(current, site) > 0) return current;
 
-    const canonical = getCanonicalUrl(site);
-    if (canonical && getUrlQuality(canonical, site) > 0) return canonical;
+    if (site !== 'instagram') {
+      const canonical = getCanonicalUrl(site);
+      if (canonical && getUrlQuality(canonical, site) > 0) return canonical;
+    }
 
     return current || location.href;
   }
 
   function getDirectVideoUrl(video, contextNode, site) {
     if (site === 'instagram') {
-      return getInstagramDomPermalink(video, contextNode)
-        || requestInstagramMetadata(video, contextNode)?.url
+      return requestInstagramMetadata(video, contextNode)?.url
+        || getInstagramDomPermalink(video, contextNode)
         || null;
     }
 
@@ -104,8 +106,6 @@
     add(safeClosest(contextNode, 'a[href]'));
     add(safeClosest(video, 'article'));
     add(safeClosest(contextNode, 'article'));
-    add(safeClosest(video, '[role="presentation"]'));
-    add(safeClosest(contextNode, '[role="presentation"]'));
     add(contextNode);
     add(video);
 
@@ -595,6 +595,8 @@
       url.hostname = 'www.tiktok.com';
     } else if (site === 'instagram') {
       url.hostname = 'www.instagram.com';
+      const reelsMatch = url.pathname.match(/^\/reels\/([A-Za-z0-9_-]+)\/?$/i);
+      if (reelsMatch) url.pathname = `/reel/${reelsMatch[1]}/`;
     }
 
     url.pathname = url.pathname.replace(/\/{2,}/g, '/');
@@ -642,7 +644,7 @@
     }
 
     if (site === 'instagram') {
-      if (/^\/(?:reel|p|tv)\/[A-Za-z0-9_-]+\/?$/i.test(path)) return 150;
+      if (/^\/(?:reel|reels|p|tv)\/[A-Za-z0-9_-]+\/?$/i.test(path)) return 150;
       return 0;
     }
 

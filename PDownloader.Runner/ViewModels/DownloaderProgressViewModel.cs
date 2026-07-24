@@ -162,21 +162,21 @@ public partial class DownloaderProgressViewModel : ObservableObject
                 case DownloadStatus.Downloading:
                     StatusText = LanguageBase.GetLangValue("download_status_downloading_title");
                     DownloaderStatus.State = RunnerState.Downloading;
-                    IsPauseResumeButtonEnabled = true;
+                    IsPauseResumeButtonEnabled = obj.CanPause;
                     IsCancelButtonEnabled = true;
                     break;
 
                 case DownloadStatus.Paused:
                     StatusText = LanguageBase.GetLangValue("download_status_paused_title");
                     DownloaderStatus.State = RunnerState.Downloading;
-                    IsPauseResumeButtonEnabled = true;
+                    IsPauseResumeButtonEnabled = obj.CanResume;
                     IsCancelButtonEnabled = true;
                     break;
 
                 case DownloadStatus.Merging:
                     StatusText = LanguageBase.GetLangValue("download_status_merging_title");
                     DownloaderStatus.State = RunnerState.Downloading;
-                    IsPauseResumeButtonEnabled = true;
+                    IsPauseResumeButtonEnabled = obj.CanPause;
                     IsCancelButtonEnabled = false;
                     break;
 
@@ -558,6 +558,11 @@ public partial class DownloaderProgressViewModel : ObservableObject
     [RelayCommand]
     private void Pause()
     {
+        if (!IsPauseResumeButtonEnabled)
+        {
+            return;
+        }
+
         IsPauseResumeButtonEnabled = false;
         _downloaderService.PauseDownload();
     }
@@ -565,6 +570,11 @@ public partial class DownloaderProgressViewModel : ObservableObject
     [RelayCommand]
     private void Resume()
     {
+        if (!IsPauseResumeButtonEnabled)
+        {
+            return;
+        }
+
         IsPauseResumeButtonEnabled = false;
         _downloaderService.ResumeDownload();
     }

@@ -45,7 +45,7 @@ internal sealed class YoutubeDownloadHandler
     {
         if (YtDlpService.Instance.FindYtDlp() == null)
         {
-            SetError("yt-dlp không tìm thấy.");
+            SetError("yt-dlp not found.");
             return;
         }
 
@@ -88,13 +88,13 @@ internal sealed class YoutubeDownloadHandler
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
-                    "Không resolve được URL từ yt-dlp: " + ex.Message,
+                    "Unable to resolve URL from yt-dlp: " + ex.Message,
                     ex);
             }
 
             if (streams.Count == 0)
             {
-                SetError("yt-dlp không trả về stream nào để tải.");
+                SetError("yt-dlp does not return any stream to download.");
                 return;
             }
 
@@ -124,6 +124,7 @@ internal sealed class YoutubeDownloadHandler
                     outputFolder,
                     fileStem,
                     _reportMergeProgress,
+                    _item.MergeMode,
                     cancellationToken);
             }
 
@@ -153,9 +154,6 @@ internal sealed class YoutubeDownloadHandler
             string extension = string.IsNullOrWhiteSpace(stream.Ext) ? "bin" : stream.Ext;
             string kind = stream.HasVideo ? "video" : "audio";
 
-            // Giữ nguyên cấu trúc temp của phiên bản cũ:
-            //   video.<ext> + video_segs/
-            //   audio.<ext> + audio_segs/
             string rawPath = Path.Combine(tempDirectory, $"{kind}.{extension}");
             string segmentDirectory = Path.Combine(tempDirectory, $"{kind}_segs");
 
@@ -178,15 +176,24 @@ internal sealed class YoutubeDownloadHandler
                 progressBaseOffset,
                 _reportProgress,
                 progress => _reportThreadProgress(progressStage, progress),
+                () =>
+                {
+                    _item.Status = DownloadStatus.Merging;
+                    _reportMergeProgress(0);
+                },
+                _reportMergeProgress,
                 streams.Count == 1 ? ApplyFileHashes : null,
+                _item.MergeMode,
                 cancellationToken);
 
+            _item.Status = DownloadStatus.Downloading;
             DownloadContentInspector.EnsureDownloadedMediaFile(rawPath, stream);
 
             long actualLength = File.Exists(rawPath)
                 ? new FileInfo(rawPath).Length
                 : probe.TotalBytes;
             progressBaseOffset += actualLength;
+            _reportProgress(progressBaseOffset, 0);
             files.Add(new DownloadedStreamFile(stream, rawPath));
             DownloadPathService.CleanupTemp(segmentDirectory);
         }

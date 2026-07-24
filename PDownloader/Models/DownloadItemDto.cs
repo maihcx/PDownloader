@@ -17,10 +17,6 @@ using System.Text.Json.Serialization;
 
 namespace PDownloader.Models;
 
-/// <summary>
-/// Mirror of Core's DownloadItemDto — received via CFS "muxt-get-downloader-list"
-/// and "muxt-download-progress" commands.
-/// </summary>
 public partial class DownloadItemDto : ObservableObject
 {
     public DownloadItemDto()
@@ -93,6 +89,17 @@ public partial class DownloadItemDto : ObservableObject
 
     [JsonPropertyName("isActive")]
     public bool IsActive { get; set; }
+
+    [JsonPropertyName("fileMergeMode")]
+    public string FileMergeMode { get; set; } = "Balanced";
+
+    [JsonPropertyName("canPause")]
+    public bool CanPause { get; set; }
+
+    [JsonPropertyName("canResume")]
+    public bool CanResume { get; set; }
+
+    public bool CanResumeOrOpenFile => CanResume || Status == "Completed";
 
     [JsonPropertyName("md5Hash")]
     public string Md5Hash { get; set; } = string.Empty;

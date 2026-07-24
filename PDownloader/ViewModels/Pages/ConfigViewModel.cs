@@ -29,6 +29,22 @@ public partial class ConfigViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = string.Empty;
 
+    public ObservableCollection<FileMergeModeOption> FileMergeModeOptions { get; } =
+    [
+        new(
+            "HighPerformance",
+            "page_config_merge_mode_high_performance_title",
+            "page_config_merge_mode_high_performance_description"),
+        new(
+            "Balanced",
+            "page_config_merge_mode_balanced_title",
+            "page_config_merge_mode_balanced_description"),
+        new(
+            "DataIntegrity",
+            "page_config_merge_mode_data_integrity_title",
+            "page_config_merge_mode_data_integrity_description")
+    ];
+
     public ConfigViewModel(DownloadLauncherService launcher, DownloadConfigService configService)
     {
         _configService = configService;

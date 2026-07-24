@@ -32,7 +32,16 @@ public class DownloadManager : IDisposable
 
     public event Action<DownloadItem>? OnItemChanged;
 
-    public DownloadItem Enqueue(string id, string url, string saveTo = "", string fileName = "", int threads = 8, bool isYoutube = false, string? formatId = null, Dictionary<string, string>? customHeaders = null)
+    public DownloadItem Enqueue(
+        string id,
+        string url,
+        string saveTo = "",
+        string fileName = "",
+        int threads = 8,
+        bool isYoutube = false,
+        string? formatId = null,
+        Dictionary<string, string>? customHeaders = null,
+        FileMergeMode mergeMode = FileMergeMode.Balanced)
     {
         var item = new DownloadItem
         {
@@ -44,7 +53,8 @@ public class DownloadManager : IDisposable
             Status = DownloadStatus.Queued,
             IsYoutube = isYoutube,
             FormatId = formatId,
-            CustomHeaders = customHeaders
+            CustomHeaders = customHeaders,
+            MergeMode = mergeMode
         };
 
         _ = new DownloadPathService().GetTempDirectory(item);
@@ -132,6 +142,11 @@ public class DownloadManager : IDisposable
             return;
         }
 
+        if (!item.CanPause)
+        {
+            return;
+        }
+
         if (_ctsByItem.TryGetValue(id, out CancellationTokenSource? cts))
         {
             cts.Cancel();
@@ -147,7 +162,7 @@ public class DownloadManager : IDisposable
 
         lock (_lock)
         {
-            if (item.Status != DownloadStatus.Paused)
+            if (!item.CanResume)
             {
                 return;
             }
@@ -333,7 +348,7 @@ public class DownloadManager : IDisposable
         catch (Exception ex)
         {
             Debug.WriteLine(
-                $"[DownloadManager] Không thể tính hash cho '{filePath}': {ex.Message}");
+                $"[DownloadManager] Cannot calculate hash for '{filePath}': {ex.Message}");
         }
         finally
         {
