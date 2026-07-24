@@ -178,6 +178,7 @@ internal sealed class HlsDownloadHandler
             },
             _reportMergeProgress,
             ApplyFileHashes,
+            _item.MergeMode,
             cancellationToken);
     }
 

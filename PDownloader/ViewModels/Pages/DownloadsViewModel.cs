@@ -264,7 +264,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void Pause(DownloadItemDto? item)
     {
-        if (item == null)
+        if (item == null || !item.CanPause)
         {
             return;
         }
@@ -286,7 +286,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         {
             OpenFile(item);
         }
-        else if (status == DownloadStatus.Paused)
+        else if (status == DownloadStatus.Paused && item.CanResume)
         {
             ConfluxManager.cfsPDownloaderCore?.Send("runner-resume", item.Id);
         }

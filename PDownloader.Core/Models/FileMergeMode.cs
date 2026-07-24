@@ -13,28 +13,25 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Models;
+namespace PDownloader.Core.Models;
 
-public partial class DownloadConfigs : ObservableObject
+public enum FileMergeMode
 {
-    [ObservableProperty]
-    public string _defaultDownloadFolder = string.Empty;
+    Balanced = 0,
+    HighPerformance = 1,
+    DataIntegrity = 2
+}
 
-    [ObservableProperty]
-    public string _defaultTempFolder = string.Empty;
+public static class FileMergeModeParser
+{
+    public static FileMergeMode Parse(string? value) =>
+        Enum.TryParse(value, ignoreCase: true, out FileMergeMode mode)
+            && Enum.IsDefined(mode)
+                ? mode
+                : FileMergeMode.Balanced;
 
-    [ObservableProperty]
-    public int _defaultThreadCount = 8;
-
-    [ObservableProperty]
-    public string _fileMergeMode = "Balanced";
-
-    [ObservableProperty]
-    public bool _closeProgressWindowWhenDownloadCompletes = false;
-
-    [ObservableProperty]
-    public bool _closeProgressWindowAfterOpeningFile = false;
-
-    [ObservableProperty]
-    public bool _closeProgressWindowAfterOpeningFolder = false;
+    public static string ToConfigValue(this FileMergeMode mode) =>
+        Enum.IsDefined(mode)
+            ? mode.ToString()
+            : FileMergeMode.Balanced.ToString();
 }

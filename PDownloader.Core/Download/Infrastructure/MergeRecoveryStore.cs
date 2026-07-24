@@ -27,6 +27,8 @@ internal sealed class MergeRecoveryManifest
 
     public MergeRecoveryKind Kind { get; set; }
 
+    public FileMergeMode FileMergeMode { get; set; } = FileMergeMode.Balanced;
+
     public string DestinationPath { get; set; } = string.Empty;
 
     public List<string> SourcePaths { get; set; } = new();

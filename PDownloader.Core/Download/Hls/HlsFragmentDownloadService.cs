@@ -38,6 +38,7 @@ internal sealed class HlsFragmentDownloadService
         Action mergingStarted,
         Action<double>? reportMergeProgress,
         Action<FileHashResult>? reportFileHashes,
+        FileMergeMode fileMergeMode,
         CancellationToken cancellationToken)
     {
         List<string> urls = fragmentResult.FragmentUrls;
@@ -102,6 +103,7 @@ internal sealed class HlsFragmentDownloadService
             finalPath,
             reportMergeProgress,
             reportFileHashes,
+            fileMergeMode,
             cancellationToken);
         return finalPath;
     }
@@ -213,6 +215,7 @@ internal sealed class HlsFragmentDownloadService
         string finalPath,
         Action<double>? reportProgress,
         Action<FileHashResult>? reportFileHashes,
+        FileMergeMode fileMergeMode,
         CancellationToken cancellationToken)
     {
         var merger = new RecoverableFileMerger();
@@ -221,6 +224,7 @@ internal sealed class HlsFragmentDownloadService
             finalPath,
             reportProgress,
             reportFileHashes,
+            fileMergeMode,
             cancellationToken);
     }
 

@@ -30,6 +30,8 @@ public record DownloadItemSnapshot(
 
     public bool IsMergeProgressActive { get; init; }
 
+    public string FileMergeMode { get; init; } = "Balanced";
+
     public string Md5Hash { get; init; } = string.Empty;
 
     public string Sha1Hash { get; init; } = string.Empty;
@@ -47,6 +49,7 @@ public record DownloadItemSnapshot(
         TempRootPath = i.TempRootPath,
         MergeProgress = i.MergeProgress,
         IsMergeProgressActive = i.IsMergeProgressActive,
+        FileMergeMode = i.MergeMode.ToString(),
         Md5Hash = i.Md5Hash,
         Sha1Hash = i.Sha1Hash,
         Sha256Hash = i.Sha256Hash
@@ -70,6 +73,7 @@ public record DownloadItemSnapshot(
             DownloadedBytes = DownloadedBytes,
             MergeProgress = MergeProgress,
             IsMergeProgressActive = IsMergeProgressActive,
+            MergeMode = FileMergeModeParser.Parse(FileMergeMode),
             Md5Hash = Md5Hash,
             Sha1Hash = Sha1Hash,
             Sha256Hash = Sha256Hash,

@@ -24,6 +24,7 @@ internal sealed class SegmentMerger
         string destinationPath,
         Action<double>? reportProgress,
         Action<FileHashResult>? reportFileHashes,
+        FileMergeMode fileMergeMode,
         CancellationToken cancellationToken)
     {
         ValidateSegments(segments);
@@ -38,6 +39,7 @@ internal sealed class SegmentMerger
             destinationPath,
             reportProgress,
             reportFileHashes,
+            fileMergeMode,
             cancellationToken);
     }
 

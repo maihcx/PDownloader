@@ -93,6 +93,32 @@ public class DownloadItem : INotifyPropertyChanged
 
     public string TempRootPath { get; set; } = string.Empty;
 
+    private FileMergeMode _mergeMode = FileMergeMode.Balanced;
+    public FileMergeMode MergeMode
+    {
+        get => _mergeMode;
+        set
+        {
+            if (_mergeMode == value)
+            {
+                return;
+            }
+
+            _mergeMode = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanPause));
+            OnPropertyChanged(nameof(CanResume));
+        }
+    }
+
+    public bool CanPause => Status is DownloadStatus.Downloading
+        || (Status == DownloadStatus.Merging
+            && MergeMode != FileMergeMode.HighPerformance);
+
+    public bool CanResume => Status == DownloadStatus.Paused
+        && !(IsMergeProgressActive
+            && MergeMode == FileMergeMode.HighPerformance);
+
     private long _totalBytes = 0;
     public long TotalBytes
     {
@@ -133,6 +159,7 @@ public class DownloadItem : INotifyPropertyChanged
             _isMergeProgressActive = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(Progress));
+            OnPropertyChanged(nameof(CanResume));
         }
     }
 
@@ -153,6 +180,8 @@ public class DownloadItem : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsActive));
             OnPropertyChanged(nameof(Progress));
+            OnPropertyChanged(nameof(CanPause));
+            OnPropertyChanged(nameof(CanResume));
         }
     }
 

@@ -113,7 +113,6 @@ public class DownloadEngine
     public static Task<string?> GetRemoteFileNameAsync(string url) =>
         HttpDownloadProbe.GetRemoteFileNameAsync(url);
 
-
     private async Task<bool> TryRecoverPendingMergeAsync(string tempDirectory)
     {
         MergeRecoveryManifest? manifest = MergeRecoveryStore.TryLoad(tempDirectory);
@@ -122,6 +121,7 @@ public class DownloadEngine
             return false;
         }
 
+        _item.MergeMode = manifest.FileMergeMode;
         _item.Status = DownloadStatus.Merging;
         _item.ErrorMessage = string.Empty;
         _item.SpeedBps = 0;
@@ -205,6 +205,7 @@ public class DownloadEngine
             },
             reportMergeProgress: ReportMergeProgress,
             reportFileHashes: ApplyFileHashes,
+            fileMergeMode: _item.MergeMode,
             cancellationToken: _cancellationToken);
 
         _cancellationToken.ThrowIfCancellationRequested();
