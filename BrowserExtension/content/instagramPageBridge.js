@@ -348,9 +348,7 @@
       }
     }
 
-    // Không ánh xạ theo thứ tự toàn cục của video/media: Instagram tái sử dụng DOM
-    // khi cuộn Reel, nên index rất dễ trỏ về video đã xem trước đó.
-    return best && bestScore >= 700 ? best : null;
+    return best && bestScore >= 10000 ? best : null;
   }
 
   function collectReactCandidates(node, signature) {
@@ -414,7 +412,7 @@
     }
 
     const best = [...candidates.values()].sort((a, b) => b.score - a.score)[0];
-    return best && best.matchScore >= 700 ? best.media : null;
+    return best && best.matchScore >= 10000 ? best.media : null;
   }
 
   function resolveMedia(video) {

@@ -57,8 +57,8 @@
 
   function getDirectVideoUrl(video, contextNode, site) {
     if (site === 'instagram') {
-      return getInstagramDomPermalink(video, contextNode)
-        || requestInstagramMetadata(video, contextNode)?.url
+      return requestInstagramMetadata(video, contextNode)?.url
+        || getInstagramDomPermalink(video, contextNode)
         || null;
     }
 
@@ -104,8 +104,11 @@
     add(safeClosest(contextNode, 'a[href]'));
     add(safeClosest(video, 'article'));
     add(safeClosest(contextNode, 'article'));
-    add(safeClosest(video, '[role="presentation"]'));
-    add(safeClosest(contextNode, '[role="presentation"]'));
+    add(safeClosest(video, 'article'));
+    add(safeClosest(contextNode, 'article'));
+    add(safeClosest(video, 'div[role="dialog"]'));
+    add(safeClosest(contextNode, 'div[role="dialog"]'));
+    add(video?.parentElement);
     add(contextNode);
     add(video);
 
@@ -129,9 +132,21 @@
         const quality = url ? getUrlQuality(url, 'instagram') : 0;
         if (quality <= 0) continue;
 
-        let score = quality + getProximityBonus(videoRect, safeRect(anchor));
+        const anchorRect = safeRect(anchor);
+        if (anchorRect && (
+          anchorRect.width <= 0
+          || anchorRect.height <= 0
+          || anchorRect.bottom < -4
+          || anchorRect.top > window.innerHeight + 4
+        )) continue;
+
+        const videoArticle = safeClosest(video, 'article');
+        const anchorArticle = safeClosest(anchor, 'article');
+        if (videoArticle && anchorArticle && videoArticle !== anchorArticle) continue;
+
+        let score = quality + getProximityBonus(videoRect, anchorRect);
         if (anchor.contains?.(video)) score += 120;
-        if (safeClosest(anchor, 'article') === safeClosest(video, 'article')) score += 80;
+        if (videoArticle && anchorArticle === videoArticle) score += 160;
 
         if (!best || score > best.score) best = { url, score };
       }
