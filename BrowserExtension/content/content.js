@@ -273,9 +273,7 @@ function getBtn() {
         const embeddingReferer = getEmbeddingPageReferer();
         const canonicalUrl = getCanonicalVimeoUrl(location.href);
 
-        url = embeddingReferer
-          ? location.href
-          : (canonicalUrl || getSiteUrl(activeVideo, activeContextNode));
+        url = canonicalUrl || getSiteUrl(activeVideo, activeContextNode);
 
         const mediaTitle = getMediaTitle(activeVideo, activeContextNode);
         filename = sanitizeName(mediaTitle) + '.mp4';
@@ -285,7 +283,7 @@ function getBtn() {
           url,
           filename,
           title: mediaTitle,
-          referer: embeddingReferer || canonicalUrl || location.href
+          referer: embeddingReferer || url || location.href
         });
 
         showBtnFeedback(

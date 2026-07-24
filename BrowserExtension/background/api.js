@@ -369,6 +369,32 @@
     };
   }
 
+  function normalizeVimeoPlayerUrl(rawUrl) {
+    let url;
+    try {
+      url = new URL(String(rawUrl || ''));
+    } catch (_) {
+      return rawUrl;
+    }
+
+    if (url.hostname.toLowerCase() !== 'player.vimeo.com') {
+      return rawUrl;
+    }
+
+    const match = url.pathname.match(/^\/video\/(\d+)(?:\/([^/?#]+))?\/?$/i);
+    if (!match) return rawUrl;
+
+    const videoId = match[1];
+    const pathHash = match[2] || '';
+    const queryHash = url.searchParams.get('h') || '';
+    const unlistedHash = /^[A-Za-z0-9_-]+$/.test(pathHash)
+      ? pathHash
+      : (/^[A-Za-z0-9_-]+$/.test(queryHash) ? queryHash : '');
+
+    return `https://vimeo.com/${videoId}`
+      + (unlistedHash ? `/${unlistedHash}` : '');
+  }
+
   function applyBrowserHeaders(headers) {
     headers['User-Agent'] = navigator.userAgent;
 
@@ -468,7 +494,8 @@
     extraHeaders,
     sourceTabId = -1
   }) {
-    const cookieContext = await getCookieContext(url, referer, sourceTabId);
+    const effectiveUrl = normalizeVimeoPlayerUrl(url);
+    const cookieContext = await getCookieContext(effectiveUrl, referer, sourceTabId);
 
     const headers = { ...(extraHeaders || {}) };
     if (cookieContext.header) headers.Cookie = cookieContext.header;
@@ -477,7 +504,7 @@
     if (cookieContext.cookies.length) headers[COOKIE_JAR_HEADER] = JSON.stringify(cookieContext.cookies);
 
     return postJson(C.YT_DOWNLOAD_URL, {
-      url,
+      url: effectiveUrl,
       formatId,
       filename,
       title: title || filename,
