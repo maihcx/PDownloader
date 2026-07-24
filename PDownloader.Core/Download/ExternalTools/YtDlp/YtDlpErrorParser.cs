@@ -21,7 +21,7 @@ internal static class YtDlpErrorParser
     {
         if (string.IsNullOrWhiteSpace(standardError))
         {
-            return "yt-dlp thất bại (không có thông tin lỗi).";
+            return "yt-dlp failed (no error information).";
         }
 
         string[] lines = standardError.Split(
