@@ -46,6 +46,7 @@ internal static class YtDlpCommandBuilder
 
     public static IReadOnlyList<string> BuildAnalyze(
         string url,
+        string? referer,
         string? userAgent,
         IReadOnlyDictionary<string, string>? extraHeaders,
         string quickJsPath,
@@ -58,6 +59,7 @@ internal static class YtDlpCommandBuilder
             "--no-playlist",
         };
 
+        AddReferer(arguments, referer);
         AddUserAgent(arguments, userAgent);
         AddExtraHeaders(arguments, extraHeaders);
         AddQuickJs(arguments, quickJsPath);
@@ -111,7 +113,6 @@ internal static class YtDlpCommandBuilder
         arguments.Add("--user-agent");
         arguments.Add(userAgent);
     }
-
 
     private static void AddExtraHeaders(
         List<string> arguments,
