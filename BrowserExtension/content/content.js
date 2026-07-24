@@ -118,6 +118,61 @@ function getCanonicalYouTubeUrl(rawUrl = location.href) {
   return videoId ? `https://www.youtube.com/watch?v=${videoId}` : '';
 }
 
+function isVimeoHost(hostname = location.hostname) {
+  const host = String(hostname || '').toLowerCase().replace(/^www\./, '');
+  return host === 'vimeo.com'
+    || host.endsWith('.vimeo.com');
+}
+
+function getVimeoVideoInfo(rawUrl = location.href) {
+  let url;
+  try {
+    url = new URL(rawUrl, location.href);
+  } catch (_) {
+    return null;
+  }
+
+  if (!isVimeoHost(url.hostname)) return null;
+
+  const pathParts = url.pathname.split('/').filter(Boolean);
+  let videoId = '';
+  let unlistedHash = '';
+
+  if (url.hostname.toLowerCase() === 'player.vimeo.com') {
+    if (pathParts[0]?.toLowerCase() !== 'video') return null;
+    videoId = pathParts[1] || '';
+    unlistedHash = url.searchParams.get('h') || '';
+  } else {
+    const videoIndex = pathParts[0]?.toLowerCase() === 'video' ? 1 : 0;
+    videoId = pathParts[videoIndex] || '';
+    unlistedHash = pathParts[videoIndex + 1] || url.searchParams.get('h') || '';
+  }
+
+  if (!/^\d+$/.test(videoId)) return null;
+  if (unlistedHash && !/^[A-Za-z0-9_-]+$/.test(unlistedHash)) {
+    unlistedHash = '';
+  }
+
+  return { videoId, unlistedHash };
+}
+
+function getCanonicalVimeoUrl(rawUrl = location.href) {
+  const info = getVimeoVideoInfo(rawUrl);
+  if (!info) return '';
+
+  return `https://vimeo.com/${info.videoId}`
+    + (info.unlistedHash ? `/${info.unlistedHash}` : '');
+}
+
+function getEmbeddingPageReferer() {
+  const referrer = String(document.referrer || '').trim();
+  if (window !== window.top && /^https?:\/\//i.test(referrer)) {
+    return referrer;
+  }
+
+  return '';
+}
+
 function isYouTubeWatch() {
   const host = location.hostname.toLowerCase();
   const isRegularYouTube = host === 'youtube.com' || host.endsWith('.youtube.com');
@@ -205,6 +260,30 @@ function getBtn() {
           filename,
           title: mediaTitle,
           referer: location.href
+        });
+
+        showBtnFeedback(
+          resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
+          resp?.success
+        );
+        return;
+      }
+
+      if (isVimeoHost(hostname)) {
+        const embeddingReferer = getEmbeddingPageReferer();
+        const canonicalUrl = getCanonicalVimeoUrl(location.href);
+
+        url = canonicalUrl || getSiteUrl(activeVideo, activeContextNode);
+
+        const mediaTitle = getMediaTitle(activeVideo, activeContextNode);
+        filename = sanitizeName(mediaTitle) + '.mp4';
+
+        const resp = await sendMessageSafe({
+          action: 'download_via_ytdlp',
+          url,
+          filename,
+          title: mediaTitle,
+          referer: embeddingReferer || url || location.href
         });
 
         showBtnFeedback(
@@ -396,6 +475,40 @@ function showButton() {
   btn.style.opacity = '1';
 }
 
+function getButtonHost(video) {
+  if (!(video instanceof Element)) {
+    return document.body || document.documentElement;
+  }
+
+  const dialog = video.closest?.('dialog[open]');
+  if (dialog) {
+    return dialog.querySelector?.('.fancybox__container') || dialog;
+  }
+
+  const fullscreen = document.fullscreenElement;
+  if (fullscreen instanceof Element && fullscreen.contains(video)) {
+    return fullscreen;
+  }
+
+  try {
+    const popover = video.closest?.(':popover-open');
+    if (popover) return popover;
+  } catch (_) { }
+
+  return document.body || document.documentElement;
+}
+
+function mountButtonForVideo(video) {
+  const btn = getBtn();
+  const host = getButtonHost(video);
+
+  if (host && btn.parentNode !== host) {
+    host.appendChild(btn);
+  }
+
+  return btn;
+}
+
 function hideButton(clearActive = true) {
   if (_btn) {
     _btn.style.opacity = '0';
@@ -417,7 +530,7 @@ function positionBtn(video) {
   }
 
   const rect = video.getBoundingClientRect();
-  const btn = getBtn();
+  const btn = mountButtonForVideo(video);
   const isVertical = ['tiktok.com', 'instagram.com', 'facebook.com'].some(h => location.hostname.includes(h))
     || location.pathname.startsWith('/shorts/');
 
@@ -562,7 +675,6 @@ function findVideoAtPoint(x, y, target) {
   const targetContext = targetElement?.closest?.(VIDEO_CONTEXT_SELECTOR);
   addVideosFromRoot(targetContext, candidates);
 
-  // Fallback for players whose transparent controls are not nested under the video container.
   if (candidates.size === 0) {
     let ancestor = targetElement;
     for (let level = 0; level < 12 && ancestor; level++, ancestor = ancestor.parentElement) {
