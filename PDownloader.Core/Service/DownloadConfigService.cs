@@ -26,7 +26,14 @@ public class DownloadConfigService
     public DownloadConfigService()
     {
         LoadSettings(DownloadConfigs);
+        EnsureDefaults(DownloadConfigs);
     }
+
+    public static string GetDefaultTempFolder() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "SM SOFT",
+        "PDownloader",
+        "Temp");
 
     private void LoadSettings(DownloadConfigs? configs)
     {
@@ -47,10 +54,29 @@ public class DownloadConfigService
         }
         catch
         {
+            // Keep defaults when an old or malformed settings payload cannot be read.
         }
     }
 
-    private void CopyProperties(DownloadConfigs source, DownloadConfigs target)
+    private static void EnsureDefaults(DownloadConfigs? configs)
+    {
+        if (configs == null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(configs.DefaultTempFolder))
+        {
+            configs.DefaultTempFolder = GetDefaultTempFolder();
+        }
+
+        if (configs.DefaultThreadCount <= 0)
+        {
+            configs.DefaultThreadCount = 8;
+        }
+    }
+
+    private static void CopyProperties(DownloadConfigs source, DownloadConfigs target)
     {
         foreach (PropertyInfo property in typeof(DownloadConfigs).GetProperties())
         {
@@ -66,5 +92,6 @@ public class DownloadConfigService
     public void Reload()
     {
         LoadSettings(DownloadConfigs);
+        EnsureDefaults(DownloadConfigs);
     }
 }

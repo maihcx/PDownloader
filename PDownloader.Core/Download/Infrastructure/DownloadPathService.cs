@@ -20,19 +20,34 @@ internal sealed class DownloadPathService
     private const int CleanupAttempts = 5;
     private const int CleanupDelayMilliseconds = 100;
 
-    public string GetTempDirectory(string id) => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SM SOFT",
-        "PDownloader",
-        "Temp",
+    public string GetTempDirectory(DownloadItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        string tempRoot = ResolveTempRoot(item);
+        item.TempRootPath = tempRoot;
+        return BuildPerDownloadTempDirectory(tempRoot, item.Id);
+    }
+
+    public string GetTempDirectory(string id) => BuildPerDownloadTempDirectory(
+        GetConfiguredTempRoot(),
         id);
 
     public string GetOutputFolder(DownloadItem item)
     {
-        return string.IsNullOrWhiteSpace(item.SavePath)
-            ? CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultDownloadFolder
-                ?? Helpers.GetDefaultFolder()
-            : item.SavePath;
+        if (!string.IsNullOrWhiteSpace(item.SavePath))
+        {
+            return item.SavePath;
+        }
+
+        string? configuredFolder = CFSCommandHandler
+            .DownloadConfigService
+            .DownloadConfigs?
+            .DefaultDownloadFolder;
+
+        return string.IsNullOrWhiteSpace(configuredFolder)
+            ? Helpers.GetDefaultFolder()
+            : configuredFolder;
     }
 
     public string GetFinalPath(DownloadItem item)
@@ -179,10 +194,10 @@ internal sealed class DownloadPathService
         }
     }
 
-    public static void DeleteTempFiles(string id, string? savePath, string? fileName)
+    public static void DeleteTempFiles(DownloadItem item)
     {
         var pathService = new DownloadPathService();
-        string tempDirectory = pathService.GetTempDirectory(id);
+        string tempDirectory = pathService.GetTempDirectory(item);
         MergeRecoveryManifest? pendingMerge = MergeRecoveryStore.TryLoad(tempDirectory);
 
         if (pendingMerge != null)
@@ -194,12 +209,17 @@ internal sealed class DownloadPathService
 
         try
         {
-            string folder = string.IsNullOrWhiteSpace(savePath)
-                ? CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultDownloadFolder
-                    ?? Helpers.GetDefaultFolder()
-                : savePath;
+            string? configuredFolder = CFSCommandHandler
+                .DownloadConfigService
+                .DownloadConfigs?
+                .DefaultDownloadFolder;
+            string folder = !string.IsNullOrWhiteSpace(item.SavePath)
+                ? item.SavePath
+                : string.IsNullOrWhiteSpace(configuredFolder)
+                    ? Helpers.GetDefaultFolder()
+                    : configuredFolder;
             string name = SanitizeFileName(
-                string.IsNullOrWhiteSpace(fileName) ? "download" : fileName);
+                string.IsNullOrWhiteSpace(item.FileName) ? "download" : item.FileName);
             string mergingPath = Path.Combine(Path.GetFullPath(folder), name) + ".merging";
 
             TryDeleteFile(mergingPath);
@@ -209,6 +229,107 @@ internal sealed class DownloadPathService
             // Best effort cleanup.
         }
     }
+
+    private static string ResolveTempRoot(DownloadItem item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.TempRootPath))
+        {
+            return NormalizeTempRoot(item.TempRootPath);
+        }
+
+        string configuredRoot = GetConfiguredTempRoot();
+        string legacyRoot = GetLegacyTempRoot();
+        string configuredDirectory = BuildPerDownloadTempDirectory(configuredRoot, item.Id);
+        string legacyDirectory = BuildPerDownloadTempDirectory(legacyRoot, item.Id);
+
+        if (ContainsDownloadData(configuredDirectory))
+        {
+            return configuredRoot;
+        }
+
+        if (!PathsEqual(configuredRoot, legacyRoot)
+            && ContainsDownloadData(legacyDirectory))
+        {
+            return legacyRoot;
+        }
+
+        if (Directory.Exists(configuredDirectory))
+        {
+            return configuredRoot;
+        }
+
+        if (!PathsEqual(configuredRoot, legacyRoot)
+            && Directory.Exists(legacyDirectory))
+        {
+            return legacyRoot;
+        }
+
+        return configuredRoot;
+    }
+
+    private static string GetConfiguredTempRoot()
+    {
+        string? configured = CFSCommandHandler
+            .DownloadConfigService
+            .DownloadConfigs?
+            .DefaultTempFolder;
+
+        return NormalizeTempRoot(configured);
+    }
+
+    private static string GetLegacyTempRoot() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "SM SOFT",
+        "PDownloader",
+        "Temp");
+
+    private static string NormalizeTempRoot(string? path)
+    {
+        string fallback = GetLegacyTempRoot();
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return Path.TrimEndingDirectorySeparator(Path.GetFullPath(fallback));
+        }
+
+        try
+        {
+            string expanded = Environment.ExpandEnvironmentVariables(path.Trim().Trim('"'));
+            return Path.TrimEndingDirectorySeparator(Path.GetFullPath(expanded));
+        }
+        catch
+        {
+            return Path.TrimEndingDirectorySeparator(Path.GetFullPath(fallback));
+        }
+    }
+
+    private static string BuildPerDownloadTempDirectory(string root, string id)
+    {
+        string safeId = SanitizeFileName(id);
+        return Path.Combine(root, safeId);
+    }
+
+    private static bool ContainsDownloadData(string directory)
+    {
+        if (!Directory.Exists(directory))
+        {
+            return false;
+        }
+
+        try
+        {
+            return Directory.EnumerateFileSystemEntries(directory).Any();
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool PathsEqual(string left, string right) =>
+        string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)),
+            StringComparison.OrdinalIgnoreCase);
 
     private static void TryDeleteFile(string path)
     {

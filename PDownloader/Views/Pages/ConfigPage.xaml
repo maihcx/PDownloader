@@ -82,6 +82,37 @@
                     </Grid>
                 </ui:CardExpander>
 
+                <!-- Temporary download data folder -->
+                <ui:CardExpander Icon="{ui:SymbolIcon FolderOpen24}"
+                                 Margin="0,0,0,8" IsExpanded="True">
+                    <ui:CardExpander.Header>
+                        <StackPanel>
+                            <ui:TextBlock FontTypography="Body"
+                                         Text="{utils:Localization page_config_temp_folder_title}"
+                                         FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock Text="{utils:Localization page_config_temp_folder_summary}"
+                                       Opacity="0.6" FontSize="12" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </ui:CardExpander.Header>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBox Grid.Column="0"
+                                    Text="{Binding ViewModel.DownloadConfigs.DefaultTempFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    PlaceholderText="{utils:Localization page_config_temp_folder_placeholder}"/>
+                        <ui:Button Grid.Column="1" Margin="8,0,0,0"
+                                   Content="{utils:Localization page_config_temp_folder_default}"
+                                   Command="{Binding ViewModel.ResetTempFolderCommand}"/>
+                        <ui:Button Grid.Column="2" Margin="8,0,0,0"
+                                   Icon="{ui:SymbolIcon FolderOpen24}"
+                                   Content="{utils:Localization page_config_folder_browse}"
+                                   Command="{Binding ViewModel.BrowseTempFolderCommand}"/>
+                    </Grid>
+                </ui:CardExpander>
+
                 <!-- Thread count -->
                 <ui:CardExpander Icon="{ui:SymbolIcon Symbol=Settings20}"
                                  Margin="0,0,0,8" IsExpanded="True">

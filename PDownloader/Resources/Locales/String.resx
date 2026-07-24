@@ -279,6 +279,18 @@
   <data name="page_config_folder_browse" xml:space="preserve">
     <value>page_config_folder_browse</value>
   </data>
+  <data name="page_config_temp_folder_title" xml:space="preserve">
+    <value>page_config_temp_folder_title</value>
+  </data>
+  <data name="page_config_temp_folder_summary" xml:space="preserve">
+    <value>page_config_temp_folder_summary</value>
+  </data>
+  <data name="page_config_temp_folder_placeholder" xml:space="preserve">
+    <value>page_config_temp_folder_placeholder</value>
+  </data>
+  <data name="page_config_temp_folder_default" xml:space="preserve">
+    <value>page_config_temp_folder_default</value>
+  </data>
   <data name="page_config_threads_title" xml:space="preserve">
     <value>page_config_threads_title</value>
   </data>
@@ -302,6 +314,12 @@
   </data>
   <data name="page_config_save" xml:space="preserve">
     <value>page_config_save</value>
+  </data>
+  <data name="page_config_save_success" xml:space="preserve">
+    <value>page_config_save_success</value>
+  </data>
+  <data name="page_config_save_error" xml:space="preserve">
+    <value>page_config_save_error</value>
   </data>
   <data name="page_config_svc_active_title" xml:space="preserve">
     <value>page_config_svc_active_title</value>
