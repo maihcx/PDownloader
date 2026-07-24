@@ -74,6 +74,10 @@ public class DownloadConfigService
         {
             configs.DefaultThreadCount = 8;
         }
+
+        configs.FileMergeMode = FileMergeModeParser
+            .Parse(configs.FileMergeMode)
+            .ToConfigValue();
     }
 
     private static void CopyProperties(DownloadConfigs source, DownloadConfigs target)
@@ -94,4 +98,7 @@ public class DownloadConfigService
         LoadSettings(DownloadConfigs);
         EnsureDefaults(DownloadConfigs);
     }
+
+    public FileMergeMode GetFileMergeMode() =>
+        FileMergeModeParser.Parse(DownloadConfigs?.FileMergeMode);
 }

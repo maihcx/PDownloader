@@ -32,7 +32,16 @@ public class DownloadManager : IDisposable
 
     public event Action<DownloadItem>? OnItemChanged;
 
-    public DownloadItem Enqueue(string id, string url, string saveTo = "", string fileName = "", int threads = 8, bool isYoutube = false, string? formatId = null, Dictionary<string, string>? customHeaders = null)
+    public DownloadItem Enqueue(
+        string id,
+        string url,
+        string saveTo = "",
+        string fileName = "",
+        int threads = 8,
+        bool isYoutube = false,
+        string? formatId = null,
+        Dictionary<string, string>? customHeaders = null,
+        FileMergeMode mergeMode = FileMergeMode.Balanced)
     {
         var item = new DownloadItem
         {
@@ -44,9 +53,12 @@ public class DownloadManager : IDisposable
             Status = DownloadStatus.Queued,
             IsYoutube = isYoutube,
             FormatId = formatId,
-            CustomHeaders = customHeaders
+            CustomHeaders = customHeaders,
+            MergeMode = mergeMode
         };
 
+        // Pin the temp root at enqueue time. A later settings change must not move
+        // an active/queued download away from its resumable segment files.
         _ = new DownloadPathService().GetTempDirectory(item);
 
         lock (_lock) { _downloads.Add(item); }
@@ -86,6 +98,8 @@ public class DownloadManager : IDisposable
 
             var progress = new Progress<DownloadProgress>(_ =>
             {
+                // DownloadEngine already owns and updates the DownloadItem.
+                // This callback only publishes the latest snapshot.
                 OnItemChanged?.Invoke(item);
             });
 
@@ -132,6 +146,11 @@ public class DownloadManager : IDisposable
             return;
         }
 
+        if (!item.CanPause)
+        {
+            return;
+        }
+
         if (_ctsByItem.TryGetValue(id, out CancellationTokenSource? cts))
         {
             cts.Cancel();
@@ -147,7 +166,7 @@ public class DownloadManager : IDisposable
 
         lock (_lock)
         {
-            if (item.Status != DownloadStatus.Paused)
+            if (!item.CanResume)
             {
                 return;
             }

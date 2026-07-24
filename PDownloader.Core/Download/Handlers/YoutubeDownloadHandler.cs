@@ -124,6 +124,7 @@ internal sealed class YoutubeDownloadHandler
                     outputFolder,
                     fileStem,
                     _reportMergeProgress,
+                    _item.MergeMode,
                     cancellationToken);
             }
 
@@ -178,15 +179,24 @@ internal sealed class YoutubeDownloadHandler
                 progressBaseOffset,
                 _reportProgress,
                 progress => _reportThreadProgress(progressStage, progress),
+                () =>
+                {
+                    _item.Status = DownloadStatus.Merging;
+                    _reportMergeProgress(0);
+                },
+                _reportMergeProgress,
                 streams.Count == 1 ? ApplyFileHashes : null,
+                _item.MergeMode,
                 cancellationToken);
 
+            _item.Status = DownloadStatus.Downloading;
             DownloadContentInspector.EnsureDownloadedMediaFile(rawPath, stream);
 
             long actualLength = File.Exists(rawPath)
                 ? new FileInfo(rawPath).Length
                 : probe.TotalBytes;
             progressBaseOffset += actualLength;
+            _reportProgress(progressBaseOffset, 0);
             files.Add(new DownloadedStreamFile(stream, rawPath));
             DownloadPathService.CleanupTemp(segmentDirectory);
         }

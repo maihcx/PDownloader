@@ -22,6 +22,7 @@ internal sealed class FfmpegMuxer
         string outputFolder,
         string fileStem,
         Action<double>? reportProgress,
+        FileMergeMode fileMergeMode,
         CancellationToken cancellationToken)
     {
         DownloadedStreamFile video = files.FirstOrDefault(file => file.Stream.HasVideo)
@@ -45,10 +46,20 @@ internal sealed class FfmpegMuxer
 
         ValidateSources(sourcePaths);
 
+        if (fileMergeMode == FileMergeMode.HighPerformance)
+        {
+            return await ExecuteHighPerformanceAsync(
+                sourcePaths,
+                finalPath,
+                reportProgress,
+                cancellationToken);
+        }
+
         string recoveryDirectory = MergeRecoveryStore.GetRecoveryDirectory(sourcePaths);
         var manifest = new MergeRecoveryManifest
         {
             Kind = MergeRecoveryKind.FfmpegMux,
+            FileMergeMode = fileMergeMode,
             DestinationPath = finalPath,
             SourcePaths = sourcePaths,
             ExpectedOutputBytes = sourcePaths.Sum(GetFileLength),
@@ -87,6 +98,13 @@ internal sealed class FfmpegMuxer
         if (File.Exists(manifest.DestinationPath)
             && new FileInfo(manifest.DestinationPath).Length > 0)
         {
+            if (manifest.FileMergeMode == FileMergeMode.DataIntegrity)
+            {
+                await VerifyOutputDurabilityAsync(
+                    manifest.DestinationPath,
+                    cancellationToken);
+            }
+
             reportProgress?.Invoke(100);
             CleanupSources(manifest.SourcePaths);
             return manifest.DestinationPath;
@@ -175,6 +193,11 @@ internal sealed class FfmpegMuxer
                     $"FFmpeg merging failed (exit {process.ExitCode}): {tail}");
             }
 
+            if (manifest.FileMergeMode == FileMergeMode.DataIntegrity)
+            {
+                await VerifyOutputDurabilityAsync(mergingPath, cancellationToken);
+            }
+
             if (File.Exists(manifest.DestinationPath))
             {
                 throw new IOException(
@@ -204,6 +227,127 @@ internal sealed class FfmpegMuxer
                 ex.Message,
                 ex);
         }
+    }
+
+    private static async Task<string> ExecuteHighPerformanceAsync(
+        IReadOnlyList<string> sourcePaths,
+        string destinationPath,
+        Action<double>? reportProgress,
+        CancellationToken cancellationToken)
+    {
+        ValidateSources(sourcePaths);
+
+        string ffmpegPath = FfmpegExecutableLocator.Instance.Find()
+            ?? throw new InvalidOperationException(
+                "ffmpeg not found — ffmpeg is required to merge separately downloaded video and audio into a single file. " +
+                "Place ffmpeg.exe next to PDownloader.Core.exe or add it to the PATH.");
+
+        if (File.Exists(destinationPath))
+        {
+            throw new IOException(
+                $"Cannot complete file merging because the destination file already exists: {destinationPath}");
+        }
+
+        string? outputDirectory = Path.GetDirectoryName(destinationPath);
+        if (!string.IsNullOrWhiteSpace(outputDirectory))
+        {
+            Directory.CreateDirectory(outputDirectory);
+        }
+
+        string videoPath = sourcePaths[0];
+        string? audioPath = sourcePaths.Count > 1 ? sourcePaths[1] : null;
+        ProcessStartInfo startInfo = BuildStartInfo(
+            ffmpegPath,
+            videoPath,
+            audioPath,
+            destinationPath);
+
+        long expectedOutputBytes = sourcePaths.Sum(GetFileLength);
+        var mergeProgress = new MergeProgressTracker(
+            expectedOutputBytes,
+            reportProgress,
+            maxProgressBeforeComplete: 99);
+        mergeProgress.Start();
+
+        using var process = new Process { StartInfo = startInfo };
+        using var monitorCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        try
+        {
+            process.Start();
+            Task<string> standardErrorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            Task progressMonitorTask = MonitorOutputProgressAsync(
+                process,
+                destinationPath,
+                mergeProgress,
+                monitorCancellation.Token);
+
+            try
+            {
+                await process.WaitForExitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                try { process.Kill(entireProcessTree: true); } catch { }
+                throw;
+            }
+            finally
+            {
+                monitorCancellation.Cancel();
+                try
+                {
+                    await progressMonitorTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when the process finishes or is cancelled.
+                }
+            }
+
+            string standardError = await standardErrorTask;
+            if (process.ExitCode != 0
+                || !File.Exists(destinationPath)
+                || new FileInfo(destinationPath).Length <= 0)
+            {
+                string tail = standardError.Length > 500
+                    ? standardError[^500..]
+                    : standardError;
+                throw new InvalidOperationException(
+                    $"FFmpeg merging failed (exit {process.ExitCode}): {tail}");
+            }
+
+            mergeProgress.Complete();
+            CleanupSources(sourcePaths);
+            return destinationPath;
+        }
+        catch
+        {
+            TryDeletePartialOutput(destinationPath);
+            throw;
+        }
+    }
+
+    private static async Task VerifyOutputDurabilityAsync(
+        string outputPath,
+        CancellationToken cancellationToken)
+    {
+        await using (var stream = new FileStream(
+            outputPath,
+            FileMode.Open,
+            FileAccess.ReadWrite,
+            FileShare.None,
+            bufferSize: 4096,
+            options: FileOptions.Asynchronous | FileOptions.WriteThrough))
+        {
+            await stream.FlushAsync(cancellationToken);
+            stream.Flush(flushToDisk: true);
+        }
+
+        // A complete reread catches truncated or unreadable output before the source
+        // streams are released. The hash is intentionally not persisted because the
+        // normal completed-file hash pipeline remains the source of user-visible hashes.
+        _ = await FileHashCalculator.ComputeAsync(outputPath, cancellationToken);
     }
 
     private static void ValidateSources(IReadOnlyList<string> sourcePaths)

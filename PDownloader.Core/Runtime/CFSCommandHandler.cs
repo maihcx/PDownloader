@@ -199,6 +199,7 @@ public static class CFSCommandHandler
                 ?? NormalizeHeaders(req.Headers);
 
             int defaultThreads = DownloadConfigService.DownloadConfigs?.DefaultThreadCount ?? 0;
+            FileMergeMode mergeMode = DownloadConfigService.GetFileMergeMode();
 
             DownloadManager.Instance.Enqueue(
                 id: req.Id,
@@ -208,7 +209,8 @@ public static class CFSCommandHandler
                 threads: req.Threads > 0 ? req.Threads : defaultThreads,
                 isYoutube: ytMeta != null,
                 formatId: ytMeta?.FormatId,
-                customHeaders: customHeaders);
+                customHeaders: customHeaders,
+                mergeMode: mergeMode);
         }
         catch { }
     }

@@ -72,6 +72,8 @@ public class DownloadConfigService
         {
             configs.DefaultThreadCount = 8;
         }
+
+        configs.FileMergeMode = NormalizeFileMergeMode(configs.FileMergeMode);
     }
 
     private static void CopyProperties(DownloadConfigs source, DownloadConfigs target)
@@ -105,6 +107,7 @@ public class DownloadConfigService
             configs.DefaultTempFolder = NormalizeAndValidateTempFolder(
                 configs.DefaultTempFolder);
             configs.DefaultThreadCount = Math.Clamp(configs.DefaultThreadCount, 1, 32);
+            configs.FileMergeMode = NormalizeFileMergeMode(configs.FileMergeMode);
 
             string raw = JsonSerializer.Serialize(configs);
             UserDataStore.SetValue(StoreKey, raw);
@@ -123,6 +126,16 @@ public class DownloadConfigService
         {
             throw new IOException(errorMessage);
         }
+    }
+
+    private static string NormalizeFileMergeMode(string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "highperformance" => "HighPerformance",
+            "dataintegrity" => "DataIntegrity",
+            _ => "Balanced"
+        };
     }
 
     private static string NormalizeAndValidateTempFolder(string? folder)

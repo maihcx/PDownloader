@@ -45,7 +45,10 @@ internal sealed class MultiSegmentDownloadService
         long progressBaseOffset,
         Action<long, double> reportProgress,
         Action<IReadOnlyList<DownloadThreadProgress>>? reportThreadProgress,
+        Action? mergingStarted,
+        Action<double>? reportMergeProgress,
         Action<FileHashResult>? reportFileHashes,
+        FileMergeMode fileMergeMode,
         CancellationToken cancellationToken)
     {
         MergeRecoveryManifest? pendingMerge = MergeRecoveryStore.TryLoad(tempDirectory);
@@ -54,9 +57,10 @@ internal sealed class MultiSegmentDownloadService
                 Path.GetFullPath(destinationPath),
                 StringComparison.OrdinalIgnoreCase))
         {
+            mergingStarted?.Invoke();
             await new RecoverableFileMerger().RetryAsync(
                 pendingMerge,
-                reportProgress: null,
+                reportProgress: reportMergeProgress,
                 reportFileHashes: reportFileHashes,
                 cancellationToken: cancellationToken);
 
@@ -82,9 +86,10 @@ internal sealed class MultiSegmentDownloadService
             progressBaseOffset,
             reportProgress: reportProgress,
             reportThreadProgress: reportThreadProgress,
-            mergingStarted: null,
-            reportMergeProgress: null,
+            mergingStarted: mergingStarted,
+            reportMergeProgress: reportMergeProgress,
             reportFileHashes: reportFileHashes,
+            fileMergeMode: fileMergeMode,
             cancellationToken: cancellationToken);
         return probe;
     }
@@ -101,6 +106,7 @@ internal sealed class MultiSegmentDownloadService
         Action? mergingStarted,
         Action<double>? reportMergeProgress,
         Action<FileHashResult>? reportFileHashes,
+        FileMergeMode fileMergeMode,
         CancellationToken cancellationToken)
     {
         bool useMultipleSegments = probe.SupportsRange
@@ -155,6 +161,7 @@ internal sealed class MultiSegmentDownloadService
             destinationPath,
             reportMergeProgress,
             reportFileHashes,
+            fileMergeMode,
             cancellationToken);
 
         long finalLength = File.Exists(destinationPath)

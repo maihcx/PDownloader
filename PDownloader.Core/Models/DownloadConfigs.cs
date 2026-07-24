@@ -22,4 +22,6 @@ public partial class DownloadConfigs
     public string DefaultTempFolder { get; set; } = string.Empty;
 
     public int DefaultThreadCount { get; set; }
+
+    public string FileMergeMode { get; set; } = "Balanced";
 }

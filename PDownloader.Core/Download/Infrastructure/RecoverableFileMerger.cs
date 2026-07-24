@@ -29,13 +29,37 @@ internal sealed class RecoverableFileMerger
             reportFileHashes: null,
             cancellationToken: cancellationToken);
 
+    public Task<string> MergeAsync(
+        IReadOnlyList<string> sourcePaths,
+        string destinationPath,
+        Action<double>? reportProgress,
+        Action<FileHashResult>? reportFileHashes,
+        CancellationToken cancellationToken) =>
+        MergeAsync(
+            sourcePaths,
+            destinationPath,
+            reportProgress,
+            reportFileHashes,
+            FileMergeMode.Balanced,
+            cancellationToken);
+
     public async Task<string> MergeAsync(
         IReadOnlyList<string> sourcePaths,
         string destinationPath,
         Action<double>? reportProgress,
         Action<FileHashResult>? reportFileHashes,
+        FileMergeMode fileMergeMode,
         CancellationToken cancellationToken)
     {
+        if (fileMergeMode == FileMergeMode.HighPerformance)
+        {
+            return await new HighPerformanceFileMerger().MergeAsync(
+                sourcePaths,
+                destinationPath,
+                reportProgress,
+                cancellationToken);
+        }
+
         ValidateAllSources(sourcePaths);
 
         List<long> sourceLengths = sourcePaths
@@ -48,6 +72,7 @@ internal sealed class RecoverableFileMerger
         {
             Version = 2,
             Kind = MergeRecoveryKind.Concatenate,
+            FileMergeMode = fileMergeMode,
             DestinationPath = destinationPath,
             SourcePaths = sourcePaths.ToList(),
             SourceLengths = sourceLengths,
@@ -103,11 +128,35 @@ internal sealed class RecoverableFileMerger
         string destinationPath = manifest.DestinationPath;
         string mergingPath = MergeRecoveryStore.GetPartialOutputPath(manifest);
         string recoveryDirectory = MergeRecoveryStore.GetRecoveryDirectory(manifest.SourcePaths);
+        bool preserveSourcesUntilComplete =
+            manifest.FileMergeMode == FileMergeMode.DataIntegrity;
+        bool verifyMergedOutput = preserveSourcesUntilComplete;
 
         if (IsAlreadyFinalized(manifest))
         {
-            reportProgress?.Invoke(100);
             FileHashResult? persistedHashes = GetPersistedHashes(manifest);
+            if (manifest.FileMergeMode == FileMergeMode.DataIntegrity)
+            {
+                FileHashResult verifiedHashes = await FileHashCalculator.ComputeAsync(
+                    destinationPath,
+                    cancellationToken);
+
+                if (persistedHashes != null
+                    && !HashesEqual(persistedHashes, verifiedHashes))
+                {
+                    throw new IOException(
+                        "The completed file failed data-integrity verification. " +
+                        "The retained source parts were not deleted.");
+                }
+
+                persistedHashes = verifiedHashes;
+                SaveCompletedHashes(
+                    recoveryDirectory,
+                    manifest,
+                    verifiedHashes);
+            }
+
+            reportProgress?.Invoke(100);
             if (persistedHashes != null)
             {
                 reportFileHashes?.Invoke(persistedHashes);
@@ -124,8 +173,21 @@ internal sealed class RecoverableFileMerger
             mergingPath);
         ValidateCheckpoint(manifest);
         PreparePartialOutputForResume(manifest, mergingPath, recoveryDirectory);
+        if (preserveSourcesUntilComplete
+            && manifest.CommittedOutputBytes > 0)
+        {
+            await ValidateCommittedPrefixOrRestartAsync(
+                recoveryDirectory,
+                manifest,
+                mergingPath,
+                cancellationToken);
+        }
+
         ValidateRemainingSources(manifest);
-        CleanupCommittedSourceFiles(manifest);
+        if (!preserveSourcesUntilComplete)
+        {
+            CleanupCommittedSourceFiles(manifest);
+        }
 
         string? destinationDirectory = Path.GetDirectoryName(destinationPath);
         if (!string.IsNullOrWhiteSpace(destinationDirectory))
@@ -141,10 +203,11 @@ internal sealed class RecoverableFileMerger
         try
         {
             FileHashResult? completedHashes = GetPersistedHashes(manifest);
-            using FileHashAccumulator? hashAccumulator =
-                reportFileHashes != null && completedHashes == null
-                    ? new FileHashAccumulator()
-                    : null;
+            bool shouldHashCopiedData = completedHashes == null
+                && (reportFileHashes != null || verifyMergedOutput);
+            using FileHashAccumulator? hashAccumulator = shouldHashCopiedData
+                ? new FileHashAccumulator()
+                : null;
 
             if (hashAccumulator != null && manifest.CommittedOutputBytes > 0)
             {
@@ -223,7 +286,10 @@ internal sealed class RecoverableFileMerger
                         throw;
                     }
 
-                    TryDeleteCommittedSource(sourcePath);
+                    if (!preserveSourcesUntilComplete)
+                    {
+                        TryDeleteCommittedSource(sourcePath);
+                    }
                 }
 
                 await output.FlushAsync(cancellationToken);
@@ -242,11 +308,35 @@ internal sealed class RecoverableFileMerger
                 if (hashAccumulator != null)
                 {
                     completedHashes = hashAccumulator.Complete();
-                    SaveCompletedHashes(
-                        recoveryDirectory,
-                        manifest,
-                        completedHashes);
+                    if (!verifyMergedOutput)
+                    {
+                        SaveCompletedHashes(
+                            recoveryDirectory,
+                            manifest,
+                            completedHashes);
+                    }
                 }
+            }
+
+            if (verifyMergedOutput)
+            {
+                FileHashResult verifiedHashes = await FileHashCalculator.ComputeAsync(
+                    mergingPath,
+                    cancellationToken);
+
+                if (completedHashes != null
+                    && !HashesEqual(completedHashes, verifiedHashes))
+                {
+                    throw new IOException(
+                        "Merged-file verification failed: the data read back from disk " +
+                        "does not match the data copied from the source parts.");
+                }
+
+                completedHashes = verifiedHashes;
+                SaveCompletedHashes(
+                    recoveryDirectory,
+                    manifest,
+                    completedHashes);
             }
 
             if (File.Exists(destinationPath))
@@ -442,6 +532,99 @@ internal sealed class RecoverableFileMerger
         MergeRecoveryStore.Save(recoveryDirectory, manifest);
     }
 
+
+    private static async Task ValidateCommittedPrefixOrRestartAsync(
+        string recoveryDirectory,
+        MergeRecoveryManifest manifest,
+        string mergingPath,
+        CancellationToken cancellationToken)
+    {
+        bool matches = await CommittedPrefixMatchesSourcesAsync(
+            manifest,
+            mergingPath,
+            cancellationToken);
+        if (matches)
+        {
+            return;
+        }
+
+        // Data-integrity mode retains every source part. If the durable output
+        // prefix was deleted, truncated, or modified, discard it and rebuild
+        // from the original parts instead of trusting a damaged checkpoint.
+        RollBackUncommittedBytes(mergingPath, 0);
+        ResetCheckpoint(recoveryDirectory, manifest);
+    }
+
+    private static async Task<bool> CommittedPrefixMatchesSourcesAsync(
+        MergeRecoveryManifest manifest,
+        string mergingPath,
+        CancellationToken cancellationToken)
+    {
+        if (!File.Exists(mergingPath))
+        {
+            return false;
+        }
+
+        const int bufferSize = 1024 * 1024;
+        byte[] sourceBuffer = new byte[bufferSize];
+        byte[] outputBuffer = new byte[bufferSize];
+
+        await using var output = new FileStream(
+            mergingPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+        for (int index = 0; index < manifest.NextSourceIndex; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            string sourcePath = manifest.SourcePaths[index];
+            ValidateSourceForMerge(
+                sourcePath,
+                manifest.SourceLengths[index],
+                index);
+
+            await using var source = new FileStream(
+                sourcePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize,
+                FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+            int sourceRead;
+            while ((sourceRead = await source.ReadAsync(
+                       sourceBuffer.AsMemory(0, sourceBuffer.Length),
+                       cancellationToken)) > 0)
+            {
+                int outputRead = 0;
+                while (outputRead < sourceRead)
+                {
+                    int read = await output.ReadAsync(
+                        outputBuffer.AsMemory(outputRead, sourceRead - outputRead),
+                        cancellationToken);
+                    if (read == 0)
+                    {
+                        return false;
+                    }
+
+                    outputRead += read;
+                }
+
+                if (!sourceBuffer.AsSpan(0, sourceRead)
+                    .SequenceEqual(outputBuffer.AsSpan(0, sourceRead)))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return output.Position == manifest.CommittedOutputBytes;
+    }
+
     private static void ValidateRemainingSources(MergeRecoveryManifest manifest)
     {
         for (int index = manifest.NextSourceIndex;
@@ -491,6 +674,11 @@ internal sealed class RecoverableFileMerger
                 $"{actualLength} B, expected {expectedLength} B.");
         }
     }
+
+    private static bool HashesEqual(FileHashResult left, FileHashResult right) =>
+        left.Md5.Equals(right.Md5, StringComparison.OrdinalIgnoreCase)
+        && left.Sha1.Equals(right.Sha1, StringComparison.OrdinalIgnoreCase)
+        && left.Sha256.Equals(right.Sha256, StringComparison.OrdinalIgnoreCase);
 
     private static void SaveCompletedHashes(
         string recoveryDirectory,

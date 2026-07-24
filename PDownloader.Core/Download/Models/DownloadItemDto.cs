@@ -29,7 +29,10 @@ public record DownloadItemDto(
     bool IsMergeProgressActive,
     string Md5Hash,
     string Sha1Hash,
-    string Sha256Hash)
+    string Sha256Hash,
+    string FileMergeMode,
+    bool CanPause,
+    bool CanResume)
 {
     public static DownloadItemDto From(DownloadItem i) => new(
         i.Id.ToString(), i.Url, i.FileName, i.SavePath,
@@ -45,5 +48,8 @@ public record DownloadItemDto(
         i.IsMergeProgressActive,
         i.Md5Hash,
         i.Sha1Hash,
-        i.Sha256Hash);
+        i.Sha256Hash,
+        i.MergeMode.ToString(),
+        i.CanPause,
+        i.CanResume);
 }
