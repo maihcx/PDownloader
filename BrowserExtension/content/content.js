@@ -304,15 +304,11 @@ function getBtn() {
           minScore: 80
         });
         const candidate = detected?.candidate || null;
-        const isTikTok = hostname.includes('tiktok.com');
-        const isStrongNetworkCandidate = candidate?.source === 'network'
-          && candidate?.kind === 'direct'
-          && !candidate?.likelySegment;
+
         const shouldUseCandidate = candidate?.id && (
           candidate.kind === 'hls'
           || candidate.kind === 'dash'
           || !isSpecificMediaPageUrl(url, hostname)
-          || (isTikTok && isStrongNetworkCandidate)
         );
         let candidateTried = false;
 

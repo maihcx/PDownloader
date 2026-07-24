@@ -13,13 +13,13 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Core;
+namespace PDownloader.Runner.Models;
 
-public partial class DownloadConfigs
+public sealed class ProgressWindowBehaviorSettings
 {
-    public string DefaultDownloadFolder { get; set; } = string.Empty;
+    public bool CloseProgressWindowWhenDownloadCompletes { get; set; }
 
-    public string DefaultTempFolder { get; set; } = string.Empty;
+    public bool CloseProgressWindowAfterOpeningFile { get; set; }
 
-    public int DefaultThreadCount { get; set; }
+    public bool CloseProgressWindowAfterOpeningFolder { get; set; }
 }

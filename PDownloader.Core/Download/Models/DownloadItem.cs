@@ -91,6 +91,8 @@ public class DownloadItem : INotifyPropertyChanged
         set { _savePath = value; OnPropertyChanged(); }
     }
 
+    public string TempRootPath { get; set; } = string.Empty;
+
     private long _totalBytes = 0;
     public long TotalBytes
     {

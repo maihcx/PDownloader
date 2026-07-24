@@ -55,7 +55,7 @@ public class DownloadEngine
 
     public async Task RunAsync()
     {
-        string tempDirectory = _pathService.GetTempDirectory(_item.Id);
+        string tempDirectory = _pathService.GetTempDirectory(_item);
         Directory.CreateDirectory(tempDirectory);
 
         try
@@ -91,25 +91,22 @@ public class DownloadEngine
         }
     }
 
-    public static void DeleteTempFiles(
-        string id,
-        string? savePath,
-        string? fileName) =>
-        DownloadPathService.DeleteTempFiles(id, savePath, fileName);
+    public static void DeleteTempFiles(DownloadItem item) =>
+        DownloadPathService.DeleteTempFiles(item);
 
-    public static bool HasPendingMerge(string id)
+    public static bool HasPendingMerge(DownloadItem item)
     {
         var pathService = new DownloadPathService();
-        return MergeRecoveryStore.HasPendingInTree(pathService.GetTempDirectory(id));
+        return MergeRecoveryStore.HasPendingInTree(pathService.GetTempDirectory(item));
     }
 
     public static bool TryGetPendingMergeProgress(
-        string id,
+        DownloadItem item,
         out double progress)
     {
         var pathService = new DownloadPathService();
         return MergeRecoveryStore.TryGetPendingProgressInTree(
-            pathService.GetTempDirectory(id),
+            pathService.GetTempDirectory(item),
             out progress);
     }
 

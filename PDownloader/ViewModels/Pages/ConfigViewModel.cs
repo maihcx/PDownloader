@@ -53,16 +53,53 @@ public partial class ConfigViewModel : ObservableObject
 
         if (dialog.ShowDialog() == true)
         {
-            DownloadConfigs?.DefaultDownloadFolder = dialog.FolderName;
+            DownloadConfigs!.DefaultDownloadFolder = dialog.FolderName;
+        }
+    }
+
+    [RelayCommand]
+    private void BrowseTempFolder()
+    {
+        string configuredFolder = DownloadConfigs?.DefaultTempFolder ?? string.Empty;
+        string initialDirectory = Directory.Exists(configuredFolder)
+            ? configuredFolder
+            : DownloadConfigService.GetDefaultTempFolder();
+
+        var dialog = new OpenFolderDialog
+        {
+            Title = LanguageBase.GetLangValue("page_config_temp_folder_title"),
+            InitialDirectory = initialDirectory,
+            Multiselect = false
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            DownloadConfigs!.DefaultTempFolder = dialog.FolderName;
+        }
+    }
+
+    [RelayCommand]
+    private void ResetTempFolder()
+    {
+        if (DownloadConfigs != null)
+        {
+            DownloadConfigs.DefaultTempFolder = DownloadConfigService.GetDefaultTempFolder();
         }
     }
 
     [RelayCommand]
     private void SaveSettings()
     {
-        _configService.Save();
+        if (!_configService.TrySave(out string errorMessage))
+        {
+            StatusMessage = string.Format(
+                CultureInfo.CurrentCulture,
+                LanguageBase.GetLangValue("page_config_save_error"),
+                errorMessage);
+            return;
+        }
 
         _launcher.RefreshConfigs();
-        StatusMessage = LanguageBase.GetLangValue("page_config_save") + " ✓";
+        StatusMessage = LanguageBase.GetLangValue("page_config_save_success");
     }
 }

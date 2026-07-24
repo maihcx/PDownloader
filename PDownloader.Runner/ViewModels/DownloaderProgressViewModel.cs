@@ -20,7 +20,9 @@ public partial class DownloaderProgressViewModel : ObservableObject
     private bool _isInitialized = false;
 
     private readonly DownloaderService _downloaderService;
+    private readonly ProgressWindowBehaviorSettingsService _progressWindowSettingsService;
     private string _currentProgressVisualizationStage = string.Empty;
+    private bool _shutdownRequested;
 
     [ObservableProperty]
     private RunnerConfig _runnerConfig;
@@ -97,10 +99,12 @@ public partial class DownloaderProgressViewModel : ObservableObject
 
     public DownloaderProgressViewModel(
         RunnerConfig runnerConfig,
-        DownloaderService downloaderService)
+        DownloaderService downloaderService,
+        ProgressWindowBehaviorSettingsService progressWindowSettingsService)
     {
         RunnerConfig = runnerConfig;
         _downloaderService = downloaderService;
+        _progressWindowSettingsService = progressWindowSettingsService;
         _downloaderStatus = downloaderService.DownloaderStatus;
 
         if (!_isInitialized)
@@ -206,6 +210,14 @@ public partial class DownloaderProgressViewModel : ObservableObject
             }
 
             UpdateCompactStatusPanel(status, obj);
+
+            if (status == DownloadStatus.Completed
+                && _progressWindowSettingsService
+                    .GetCurrent()
+                    .CloseProgressWindowWhenDownloadCompletes)
+            {
+                RequestApplicationShutdown();
+            }
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
@@ -506,19 +518,41 @@ public partial class DownloaderProgressViewModel : ObservableObject
     [RelayCommand]
     private void OpenFile()
     {
-        ShellProcessLauncher.OpenFile(CompletedFilePath);
+        bool opened = ShellProcessLauncher.OpenFile(CompletedFilePath);
+        if (opened
+            && _progressWindowSettingsService
+                .GetCurrent()
+                .CloseProgressWindowAfterOpeningFile)
+        {
+            RequestApplicationShutdown();
+        }
     }
 
     [RelayCommand]
     private void OpenFolder()
     {
-        var folder = Path.GetDirectoryName(CompletedFilePath);
-        if (folder is null || !Directory.Exists(folder))
+        bool opened = ShellProcessLauncher.OpenContainingFolder(CompletedFilePath);
+        if (opened
+            && _progressWindowSettingsService
+                .GetCurrent()
+                .CloseProgressWindowAfterOpeningFolder)
+        {
+            RequestApplicationShutdown();
+        }
+    }
+
+    private void RequestApplicationShutdown()
+    {
+        if (_shutdownRequested)
         {
             return;
         }
 
-        Process.Start("explorer.exe", $"/select,\"{CompletedFilePath}\"");
+        _shutdownRequested = true;
+        Application application = Application.Current;
+        application.Dispatcher.BeginInvoke(
+            DispatcherPriority.ContextIdle,
+            new Action(() => application.Shutdown()));
     }
 
     [RelayCommand]

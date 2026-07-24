@@ -265,7 +265,7 @@
     <value>PDownloader — Cài đặt tải xuống</value>
   </data>
   <data name="page_config_header_summary" xml:space="preserve">
-    <value>Cấu hình thư mục, luồng và hành vi mặc định</value>
+    <value>Cấu hình thư mục tải, dữ liệu tạm và số luồng mặc định</value>
   </data>
   <data name="page_config_folder_title" xml:space="preserve">
     <value>Thư mục tải xuống</value>
@@ -278,6 +278,18 @@
   </data>
   <data name="page_config_folder_browse" xml:space="preserve">
     <value>Chọn...</value>
+  </data>
+  <data name="page_config_temp_folder_title" xml:space="preserve">
+    <value>Thư mục dữ liệu tạm</value>
+  </data>
+  <data name="page_config_temp_folder_summary" xml:space="preserve">
+    <value>Mỗi lượt tải dùng một thư mục con riêng để lưu segment, mảnh HLS và dữ liệu phục hồi ghép file. Các lượt tải hiện có vẫn giữ vị trí cũ để có thể tiếp tục an toàn.</value>
+  </data>
+  <data name="page_config_temp_folder_placeholder" xml:space="preserve">
+    <value>Thư mục dùng để lưu dữ liệu tải tạm</value>
+  </data>
+  <data name="page_config_temp_folder_default" xml:space="preserve">
+    <value>Mặc định</value>
   </data>
   <data name="page_config_threads_title" xml:space="preserve">
     <value>Số luồng tải mặc định</value>
@@ -302,6 +314,12 @@
   </data>
   <data name="page_config_save" xml:space="preserve">
     <value>Lưu cài đặt</value>
+  </data>
+  <data name="page_config_save_success" xml:space="preserve">
+    <value>Đã lưu cài đặt ✓</value>
+  </data>
+  <data name="page_config_save_error" xml:space="preserve">
+    <value>Không thể lưu cài đặt: {0}</value>
   </data>
   <data name="page_config_svc_active_title" xml:space="preserve">
     <value>Đang hoạt động</value>
@@ -482,5 +500,29 @@
   </data>
   <data name="about_app_title" xml:space="preserve">
     <value>Về ứng dụng</value>
+  </data>
+  <data name="page_config_progress_window_title" xml:space="preserve">
+    <value>Cửa sổ tiến trình tải xuống</value>
+  </data>
+  <data name="page_config_progress_window_summary" xml:space="preserve">
+    <value>Tùy chỉnh thời điểm cửa sổ theo dõi tác vụ tự động đóng</value>
+  </data>
+  <data name="page_config_progress_window_close_completed_title" xml:space="preserve">
+    <value>Đóng khi tải hoàn tất</value>
+  </data>
+  <data name="page_config_progress_window_close_completed_summary" xml:space="preserve">
+    <value>Tự động đóng cửa sổ tiến trình sau khi tệp được tải xuống thành công.</value>
+  </data>
+  <data name="page_config_progress_window_close_open_file_title" xml:space="preserve">
+    <value>Đóng sau khi mở tệp</value>
+  </data>
+  <data name="page_config_progress_window_close_open_file_summary" xml:space="preserve">
+    <value>Đóng cửa sổ tiến trình sau khi mở tệp đã tải xuống.</value>
+  </data>
+  <data name="page_config_progress_window_close_open_folder_title" xml:space="preserve">
+    <value>Đóng sau khi mở thư mục chứa tệp</value>
+  </data>
+  <data name="page_config_progress_window_close_open_folder_summary" xml:space="preserve">
+    <value>Đóng cửa sổ tiến trình sau khi File Explorer mở vị trí của tệp đã tải xuống.</value>
   </data>
 </root>

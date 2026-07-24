@@ -21,5 +21,17 @@ public partial class DownloadConfigs : ObservableObject
     public string _defaultDownloadFolder = string.Empty;
 
     [ObservableProperty]
+    public string _defaultTempFolder = string.Empty;
+
+    [ObservableProperty]
     public int _defaultThreadCount = 8;
+
+    [ObservableProperty]
+    public bool _closeProgressWindowWhenDownloadCompletes = false;
+
+    [ObservableProperty]
+    public bool _closeProgressWindowAfterOpeningFile = false;
+
+    [ObservableProperty]
+    public bool _closeProgressWindowAfterOpeningFolder = false;
 }

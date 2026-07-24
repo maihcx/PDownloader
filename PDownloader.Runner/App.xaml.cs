@@ -40,6 +40,7 @@ public partial class App
             {
                 services.AddSingleton(RunnerConfig.ParseArgs(_args));
                 services.AddSingleton<PowerModeService>();
+                services.AddSingleton<ProgressWindowBehaviorSettingsService>();
                 services.AddHostedService<ApplicationHostService>();
                 services.AddSingleton<DownloaderService>();
 

@@ -24,6 +24,8 @@ public record DownloadItemSnapshot(
 {
     public string? ResolvedUrl { get; init; }
 
+    public string TempRootPath { get; init; } = string.Empty;
+
     public double MergeProgress { get; init; }
 
     public bool IsMergeProgressActive { get; init; }
@@ -42,6 +44,7 @@ public record DownloadItemSnapshot(
         i.StartTime, i.EndTime)
     {
         ResolvedUrl = i.ResolvedUrl,
+        TempRootPath = i.TempRootPath,
         MergeProgress = i.MergeProgress,
         IsMergeProgressActive = i.IsMergeProgressActive,
         Md5Hash = i.Md5Hash,
@@ -59,6 +62,7 @@ public record DownloadItemSnapshot(
             ResolvedUrl = ResolvedUrl ?? string.Empty,
             FileName = FileName,
             SavePath = SavePath,
+            TempRootPath = TempRootPath,
             Threads = Threads,
             IsYoutube = IsYoutube,
             FormatId = FormatId,
