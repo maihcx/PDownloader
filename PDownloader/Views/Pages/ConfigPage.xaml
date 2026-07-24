@@ -32,7 +32,7 @@
 
                 <!-- Download folder -->
                 <ui:CardExpander Icon="{ui:SymbolIcon Folder24}"
-                                 Margin="0,0,0,8" IsExpanded="True">
+                                 Margin="0,0,0,8" IsExpanded="False">
                     <ui:CardExpander.Header>
                         <StackPanel>
                             <ui:TextBlock FontTypography="Body"
@@ -59,7 +59,8 @@
 
                 <!-- Temporary download data folder -->
                 <ui:CardExpander Icon="{ui:SymbolIcon FolderOpen24}"
-                                 Margin="0,0,0,8" IsExpanded="True">
+                                 Margin="0,0,0,8"
+                                 IsExpanded="False">
                     <ui:CardExpander.Header>
                         <StackPanel>
                             <ui:TextBlock FontTypography="Body"
@@ -90,7 +91,8 @@
 
                 <!-- Thread count -->
                 <ui:CardExpander Icon="{ui:SymbolIcon Symbol=Settings20}"
-                                 Margin="0,0,0,8" IsExpanded="True">
+                                 Margin="0,0,0,8"
+                                 IsExpanded="False">
                     <ui:CardExpander.Header>
                         <StackPanel>
                             <ui:TextBlock FontTypography="Body"
@@ -114,7 +116,8 @@
 
                 <!-- Download progress window behavior -->
                 <ui:CardExpander Icon="{ui:SymbolIcon WindowSettings20}"
-                                 Margin="0,0,0,8" IsExpanded="True">
+                                 Margin="0,0,0,8"
+                                 IsExpanded="False">
                     <ui:CardExpander.Header>
                         <StackPanel>
                             <ui:TextBlock FontTypography="Body"
