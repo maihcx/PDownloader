@@ -568,7 +568,7 @@ function isSpecificMediaPageUrl(rawUrl, hostname = location.hostname) {
     const host = String(hostname || url.hostname).toLowerCase();
 
     if (host.includes('tiktok.com')) return /\/@[^/]+\/video\/\d+/i.test(path);
-    if (host.includes('instagram.com')) return /^\/(?:reel|p|tv)\/[^/]+/i.test(path);
+    if (host.includes('instagram.com')) return /^\/(?:reel|reels|p|tv)\/[^/]+/i.test(path);
     if (host.includes('facebook.com') || host.includes('fb.watch')) {
       return !!url.searchParams.get('v')
         || /\/(?:reel|videos|watch)\//i.test(path)
