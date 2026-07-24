@@ -52,8 +52,8 @@ internal static class YtDlpJsonParser
         {
             string preview = json.Length > 300 ? json[..300] + "..." : json;
             throw new InvalidOperationException(
-                "Không tìm thấy URL trực tiếp trong JSON yt-dlp trả về. " +
-                "JSON (rút gọn): " + preview);
+                "Direct URL not found in the JSON returned by yt-dlp. " +
+                "JSON (abbreviated): " + preview);
         }
 
         return streams;
@@ -68,7 +68,7 @@ internal static class YtDlpJsonParser
         if (!root.TryGetProperty("formats", out JsonElement formatArray)
             || formatArray.ValueKind != JsonValueKind.Array)
         {
-            return YtAnalyzeResult.Fail("yt-dlp không trả về danh sách formats.");
+            return YtAnalyzeResult.Fail("yt-dlp does not return the list of formats.");
         }
 
         var formats = new List<YtFormat>();
@@ -128,6 +128,8 @@ internal static class YtDlpJsonParser
 
         return new ResolvedStream
         {
+            FormatId = element.GetStringOrDefault("format_id") ?? string.Empty,
+            Protocol = element.GetStringOrDefault("protocol") ?? string.Empty,
             Url = element.GetStringOrDefault("url") ?? string.Empty,
             Ext = element.GetStringOrDefault("ext") ?? "mp4",
             HasVideo = !string.Equals(videoCodec, "none", StringComparison.OrdinalIgnoreCase),
@@ -254,7 +256,7 @@ internal static class YtDlpJsonParser
             .FirstOrDefault(line => line.StartsWith('{'));
 
         return json ?? throw new InvalidOperationException(
-            "yt-dlp không trả về JSON hợp lệ.");
+            "yt-dlp does not return valid JSON.");
     }
 
     private static long GetFileSize(JsonElement element)

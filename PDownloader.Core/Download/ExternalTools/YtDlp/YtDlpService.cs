@@ -103,8 +103,8 @@ public sealed class YtDlpService
         if (ytDlpPath == null)
         {
             return YtAnalyzeResult.Fail(
-                "yt-dlp không tìm thấy. Đặt yt-dlp.exe cạnh PDownloader.exe " +
-                "hoặc thêm vào PATH rồi khởi động lại.");
+                "yt-dlp not found. Place yt-dlp.exe next to PDownloader.exe " +
+                "or add it to the PATH and restart.");
         }
 
         string? referer = GetHeader(extraHeaders, "Referer");
@@ -141,7 +141,7 @@ public sealed class YtDlpService
             catch (Exception exception)
             {
                 return YtAnalyzeResult.Fail(
-                    $"Lỗi parse JSON từ yt-dlp: {exception.Message}");
+                    $"JSON parsing error from yt-dlp: {exception.Message}");
             }
         }
         finally
@@ -235,13 +235,13 @@ public sealed class YtDlpService
     private string RequireYtDlp()
     {
         return FindYtDlp()
-            ?? throw new InvalidOperationException("yt-dlp không tìm thấy.");
+            ?? throw new InvalidOperationException("yt-dlp not found.");
     }
 
     private string RequireQuickJs()
     {
         return FindQJS()
-            ?? throw new InvalidOperationException("qjs không tìm thấy.");
+            ?? throw new InvalidOperationException("qjs not found.");
     }
 
     private static void EnsureSuccessful(ExternalProcessResult result)
