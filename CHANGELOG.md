@@ -1,3 +1,23 @@
+## v0.8.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- Add Vimeo handling and content inspection (#97) — @maihcx
+- [extension] Bump browser extension to v0.3.14 (#96) — @maihcx
+
+## 🐛 Bug Fixes
+
+- [extension] Vimeo video download support (#94) — @maihcx
+- [extension] Fix button mounting for videos in different contexts (#93) — @maihcx
+
+## 🧹 Maintenance
+
+- Translate yt-dlp messages to English (#98) — @maihcx
+
+
+---
+
 ## v0.7.1
 
 ## 🚀 Changelog
