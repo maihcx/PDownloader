@@ -13,25 +13,13 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Models;
+namespace PDownloader.Runner.Models;
 
-public partial class DownloadConfigs : ObservableObject
+public sealed class ProgressWindowBehaviorSettings
 {
-    [ObservableProperty]
-    public string _defaultDownloadFolder = string.Empty;
+    public bool CloseProgressWindowWhenDownloadCompletes { get; set; }
 
-    [ObservableProperty]
-    public string _defaultTempFolder = string.Empty;
+    public bool CloseProgressWindowAfterOpeningFile { get; set; }
 
-    [ObservableProperty]
-    public int _defaultThreadCount = 8;
-
-    [ObservableProperty]
-    public bool _closeProgressWindowWhenDownloadCompletes = false;
-
-    [ObservableProperty]
-    public bool _closeProgressWindowAfterOpeningFile = false;
-
-    [ObservableProperty]
-    public bool _closeProgressWindowAfterOpeningFolder = false;
+    public bool CloseProgressWindowAfterOpeningFolder { get; set; }
 }

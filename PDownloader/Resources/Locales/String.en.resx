@@ -501,4 +501,28 @@
   <data name="about_app_title" xml:space="preserve">
     <value>About app</value>
   </data>
+  <data name="page_config_progress_window_title" xml:space="preserve">
+    <value>Download progress window</value>
+  </data>
+  <data name="page_config_progress_window_summary" xml:space="preserve">
+    <value>Choose when the task progress window closes automatically</value>
+  </data>
+  <data name="page_config_progress_window_close_completed_title" xml:space="preserve">
+    <value>Close when the download completes</value>
+  </data>
+  <data name="page_config_progress_window_close_completed_summary" xml:space="preserve">
+    <value>Automatically close the progress window after the file downloads successfully.</value>
+  </data>
+  <data name="page_config_progress_window_close_open_file_title" xml:space="preserve">
+    <value>Close after opening the file</value>
+  </data>
+  <data name="page_config_progress_window_close_open_file_summary" xml:space="preserve">
+    <value>Close the progress window after the downloaded file is opened.</value>
+  </data>
+  <data name="page_config_progress_window_close_open_folder_title" xml:space="preserve">
+    <value>Close after opening the containing folder</value>
+  </data>
+  <data name="page_config_progress_window_close_open_folder_summary" xml:space="preserve">
+    <value>Close the progress window after File Explorer opens the downloaded file location.</value>
+  </data>
 </root>
