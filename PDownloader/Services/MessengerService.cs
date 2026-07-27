@@ -73,6 +73,7 @@ public static class MessengerService
             {
                 await onShowing(dialog);
             }
+
             modelDialog.SetModel(model);
         }
         else if (model != null)
@@ -81,6 +82,7 @@ public static class MessengerService
             {
                 await onShowing(dialog);
             }
+
             dialog.DataContext = model;
         }
 

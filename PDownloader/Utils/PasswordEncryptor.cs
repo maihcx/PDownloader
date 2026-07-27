@@ -17,7 +17,7 @@ namespace PDownloader.Utils;
 
 public static class PasswordEncryptor
 {
-    private static Random random = new Random();
+    private static readonly Random random = new();
 
     private static readonly byte[] Key = Encoding.UTF8.GetBytes("maisoft_huynh_cong_xuan_mai_0612");
 

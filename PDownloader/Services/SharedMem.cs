@@ -17,17 +17,14 @@ namespace PDownloader.Services;
 
 public static class SharedMem
 {
-    public static DownloadConfigs? AppSettings { get; set; }
-
-    private static bool _isScrollToUpdateCard = false;
     public static bool IsScrollToUpdateCard
     {
         get
         {
-            bool v = _isScrollToUpdateCard;
-            _isScrollToUpdateCard = false;
+            bool v = field;
+            field = false;
             return v;
         }
-        set => _isScrollToUpdateCard = value;
+        set => field = value;
     }
 }
