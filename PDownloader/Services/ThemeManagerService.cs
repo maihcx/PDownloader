@@ -82,23 +82,22 @@ public class ThemeManagerService
         return _ThemeType;
     }
 
-    private int globalCornerRadius = UserDataStore.GetValue<int>("ObjectCornerRadius");
     public int GlobalCornerRadius
     {
-        get => globalCornerRadius;
+        get => field;
         set
         {
-            if (globalCornerRadius == value)
+            if (field == value)
             {
                 return;
             }
 
-            globalCornerRadius = value;
+            field = value;
 
             System.Windows.Application.Current.Resources["ControlCornerRadius"] = new CornerRadius(value);
             UserDataStore.SetValue("ObjectCornerRadius", value);
         }
-    }
+    } = UserDataStore.GetValue<int>("ObjectCornerRadius");
 
     public void SetApplicationTheme(ThemeConfigs.IThemeType _IThemeType)
     {
