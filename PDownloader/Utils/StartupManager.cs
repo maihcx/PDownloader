@@ -17,7 +17,7 @@ namespace PDownloader.Utils;
 
 public static class StartupManager
 {
-    private static string RegistryPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
+    private static readonly string RegistryPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
 
     public static void SetStartWithWin(bool value)
     {

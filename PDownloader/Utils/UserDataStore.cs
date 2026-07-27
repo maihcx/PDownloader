@@ -25,7 +25,7 @@ public static class UserDataStore
 
     private static Dictionary<string, object> _data = new();
 
-    private static Dictionary<string, string> _passCaching = new();
+    private static readonly Dictionary<string, string> _passCaching = new();
 
     static UserDataStore()
     {
