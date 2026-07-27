@@ -73,6 +73,7 @@ public partial class App
             services.AddSingleton<DownloadLauncherService>();
             services.AddSingleton<DownloadsChannelService>();
 
+            services.AddSingleton<ThemeManagerService>();
             services.AddSingleton<IWindow, MainWindow>();
             services.AddSingleton<MainWindowViewModel>();
             services.AddSingleton<INavigationService, NavigationService>();
