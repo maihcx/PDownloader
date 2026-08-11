@@ -19,8 +19,6 @@ public partial class MainWindowViewModel : ObservableObject
 {
     private bool _isInitialized = false;
 
-    private readonly INavigationService _navigationService;
-
     public void OnNavigatedTo()
     {
         if (!_isInitialized)
@@ -46,7 +44,6 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(INavigationService navigationService, UpdateHostService updateHostService)
     {
         NavigationHandle.NavigationService = navigationService;
-        _navigationService = navigationService;
         _menuItems = NavigationHandle.GetNavCardsInNamespace("PDownloader.Views.Pages");
         _footerMenuItems = NavigationHandle.GetNavCardsInNamespace("PDownloader.Views.PagesBottom");
 

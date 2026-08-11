@@ -15,7 +15,7 @@
 
 namespace PDownloader.Services;
 
-public class ApplicationThemeManagerService
+public class ThemeManagerService
 {
     public WindowBackdropType GetBackdropType()
     {
@@ -29,13 +29,16 @@ public class ApplicationThemeManagerService
 
     public event ThemeChangedHandle? OnThemeChanged;
 
-    public Window MainWindowHandle { get; private set; }
+    public Window? MainWindowHandle { get; private set; }
 
     public bool IsWatcher { get; set; }
 
-    public ApplicationThemeManagerService(Window mainWindow)
+    public void Init(Window mainWindow)
     {
         MainWindowHandle = mainWindow;
+
+        InitCornerRadius();
+        SetApplicationTheme(GetApplicationTheme());
     }
 
     public void SetBackdropType(WindowBackdropType _WindowBackdropType)
@@ -62,7 +65,7 @@ public class ApplicationThemeManagerService
 
     public ThemeType GetSysApplicationTheme()
     {
-        ThemeType _ThemeType = ThemeType.Unknown;
+        ThemeType _ThemeType;
         if (UserDataStore.GetValue<string>("IThemeType") == "Auto")
         {
             ApplicationThemeManager.ApplySystemTheme();
@@ -79,23 +82,22 @@ public class ApplicationThemeManagerService
         return _ThemeType;
     }
 
-    private int globalCornerRadius = UserDataStore.GetValue<int>("ObjectCornerRadius");
     public int GlobalCornerRadius
     {
-        get => globalCornerRadius;
+        get => field;
         set
         {
-            if (globalCornerRadius == value)
+            if (field == value)
             {
                 return;
             }
 
-            globalCornerRadius = value;
+            field = value;
 
             System.Windows.Application.Current.Resources["ControlCornerRadius"] = new CornerRadius(value);
             UserDataStore.SetValue("ObjectCornerRadius", value);
         }
-    }
+    } = UserDataStore.GetValue<int>("ObjectCornerRadius");
 
     public void SetApplicationTheme(ThemeConfigs.IThemeType _IThemeType)
     {
@@ -121,7 +123,7 @@ public class ApplicationThemeManagerService
         if (!IsWatcher)
         {
             ThemeApply(applicationTheme, windowBackdrop);
-            Watcher.Watch(WindowHelper.MainWindow, windowBackdrop, updateAccents);
+            Watcher.Watch(MainWindowHandle, windowBackdrop, updateAccents);
             SystemThemeWatcher.Watch(MainWindowHandle, this.GetBackdropType(), updateAccents);
 
             IsWatcher = true;
@@ -137,7 +139,7 @@ public class ApplicationThemeManagerService
     {
         if (IsWatcher)
         {
-            Watcher.UnWatch(WindowHelper.MainWindow);
+            Watcher.UnWatch(MainWindowHandle);
             SystemThemeWatcher.UnWatch(MainWindowHandle);
             IsWatcher = false;
         }

@@ -19,8 +19,6 @@ public sealed partial class MainWindow : IWindow
 {
     public MainWindowViewModel ViewModel { get; }
 
-    public ApplicationThemeManagerService ThemeManagerService { get; }
-
     BreadcrumbBar IWindow.BreadcrumbBar => BreadcrumbBar;
 
     BreadcrumbBar IWindow.BreadcrumbBarHolder => BreadcrumbBarHolder;
@@ -30,16 +28,14 @@ public sealed partial class MainWindow : IWindow
         INavigationService navigationService,
         IServiceProvider serviceProvider,
         ISnackbarService snackbarService,
-        IContentDialogService contentDialogService
+        IContentDialogService contentDialogService,
+        ThemeManagerService themeManagerService
     )
     {
         ViewModel = viewModel;
         DataContext = this;
 
-        ThemeManagerService = new ApplicationThemeManagerService(this);
-        WindowHelper.ThemeManagerService = ThemeManagerService;
-        ThemeManagerService.InitCornerRadius();
-        ThemeManagerService.SetApplicationTheme(ThemeManagerService.GetApplicationTheme());
+        themeManagerService.Init(this);
 
         InitializeComponent();
 

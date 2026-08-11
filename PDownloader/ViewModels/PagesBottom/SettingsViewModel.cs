@@ -23,23 +23,32 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
 
     public event Action? ScrollToUpdateRequested;
 
-    private static ApplicationThemeManagerService? ThemeManagerService = WindowHelper.ThemeManagerService;
-
     private readonly UpdateHostService updateHostService;
 
     private readonly NavigationPanelHostService navigationPanelHostService;
 
-    [ObservableProperty] private string _appVersion = string.Empty;
+    private readonly ThemeManagerService ThemeManagerService;
+
+    [ObservableProperty] 
+    private string _appVersion = string.Empty;
 
     public SettingsViewModel(
         UpdateHostService updateHostService,
-        NavigationPanelHostService navigationPanelHostService
+        NavigationPanelHostService navigationPanelHostService,
+        ThemeManagerService themeManagerService
     )
     {
         this.updateHostService = updateHostService;
         this.navigationPanelHostService = navigationPanelHostService;
+        this.ThemeManagerService = themeManagerService;
 
         _autoHideNavigationPanel = navigationPanelHostService.NaviPanelOpen == NaviPanelOpenState.Auto;
+
+        _selectedTheme = ThemeManagerService.GetThemeCBBSelected();
+        _themeList = ThemeManagerService.GetThemeCBBs();
+        _selectedMaterial = ThemeManagerService.GetMaterialCBBSelected();
+        _materialList = ThemeManagerService.GetMaterialCBBs();
+        _sliderCornerRadius = ThemeManagerService.GlobalCornerRadius;
     }
 
     #region Update handling
@@ -166,10 +175,10 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
 
     #region Theme list handle
     [ObservableProperty]
-    private Models.ComboBoxItem? _selectedTheme = ThemeManagerService?.GetThemeCBBSelected();
+    private Models.ComboBoxItem? _selectedTheme;
 
     [ObservableProperty]
-    private ObservableCollection<Models.ComboBoxItem>? _themeList = ThemeManagerService?.GetThemeCBBs();
+    private ObservableCollection<Models.ComboBoxItem>? _themeList;
 
     partial void OnSelectedThemeChanged(Models.ComboBoxItem? value)
     {
@@ -180,10 +189,10 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
 
     #region Material list handle
     [ObservableProperty]
-    private Models.ComboBoxItem? _selectedMaterial = ThemeManagerService?.GetMaterialCBBSelected();
+    private Models.ComboBoxItem? _selectedMaterial;
 
     [ObservableProperty]
-    private ObservableCollection<Models.ComboBoxItem>? _materialList = ThemeManagerService?.GetMaterialCBBs();
+    private ObservableCollection<Models.ComboBoxItem>? _materialList;
 
     partial void OnSelectedMaterialChanged(Models.ComboBoxItem? value)
     {
@@ -195,7 +204,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
 
     #region CornerRadius list handle
     [ObservableProperty]
-    private int _sliderCornerRadius = ThemeManagerService?.GlobalCornerRadius ?? 0;
+    private int _sliderCornerRadius;
 
     partial void OnSliderCornerRadiusChanged(int oldValue, int newValue)
     {

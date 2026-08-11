@@ -17,10 +17,6 @@ namespace PDownloader.Utils;
 
 public static class WindowHelper
 {
-    public static ApplicationThemeManagerService? ThemeManagerService;
-
-    public static Window? MainWindow;
-
     public static void BringToFront(Window window)
     {
         if (window == null)

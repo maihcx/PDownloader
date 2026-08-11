@@ -169,6 +169,18 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
                         ListSortDirection.Descending);
                     break;
 
+                case DownloadSortMode.TimeEndAscending:
+                    AddSort(
+                        nameof(DownloadItemDto.EndTime),
+                        ListSortDirection.Ascending);
+                    break;
+
+                case DownloadSortMode.TimeEndDescending:
+                    AddSort(
+                        nameof(DownloadItemDto.EndTime),
+                        ListSortDirection.Descending);
+                    break;
+
                 case DownloadSortMode.SizeAscending:
                     AddSort(
                         nameof(DownloadItemDto.TotalBytes),
