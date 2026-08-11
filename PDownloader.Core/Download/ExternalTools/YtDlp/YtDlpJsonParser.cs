@@ -175,12 +175,12 @@ internal static class YtDlpJsonParser
             return null;
         }
 
-        long fileSize = GetFileSize(element);
-        if (fileSize == 0)
+        if (!IsDirectHttpFormat(element))
         {
             return null;
         }
 
+        long fileSize = GetFileSize(element);
         string videoCodec = element.GetStringOrDefault("vcodec") ?? "none";
         string audioCodec = element.GetStringOrDefault("acodec") ?? "none";
         bool hasVideo = videoCodec != "none";
@@ -205,6 +205,22 @@ internal static class YtDlpJsonParser
             Filesize = fileSize,
             Size = FormatSize(fileSize),
         };
+    }
+
+    private static bool IsDirectHttpFormat(JsonElement element)
+    {
+        string protocol = element.GetStringOrDefault("protocol") ?? string.Empty;
+        string? url = element.GetStringOrDefault("url");
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return false;
+        }
+
+        return string.IsNullOrWhiteSpace(protocol)
+            || protocol.Equals("http", StringComparison.OrdinalIgnoreCase)
+            || protocol.Equals("https", StringComparison.OrdinalIgnoreCase);
     }
 
     private static HlsFragmentsResult? ExtractFragments(JsonElement element)
