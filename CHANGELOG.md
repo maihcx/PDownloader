@@ -1,3 +1,22 @@
+## v0.9.1
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- Workaround for YouTube download/analyze issue (#122) — @maihcx
+- Validate direct HTTP formats before filesize (#121) — @maihcx
+- fix sorting by download end time (#119) — @maihcx
+
+## 🧹 Maintenance
+
+- Update QuickJS runtime (#120) — @maihcx
+- [extension] Remove rounded corners for popup (#117) — @maihcx
+- Refactor theme manager (#116) — @maihcx
+- Code modernization and cleanup (#115) — @maihcx
+
+
+---
+
 ## v0.9.0
 
 ## 🚀 Changelog
