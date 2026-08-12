@@ -352,10 +352,15 @@
                                          RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                    CommandParameter="{Binding}">
                                             <ui:Button.Visibility>
-                                                <Binding Path="IsActive"
-                                                         Converter="{StaticResource BoolToVisConverter}">
-                                                    <Binding.ConverterParameter>invert</Binding.ConverterParameter>
-                                                </Binding>
+                                                <MultiBinding Converter="{StaticResource AndVisibilityConverter}">
+                                                    <Binding Path="IsActive"
+                                                             Converter="{StaticResource BoolToVisConverter}"
+                                                             ConverterParameter="invert" />
+
+                                                    <Binding Path="StatusState"
+                                                             Converter="{StaticResource BoolToVisConverter}"
+                                                             ConverterParameter="!~Error" />
+                                                </MultiBinding>
                                             </ui:Button.Visibility>
                                         </ui:Button>
 
@@ -382,7 +387,7 @@
                                              RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                        CommandParameter="{Binding}">
                                                 <ui:Button.Visibility>
-                                                    <Binding Path="Status"
+                                                    <Binding Path="StatusState"
                                                              Converter="{StaticResource BoolToVisConverter}"
                                                              ConverterParameter="Error" />
                                                 </ui:Button.Visibility>
@@ -391,9 +396,10 @@
                                             <ui:Button Icon="{ui:SymbolIcon FolderOpen24}"
                                                        ToolTip="{utils:Localization page_downloads_open_folder}"
                                                        Margin="0 0 2 0"
-                                                       Command="{Binding DataContext.ViewModel.OpenFolderCommand,
-                                             RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                       CommandParameter="{Binding}" />
+                                                       Command="{Binding DataContext.ViewModel.OpenFolderCommand, 
+                                                RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       CommandParameter="{Binding}"
+                                                       IsEnabled="{Binding StatusState, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Completed}"/>
 
                                             <ui:Button Icon="{ui:SymbolIcon Delete24}"
                                                        ToolTip="{utils:Localization page_downloads_cancel}"

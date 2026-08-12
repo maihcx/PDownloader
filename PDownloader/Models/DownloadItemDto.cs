@@ -65,9 +65,16 @@ public partial class DownloadItemDto : ObservableObject
         get; set
         {
             field = value;
+
+            _ = Enum.TryParse(value.Trim(), out DownloadStatus status);
+            StatusState = status;
+
             RefreshStatusText();
         }
     } = string.Empty;
+
+    [ObservableProperty]
+    private DownloadStatus _statusState;
 
     [ObservableProperty]
     private string _statusText = string.Empty;
@@ -85,7 +92,14 @@ public partial class DownloadItemDto : ObservableObject
     public string DownloadedFormatted { get; set; } = string.Empty;
 
     [JsonPropertyName("errorMessage")]
-    public string ErrorMessage { get; set; } = string.Empty;
+    public string ErrorMessage
+    {
+        get; set
+        {
+            field = value;
+            RefreshStatusText();
+        }
+    } = string.Empty;
 
     [JsonPropertyName("isActive")]
     public bool IsActive { get; set; }
@@ -99,7 +113,7 @@ public partial class DownloadItemDto : ObservableObject
     [JsonPropertyName("canResume")]
     public bool CanResume { get; set; }
 
-    public bool CanResumeOrOpenFile => CanResume || Status == "Completed";
+    public bool CanResumeOrOpenFile => CanResume || StatusState == DownloadStatus.Completed;
 
     [JsonPropertyName("md5Hash")]
     public string Md5Hash { get; set; } = string.Empty;
@@ -112,21 +126,21 @@ public partial class DownloadItemDto : ObservableObject
 
     private void RefreshStatusText()
     {
-        if (Status == "Error")
+        if (StatusState == DownloadStatus.Error)
         {
             StatusText = LanguageBase.GetLangValue("download_status_error_title", ErrorMessage);
         }
         else
         {
             StatusText = LanguageBase.GetLangValue(
-                Status switch
+                StatusState switch
                 {
-                    "Queued" => "download_status_queued_title",
-                    "Connecting" => "download_status_connecting_title",
-                    "Downloading" => "download_status_downloading_title",
-                    "Paused" => "download_status_paused_title",
-                    "Merging" => "download_status_merging_title",
-                    "Completed" => "download_status_completed_title",
+                    DownloadStatus.Queued => "download_status_queued_title",
+                    DownloadStatus.Connecting => "download_status_connecting_title",
+                    DownloadStatus.Downloading => "download_status_downloading_title",
+                    DownloadStatus.Paused => "download_status_paused_title",
+                    DownloadStatus.Merging => "download_status_merging_title",
+                    DownloadStatus.Completed => "download_status_completed_title",
                     _ => "?"
                 }
             );
