@@ -254,7 +254,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
             DownloadItemDto? existing = Downloads.FirstOrDefault(d => d.Id == dto.Id);
             if (existing != null)
             {
-                if (dto.Status == "Cancelled")
+                if (dto.StatusState == DownloadStatus.Cancelled)
                 {
                     Downloads.Remove(existing);
                 }
@@ -264,7 +264,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
                     Downloads[index] = dto;
                 }
             }
-            else if (dto.Status != "Cancelled")
+            else if (dto.StatusState != DownloadStatus.Cancelled)
             {
                 Downloads.Insert(0, dto);
             }
@@ -292,13 +292,11 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
             return;
         }
 
-        _ = Enum.TryParse(item.Status, out DownloadStatus status);
-
-        if (status == DownloadStatus.Completed)
+        if (item.StatusState == DownloadStatus.Completed)
         {
             OpenFile(item);
         }
-        else if (status == DownloadStatus.Paused && item.CanResume)
+        else if (item.StatusState == DownloadStatus.Paused && item.CanResume)
         {
             ConfluxManager.cfsPDownloaderCore?.Send("runner-resume", item.Id);
         }
