@@ -26,10 +26,7 @@
             <helpers:StatusToIconConverter x:Key="StatusToIconConverter" />
             <helpers:StatusToTextConverter x:Key="StatusToTextConverter" />
             <helpers:BoolToVisConverter x:Key="BoolToVisConverter" />
-            <helpers:OrVisibilityConverter x:Key="OrVisibilityConverter" />
-            <helpers:AndVisibilityConverter x:Key="AndVisibilityConverter" />
             <helpers:NullOrEmptyToVisibilityConverter x:Key="NullOrEmptyToVisibilityConverter" />
-            <helpers:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
 
             <ControlTemplate x:Key="StarErrorTemplate">
                 <Grid>
