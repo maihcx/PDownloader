@@ -456,9 +456,6 @@
   <data name="download_view_file_name_title" xml:space="preserve">
     <value>Tên tệp</value>
   </data>
-  <data name="download_view_file_url_title" xml:space="preserve">
-    <value>Liên kết Url</value>
-  </data>
   <data name="download_view_file_cap_loaded_title" xml:space="preserve">
     <value>Đã tải / Dung lượng</value>
   </data>
@@ -548,5 +545,32 @@
   </data>
   <data name="page_config_merge_mode_data_integrity_description" xml:space="preserve">
     <value>Giữ toàn bộ dữ liệu nguồn đến khi hoàn tất và xác minh lại tệp đã gộp. Tốn thời gian và dung lượng hơn nhưng có thể dựng lại nếu tệp đang gộp bị xóa.</value>
+  </data>
+  <data name="dialog_button_ok_title" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="dialog_button_cancel_title" xml:space="preserve">
+    <value>Hủy</value>
+  </data>
+  <data name="dialog_button_abort_title" xml:space="preserve">
+    <value>Hủy bỏ</value>
+  </data>
+  <data name="dialog_button_yes_title" xml:space="preserve">
+    <value>Có</value>
+  </data>
+  <data name="dialog_button_no_title" xml:space="preserve">
+    <value>Không</value>
+  </data>
+  <data name="dialog_button_retry_title" xml:space="preserve">
+    <value>Thử lại</value>
+  </data>
+  <data name="dialog_button_Ignore_title" xml:space="preserve">
+    <value>Bỏ qua</value>
+  </data>
+  <data name="dialog_button_try_title" xml:space="preserve">
+    <value>Thử</value>
+  </data>
+  <data name="dialog_button_continue_title" xml:space="preserve">
+    <value>Tiếp tục</value>
   </data>
 </root>
