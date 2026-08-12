@@ -549,4 +549,31 @@
   <data name="page_config_merge_mode_data_integrity_description" xml:space="preserve">
     <value>Keeps every source part until completion and verifies the merged file again. It uses more time and disk space, but can rebuild if the in-progress file is deleted.</value>
   </data>
+  <data name="dialog_button_ok_title" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="dialog_button_cancel_title" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="dialog_button_abort_title" xml:space="preserve">
+    <value>Abort</value>
+  </data>
+  <data name="dialog_button_yes_title" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="dialog_button_no_title" xml:space="preserve">
+    <value>No</value>
+  </data>
+  <data name="dialog_button_retry_title" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="dialog_button_Ignore_title" xml:space="preserve">
+    <value>Ignore</value>
+  </data>
+  <data name="dialog_button_try_title" xml:space="preserve">
+    <value>Try</value>
+  </data>
+  <data name="dialog_button_continue_title" xml:space="preserve">
+    <value>Continue</value>
+  </data>
 </root>

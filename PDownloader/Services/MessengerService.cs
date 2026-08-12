@@ -17,14 +17,21 @@ using CommunityToolkit.Mvvm.Messaging.Messages;
 
 namespace PDownloader.Services;
 
-public interface IDialogWithResult<TResult>
+public interface IDialogWithResult<out T>
 {
-    TResult? Result { get; }
+    T ViewModel { get; }
+
+    T? Result { get; }
 }
 
 public interface IDialogWithModel
 {
     void SetModel(object? model);
+}
+
+public interface IDialogWithModel<TModel>
+{
+    void SetModel(TModel? model);
 }
 
 public class GenericMessage<T> : ValueChangedMessage<T>
@@ -75,6 +82,40 @@ public static class MessengerService
             }
 
             modelDialog.SetModel(model);
+        }
+        else if (model != null)
+        {
+            if (onShowing != null)
+            {
+                await onShowing(dialog);
+            }
+
+            dialog.DataContext = model;
+        }
+
+        await dialog.ShowAsync();
+        return dialog.Result;
+    }
+
+    public static async Task<TResult?> ShowDialogAsync<TDialog, TResult, TModel>(TModel? model, ContentDialogHost? dialogHost = null, Func<TDialog, Task>? onShowing = null) where TDialog : ContentDialog, IDialogWithResult<TResult>
+    {
+        IContentDialogService service = App.GetRequiredService<IContentDialogService>();
+
+        dialogHost ??= service.GetDialogHostEx();
+
+        if (Activator.CreateInstance(typeof(TDialog), dialogHost) is not TDialog dialog)
+        {
+            throw new InvalidOperationException($"Cannot create instance of type {typeof(TDialog).FullName}.");
+        }
+
+        if (dialog is IDialogWithModel<TModel> dialogWithModel)
+        {
+            if (onShowing != null)
+            {
+                await onShowing(dialog);
+            }
+
+            dialogWithModel.SetModel(model);
         }
         else if (model != null)
         {

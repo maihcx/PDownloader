@@ -187,6 +187,87 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to dialog_button_abort_title.
+        /// </summary>
+        internal static string dialog_button_abort_title {
+            get {
+                return ResourceManager.GetString("dialog_button_abort_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to dialog_button_cancel_title.
+        /// </summary>
+        internal static string dialog_button_cancel_title {
+            get {
+                return ResourceManager.GetString("dialog_button_cancel_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to dialog_button_continue_title.
+        /// </summary>
+        internal static string dialog_button_continue_title {
+            get {
+                return ResourceManager.GetString("dialog_button_continue_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to dialog_button_Ignore_title.
+        /// </summary>
+        internal static string dialog_button_Ignore_title {
+            get {
+                return ResourceManager.GetString("dialog_button_Ignore_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to dialog_button_no_title.
+        /// </summary>
+        internal static string dialog_button_no_title {
+            get {
+                return ResourceManager.GetString("dialog_button_no_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to dialog_button_ok_title.
+        /// </summary>
+        internal static string dialog_button_ok_title {
+            get {
+                return ResourceManager.GetString("dialog_button_ok_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to dialog_button_retry_title.
+        /// </summary>
+        internal static string dialog_button_retry_title {
+            get {
+                return ResourceManager.GetString("dialog_button_retry_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to dialog_button_try_title.
+        /// </summary>
+        internal static string dialog_button_try_title {
+            get {
+                return ResourceManager.GetString("dialog_button_try_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to dialog_button_yes_title.
+        /// </summary>
+        internal static string dialog_button_yes_title {
+            get {
+                return ResourceManager.GetString("dialog_button_yes_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to dialog_link_title.
         /// </summary>
         internal static string dialog_link_title {
@@ -601,6 +682,24 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to page_config_save_error.
+        /// </summary>
+        internal static string page_config_save_error {
+            get {
+                return ResourceManager.GetString("page_config_save_error", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_save_success.
+        /// </summary>
+        internal static string page_config_save_success {
+            get {
+                return ResourceManager.GetString("page_config_save_success", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to page_config_summary.
         /// </summary>
         internal static string page_config_summary {
@@ -624,6 +723,42 @@ namespace PDownloader.Resources.Locales {
         internal static string page_config_svc_inactive_title {
             get {
                 return ResourceManager.GetString("page_config_svc_inactive_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_temp_folder_default.
+        /// </summary>
+        internal static string page_config_temp_folder_default {
+            get {
+                return ResourceManager.GetString("page_config_temp_folder_default", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_temp_folder_placeholder.
+        /// </summary>
+        internal static string page_config_temp_folder_placeholder {
+            get {
+                return ResourceManager.GetString("page_config_temp_folder_placeholder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_temp_folder_summary.
+        /// </summary>
+        internal static string page_config_temp_folder_summary {
+            get {
+                return ResourceManager.GetString("page_config_temp_folder_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_temp_folder_title.
+        /// </summary>
+        internal static string page_config_temp_folder_title {
+            get {
+                return ResourceManager.GetString("page_config_temp_folder_title", resourceCulture);
             }
         }
         
