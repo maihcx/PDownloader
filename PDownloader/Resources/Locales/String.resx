@@ -546,6 +546,27 @@
   <data name="page_config_merge_mode_data_integrity_description" xml:space="preserve">
     <value>Giữ toàn bộ dữ liệu nguồn đến khi hoàn tất và xác minh lại tệp đã gộp. Tốn thời gian và dung lượng hơn nhưng có thể dựng lại nếu tệp đang gộp bị xóa.</value>
   </data>
+  <data name="page_downloads_action_title" xml:space="preserve">
+    <value>page_downloads_action_title</value>
+  </data>
+  <data name="download_view_file_url_title" xml:space="preserve">
+    <value>download_view_file_url_title</value>
+  </data>
+  <data name="page_downloads_action_delete_completed_title" xml:space="preserve">
+    <value>page_downloads_action_delete_completed_title</value>
+  </data>
+  <data name="page_downloads_action_delete_all_title" xml:space="preserve">
+    <value>page_downloads_action_delete_all_title</value>
+  </data>
+  <data name="page_downloads_action_pause_all_title" xml:space="preserve">
+    <value>page_downloads_action_pause_all_title</value>
+  </data>
+  <data name="page_downloads_action_resume_all_title" xml:space="preserve">
+    <value>page_downloads_action_resume_all_title</value>
+  </data>
+  <data name="dialog_warn_title" xml:space="preserve">
+    <value>dialog_warn_title</value>
+  </data>
   <data name="dialog_button_ok_title" xml:space="preserve">
     <value>dialog_button_ok_title</value>
   </data>
@@ -572,5 +593,20 @@
   </data>
   <data name="dialog_button_continue_title" xml:space="preserve">
     <value>dialog_button_continue_title</value>
+  </data>
+  <data name="page_downloads_dialog_delete_allcpl_summary" xml:space="preserve">
+    <value>page_downloads_dialog_delete_allcpl_summary</value>
+  </data>
+  <data name="page_downloads_dialog_delete_all_summary" xml:space="preserve">
+    <value>page_downloads_dialog_delete_all_summary</value>
+  </data>
+  <data name="page_downloads_dialog_pause_all_summary" xml:space="preserve">
+    <value>page_downloads_dialog_pause_all_summary</value>
+  </data>
+  <data name="page_downloads_action_retry_all_title" xml:space="preserve">
+    <value>page_downloads_action_retry_all_title</value>
+  </data>
+  <data name="page_downloads_dialog_retry_all_summary" xml:space="preserve">
+    <value>page_downloads_dialog_retry_all_summary</value>
   </data>
 </root>

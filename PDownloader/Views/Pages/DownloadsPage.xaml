@@ -471,22 +471,62 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="4" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="4" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0"
                            Text="{Binding ViewModel.StatusText}"
                            Opacity="0.5"
                            FontSize="12"
                            VerticalAlignment="Center" />
+                <ui:Flyout Grid.Column="1"
+                           Margin="0 0 0 7"
+                           Padding="6"
+                           IsOpen="{Binding ViewModel.IsFlyoutOpen, Mode=TwoWay}"
+                           Placement="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Button Margin="0,0,0,0"
+                                   Content="{utils:Localization page_downloads_action_delete_completed_title}"
+                                   Icon="{ui:SymbolIcon Delete24}"
+                                   Appearance="Caution"
+                                   Command="{Binding ViewModel.DeleteAllCompletedCommand, Mode=OneWay}" />
+                        <ui:Button Margin="4,0,0,0"
+                                   Content="{utils:Localization page_downloads_action_delete_all_title}"
+                                   Icon="{ui:SymbolIcon DeleteDismiss24}"
+                                   Appearance="Danger"
+                                   Command="{Binding ViewModel.DeleteAllCommand, Mode=OneWay}" />
+                        <ui:Button Margin="4,0,0,0"
+                                   Content="{utils:Localization page_downloads_action_pause_all_title}"
+                                   Icon="{ui:SymbolIcon Pause24}"
+                                   Command="{Binding ViewModel.PauseAllCommand, Mode=OneWay}" />
+                        <ui:Button Margin="4,0,0,0"
+                                   Content="{utils:Localization page_downloads_action_resume_all_title}"
+                                   Icon="{ui:SymbolIcon Play24}"
+                                   Appearance="Primary"
+                                   Command="{Binding ViewModel.ResumeAllCommand, Mode=OneWay}" />
+                        <ui:Button Margin="4,0,0,0"
+                                   Content="{utils:Localization page_downloads_action_retry_all_title}"
+                                   Icon="{ui:SymbolIcon ArrowSync24}"
+                                   Appearance="Info"
+                                   Command="{Binding ViewModel.RetryAllCommand, Mode=OneWay}" />
+                    </StackPanel>
+                </ui:Flyout>
                 <ui:Button Grid.Column="1"
+                           Content="{utils:Localization page_downloads_action_title}"
+                           Icon="{ui:SymbolIcon ExpandUpRight20}"
+                           Appearance="Caution"
+                           Command="{Binding ViewModel.OpenActionFlyoutCommand, Mode=OneWay}"
+                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Mode=OneWay}" />
+                <ui:Button Grid.Column="3"
                            Content="{utils:Localization page_downloads_add_title}"
                            Icon="{ui:SymbolIcon AddCircle24}"
                            Appearance="Primary"
-                           Command="{Binding ViewModel.AddCommand}" />
-                <ui:Button Grid.Column="3"
+                           Command="{Binding ViewModel.AddCommand, Mode=OneWay}" />
+                <ui:Button Grid.Column="5"
                            Content="{utils:Localization page_downloads_refresh_title}"
                            Icon="{ui:SymbolIcon ArrowClockwise24}"
                            Appearance="Transparent"
-                           Command="{Binding ViewModel.RefreshCommand}" />
+                           Command="{Binding ViewModel.RefreshCommand, Mode=OneWay}" />
             </Grid>
         </Border>
     </Grid>
