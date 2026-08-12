@@ -15,25 +15,14 @@
 
 namespace PDownloader.Helpers;
 
-internal class EnumToBooleanConverter : IValueConverter
+internal class AndVisibilityConverter: IMultiValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is not Enum enumValue || parameter is not string enumName)
-        {
-            return false;
-        }
-
-        return Enum.TryParse(
-            enumValue.GetType(),
-            enumName,
-            ignoreCase: true,
-            out var parsedValue)
-            && Equals(enumValue, parsedValue);
+        return values.All(x => x is Visibility.Visible)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        throw new NotSupportedException();
-    }
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) => throw new NotSupportedException();
 }

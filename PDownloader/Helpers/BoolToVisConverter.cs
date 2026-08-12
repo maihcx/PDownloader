@@ -29,9 +29,31 @@ internal class BoolToVisConverter : IValueConverter
 
         if (value is DownloadStatus status && parameter is string s)
         {
-            return status.ToString().Equals(s, StringComparison.OrdinalIgnoreCase)
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+            string[] arrS = s.Split('~');
+            bool isInvert = false;
+
+            if (arrS.Length == 2)
+            {
+                if (arrS[0].Equals("!"))
+                {
+                    isInvert = true;
+                }
+
+                s = arrS[1];
+            }
+
+            if (isInvert)
+            {
+                return status.ToString().Equals(s, StringComparison.OrdinalIgnoreCase)
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
+            }
+            else
+            {
+                return status.ToString().Equals(s, StringComparison.OrdinalIgnoreCase)
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            }
         }
 
         return value is true
