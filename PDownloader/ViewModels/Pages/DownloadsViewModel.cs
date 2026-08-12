@@ -68,6 +68,9 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         ApplySort(value.Mode);
     }
 
+    [ObservableProperty]
+    private bool _isFlyoutOpen = false;
+
     private readonly DownloadLauncherService _downloadLauncherService;
 
     public DownloadsViewModel(
@@ -350,6 +353,137 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         }
 
         Process.Start("explorer.exe", $"/select,\"{item.SavePath}\"");
+    }
+
+    [RelayCommand]
+    private void OpenActionFlyout()
+    {
+        if (!IsFlyoutOpen)
+        {
+            IsFlyoutOpen = true;
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteAllCompleted()
+    {
+        IsFlyoutOpen = false;
+
+        Dialogs.ViewModels.Messages? result = await MessengerService.ShowDialogAsync<Dialogs.Views.Messages, Dialogs.ViewModels.Messages, Dialogs.Models.Messages>(new Dialogs.Models.Messages
+        {
+            MessageButtonType = Dialogs.Models.Messages.MessageButton.YesNo,
+            MessageImageType = Dialogs.Models.Messages.MessageImage.Warning,
+            MessageTitleKey = "dialog_warn_title",
+            MessageContentKey = "page_downloads_dialog_delete_allcpl_summary"
+        });
+
+        if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
+        {
+            foreach (DownloadItemDto item in Downloads)
+            {
+                if (item.StatusState == DownloadStatus.Completed)
+                {
+                    ConfluxManager.cfsPDownloaderCore?.Send("runner-cancel", item.Id);
+                }
+            }
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteAll()
+    {
+        IsFlyoutOpen = false;
+
+        Dialogs.ViewModels.Messages? result = await MessengerService.ShowDialogAsync<Dialogs.Views.Messages, Dialogs.ViewModels.Messages, Dialogs.Models.Messages>(new Dialogs.Models.Messages
+        {
+            MessageButtonType = Dialogs.Models.Messages.MessageButton.YesNo,
+            MessageImageType = Dialogs.Models.Messages.MessageImage.Warning,
+            MessageTitleKey = "dialog_warn_title",
+            MessageContentKey = "page_downloads_dialog_delete_all_summary"
+        });
+
+        if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
+        {
+            foreach (DownloadItemDto item in Downloads)
+            {
+                ConfluxManager.cfsPDownloaderCore?.Send("runner-cancel", item.Id);
+            }
+        }
+    }
+
+    [RelayCommand]
+    private async Task PauseAll()
+    {
+        IsFlyoutOpen = false;
+
+        Dialogs.ViewModels.Messages? result = await MessengerService.ShowDialogAsync<Dialogs.Views.Messages, Dialogs.ViewModels.Messages, Dialogs.Models.Messages>(new Dialogs.Models.Messages
+        {
+            MessageButtonType = Dialogs.Models.Messages.MessageButton.YesNo,
+            MessageImageType = Dialogs.Models.Messages.MessageImage.Warning,
+            MessageTitleKey = "dialog_warn_title",
+            MessageContentKey = "page_downloads_dialog_pause_all_summary"
+        });
+
+        if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
+        {
+            foreach (DownloadItemDto item in Downloads)
+            {
+                if (item.StatusState != DownloadStatus.Completed && item.StatusState != DownloadStatus.Error)
+                {
+                    ConfluxManager.cfsPDownloaderCore?.Send("runner-pause", item.Id);
+                }
+            }
+        }
+    }
+
+    [RelayCommand]
+    private async Task ResumeAll()
+    {
+        IsFlyoutOpen = false;
+
+        Dialogs.ViewModels.Messages? result = await MessengerService.ShowDialogAsync<Dialogs.Views.Messages, Dialogs.ViewModels.Messages, Dialogs.Models.Messages>(new Dialogs.Models.Messages
+        {
+            MessageButtonType = Dialogs.Models.Messages.MessageButton.YesNo,
+            MessageImageType = Dialogs.Models.Messages.MessageImage.Warning,
+            MessageTitleKey = "dialog_warn_title",
+            MessageContentKey = "page_downloads_dialog_pause_all_summary"
+        });
+
+        if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
+        {
+            foreach (DownloadItemDto item in Downloads)
+            {
+                if (item.StatusState == DownloadStatus.Paused)
+                {
+                    ConfluxManager.cfsPDownloaderCore?.Send("runner-resume", item.Id);
+                }
+            }
+        }
+    }
+
+    [RelayCommand]
+    private async Task RetryAll()
+    {
+        IsFlyoutOpen = false;
+
+        Dialogs.ViewModels.Messages? result = await MessengerService.ShowDialogAsync<Dialogs.Views.Messages, Dialogs.ViewModels.Messages, Dialogs.Models.Messages>(new Dialogs.Models.Messages
+        {
+            MessageButtonType = Dialogs.Models.Messages.MessageButton.YesNo,
+            MessageImageType = Dialogs.Models.Messages.MessageImage.Warning,
+            MessageTitleKey = "dialog_warn_title",
+            MessageContentKey = "page_downloads_dialog_retry_all_summary"
+        });
+
+        if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
+        {
+            foreach (DownloadItemDto item in Downloads)
+            {
+                if (item.StatusState == DownloadStatus.Error)
+                {
+                    ConfluxManager.cfsPDownloaderCore?.Send("runner-retry", item.Id);
+                }
+            }
+        }
     }
 
     [RelayCommand]

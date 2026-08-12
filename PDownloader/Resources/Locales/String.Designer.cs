@@ -277,6 +277,15 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to dialog_warn_title.
+        /// </summary>
+        internal static string dialog_warn_title {
+            get {
+                return ResourceManager.GetString("dialog_warn_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to download_filter_searchbox_desc.
         /// </summary>
         internal static string download_filter_searchbox_desc {
@@ -664,11 +673,155 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Duy trì checkpoint theo từng phần và giải phóng dữ liệu đã gộp để cân đối tốc độ, dung lượng và khả năng tiếp tục..
+        /// </summary>
+        internal static string page_config_merge_mode_balanced_description {
+            get {
+                return ResourceManager.GetString("page_config_merge_mode_balanced_description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cân bằng.
+        /// </summary>
+        internal static string page_config_merge_mode_balanced_title {
+            get {
+                return ResourceManager.GetString("page_config_merge_mode_balanced_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Giữ toàn bộ dữ liệu nguồn đến khi hoàn tất và xác minh lại tệp đã gộp. Tốn thời gian và dung lượng hơn nhưng có thể dựng lại nếu tệp đang gộp bị xóa..
+        /// </summary>
+        internal static string page_config_merge_mode_data_integrity_description {
+            get {
+                return ResourceManager.GetString("page_config_merge_mode_data_integrity_description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Toàn vẹn dữ liệu.
+        /// </summary>
+        internal static string page_config_merge_mode_data_integrity_title {
+            get {
+                return ResourceManager.GetString("page_config_merge_mode_data_integrity_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Gộp nhanh nhất, không tạo checkpoint an toàn. Không thể tạm dừng khi đang gộp và dữ liệu có thể không phục hồi nếu quá trình bị gián đoạn..
+        /// </summary>
+        internal static string page_config_merge_mode_high_performance_description {
+            get {
+                return ResourceManager.GetString("page_config_merge_mode_high_performance_description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Hiệu suất cao.
+        /// </summary>
+        internal static string page_config_merge_mode_high_performance_title {
+            get {
+                return ResourceManager.GetString("page_config_merge_mode_high_performance_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Chọn mức ưu tiên giữa tốc độ gộp và khả năng bảo vệ dữ liệu tạm. Áp dụng cho các lượt tải được thêm sau khi lưu..
+        /// </summary>
+        internal static string page_config_merge_mode_summary {
+            get {
+                return ResourceManager.GetString("page_config_merge_mode_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Chế độ gộp tệp.
+        /// </summary>
+        internal static string page_config_merge_mode_title {
+            get {
+                return ResourceManager.GetString("page_config_merge_mode_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to page_config_open_runner.
         /// </summary>
         internal static string page_config_open_runner {
             get {
                 return ResourceManager.GetString("page_config_open_runner", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tự động đóng cửa sổ tiến trình sau khi tệp được tải xuống thành công..
+        /// </summary>
+        internal static string page_config_progress_window_close_completed_summary {
+            get {
+                return ResourceManager.GetString("page_config_progress_window_close_completed_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Đóng khi tải hoàn tất.
+        /// </summary>
+        internal static string page_config_progress_window_close_completed_title {
+            get {
+                return ResourceManager.GetString("page_config_progress_window_close_completed_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Đóng cửa sổ tiến trình sau khi mở tệp đã tải xuống..
+        /// </summary>
+        internal static string page_config_progress_window_close_open_file_summary {
+            get {
+                return ResourceManager.GetString("page_config_progress_window_close_open_file_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Đóng sau khi mở tệp.
+        /// </summary>
+        internal static string page_config_progress_window_close_open_file_title {
+            get {
+                return ResourceManager.GetString("page_config_progress_window_close_open_file_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Đóng cửa sổ tiến trình sau khi File Explorer mở vị trí của tệp đã tải xuống..
+        /// </summary>
+        internal static string page_config_progress_window_close_open_folder_summary {
+            get {
+                return ResourceManager.GetString("page_config_progress_window_close_open_folder_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Đóng sau khi mở thư mục chứa tệp.
+        /// </summary>
+        internal static string page_config_progress_window_close_open_folder_title {
+            get {
+                return ResourceManager.GetString("page_config_progress_window_close_open_folder_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tùy chỉnh thời điểm cửa sổ theo dõi tác vụ tự động đóng.
+        /// </summary>
+        internal static string page_config_progress_window_summary {
+            get {
+                return ResourceManager.GetString("page_config_progress_window_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cửa sổ tiến trình tải xuống.
+        /// </summary>
+        internal static string page_config_progress_window_title {
+            get {
+                return ResourceManager.GetString("page_config_progress_window_title", resourceCulture);
             }
         }
         
@@ -799,6 +952,60 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to page_downloads_action_delete_all_title.
+        /// </summary>
+        internal static string page_downloads_action_delete_all_title {
+            get {
+                return ResourceManager.GetString("page_downloads_action_delete_all_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_action_delete_completed_title.
+        /// </summary>
+        internal static string page_downloads_action_delete_completed_title {
+            get {
+                return ResourceManager.GetString("page_downloads_action_delete_completed_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_action_pause_all_title.
+        /// </summary>
+        internal static string page_downloads_action_pause_all_title {
+            get {
+                return ResourceManager.GetString("page_downloads_action_pause_all_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_action_resume_all_title.
+        /// </summary>
+        internal static string page_downloads_action_resume_all_title {
+            get {
+                return ResourceManager.GetString("page_downloads_action_resume_all_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_action_retry_all_title.
+        /// </summary>
+        internal static string page_downloads_action_retry_all_title {
+            get {
+                return ResourceManager.GetString("page_downloads_action_retry_all_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_action_title.
+        /// </summary>
+        internal static string page_downloads_action_title {
+            get {
+                return ResourceManager.GetString("page_downloads_action_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to page_downloads_add_title.
         /// </summary>
         internal static string page_downloads_add_title {
@@ -813,6 +1020,42 @@ namespace PDownloader.Resources.Locales {
         internal static string page_downloads_cancel {
             get {
                 return ResourceManager.GetString("page_downloads_cancel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_dialog_delete_all_summary.
+        /// </summary>
+        internal static string page_downloads_dialog_delete_all_summary {
+            get {
+                return ResourceManager.GetString("page_downloads_dialog_delete_all_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_dialog_delete_allcpl_summary.
+        /// </summary>
+        internal static string page_downloads_dialog_delete_allcpl_summary {
+            get {
+                return ResourceManager.GetString("page_downloads_dialog_delete_allcpl_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_dialog_pause_all_summary.
+        /// </summary>
+        internal static string page_downloads_dialog_pause_all_summary {
+            get {
+                return ResourceManager.GetString("page_downloads_dialog_pause_all_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_downloads_dialog_retry_all_summary.
+        /// </summary>
+        internal static string page_downloads_dialog_retry_all_summary {
+            get {
+                return ResourceManager.GetString("page_downloads_dialog_retry_all_summary", resourceCulture);
             }
         }
         
