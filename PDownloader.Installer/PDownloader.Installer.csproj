@@ -4,29 +4,41 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows7.0</TargetFramework>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
 
     <PlatformTarget>x64</PlatformTarget>
     <Platforms>AnyCPU;x64</Platforms>
-    <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+    <!-- Publish config -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+
+    <!--<ExcludeFromSingleFile>true</ExcludeFromSingleFile>-->
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+
     <AssemblyVersion>0.0.0.0</AssemblyVersion>
     <FileVersion>0.0.0.0</FileVersion>
 
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>false</SelfContained>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <Authors>Song Mai Software</Authors>
+    <RepositoryUrl>https://github.com/maihcx/PDownloader.git</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    
     <!-- <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract> -->
 
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>PDownloader.Installer</AssemblyName>
     <RootNamespace>PDownloader.Installer</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Authors>Song Mai Software</Authors>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
+    
+    <!-- Release -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <Optimize>true</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
