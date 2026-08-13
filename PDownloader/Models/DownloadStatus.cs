@@ -24,5 +24,6 @@ public enum DownloadStatus
     Merging,
     Completed,
     Cancelled,
-    Error
+    Error,
+    Retrying
 }

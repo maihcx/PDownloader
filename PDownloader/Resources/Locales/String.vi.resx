@@ -615,4 +615,7 @@ Bạn có muốn tiếp tục?</value>
     <value>Hành động này sẽ thử lại tất cả các tiến trình đã thất bại!
 Bạn có muốn tiếp tục không?</value>
   </data>
+  <data name="download_status_retrying_title" xml:space="preserve">
+    <value>Đang thử lại: {0}</value>
+  </data>
 </root>

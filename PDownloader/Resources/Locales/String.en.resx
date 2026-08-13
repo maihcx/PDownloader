@@ -456,9 +456,6 @@
   <data name="download_view_file_name_title" xml:space="preserve">
     <value>File name</value>
   </data>
-  <data name="download_view_file_url_title" xml:space="preserve">
-    <value>URL link</value>
-  </data>
   <data name="download_view_file_cap_loaded_title" xml:space="preserve">
     <value>Downloaded / Size</value>
   </data>
@@ -552,6 +549,9 @@
   <data name="page_downloads_action_title" xml:space="preserve">
     <value>Actions</value>
   </data>
+  <data name="download_view_file_url_title" xml:space="preserve">
+    <value>URL link</value>
+  </data>
   <data name="page_downloads_action_delete_completed_title" xml:space="preserve">
     <value>Delete all (downloaded)</value>
   </data>
@@ -614,5 +614,8 @@ Do you want to continue?</value>
   <data name="page_downloads_dialog_retry_all_summary" xml:space="preserve">
     <value>This action will retry all failed processes!
 Do you want to continue?</value>
+  </data>
+  <data name="download_status_retrying_title" xml:space="preserve">
+    <value>Retrying: {0}</value>
   </data>
 </root>
