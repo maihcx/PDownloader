@@ -1,3 +1,35 @@
+## v0.10.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- Add automatic retry & Retrying status (#136) — @maihcx
+- Add bulk download actions and CFS commands, the final patch for #130 (#133) — @maihcx
+- Add downloads actions flyout and batch commands (#130) — @maihcx
+- Add Or/And visibility converters; improve converters (#128) — @maihcx
+- Add Messages dialog and extend messenger service (#127) — @maihcx
+
+## 🐛 Bug Fixes
+
+- Update YouTube player_client workaround | #122 (#138) — @maihcx
+- Use DownloadRunner.DownloaderCFSRest in CFS handler | #133 (#134) — @maihcx
+- Use DownloadStatus enum for status handling (#129) — @maihcx
+
+## ⚡ Performance
+
+- Update bundled FFmpeg binaries (#124) — @maihcx
+
+## 🧹 Maintenance
+
+- Refactor YouTube handler error handling and flow (#135) — @maihcx
+- Add DownloadRunner; move runner logic from AppRuntime (#132) — @maihcx
+- Set explicit x64 Release build settings (#131) — @maihcx
+- Unify build/publish settings across csproj files (#126) — @maihcx
+- Update yt-dlp executable (#125) — @maihcx
+
+
+---
+
 ## v0.9.1
 
 ## 🚀 Changelog
