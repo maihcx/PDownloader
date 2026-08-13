@@ -35,7 +35,7 @@ public static class CFSCommandHandler
         {
             case "main-event":
                 AppRuntime.cfsTray?.Send(name, value);
-                foreach ((_, ConfluxService? CFSvalue) in AppRuntime.DownloaderCFSRest)
+                foreach ((_, ConfluxService? CFSvalue) in DownloadRunner.DownloaderCFSRest)
                 {
                     CFSvalue.Send(name, value);
                 }
@@ -213,7 +213,7 @@ public static class CFSCommandHandler
         lock (broadcastLock)
         {
             string json = DownloadManager.SerializeItem(item);
-            AppRuntime.DownloaderCFSRest.TryGetValue(
+            DownloadRunner.DownloaderCFSRest.TryGetValue(
                 item.Id,
                 out ConfluxService? cfsDowloaderUI);
 
