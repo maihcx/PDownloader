@@ -682,7 +682,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Duy trì checkpoint theo từng phần và giải phóng dữ liệu đã gộp để cân đối tốc độ, dung lượng và khả năng tiếp tục..
+        ///   Looks up a localized string similar to page_config_merge_mode_balanced_description.
         /// </summary>
         internal static string page_config_merge_mode_balanced_description {
             get {
@@ -691,7 +691,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Cân bằng.
+        ///   Looks up a localized string similar to page_config_merge_mode_balanced_title.
         /// </summary>
         internal static string page_config_merge_mode_balanced_title {
             get {
@@ -700,7 +700,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Giữ toàn bộ dữ liệu nguồn đến khi hoàn tất và xác minh lại tệp đã gộp. Tốn thời gian và dung lượng hơn nhưng có thể dựng lại nếu tệp đang gộp bị xóa..
+        ///   Looks up a localized string similar to page_config_merge_mode_data_integrity_description.
         /// </summary>
         internal static string page_config_merge_mode_data_integrity_description {
             get {
@@ -709,7 +709,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Toàn vẹn dữ liệu.
+        ///   Looks up a localized string similar to page_config_merge_mode_data_integrity_title.
         /// </summary>
         internal static string page_config_merge_mode_data_integrity_title {
             get {
@@ -718,7 +718,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Gộp nhanh nhất, không tạo checkpoint an toàn. Không thể tạm dừng khi đang gộp và dữ liệu có thể không phục hồi nếu quá trình bị gián đoạn..
+        ///   Looks up a localized string similar to page_config_merge_mode_high_performance_description.
         /// </summary>
         internal static string page_config_merge_mode_high_performance_description {
             get {
@@ -727,7 +727,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Hiệu suất cao.
+        ///   Looks up a localized string similar to page_config_merge_mode_high_performance_title.
         /// </summary>
         internal static string page_config_merge_mode_high_performance_title {
             get {
@@ -736,7 +736,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Chọn mức ưu tiên giữa tốc độ gộp và khả năng bảo vệ dữ liệu tạm. Áp dụng cho các lượt tải được thêm sau khi lưu..
+        ///   Looks up a localized string similar to page_config_merge_mode_summary.
         /// </summary>
         internal static string page_config_merge_mode_summary {
             get {
@@ -745,7 +745,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Chế độ gộp tệp.
+        ///   Looks up a localized string similar to page_config_merge_mode_title.
         /// </summary>
         internal static string page_config_merge_mode_title {
             get {
@@ -763,7 +763,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Tự động đóng cửa sổ tiến trình sau khi tệp được tải xuống thành công..
+        ///   Looks up a localized string similar to page_config_progress_window_close_completed_summary.
         /// </summary>
         internal static string page_config_progress_window_close_completed_summary {
             get {
@@ -772,7 +772,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Đóng khi tải hoàn tất.
+        ///   Looks up a localized string similar to page_config_progress_window_close_completed_title.
         /// </summary>
         internal static string page_config_progress_window_close_completed_title {
             get {
@@ -781,7 +781,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Đóng cửa sổ tiến trình sau khi mở tệp đã tải xuống..
+        ///   Looks up a localized string similar to page_config_progress_window_close_open_file_summary.
         /// </summary>
         internal static string page_config_progress_window_close_open_file_summary {
             get {
@@ -790,7 +790,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Đóng sau khi mở tệp.
+        ///   Looks up a localized string similar to page_config_progress_window_close_open_file_title.
         /// </summary>
         internal static string page_config_progress_window_close_open_file_title {
             get {
@@ -799,7 +799,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Đóng cửa sổ tiến trình sau khi File Explorer mở vị trí của tệp đã tải xuống..
+        ///   Looks up a localized string similar to page_config_progress_window_close_open_folder_summary.
         /// </summary>
         internal static string page_config_progress_window_close_open_folder_summary {
             get {
@@ -808,7 +808,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Đóng sau khi mở thư mục chứa tệp.
+        ///   Looks up a localized string similar to page_config_progress_window_close_open_folder_title.
         /// </summary>
         internal static string page_config_progress_window_close_open_folder_title {
             get {
@@ -817,7 +817,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Tùy chỉnh thời điểm cửa sổ theo dõi tác vụ tự động đóng.
+        ///   Looks up a localized string similar to page_config_progress_window_summary.
         /// </summary>
         internal static string page_config_progress_window_summary {
             get {
@@ -826,7 +826,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Cửa sổ tiến trình tải xuống.
+        ///   Looks up a localized string similar to page_config_progress_window_title.
         /// </summary>
         internal static string page_config_progress_window_title {
             get {
@@ -1312,7 +1312,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Version {0} is available.
+        ///   Looks up a localized string similar to page_settings_update_available.
         /// </summary>
         internal static string page_settings_update_available {
             get {
@@ -1321,7 +1321,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Cancel.
+        ///   Looks up a localized string similar to page_settings_update_cancel_btn.
         /// </summary>
         internal static string page_settings_update_cancel_btn {
             get {
@@ -1330,7 +1330,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Check for updates.
+        ///   Looks up a localized string similar to page_settings_update_check_btn.
         /// </summary>
         internal static string page_settings_update_check_btn {
             get {
@@ -1339,7 +1339,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Checking for updates....
+        ///   Looks up a localized string similar to page_settings_update_checking.
         /// </summary>
         internal static string page_settings_update_checking {
             get {
@@ -1348,7 +1348,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Current version.
+        ///   Looks up a localized string similar to page_settings_update_current_version_title.
         /// </summary>
         internal static string page_settings_update_current_version_title {
             get {
@@ -1357,7 +1357,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Download.
+        ///   Looks up a localized string similar to page_settings_update_download_btn.
         /// </summary>
         internal static string page_settings_update_download_btn {
             get {
@@ -1366,7 +1366,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Downloading update....
+        ///   Looks up a localized string similar to page_settings_update_downloading.
         /// </summary>
         internal static string page_settings_update_downloading {
             get {
@@ -1375,7 +1375,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Downloading... {0}%.
+        ///   Looks up a localized string similar to page_settings_update_downloading_progress.
         /// </summary>
         internal static string page_settings_update_downloading_progress {
             get {
@@ -1384,7 +1384,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Failed to check for updates.
+        ///   Looks up a localized string similar to page_settings_update_error.
         /// </summary>
         internal static string page_settings_update_error {
             get {
@@ -1393,7 +1393,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Click to check for a new version.
+        ///   Looks up a localized string similar to page_settings_update_idle.
         /// </summary>
         internal static string page_settings_update_idle {
             get {
@@ -1402,7 +1402,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Install now.
+        ///   Looks up a localized string similar to page_settings_update_install_btn.
         /// </summary>
         internal static string page_settings_update_install_btn {
             get {
@@ -1411,7 +1411,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to New version available.
+        ///   Looks up a localized string similar to page_settings_update_new_version_title.
         /// </summary>
         internal static string page_settings_update_new_version_title {
             get {
@@ -1420,7 +1420,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Download complete — ready to install.
+        ///   Looks up a localized string similar to page_settings_update_ready.
         /// </summary>
         internal static string page_settings_update_ready {
             get {
@@ -1429,7 +1429,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Application Update.
+        ///   Looks up a localized string similar to page_settings_update_title.
         /// </summary>
         internal static string page_settings_update_title {
             get {
@@ -1438,7 +1438,7 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to You&apos;re up to date.
+        ///   Looks up a localized string similar to page_settings_update_uptodate.
         /// </summary>
         internal static string page_settings_update_uptodate {
             get {

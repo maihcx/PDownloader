@@ -217,49 +217,49 @@
     <value>page_config_summary</value>
   </data>
   <data name="page_settings_update_title" xml:space="preserve">
-    <value>Application Update</value>
+    <value>page_settings_update_title</value>
   </data>
   <data name="page_settings_update_current_version_title" xml:space="preserve">
-    <value>Current version</value>
+    <value>page_settings_update_current_version_title</value>
   </data>
   <data name="page_settings_update_check_btn" xml:space="preserve">
-    <value>Check for updates</value>
+    <value>page_settings_update_check_btn</value>
   </data>
   <data name="page_settings_update_cancel_btn" xml:space="preserve">
-    <value>Cancel</value>
+    <value>page_settings_update_cancel_btn</value>
   </data>
   <data name="page_settings_update_download_btn" xml:space="preserve">
-    <value>Download</value>
+    <value>page_settings_update_download_btn</value>
   </data>
   <data name="page_settings_update_install_btn" xml:space="preserve">
-    <value>Install now</value>
+    <value>page_settings_update_install_btn</value>
   </data>
   <data name="page_settings_update_idle" xml:space="preserve">
-    <value>Click to check for a new version</value>
+    <value>page_settings_update_idle</value>
   </data>
   <data name="page_settings_update_checking" xml:space="preserve">
-    <value>Checking for updates...</value>
+    <value>page_settings_update_checking</value>
   </data>
   <data name="page_settings_update_uptodate" xml:space="preserve">
-    <value>You're up to date</value>
+    <value>page_settings_update_uptodate</value>
   </data>
   <data name="page_settings_update_available" xml:space="preserve">
-    <value>Version {0} is available</value>
+    <value>page_settings_update_available</value>
   </data>
   <data name="page_settings_update_downloading" xml:space="preserve">
-    <value>Downloading update...</value>
+    <value>page_settings_update_downloading</value>
   </data>
   <data name="page_settings_update_downloading_progress" xml:space="preserve">
-    <value>Downloading... {0}%</value>
+    <value>page_settings_update_downloading_progress</value>
   </data>
   <data name="page_settings_update_ready" xml:space="preserve">
-    <value>Download complete — ready to install</value>
+    <value>page_settings_update_ready</value>
   </data>
   <data name="page_settings_update_error" xml:space="preserve">
-    <value>Failed to check for updates</value>
+    <value>page_settings_update_error</value>
   </data>
   <data name="page_settings_update_new_version_title" xml:space="preserve">
-    <value>New version available</value>
+    <value>page_settings_update_new_version_title</value>
   </data>
   <data name="page_config_header_title" xml:space="preserve">
     <value>page_config_header_title</value>
@@ -499,52 +499,52 @@
     <value>about_app_title</value>
   </data>
   <data name="page_config_progress_window_title" xml:space="preserve">
-    <value>Cửa sổ tiến trình tải xuống</value>
+    <value>page_config_progress_window_title</value>
   </data>
   <data name="page_config_progress_window_summary" xml:space="preserve">
-    <value>Tùy chỉnh thời điểm cửa sổ theo dõi tác vụ tự động đóng</value>
+    <value>page_config_progress_window_summary</value>
   </data>
   <data name="page_config_progress_window_close_completed_title" xml:space="preserve">
-    <value>Đóng khi tải hoàn tất</value>
+    <value>page_config_progress_window_close_completed_title</value>
   </data>
   <data name="page_config_progress_window_close_completed_summary" xml:space="preserve">
-    <value>Tự động đóng cửa sổ tiến trình sau khi tệp được tải xuống thành công.</value>
+    <value>page_config_progress_window_close_completed_summary</value>
   </data>
   <data name="page_config_progress_window_close_open_file_title" xml:space="preserve">
-    <value>Đóng sau khi mở tệp</value>
+    <value>page_config_progress_window_close_open_file_title</value>
   </data>
   <data name="page_config_progress_window_close_open_file_summary" xml:space="preserve">
-    <value>Đóng cửa sổ tiến trình sau khi mở tệp đã tải xuống.</value>
+    <value>page_config_progress_window_close_open_file_summary</value>
   </data>
   <data name="page_config_progress_window_close_open_folder_title" xml:space="preserve">
-    <value>Đóng sau khi mở thư mục chứa tệp</value>
+    <value>page_config_progress_window_close_open_folder_title</value>
   </data>
   <data name="page_config_progress_window_close_open_folder_summary" xml:space="preserve">
-    <value>Đóng cửa sổ tiến trình sau khi File Explorer mở vị trí của tệp đã tải xuống.</value>
+    <value>page_config_progress_window_close_open_folder_summary</value>
   </data>
   <data name="page_config_merge_mode_title" xml:space="preserve">
-    <value>Chế độ gộp tệp</value>
+    <value>page_config_merge_mode_title</value>
   </data>
   <data name="page_config_merge_mode_summary" xml:space="preserve">
-    <value>Chọn mức ưu tiên giữa tốc độ gộp và khả năng bảo vệ dữ liệu tạm. Áp dụng cho các lượt tải được thêm sau khi lưu.</value>
+    <value>page_config_merge_mode_summary</value>
   </data>
   <data name="page_config_merge_mode_high_performance_title" xml:space="preserve">
-    <value>Hiệu suất cao</value>
+    <value>page_config_merge_mode_high_performance_title</value>
   </data>
   <data name="page_config_merge_mode_high_performance_description" xml:space="preserve">
-    <value>Gộp nhanh nhất, không tạo checkpoint an toàn. Không thể tạm dừng khi đang gộp và dữ liệu có thể không phục hồi nếu quá trình bị gián đoạn.</value>
+    <value>page_config_merge_mode_high_performance_description</value>
   </data>
   <data name="page_config_merge_mode_balanced_title" xml:space="preserve">
-    <value>Cân bằng</value>
+    <value>page_config_merge_mode_balanced_title</value>
   </data>
   <data name="page_config_merge_mode_balanced_description" xml:space="preserve">
-    <value>Duy trì checkpoint theo từng phần và giải phóng dữ liệu đã gộp để cân đối tốc độ, dung lượng và khả năng tiếp tục.</value>
+    <value>page_config_merge_mode_balanced_description</value>
   </data>
   <data name="page_config_merge_mode_data_integrity_title" xml:space="preserve">
-    <value>Toàn vẹn dữ liệu</value>
+    <value>page_config_merge_mode_data_integrity_title</value>
   </data>
   <data name="page_config_merge_mode_data_integrity_description" xml:space="preserve">
-    <value>Giữ toàn bộ dữ liệu nguồn đến khi hoàn tất và xác minh lại tệp đã gộp. Tốn thời gian và dung lượng hơn nhưng có thể dựng lại nếu tệp đang gộp bị xóa.</value>
+    <value>page_config_merge_mode_data_integrity_description</value>
   </data>
   <data name="page_downloads_action_title" xml:space="preserve">
     <value>page_downloads_action_title</value>
