@@ -26,7 +26,7 @@ internal static class YtDlpCommandBuilder
     // "youtube:" extractor namespace, so it's a no-op for any other site.
     // Remove once yt-dlp ships an upstream fix for #17405.
     private const string YoutubePlayerClientWorkaround =
-        "youtube:player_client=web_safari,web_embedded,-tv_downgraded";
+        "youtube:player_client=default,web_embedded";
 
     public static IReadOnlyList<string> BuildResolveDirectUrls(
         string pageUrl,
