@@ -456,9 +456,6 @@
   <data name="download_view_file_name_title" xml:space="preserve">
     <value>File name</value>
   </data>
-  <data name="download_view_file_url_title" xml:space="preserve">
-    <value>URL link</value>
-  </data>
   <data name="download_view_file_cap_loaded_title" xml:space="preserve">
     <value>Downloaded / Size</value>
   </data>
@@ -548,5 +545,77 @@
   </data>
   <data name="page_config_merge_mode_data_integrity_description" xml:space="preserve">
     <value>Keeps every source part until completion and verifies the merged file again. It uses more time and disk space, but can rebuild if the in-progress file is deleted.</value>
+  </data>
+  <data name="page_downloads_action_title" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="download_view_file_url_title" xml:space="preserve">
+    <value>URL link</value>
+  </data>
+  <data name="page_downloads_action_delete_completed_title" xml:space="preserve">
+    <value>Delete all (downloaded)</value>
+  </data>
+  <data name="page_downloads_action_delete_all_title" xml:space="preserve">
+    <value>Delete all</value>
+  </data>
+  <data name="page_downloads_action_pause_all_title" xml:space="preserve">
+    <value>Stop all</value>
+  </data>
+  <data name="page_downloads_action_resume_all_title" xml:space="preserve">
+    <value>Continue all</value>
+  </data>
+  <data name="dialog_warn_title" xml:space="preserve">
+    <value>Warning!</value>
+  </data>
+  <data name="dialog_button_ok_title" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="dialog_button_cancel_title" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="dialog_button_abort_title" xml:space="preserve">
+    <value>Abort</value>
+  </data>
+  <data name="dialog_button_yes_title" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="dialog_button_no_title" xml:space="preserve">
+    <value>No</value>
+  </data>
+  <data name="dialog_button_retry_title" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="dialog_button_Ignore_title" xml:space="preserve">
+    <value>Ignore</value>
+  </data>
+  <data name="dialog_button_try_title" xml:space="preserve">
+    <value>Try</value>
+  </data>
+  <data name="dialog_button_continue_title" xml:space="preserve">
+    <value>Continue</value>
+  </data>
+  <data name="page_downloads_dialog_delete_allcpl_summary" xml:space="preserve">
+    <value>This action will delete all records of processes marked as complete!
+Do you want to continue?
+(Note that the file on the hard drive will not be deleted)</value>
+  </data>
+  <data name="page_downloads_dialog_delete_all_summary" xml:space="preserve">
+    <value>This operation will delete all logs of all processes!
+Do you want to continue?
+(Note that files on the hard drive will not be deleted)</value>
+  </data>
+  <data name="page_downloads_dialog_pause_all_summary" xml:space="preserve">
+    <value>This action will pause all processes!
+Do you want to continue?</value>
+  </data>
+  <data name="page_downloads_action_retry_all_title" xml:space="preserve">
+    <value>Retry all</value>
+  </data>
+  <data name="page_downloads_dialog_retry_all_summary" xml:space="preserve">
+    <value>This action will retry all failed processes!
+Do you want to continue?</value>
+  </data>
+  <data name="download_status_retrying_title" xml:space="preserve">
+    <value>Retrying: {0}</value>
   </data>
 </root>

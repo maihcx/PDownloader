@@ -19,28 +19,41 @@ internal class EnumToBooleanConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (parameter is not String enumString)
+        if (value is not Enum enumValue || parameter is not string enumName)
         {
-            throw new ArgumentException("ExceptionEnumToBooleanConverterParameterMustBeAnEnumName");
+            return false;
         }
 
-        if (!Enum.IsDefined(typeof(ApplicationTheme), value))
+        string[] arreNumName = enumName.Split('~');
+        bool isInvert = false;
+
+        if (arreNumName.Length == 2)
         {
-            throw new ArgumentException("ExceptionEnumToBooleanConverterValueMustBeAnEnum");
+            if (arreNumName[0].Equals("!"))
+            {
+                isInvert = true;
+            }
+
+            enumName = arreNumName[1];
         }
 
-        var enumValue = Enum.Parse(typeof(ApplicationTheme), enumString);
+        bool parseCompare = Enum.TryParse(
+            enumValue.GetType(),
+            enumName,
+            ignoreCase: true,
+            out var parsedValue)
+            && Equals(enumValue, parsedValue);
 
-        return enumValue.Equals(value);
+        if (isInvert)
+        {
+            return !parseCompare;
+        }
+
+        return parseCompare;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (parameter is not String enumString)
-        {
-            throw new ArgumentException("ExceptionEnumToBooleanConverterParameterMustBeAnEnumName");
-        }
-
-        return Enum.Parse(typeof(ApplicationTheme), enumString);
+        throw new NotSupportedException();
     }
 }
