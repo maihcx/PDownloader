@@ -45,8 +45,7 @@ internal sealed class YoutubeDownloadHandler
     {
         if (YtDlpService.Instance.FindYtDlp() == null)
         {
-            SetError("yt-dlp not found.");
-            return;
+            throw new ArgumentNullException("yt-dlp not found.");
         }
 
         string outputFolder = _pathService.GetOutputFolder(_item);
@@ -66,70 +65,18 @@ internal sealed class YoutubeDownloadHandler
 
         _item.Status = DownloadStatus.Connecting;
 
+        List<ResolvedStream> streams;
         try
         {
-            List<ResolvedStream> streams;
-            try
-            {
-                streams = await YtDlpService.Instance.ResolveDirectUrlsAsync(
-                    _item.Url,
-                    _item.FormatId ?? "bestvideo+bestaudio/best",
-                    referer,
-                    cookieHeader,
-                    cookieJarJson,
-                    userAgent,
-                    _item.CustomHeaders,
-                    cancellationToken);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException(
-                    "Unable to resolve URL from yt-dlp: " + ex.Message,
-                    ex);
-            }
-
-            if (streams.Count == 0)
-            {
-                SetError("yt-dlp does not return any stream to download.");
-                return;
-            }
-
-            _item.TotalBytes = streams.Sum(stream => stream.FilesizeApprox);
-            _item.Status = DownloadStatus.Downloading;
-            _item.StartTime = DateTime.Now;
-
-            List<DownloadedStreamFile> rawFiles = await DownloadStreamsAsync(
-                streams,
-                tempDirectory,
+            streams = await YtDlpService.Instance.ResolveDirectUrlsAsync(
+                _item.Url,
+                _item.FormatId ?? "bestvideo+bestaudio/best",
+                referer,
+                cookieHeader,
+                cookieJarJson,
+                userAgent,
+                _item.CustomHeaders,
                 cancellationToken);
-
-            cancellationToken.ThrowIfCancellationRequested();
-            _item.Status = DownloadStatus.Merging;
-            _reportMergeProgress(0);
-
-            string finalPath;
-            if (rawFiles.Count == 1)
-            {
-                finalPath = MoveSingleStream(rawFiles[0], outputFolder, fileStem);
-                _reportMergeProgress(100);
-            }
-            else
-            {
-                finalPath = await _ffmpegMuxer.MuxAsync(
-                    rawFiles,
-                    outputFolder,
-                    fileStem,
-                    _reportMergeProgress,
-                    _item.MergeMode,
-                    cancellationToken);
-            }
-
-            Complete(finalPath, rawFiles);
-            DownloadPathService.CleanupTemp(tempDirectory);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -137,8 +84,48 @@ internal sealed class YoutubeDownloadHandler
         }
         catch (Exception ex)
         {
-            SetError(ex.Message);
+            throw new InvalidOperationException(
+                "Unable to resolve URL from yt-dlp: " + ex.Message,
+                ex);
         }
+
+        if (streams.Count == 0)
+        {
+            throw new Exception("yt-dlp does not return any stream to download.");
+        }
+
+        _item.TotalBytes = streams.Sum(stream => stream.FilesizeApprox);
+        _item.Status = DownloadStatus.Downloading;
+        _item.StartTime = DateTime.Now;
+
+        List<DownloadedStreamFile> rawFiles = await DownloadStreamsAsync(
+            streams,
+            tempDirectory,
+            cancellationToken);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        _item.Status = DownloadStatus.Merging;
+        _reportMergeProgress(0);
+
+        string finalPath;
+        if (rawFiles.Count == 1)
+        {
+            finalPath = MoveSingleStream(rawFiles[0], outputFolder, fileStem);
+            _reportMergeProgress(100);
+        }
+        else
+        {
+            finalPath = await _ffmpegMuxer.MuxAsync(
+                rawFiles,
+                outputFolder,
+                fileStem,
+                _reportMergeProgress,
+                _item.MergeMode,
+                cancellationToken);
+        }
+
+        Complete(finalPath, rawFiles);
+        DownloadPathService.CleanupTemp(tempDirectory);
     }
 
     private async Task<List<DownloadedStreamFile>> DownloadStreamsAsync(
@@ -275,12 +262,5 @@ internal sealed class YoutubeDownloadHandler
         _reportProgress(_item.TotalBytes, 0);
         _item.Status = DownloadStatus.Completed;
         _item.EndTime = DateTime.Now;
-    }
-
-    private void SetError(string message)
-    {
-        _item.Status = DownloadStatus.Error;
-        _item.ErrorMessage = message;
-        _item.SpeedBps = 0;
     }
 }
