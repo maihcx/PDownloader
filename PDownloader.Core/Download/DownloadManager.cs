@@ -153,11 +153,38 @@ public class DownloadManager : IDisposable
         }
     }
 
-    public void Resume(string id)
+    public void Resume(string id, bool isShowRunner = true)
     {
-        DownloadItem? item = Find(id); if (item == null)
+        if (string.IsNullOrWhiteSpace(id))
         {
             return;
+        }
+
+        DownloadItem? item = Find(id);
+
+        Resume(item);
+    }
+
+    public void Resume(DownloadItem? item, bool isShowRunner = true)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        if (isShowRunner)
+        {
+            DownloadRunner.EnsureRunnerStarted(item.Id, new()
+            {
+                id = item.Id,
+                fileName = item.FileName,
+                formatId = item.FormatId ?? string.Empty,
+                filesize = item.TotalBytes,
+                saveTo = item.SavePath,
+                url = item.Url,
+                downloadRunner = "runner",
+                threads = item.Threads
+            });
         }
 
         lock (_lock)

@@ -68,7 +68,6 @@ public static class CFSCommandHandler
                 return;
 
             case "runner-resume":
-                HandleShowRunnerForDownload(value);
                 DownloadManager.Instance.Resume(value);
                 return;
 
@@ -113,7 +112,7 @@ public static class CFSCommandHandler
                 AppRuntime.cfsMain.Send("state", value);
             }
 
-            AppRuntime.EnsureCloseAllRunnerStarted();
+            DownloadRunner.EnsureCloseAllRunnerStarted();
 
             AppRuntime.bootstrap?.Shutdown();
         }
@@ -133,30 +132,6 @@ public static class CFSCommandHandler
         }
     }
 
-    private static void HandleShowRunnerForDownload(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return;
-        }
-
-        DownloadItem? downloadItem = DownloadManager.Instance.Find(value);
-        if (downloadItem != null)
-        {
-            AppRuntime.EnsureRunnerStarted(downloadItem.Id, new()
-            {
-                id = downloadItem.Id,
-                fileName = downloadItem.FileName,
-                formatId = downloadItem.FormatId ?? string.Empty,
-                filesize = downloadItem.TotalBytes,
-                saveTo = downloadItem.SavePath,
-                url = downloadItem.Url,
-                downloadRunner = "runner",
-                threads = downloadItem.Threads
-            });
-        }
-    }
-
     private static void SendListToMain()
     {
         string json = DownloadManager.Instance.SerializeList();
@@ -173,7 +148,7 @@ public static class CFSCommandHandler
 
         var id = Guid.NewGuid().ToString();
         string fileName = await DownloadEngine.GetRemoteFileNameAsync(req.Url) ?? "Unknown";
-        AppRuntime.EnsureRunnerStarted(id, new()
+        DownloadRunner.EnsureRunnerStarted(id, new()
         {
             id = id,
             fileName = fileName,
