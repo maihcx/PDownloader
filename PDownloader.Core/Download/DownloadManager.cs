@@ -137,7 +137,13 @@ public class DownloadManager : IDisposable
 
     public void Pause(string id)
     {
-        DownloadItem? item = Find(id); if (item == null)
+        DownloadItem? item = Find(id);
+        Pause(item);
+    }
+
+    public void Pause(DownloadItem? item)
+    {
+        if (item == null)
         {
             return;
         }
@@ -147,7 +153,7 @@ public class DownloadManager : IDisposable
             return;
         }
 
-        if (_ctsByItem.TryGetValue(id, out CancellationTokenSource? cts))
+        if (_ctsByItem.TryGetValue(item.Id, out CancellationTokenSource? cts))
         {
             cts.Cancel();
         }
@@ -201,13 +207,82 @@ public class DownloadManager : IDisposable
         _runningTaskByItem[item.Id] = task;
     }
 
+    public void PauseAll()
+    {
+        foreach (DownloadItem item in _downloads)
+        {
+            if (item.Status != DownloadStatus.Completed && item.Status != DownloadStatus.Error)
+            {
+                Pause(item);
+            }
+        }
+    }
+
+    public void ResumeAll()
+    {
+        foreach (DownloadItem item in _downloads)
+        {
+            if (item.Status == DownloadStatus.Paused)
+            {
+                Resume(item);
+            }
+        }
+    }
+
+    public void RetryAll()
+    {
+        foreach (DownloadItem item in _downloads)
+        {
+            if (item.Status == DownloadStatus.Error)
+            {
+                Retry(item);
+            }
+        }
+    }
+
+    public void ClearAll(string state)
+    {
+        ClearAllAsync(state).Wait();
+    }
+
+    public async Task ClearAllAsync(string state)
+    {
+        if (state.Equals("completed"))
+        {
+            for (int i = _downloads.Count - 1; i >= 0; i--)
+            {
+                DownloadItem item = _downloads[i];
+                if (item.Status == DownloadStatus.Completed)
+                {
+                    await CancelAsync(item);
+                }
+            }
+        }
+        else if (state.Equals("all"))
+        {
+            for (int i = _downloads.Count - 1; i >= 0; i--)
+            {
+                DownloadItem item = _downloads[i];
+                await CancelAsync(item);
+            }
+        }
+    }
+
     public async Task CancelAsync(string id)
     {
-        DownloadItem? item;
+        DownloadItem? item = _downloads.FirstOrDefault(d => d.Id == id);
+
+        if (item != null)
+        {
+            await CancelAsync(item);
+        }
+    }
+
+    public async Task CancelAsync(DownloadItem item)
+    {
         Task? runningTask;
         lock (_lock)
         {
-            item = _downloads.FirstOrDefault(d => d.Id == id);
             if (item == null)
             {
                 return;
@@ -217,9 +292,9 @@ public class DownloadManager : IDisposable
             _downloads.Remove(item);
         }
 
-        _runningTaskByItem.TryGetValue(id, out runningTask);
+        _runningTaskByItem.TryGetValue(item.Id, out runningTask);
 
-        if (_ctsByItem.TryGetValue(id, out CancellationTokenSource? cts))
+        if (_ctsByItem.TryGetValue(item.Id, out CancellationTokenSource? cts))
         {
             cts.Cancel();
         }
@@ -233,17 +308,23 @@ public class DownloadManager : IDisposable
 
         DownloadEngine.DeleteTempFiles(item);
 
-        _runningTaskByItem.TryRemove(id, out _);
+        _runningTaskByItem.TryRemove(item.Id, out _);
     }
 
     public void Cancel(string id)
     {
-        _ = CancelAsync(id);
+        CancelAsync(id).Wait();
     }
 
     public void Retry(string id)
     {
-        DownloadItem? item = Find(id); if (item == null)
+        DownloadItem? item = Find(id);
+        Retry(item);
+    }
+
+    public void Retry(DownloadItem? item)
+    {
+        if (item == null)
         {
             return;
         }

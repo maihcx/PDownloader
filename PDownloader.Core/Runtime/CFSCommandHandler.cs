@@ -82,6 +82,22 @@ public static class CFSCommandHandler
             case "runner-pause":
                 DownloadManager.Instance.Pause(value);
                 return;
+
+            case "runner-clear":
+                DownloadManager.Instance.ClearAll(value);
+                return;
+
+            case "runner-pause-all":
+                DownloadManager.Instance.PauseAll();
+                return;
+
+            case "runner-resume-all":
+                DownloadManager.Instance.ResumeAll();
+                return;
+
+            case "runner-retry-all":
+                DownloadManager.Instance.RetryAll();
+                return;
         }
     }
 
