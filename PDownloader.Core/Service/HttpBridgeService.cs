@@ -231,7 +231,7 @@ public sealed class HttpBridgeService : IDisposable
             headers = customHeaders,
         };
 
-        Utils.AppRuntime.EnsureRunnerStarted(id, data);
+        DownloadRunner.EnsureRunnerStarted(id, data);
         await Json(response, new { ok = true });
     }
 
@@ -297,7 +297,7 @@ public sealed class HttpBridgeService : IDisposable
             headers = headers,
         };
 
-        Utils.AppRuntime.EnsureRunnerStarted(id, data);
+        DownloadRunner.EnsureRunnerStarted(id, data);
         await Json(response, new { success = true });
     }
 
