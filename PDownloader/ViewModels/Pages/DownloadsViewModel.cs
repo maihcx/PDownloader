@@ -379,13 +379,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            foreach (DownloadItemDto item in Downloads)
-            {
-                if (item.StatusState == DownloadStatus.Completed)
-                {
-                    ConfluxManager.cfsPDownloaderCore?.Send("runner-cancel", item.Id);
-                }
-            }
+            ConfluxManager.cfsPDownloaderCore?.Send("runner-clear", "completed");
         }
     }
 
@@ -404,10 +398,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            foreach (DownloadItemDto item in Downloads)
-            {
-                ConfluxManager.cfsPDownloaderCore?.Send("runner-cancel", item.Id);
-            }
+            ConfluxManager.cfsPDownloaderCore?.Send("runner-clear", "all");
         }
     }
 
@@ -426,13 +417,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            foreach (DownloadItemDto item in Downloads)
-            {
-                if (item.StatusState != DownloadStatus.Completed && item.StatusState != DownloadStatus.Error)
-                {
-                    ConfluxManager.cfsPDownloaderCore?.Send("runner-pause", item.Id);
-                }
-            }
+            ConfluxManager.cfsPDownloaderCore?.Send("runner-pause-all", string.Empty);
         }
     }
 
@@ -451,13 +436,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            foreach (DownloadItemDto item in Downloads)
-            {
-                if (item.StatusState == DownloadStatus.Paused)
-                {
-                    ConfluxManager.cfsPDownloaderCore?.Send("runner-resume", item.Id);
-                }
-            }
+            ConfluxManager.cfsPDownloaderCore?.Send("runner-resume-all", string.Empty);
         }
     }
 
@@ -476,13 +455,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            foreach (DownloadItemDto item in Downloads)
-            {
-                if (item.StatusState == DownloadStatus.Error)
-                {
-                    ConfluxManager.cfsPDownloaderCore?.Send("runner-retry", item.Id);
-                }
-            }
+            ConfluxManager.cfsPDownloaderCore?.Send("runner-retry-all", string.Empty);
         }
     }
 
