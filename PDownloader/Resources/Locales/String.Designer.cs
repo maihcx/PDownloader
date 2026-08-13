@@ -367,6 +367,15 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to download_status_retrying_title.
+        /// </summary>
+        internal static string download_status_retrying_title {
+            get {
+                return ResourceManager.GetString("download_status_retrying_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to download_view_file_cap_loaded_title.
         /// </summary>
         internal static string download_view_file_cap_loaded_title {

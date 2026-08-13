@@ -58,6 +58,9 @@ internal class StatusToTextConverter : IMultiValueConverter
             DownloadStatus.Error =>
                 LanguageBase.GetLangValue("download_status_error_title", errorMessage),
 
+            DownloadStatus.Retrying =>
+                LanguageBase.GetLangValue("download_status_retrying_title", errorMessage),
+
             _ =>
                 LanguageBase.GetLangValue("download_status_error_title", "unknown...")
         };

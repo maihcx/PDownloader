@@ -24,12 +24,32 @@ internal class EnumToBooleanConverter : IValueConverter
             return false;
         }
 
-        return Enum.TryParse(
+        string[] arreNumName = enumName.Split('~');
+        bool isInvert = false;
+
+        if (arreNumName.Length == 2)
+        {
+            if (arreNumName[0].Equals("!"))
+            {
+                isInvert = true;
+            }
+
+            enumName = arreNumName[1];
+        }
+
+        bool parseCompare = Enum.TryParse(
             enumValue.GetType(),
             enumName,
             ignoreCase: true,
             out var parsedValue)
             && Equals(enumValue, parsedValue);
+
+        if (isInvert)
+        {
+            return !parseCompare;
+        }
+
+        return parseCompare;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

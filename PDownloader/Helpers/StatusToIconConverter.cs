@@ -19,19 +19,23 @@ internal class StatusToIconConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        //Debug.WriteLine(value);
-        return value switch
+        if (value is DownloadStatus status)
         {
-            "Queued" => "HourglassHalf24",
-            "Connecting" => "CloudLink24",
-            "Downloading" => "ArrowDownload24",
-            "Paused" => "Pause24",
-            "Merging" => "Merge24",
-            "Completed" => "Checkmark24",
-            "Error" => "CloudError24",
-            _ => "QuestionCircle24"
-        };
-        //return "⏳";
+            return status switch
+            {
+                DownloadStatus.Queued => SymbolRegular.HourglassHalf24,
+                DownloadStatus.Connecting => SymbolRegular.CloudLink24,
+                DownloadStatus.Downloading => SymbolRegular.ArrowDownload24,
+                DownloadStatus.Paused => SymbolRegular.Pause24,
+                DownloadStatus.Merging => SymbolRegular.Merge24,
+                DownloadStatus.Completed => SymbolRegular.Checkmark24,
+                DownloadStatus.Error => SymbolRegular.CloudError24,
+                DownloadStatus.Retrying => SymbolRegular.ArrowCounterclockwise24,
+                _ => SymbolRegular.QuestionCircle24
+            };
+        }
+
+        return SymbolRegular.QuestionCircle24;
     }
     public object ConvertBack(object v, Type t, object p, CultureInfo c) => Binding.DoNothing;
 }

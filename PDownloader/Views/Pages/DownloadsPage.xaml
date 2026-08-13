@@ -259,7 +259,7 @@
                                                VerticalAlignment="Center"
                                                Margin="0,0,14,0"
                                                Style="{StaticResource DownloadStatusIconStyle}"
-                                               Symbol="{Binding Status, Converter={StaticResource StatusToIconConverter}}" />
+                                               Symbol="{Binding StatusState, Converter={StaticResource StatusToIconConverter}}" />
 
                                 <!-- File info -->
                                 <StackPanel Grid.Column="1"
@@ -341,15 +341,16 @@
                                                    Margin="0 0 2 0"
                                                    ToolTip="{utils:Localization page_downloads_pause}"
                                                    Command="{Binding DataContext.ViewModel.PauseCommand,
-                                         RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                    CommandParameter="{Binding}"
-                                                   Visibility="{Binding IsActive, Converter={StaticResource BoolToVisConverter}}" />
+                                                   Visibility="{Binding IsActive, Converter={StaticResource BoolToVisConverter}}"
+                                                   IsEnabled="{Binding StatusState, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=!~Connecting}"/>
 
                                         <ui:Button Icon="{ui:SymbolIcon Play24}"
                                                    Margin="0 0 2 0"
                                                    ToolTip="{utils:Localization page_downloads_resume}"
                                                    Command="{Binding DataContext.ViewModel.ResumeCommand,
-                                         RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                    CommandParameter="{Binding}">
                                             <ui:Button.Visibility>
                                                 <MultiBinding Converter="{StaticResource AndVisibilityConverter}">
@@ -360,6 +361,10 @@
                                                     <Binding Path="StatusState"
                                                              Converter="{StaticResource BoolToVisConverter}"
                                                              ConverterParameter="!~Error" />
+
+                                                    <Binding Path="StatusState"
+                                                             Converter="{StaticResource BoolToVisConverter}"
+                                                             ConverterParameter="!~Retrying" />
                                                 </MultiBinding>
                                             </ui:Button.Visibility>
                                         </ui:Button>
@@ -385,11 +390,18 @@
                                                        Margin="0 0 2 0"
                                                        Command="{Binding DataContext.ViewModel.RetryCommand,
                                              RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                       CommandParameter="{Binding}">
+                                                       CommandParameter="{Binding}"
+                                                       IsEnabled="{Binding StatusState, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Error}">
                                                 <ui:Button.Visibility>
-                                                    <Binding Path="StatusState"
-                                                             Converter="{StaticResource BoolToVisConverter}"
-                                                             ConverterParameter="Error" />
+                                                    <MultiBinding Converter="{StaticResource OrVisibilityConverter}">
+                                                        <Binding Path="StatusState"
+                                                                 Converter="{StaticResource BoolToVisConverter}"
+                                                                 ConverterParameter="Error" />
+
+                                                        <Binding Path="StatusState"
+                                                                 Converter="{StaticResource BoolToVisConverter}"
+                                                                 ConverterParameter="Retrying" />
+                                                    </MultiBinding>
                                                 </ui:Button.Visibility>
                                             </ui:Button>
 

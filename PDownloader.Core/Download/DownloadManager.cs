@@ -99,22 +99,55 @@ public class DownloadManager : IDisposable
                 OnItemChanged?.Invoke(item);
             });
 
-            var engine = new DownloadEngine(item, progress, cts.Token);
-            try
+            const int maxAutoRetries = 5;
+            int attempt = 0;
+
+            while (true)
             {
-                await engine.RunAsync();
-            }
-            catch (OperationCanceledException)
-            {
-                if (item.Status != DownloadStatus.Paused && item.Status != DownloadStatus.Cancelled)
+                var engine = new DownloadEngine(item, progress, cts.Token);
+                try
                 {
-                    item.Status = DownloadStatus.Paused;
+                    await engine.RunAsync();
+                    break;
                 }
-            }
-            catch (System.Exception ex)
-            {
-                item.Status = DownloadStatus.Error;
-                item.ErrorMessage = ex.Message;
+                catch (OperationCanceledException)
+                {
+                    if (item.Status != DownloadStatus.Paused && item.Status != DownloadStatus.Cancelled)
+                    {
+                        item.Status = DownloadStatus.Paused;
+                    }
+
+                    break;
+                }
+                catch (System.Exception ex)
+                {
+                    if (attempt >= maxAutoRetries)
+                    {
+                        item.Status = DownloadStatus.Error;
+                        item.ErrorMessage = ex.Message;
+                        break;
+                    }
+
+                    attempt++;
+                    item.Status = DownloadStatus.Retrying;
+                    item.ErrorMessage = $"An error occurred! Retrying ({attempt}/{maxAutoRetries})... Please wait...";
+                    OnItemChanged?.Invoke(item);
+
+                    int delayMilliseconds = 2000;
+                    try
+                    {
+                        await Task.Delay(delayMilliseconds, cts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (item.Status != DownloadStatus.Paused && item.Status != DownloadStatus.Cancelled)
+                        {
+                            item.Status = DownloadStatus.Paused;
+                        }
+
+                        break;
+                    }
+                }
             }
 
             if (item.Status != DownloadStatus.Cancelled)
@@ -404,6 +437,11 @@ public class DownloadManager : IDisposable
         if (item.Status == DownloadStatus.Completed)
         {
             QueueHashCalculation(item);
+        }
+
+        if (item.Status == DownloadStatus.Retrying)
+        {
+            Retry(item);
         }
 
         return item;

@@ -609,4 +609,7 @@
   <data name="page_downloads_dialog_retry_all_summary" xml:space="preserve">
     <value>page_downloads_dialog_retry_all_summary</value>
   </data>
+  <data name="download_status_retrying_title" xml:space="preserve">
+    <value>download_status_retrying_title</value>
+  </data>
 </root>
