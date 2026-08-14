@@ -131,7 +131,17 @@ dotnet build PDownloader.sln -c Release
 dotnet run --project PDownloader
 ```
 
-For the browser extension, see the "Manual/development install" steps above. Packaging scripts (`build.bat`, `pack-crx.bat`) are provided at the repository root for producing installer and extension release artifacts.
+For the browser extension, see the "Manual/development install" steps above. `build.bat` is provided at the repository root for producing the installer release artifact. The extension itself is built with Vite from `BrowserExtension/` (Node.js required):
+
+```bash
+cd BrowserExtension
+pnpm install
+
+pnpm run build:chrome    # dist/chromium, dist/store, PDownloader-store.zip
+pnpm run build:firefox   # dist/firefox, signs with AMO, publishes PDownloader.xpi + updates.json
+```
+
+`build:firefox` submits to Mozilla AMO for unlisted signing and requires `WEB_EXT_API_KEY`/`WEB_EXT_API_SECRET` environment variables (never commit these).
 
 ---
 
