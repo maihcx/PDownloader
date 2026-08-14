@@ -1,0 +1,18 @@
+{
+  "name": "pdownloader-browser-extension",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --mode chromium --watch",
+    "build:chrome": "node scripts/build-chrome.mjs",
+    "build:firefox": "node scripts/build-firefox.mjs",
+    "build:firefox-nosign": "node scripts/build-firefox-nosign.mjs",
+    "build": "pnpm run build:chrome && pnpm run build:firefox"
+  },
+  "devDependencies": {
+    "adm-zip": "^0.6.0",
+    "vite": "^8.2.1",
+    "vite-plugin-static-copy": "^4.1.1",
+    "web-ext": "^8.0.0"
+  }
+}
