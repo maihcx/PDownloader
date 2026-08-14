@@ -22,7 +22,7 @@ namespace PDownloader.Installer.Services;
 
 public static class BrowserExtensionInstallerService
 {
-    public const string ExtensionId = "nliblbkhgljcpdboininiepogjaegien";
+    public const string ExtensionId = "kdbapmeegoljihpndnbfeockjjcoogbp";
     public const string FirefoxExtensionId = "pdownloader@maisoft.io.vn";
 
     private const string ChromiumExtensionId = ExtensionId;
@@ -31,12 +31,15 @@ public static class BrowserExtensionInstallerService
     private const string ExtensionSettingsSubKey = "ExtensionSettings";
 
     private const string ChromiumUpdateUri =
-        "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/update.xml";
+        "https://clients2.google.com/service/update2/crx";
 
     private const string GeckoExtensionSettingsValue = "ExtensionSettings";
 
     private const string GeckoInstallUrl =
         "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/PDownloader.xpi";
+
+    private const string LegacySelfHostedChromiumExtensionId =
+        "nliblbkhgljcpdboininiepogjaegien";
 
     private enum BrowserEngine
     {
@@ -66,6 +69,7 @@ public static class BrowserExtensionInstallerService
                 switch (engine)
                 {
                     case BrowserEngine.Chromium when IsValidChromiumExtensionId():
+                        RemoveLegacySelfHostedChromiumPolicy(policyRoot);
                         RegisterChromiumExtensionPolicy(policyRoot, ChromiumUpdateUri);
                         break;
 
@@ -93,6 +97,7 @@ public static class BrowserExtensionInstallerService
                 {
                     case BrowserEngine.Chromium when IsValidChromiumExtensionId():
                         RemoveChromiumExtensionPolicy(policyRoot);
+                        RemoveLegacySelfHostedChromiumPolicy(policyRoot);
                         break;
 
                     case BrowserEngine.Gecko when !string.IsNullOrWhiteSpace(GeckoExtensionId):
@@ -140,7 +145,7 @@ public static class BrowserExtensionInstallerService
 
         extension.SetValue(
             "installation_mode",
-            "force_installed",
+            "normal_installed",
             RegistryValueKind.String);
 
         extension.SetValue(
@@ -152,11 +157,6 @@ public static class BrowserExtensionInstallerService
             "update_url",
             updateUrl,
             RegistryValueKind.String);
-
-        extension.SetValue(
-            "override_update_url",
-            1,
-            RegistryValueKind.DWord);
     }
 
     private static void RemoveChromiumExtensionPolicy(string policyRoot)
@@ -173,6 +173,18 @@ public static class BrowserExtensionInstallerService
 
         extensionSettings.DeleteSubKey(
             ChromiumExtensionId,
+            throwOnMissingSubKey: false);
+    }
+
+    private static void RemoveLegacySelfHostedChromiumPolicy(string policyRoot)
+    {
+        using RegistryKey? extensionSettings =
+            Registry.LocalMachine.OpenSubKey(
+                $"{policyRoot}\\{ExtensionSettingsSubKey}",
+                writable: true);
+
+        extensionSettings?.DeleteSubKey(
+            LegacySelfHostedChromiumExtensionId,
             throwOnMissingSubKey: false);
     }
 
@@ -193,7 +205,7 @@ public static class BrowserExtensionInstallerService
 
         extensionSettings[GeckoExtensionId] = new JsonObject
         {
-            ["installation_mode"] = "force_installed",
+            ["installation_mode"] = "normal_installed",
             ["install_url"] = GeckoInstallUrl,
             ["updates_disabled"] = false,
         };
