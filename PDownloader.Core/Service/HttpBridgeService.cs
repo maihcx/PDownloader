@@ -20,8 +20,13 @@ namespace PDownloader.Core.Service;
 public sealed class HttpBridgeService : IDisposable
 {
     private const string Prefix = "http://localhost:6287/";
-    private const string AllowedChromiumExtensionOrigin =
-        "chrome-extension://nliblbkhgljcpdboininiepogjaegien";
+
+    private static readonly HashSet<string> AllowedChromiumExtensionOrigins =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "chrome-extension://nliblbkhgljcpdboininiepogjaegien", // self-hosted CRX (has "key")
+            "chrome-extension://kdbapmeegoljihpndnbfeockjjcoogbp", // Chrome Web Store listing (no "key")
+        };
 
     private const string ClientHeaderName = "X-PDownloader-Client";
     private const string ClientHeaderValue = "browser-extension";
@@ -472,10 +477,7 @@ public sealed class HttpBridgeService : IDisposable
 
     private static bool IsAllowedOrigin(string? origin)
     {
-        if (string.Equals(
-            origin,
-            AllowedChromiumExtensionOrigin,
-            StringComparison.OrdinalIgnoreCase))
+        if (origin != null && AllowedChromiumExtensionOrigins.Contains(origin))
         {
             return true;
         }

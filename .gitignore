@@ -57,8 +57,8 @@ TestResult.xml
 nunit-*.xml
 /.vs
 
-# Browser extension signing key - KHONG BAO GIO commit private key nay
-BrowserExtension/_packaging/signing-key.pem
-BrowserExtension/dist
+# Browser extension build output / node deps / signing artifacts
+BrowserExtension/node_modules/
+BrowserExtension/dist/
 BrowserExtension/web-ext-artifacts/
 BrowserExtension/.web-extension-id
