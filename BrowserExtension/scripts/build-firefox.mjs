@@ -1,10 +1,6 @@
 #!/usr/bin/env node
 // pnpm run build:firefox
-//
-// Replaces sign-firefox.bat + publish-firefox-xpi.bat + generate-firefox-updates.ps1.
-// Builds the Firefox target with Vite, submits it to Mozilla AMO for UNLISTED
-// signing (self-distribution), then publishes the signed XPI as
-// BrowserExtension/PDownloader.xpi alongside a freshly generated updates.json.
+// FIREFOX_CHANNEL=listed pnpm run build:firefox  -> listed
 //
 // Required environment variables:
 //   WEB_EXT_API_KEY     - AMO JWT issuer
@@ -49,6 +45,9 @@ if (!apiSecret) {
   fail('WEB_EXT_API_SECRET is not set. Do not put the secret in source code or commit it to Git.');
 }
 
+const channel = process.env.FIREFOX_CHANNEL === 'listed' ? 'listed' : 'unlisted';
+const isListed = channel === 'listed';
+
 console.log('[PDownloader] Building Firefox extension...');
 await build({ root: extensionRoot, mode: 'firefox', configFile: path.join(extensionRoot, 'vite.config.mjs') });
 
@@ -58,9 +57,14 @@ if (!existsSync(path.join(firefoxDir, 'manifest.json'))) {
 
 mkdirSync(artifactsDir, { recursive: true });
 
-console.log('\nSubmitting extension to Mozilla for UNLISTED signing...');
+console.log(`\nSubmitting extension to Mozilla for ${channel.toUpperCase()} ${isListed ? 'review/publish' : 'signing'}...`);
 console.log(`Extension source: ${firefoxDir}`);
 console.log(`Signed artifacts: ${artifactsDir}\n`);
+
+const firefoxListingMetadataPath = path.join(extensionRoot, 'manifests', 'firefox-listing.json');
+if (isListed && !existsSync(firefoxListingMetadataPath)) {
+  fail(`Listing metadata file not found: ${firefoxListingMetadataPath}\n  Bắt buộc cho lần submit listed đầu tiên (categories/summary/license).`);
+}
 
 let signResult;
 try {
@@ -68,14 +72,34 @@ try {
     {
       apiKey,
       apiSecret,
-      channel: 'unlisted',
+      channel,
       sourceDir: firefoxDir,
-      artifactsDir
+      artifactsDir,
+      amoBaseUrl: 'https://addons.mozilla.org/api/v5/',
+      ...(isListed ? { amoMetadata: firefoxListingMetadataPath } : {})
     },
     { shouldExitProgram: false }
   );
 } catch (error) {
-  fail(`Mozilla signing failed: ${error?.message ?? error}`);
+  fail(`Mozilla submission failed: ${error?.message ?? error}`);
+}
+
+const signedXpi = readdirSync(artifactsDir)
+  .filter((name) => name.endsWith('.xpi'))
+  .map((name) => path.join(artifactsDir, name))
+  .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
+
+if (isListed) {
+  if (signResult?.success && signedXpi) {
+    console.log('\n[OK] Đã submit và được duyệt tự động (auto-approved).');
+    console.log(`Bản build đã ký nằm tại: ${signedXpi}`);
+  } else {
+    console.log('\n[OK] Đã submit lên AMO thành công, đang chờ REVIEW (có thể mất vài giờ đến vài ngày).');
+    console.log('Kiểm tra trạng thái tại: AMO Developer Hub -> Manage Status & Versions.');
+  }
+  console.log('Sau khi được Approved, extension sẽ TỰ ĐỘNG public trên addons.mozilla.org.');
+  console.log('Không cần commit PDownloader.xpi / updates.json cho bản listed — AMO tự lo update cho user.');
+  process.exit(0);
 }
 
 if (!signResult?.success) {
@@ -83,11 +107,6 @@ if (!signResult?.success) {
 }
 
 console.log('\nPublishing signed XPI to BrowserExtension/PDownloader.xpi...');
-
-const signedXpi = readdirSync(artifactsDir)
-  .filter((name) => name.endsWith('.xpi'))
-  .map((name) => path.join(artifactsDir, name))
-  .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
 
 if (!signedXpi) {
   fail(`No signed XPI was found in: ${artifactsDir}`);

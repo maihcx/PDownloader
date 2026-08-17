@@ -31,7 +31,9 @@ function pdownloaderManifestPlugin(target) {
     closeBundle() {
       const baseManifest = readJson(path.join(extensionRoot, 'manifest.json'));
       const firefoxConfig = readJson(path.join(extensionRoot, 'manifests', 'firefox.json'));
-      const manifest = buildManifestForTarget(target, baseManifest, firefoxConfig);
+      const manifest = buildManifestForTarget(target, baseManifest, firefoxConfig, {
+        listed: process.env.FIREFOX_CHANNEL === 'listed'
+      });
 
       writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\r\n`, 'utf8');
 
