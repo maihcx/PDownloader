@@ -1,58 +1,3 @@
-const _themeLink = document.createElement('link');
-_themeLink.rel = 'stylesheet';
-_themeLink.href = PDWebExt.runtime.getURL('common/theme.css');
-document.head.appendChild(_themeLink);
-
-const _style = document.createElement('style');
-_style.textContent = `
-.pd-grab-btn {
-  position: fixed;
-  z-index: 2147483647;
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  user-select: none;
-  background: var(--pd-bg);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--pd-border);
-  border-radius: 8px;
-  box-shadow: 0 4px 20px var(--pd-shadow),
-              0 0 0 1px rgba(79,195,247,0.08);
-  padding: 5px 12px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--pd-text);
-  cursor: pointer;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity .18s, transform .1s, border-color .15s;
-  pointer-events: auto;
-}
-.pd-grab-btn:hover {
-  background: var(--pd-accent-bg);
-  border-color: var(--pd-accent);
-  color: var(--pd-text);
-}
-.pd-grab-btn:active { transform: scale(0.96); }
-.pd-grab-icon {
-  width: 0; height: 0;
-  border-left: 9px solid var(--pd-accent);
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  display: inline-block;
-}
-.pd-grab-btn.success {
-  border-color: var(--pd-green);
-  background: var(--pd-green-bg);
-}
-.pd-grab-btn.success .pd-grab-icon {
-  border-left-color: var(--pd-green);
-}
-`;
-document.head.appendChild(_style);
-
 const VIDEO_CONTEXT_SELECTOR = [
   '[data-video-id]',
   '[aria-label="Video player"]',
@@ -66,9 +11,9 @@ const VIDEO_CONTEXT_SELECTOR = [
 
 let _activeVideo = null;
 let _activeContextNode = null;
-let _pressedVideo = null;
-let _pressedContextNode = null;
 let _btn = null;
+let _qualityPanel = null;
+let _dismissedVideo = null;
 let _hideTimer = null;
 let _pointerFrame = 0;
 let _lastPointerEvent = null;
@@ -173,29 +118,30 @@ function getEmbeddingPageReferer() {
   return '';
 }
 
-function isYouTubeWatch() {
+function usesDedicatedYouTubePanel() {
   const host = location.hostname.toLowerCase();
   const isRegularYouTube = host === 'youtube.com' || host.endsWith('.youtube.com');
 
-  return window === window.top
-    && isRegularYouTube
-    && !location.pathname.startsWith('/shorts/');
+  return window === window.top && isRegularYouTube;
 }
 
 function getBtn() {
   if (_btn) return _btn;
 
-  _btn = document.createElement('div');
-  _btn.className = 'pd-grab-btn pd-theme-root';
+  if (!PD.QualityAnalyzer) {
+    throw new Error('Quality analyzer is not available.');
+  }
 
-  const icon = document.createElement('span');
-  icon.className = 'pd-grab-icon';
+  _qualityPanel = PD.QualityAnalyzer.createPanel({
+    fixed: true,
+    getContext: () => resolveQualityContext(_activeVideo, _activeContextNode),
+    onClose: () => {
+      _dismissedVideo = _activeVideo;
+      hideButton(false);
+    }
+  });
 
-  const label = document.createElement('span');
-  label.className = 'pd-grab-label';
-  label.textContent = PD.I18n.t('ytDownloadThisVideo');
-
-  _btn.append(icon, label);
+  _btn = _qualityPanel.element;
 
   _btn.addEventListener('pointerenter', () => {
     clearHide();
@@ -203,230 +149,105 @@ function getBtn() {
   });
   _btn.addEventListener('pointerleave', () => scheduleHide(300));
 
-  _btn.addEventListener('pointerdown', () => {
-    if (!_activeVideo || !isRenderedVideo(_activeVideo)) {
-      refreshActiveVideoFromPointer();
-    }
-
-    _pressedVideo = _activeVideo;
-    _pressedContextNode = _activeContextNode;
-  }, true);
-
-  _btn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const activeVideo = isRenderedVideo(_pressedVideo)
-      ? _pressedVideo
-      : _activeVideo;
-    const activeContextNode = activeVideo === _pressedVideo
-      ? _pressedContextNode
-      : _activeContextNode;
-
-    _pressedVideo = null;
-    _pressedContextNode = null;
-
-    if (!activeVideo || !activeVideo.isConnected) return;
-
-    const hostname = location.hostname;
-    const isSpecial = [
-      'tiktok.com', 'facebook.com', 'fb.watch', 'instagram.com',
-      'x.com', 'twitter.com', 'vimeo.com', 'twitch.tv',
-      'reddit.com', 'bilibili.com', 'bilibili.tv', 'soundcloud.com'
-    ].some(h => hostname.includes(h)) || location.pathname.startsWith('/shorts/');
-
-    try {
-      let url;
-      let filename;
-
-      if (isYouTubeHost(hostname)) {
-        const videoId = getYouTubeVideoId(location.href);
-        const youtubeUrl = getCanonicalYouTubeUrl(location.href);
-
-        if (!youtubeUrl) {
-          showBtnFeedback(PD.I18n.t('genericError'), false);
-          return;
-        }
-
-        const rawTitle = String(document.title || '').trim();
-        const mediaTitle = rawTitle && !/^youtube$/i.test(rawTitle)
-          ? rawTitle
-          : `YouTube_${videoId}`;
-        filename = sanitizeName(mediaTitle) + '.mp4';
-
-        const resp = await sendMessageSafe({
-          action: 'download_via_ytdlp',
-          url: youtubeUrl,
-          filename,
-          title: mediaTitle,
-          referer: location.href
-        });
-
-        showBtnFeedback(
-          resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
-          resp?.success
-        );
-        return;
-      }
-
-      if (isVimeoHost(hostname)) {
-        const embeddingReferer = getEmbeddingPageReferer();
-        const canonicalUrl = getCanonicalVimeoUrl(location.href);
-
-        url = canonicalUrl || getSiteUrl(activeVideo, activeContextNode);
-
-        const mediaTitle = getMediaTitle(activeVideo, activeContextNode);
-        filename = sanitizeName(mediaTitle) + '.mp4';
-
-        const resp = await sendMessageSafe({
-          action: 'download_via_ytdlp',
-          url,
-          filename,
-          title: mediaTitle,
-          referer: embeddingReferer || url || location.href
-        });
-
-        showBtnFeedback(
-          resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
-          resp?.success
-        );
-        return;
-      }
-
-      if (isSpecial) {
-        url = getSiteUrl(activeVideo, activeContextNode);
-        const mediaTitle = getMediaTitle(activeVideo, activeContextNode);
-        filename = sanitizeName(mediaTitle) + (hostname.includes('soundcloud.com') ? '.mp3' : '.mp4');
-
-        const detected = await sendMessageSafe({
-          action: 'get_best_media_candidate',
-          mediaType: hostname.includes('soundcloud.com') ? 'audio' : 'video',
-          minScore: 80
-        });
-        const candidate = detected?.candidate || null;
-
-        const shouldUseCandidate = candidate?.id && (
-          candidate.kind === 'hls'
-          || candidate.kind === 'dash'
-          || !isSpecificMediaPageUrl(url, hostname)
-        );
-        let candidateTried = false;
-
-        if (shouldUseCandidate) {
-          candidateTried = true;
-          const resp = await sendMessageSafe({
-            action: 'download_media_candidate',
-            candidateId: candidate.id,
-            mediaType: hostname.includes('soundcloud.com') ? 'audio' : 'video'
-          });
-
-          showBtnFeedback(
-            resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
-            resp?.success
-          );
-          if (resp?.success) return;
-        }
-
-        const resp = await sendMessageSafe({
-          action: 'download_via_ytdlp',
-          url,
-          filename,
-          title: mediaTitle,
-          referer: location.href,
-          audioOnly: hostname.includes('soundcloud.com')
-        });
-
-        if (!resp?.success && candidate?.id && !candidateTried) {
-          const fallback = await sendMessageSafe({
-            action: 'download_media_candidate',
-            candidateId: candidate.id,
-            mediaType: hostname.includes('soundcloud.com') ? 'audio' : 'video'
-          });
-
-          if (fallback?.success) {
-            showBtnFeedback(PD.I18n.t('ytAdded'), true);
-            return;
-          }
-        }
-
-        showBtnFeedback(
-          resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
-          resp?.success
-        );
-        return;
-      }
-
-      const detected = await sendMessageSafe({
-        action: 'get_best_media_candidate',
-        mediaType: 'video',
-        minScore: 70
-      });
-      if (detected?.candidate?.id) {
-        const resp = await sendMessageSafe({
-          action: 'download_media_candidate',
-          candidateId: detected.candidate.id,
-          mediaType: 'video'
-        });
-
-        showBtnFeedback(
-          resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
-          resp?.success
-        );
-        if (resp?.success) return;
-      }
-
-      url = activeVideo.currentSrc || activeVideo.src;
-      const isPlaceholderSrc = !url
-        || url.startsWith('blob:')
-        || /(^|[\/_-])(blank|dummy|placeholder|empty)([\/_.-]|$)/i.test(url)
-        || (isFinite(activeVideo.duration) && activeVideo.duration > 0 && activeVideo.duration < 2);
-
-      if (isPlaceholderSrc) {
-        const manifest = await sendMessageSafe({ action: 'get_hls_manifest' });
-        if (manifest?.url) {
-          filename = sanitizeName(document.title) + '.mp4';
-          const resp = await sendMessageSafe({
-            action: 'download_via_ytdlp',
-            url: manifest.url,
-            filename,
-            title: document.title,
-            referer: manifest.referer
-          });
-          showBtnFeedback(
-            resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
-            resp?.success
-          );
-        } else {
-          showBtnFeedback(PD.I18n.t('contentDrmUnsupported'), false);
-        }
-        return;
-      }
-
-      try {
-        const p = new URL(url).pathname;
-        const seg = p.substring(p.lastIndexOf('/') + 1);
-        filename = seg.includes('.') ? seg : sanitizeName(document.title) + '.mp4';
-      } catch (_) {
-        filename = 'video.mp4';
-      }
-
-      const resp = await sendMessageSafe({
-        action: 'download',
-        url,
-        filename,
-        referer: location.href
-      });
-      showBtnFeedback(
-        resp?.success ? PD.I18n.t('ytAdded') : PD.I18n.t('contentConnError'),
-        resp?.success
-      );
-    } catch (error) {
-      showBtnFeedback('✗ ' + (error?.message || PD.I18n.t('genericError')), false);
-    }
-  });
-
   document.body.appendChild(_btn);
   return _btn;
+}
+
+async function resolveQualityContext(video, contextNode) {
+  if (!video || !video.isConnected) return null;
+
+  const hostname = location.hostname;
+  const mediaTitle = getMediaTitle(video, contextNode);
+  let url = '';
+  let referer = location.href;
+
+  if (isYouTubeHost(hostname)) {
+    url = getCanonicalYouTubeUrl(location.href) || location.href;
+  } else if (isVimeoHost(hostname)) {
+    const embeddingReferer = getEmbeddingPageReferer();
+    url = getCanonicalVimeoUrl(location.href) || getSiteUrl(video, contextNode);
+    referer = embeddingReferer || location.href;
+  } else {
+    const siteUrl = getSiteUrl(video, contextNode);
+    if (siteUrl && /^https?:\/\//i.test(siteUrl)) url = siteUrl;
+
+    const shouldPreferPageUrl = [
+      'tiktok.com', 'facebook.com', 'fb.watch', 'instagram.com',
+      'x.com', 'twitter.com', 'twitch.tv', 'reddit.com',
+      'bilibili.com', 'bilibili.tv', 'soundcloud.com'
+    ].some(host => hostname.includes(host));
+
+    if (!shouldPreferPageUrl && (!url || url === location.href)) {
+      const directUrl = video.currentSrc || video.src || '';
+      if (/^https?:\/\//i.test(directUrl)) url = directUrl;
+    }
+
+    const shouldUseCapturedMedia = !url
+      || url === location.href
+      || url.startsWith('blob:')
+      || /\.(?:m3u8|mpd)(?:$|[?#])/i.test(url);
+
+    if (!shouldPreferPageUrl && shouldUseCapturedMedia) {
+      const detected = await sendMessageSafe({
+        action: 'get_media_candidates',
+        mediaType: 'video',
+        minScore: 45
+      });
+
+      const candidates = Array.isArray(detected?.candidates)
+        ? detected.candidates.filter(candidate => /^https?:\/\//i.test(candidate?.url || ''))
+        : [];
+      const bestCandidate = candidates[0] || null;
+      const manifestCandidates = candidates.filter(candidate =>
+        candidate.kind === 'hls' || candidate.kind === 'dash');
+
+      let candidate = bestCandidate;
+      if (manifestCandidates.length) {
+        let bestOrigin = '';
+        try { bestOrigin = new URL(bestCandidate?.url || '').origin; } catch (_) { }
+        const bestManifestKind = ['hls', 'dash'].includes(bestCandidate?.kind)
+          ? bestCandidate.kind
+          : '';
+
+        const sameOriginManifests = bestOrigin
+          ? manifestCandidates.filter(item => {
+              try {
+                return new URL(item.url).origin === bestOrigin
+                  && (!bestManifestKind || item.kind === bestManifestKind);
+              } catch (_) {
+                return false;
+              }
+            })
+          : manifestCandidates;
+
+        candidate = [...(sameOriginManifests.length ? sameOriginManifests : manifestCandidates)]
+          .sort((a, b) => (a.foundAt || 0) - (b.foundAt || 0))[0];
+      }
+
+      if (candidate?.url) {
+        url = candidate.url;
+        referer = candidate.referer || candidate.pageUrl || location.href;
+      }
+    }
+
+    if (!url || url === location.href || url.startsWith('blob:')) {
+      const manifest = await sendMessageSafe({ action: 'get_hls_manifest' });
+      if (manifest?.url && /^https?:\/\//i.test(manifest.url)) {
+        url = manifest.url;
+        referer = manifest.referer || location.href;
+      }
+    }
+
+    if (!url || url.startsWith('blob:')) url = location.href;
+  }
+
+  return {
+    url,
+    cacheKey: `${url}|${mediaTitle}`,
+    title: mediaTitle,
+    referer,
+    allowDirectFallback: !isYouTubeHost(hostname)
+  };
 }
 
 async function sendMessageSafe(message) {
@@ -450,23 +271,9 @@ async function sendMessageSafe(message) {
   }
 }
 
-function showBtnFeedback(text, ok) {
-  const btn = getBtn();
-  const lbl = btn.querySelector('.pd-grab-label');
-  const origText = PD.I18n.t('ytDownloadThisVideo');
-  lbl.textContent = text;
-  btn.classList.toggle('success', !!ok);
-  showButton();
-
-  setTimeout(() => {
-    if (!lbl.isConnected) return;
-    lbl.textContent = origText;
-    btn.classList.remove('success');
-  }, 2000);
-}
-
 function showButton() {
   const btn = getBtn();
+  btn.style.display = 'flex';
   btn.style.visibility = 'visible';
   btn.style.opacity = '1';
 }
@@ -514,8 +321,6 @@ function hideButton(clearActive = true) {
   if (clearActive) {
     _activeVideo = null;
     _activeContextNode = null;
-    _pressedVideo = null;
-    _pressedContextNode = null;
   }
 }
 
@@ -530,15 +335,16 @@ function positionBtn(video) {
   const isVertical = ['tiktok.com', 'instagram.com', 'facebook.com'].some(h => location.hostname.includes(h))
     || location.pathname.startsWith('/shorts/');
 
-  const estimatedWidth = Math.max(btn.offsetWidth || 0, 132);
+  const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+  const estimatedWidth = Math.max(btn.offsetWidth || 0, 176);
   const top = clamp(rect.top + 10, 8, Math.max(8, window.innerHeight - 40));
-  const preferredLeft = isVertical
-    ? rect.left + 12
-    : rect.right - estimatedWidth - 12;
-  const left = clamp(preferredLeft, 8, Math.max(8, window.innerWidth - estimatedWidth - 8));
+  const preferredRight = viewportWidth - rect.right + 12;
+  const right = clamp(preferredRight, 8, Math.max(8, viewportWidth - estimatedWidth - 8));
 
   btn.style.top = `${Math.round(top)}px`;
-  btn.style.left = `${Math.round(left)}px`;
+  btn.style.left = 'auto';
+  btn.style.right = `${right}px`;
+  _qualityPanel?.setDropdownAlignment(isVertical ? 'left' : 'right');
   showButton();
 }
 
@@ -561,44 +367,10 @@ function getSiteUrl(video, contextNode) {
   return PD.SiteUrlResolver?.resolve(video, contextNode || video) || location.href;
 }
 
-function isSpecificMediaPageUrl(rawUrl, hostname = location.hostname) {
-  try {
-    const url = new URL(rawUrl, location.href);
-    const path = url.pathname;
-    const host = String(hostname || url.hostname).toLowerCase();
-
-    if (host.includes('tiktok.com')) return /\/@[^/]+\/video\/\d+/i.test(path);
-    if (host.includes('instagram.com')) return /^\/(?:reel|reels|p|tv)\/[^/]+/i.test(path);
-    if (host.includes('facebook.com') || host.includes('fb.watch')) {
-      return !!url.searchParams.get('v')
-        || /\/(?:reel|videos|watch)\//i.test(path)
-        || /\/video\.php$/i.test(path);
-    }
-    if (host.includes('x.com') || host.includes('twitter.com')) return /\/status\/\d+/i.test(path);
-    if (host.includes('reddit.com')) return /\/comments\/[A-Za-z0-9]+/i.test(path);
-    if (host.includes('vimeo.com')) return /\/\d+(?:$|\/)/.test(path);
-    if (host.includes('bilibili.')) return /\/video\//i.test(path);
-    if (host.includes('soundcloud.com')) return path.split('/').filter(Boolean).length >= 2;
-
-    return rawUrl !== location.href;
-  } catch (_) {
-    return false;
-  }
-}
-
 function getMediaTitle(video, contextNode) {
   return PD.SiteUrlResolver?.getMediaTitle?.(video, contextNode || video)
     || document.title
     || 'video';
-}
-
-function sanitizeName(name) {
-  const sanitized = String(name || 'video')
-    .replace(/[\\/:*?"<>|]/g, '_')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 80);
-  return sanitized || 'video';
 }
 
 function clamp(value, min, max) {
@@ -717,15 +489,6 @@ function getVideoUnderLastPointer() {
   return { video, target };
 }
 
-function refreshActiveVideoFromPointer() {
-  const pointed = getVideoUnderLastPointer();
-  if (!pointed?.video) return false;
-
-  _activeVideo = pointed.video;
-  _activeContextNode = getVideoContextNode(pointed.target, pointed.video);
-  return true;
-}
-
 function queuePointerProcessing(forceRefresh = false) {
   if (forceRefresh) _forcePointerRefresh = true;
   if (!_pointerFrame) {
@@ -738,7 +501,7 @@ function processPointerEvent() {
   const forceRefresh = _forcePointerRefresh;
   _forcePointerRefresh = false;
 
-  if (!_lastPointerEvent || _contextInvalidated || isYouTubeWatch()) return;
+  if (!_lastPointerEvent || _contextInvalidated || usesDedicatedYouTubePanel()) return;
 
   const pointed = getVideoUnderLastPointer();
   const target = pointed?.target || _lastPointerEvent.target;
@@ -754,6 +517,12 @@ function processPointerEvent() {
     return;
   }
 
+  if (video === _dismissedVideo) {
+    hideButton(false);
+    return;
+  }
+  if (_dismissedVideo && video !== _dismissedVideo) _dismissedVideo = null;
+
   clearHide();
   _activeVideo = video;
   _activeContextNode = getVideoContextNode(target, video);
@@ -761,7 +530,7 @@ function processPointerEvent() {
 }
 
 function initListeners() {
-  if (isYouTubeWatch()) return;
+  if (usesDedicatedYouTubePanel()) return;
 
   document.addEventListener('pointermove', (event) => {
     _lastPointerEvent = {
@@ -783,7 +552,8 @@ function initListeners() {
     };
 
     const pointed = getVideoUnderLastPointer();
-    if (!pointed?.video) return;
+    if (!pointed?.video || pointed.video === _dismissedVideo) return;
+    if (_dismissedVideo && pointed.video !== _dismissedVideo) _dismissedVideo = null;
 
     clearHide();
     _activeVideo = pointed.video;

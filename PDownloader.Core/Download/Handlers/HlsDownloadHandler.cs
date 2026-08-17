@@ -139,6 +139,7 @@ internal sealed class HlsDownloadHandler
         {
             return await YtDlpService.Instance.ResolveHlsFragmentsAsync(
                 _item.Url,
+                _item.FormatId,
                 referer,
                 cookieHeader,
                 cookieJarJson,
@@ -208,6 +209,7 @@ internal sealed class HlsDownloadHandler
 
         return await _ytDlpDownloader.DownloadAsync(
             _item.Url,
+            _item.FormatId,
             tempDirectory,
             outputPathWithoutExtension,
             referer,

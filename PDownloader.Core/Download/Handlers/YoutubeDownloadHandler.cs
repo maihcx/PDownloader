@@ -20,6 +20,7 @@ internal sealed class YoutubeDownloadHandler
     private readonly DownloadItem _item;
     private readonly DownloadPathService _pathService;
     private readonly FfmpegMuxer _ffmpegMuxer;
+    private readonly YtDlpHlsDownloadService _ytDlpFragmentedDownloader;
     private readonly Action<long, double> _reportProgress;
     private readonly Action<double> _reportMergeProgress;
     private readonly Action<string, IReadOnlyList<DownloadThreadProgress>> _reportThreadProgress;
@@ -34,6 +35,7 @@ internal sealed class YoutubeDownloadHandler
         _item = item;
         _pathService = pathService;
         _ffmpegMuxer = new FfmpegMuxer();
+        _ytDlpFragmentedDownloader = new YtDlpHlsDownloadService();
         _reportProgress = reportProgress;
         _reportMergeProgress = reportMergeProgress;
         _reportThreadProgress = reportThreadProgress;
@@ -94,6 +96,20 @@ internal sealed class YoutubeDownloadHandler
             throw new Exception("yt-dlp does not return any stream to download.");
         }
 
+        if (streams.Any(stream => !stream.IsDirectHttp))
+        {
+            await DownloadFragmentedFormatAsync(
+                outputFolder,
+                fileStem,
+                tempDirectory,
+                referer,
+                cookieHeader,
+                cookieJarJson,
+                userAgent,
+                cancellationToken);
+            return;
+        }
+
         _item.TotalBytes = streams.Sum(stream => stream.FilesizeApprox);
         _item.Status = DownloadStatus.Downloading;
         _item.StartTime = DateTime.Now;
@@ -125,6 +141,83 @@ internal sealed class YoutubeDownloadHandler
         }
 
         Complete(finalPath, rawFiles);
+        DownloadPathService.CleanupTemp(tempDirectory);
+    }
+
+    private async Task DownloadFragmentedFormatAsync(
+        string outputFolder,
+        string fileStem,
+        string tempDirectory,
+        string? referer,
+        string? cookieHeader,
+        string? cookieJarJson,
+        string? userAgent,
+        CancellationToken cancellationToken)
+    {
+        _item.Status = DownloadStatus.Downloading;
+        _item.StartTime = DateTime.Now;
+        _item.TotalBytes = 0;
+        _item.SetProgressVisualizationUnsupported("YtDlp");
+        _reportProgress(_item.DownloadedBytes, _item.SpeedBps);
+
+        string uniqueMp4Path = DownloadPathService.UniqueFilePath(
+            outputFolder,
+            $"{fileStem}.mp4");
+        string outputPathWithoutExtension = Path.Combine(
+            Path.GetDirectoryName(uniqueMp4Path) ?? outputFolder,
+            Path.GetFileNameWithoutExtension(uniqueMp4Path));
+
+        long previousDownloadedBytes = 0;
+        long previousTimestamp = Stopwatch.GetTimestamp();
+        object progressSync = new();
+
+        string finalPath = await _ytDlpFragmentedDownloader.DownloadAsync(
+            _item.Url,
+            _item.FormatId,
+            tempDirectory,
+            outputPathWithoutExtension,
+            referer,
+            cookieHeader,
+            cookieJarJson,
+            userAgent,
+            _item.CustomHeaders,
+            _item.Threads,
+            (downloadedBytes, totalBytes, ytDlpSpeedBps) =>
+            {
+                lock (progressSync)
+                {
+                    long now = Stopwatch.GetTimestamp();
+                    double elapsedSeconds =
+                        (now - previousTimestamp) / (double)Stopwatch.Frequency;
+                    double fallbackSpeedBps =
+                        downloadedBytes >= previousDownloadedBytes
+                        && elapsedSeconds > 0
+                            ? (downloadedBytes - previousDownloadedBytes)
+                                / elapsedSeconds
+                            : 0;
+
+                    previousDownloadedBytes = downloadedBytes;
+                    previousTimestamp = now;
+
+                    if (totalBytes > 0)
+                    {
+                        _item.TotalBytes = totalBytes;
+                    }
+
+                    _reportProgress(
+                        downloadedBytes,
+                        ytDlpSpeedBps > 0 ? ytDlpSpeedBps : fallbackSpeedBps);
+                }
+            },
+            cancellationToken);
+
+        long fileLength = new FileInfo(finalPath).Length;
+        _item.FileName = Path.GetFileName(finalPath);
+        _item.SavePath = finalPath;
+        _item.TotalBytes = Math.Max(_item.TotalBytes, fileLength);
+        _reportProgress(_item.TotalBytes, 0);
+        _item.Status = DownloadStatus.Completed;
+        _item.EndTime = DateTime.Now;
         DownloadPathService.CleanupTemp(tempDirectory);
     }
 

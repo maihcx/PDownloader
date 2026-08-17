@@ -83,6 +83,7 @@ internal static class YtDlpCommandBuilder
 
     public static IReadOnlyList<string> BuildResolveHlsFragments(
         string url,
+        string? formatId,
         string? referer,
         string? userAgent,
         IReadOnlyDictionary<string, string>? extraHeaders,
@@ -95,6 +96,8 @@ internal static class YtDlpCommandBuilder
             "--no-warnings",
             "--no-playlist",
         };
+
+        AddFormat(arguments, formatId);
 
         AddYoutubePlayerClientWorkaround(arguments);
         AddReferer(arguments, referer);
@@ -110,6 +113,17 @@ internal static class YtDlpCommandBuilder
     {
         arguments.Add("--extractor-args");
         arguments.Add(YoutubePlayerClientWorkaround);
+    }
+
+    private static void AddFormat(List<string> arguments, string? formatId)
+    {
+        if (string.IsNullOrWhiteSpace(formatId))
+        {
+            return;
+        }
+
+        arguments.Add("-f");
+        arguments.Add(formatId);
     }
 
     private static void AddReferer(List<string> arguments, string? referer)

@@ -82,7 +82,6 @@ public sealed class YtDlpService
             EnsureSuccessful(result);
             List<ResolvedStream> streams =
                 YtDlpJsonParser.ParseResolvedStreams(result.StandardOutput);
-            EnsureDirectHttpStreams(streams);
             return streams;
         }
         finally
@@ -152,6 +151,7 @@ public sealed class YtDlpService
 
     public async Task<HlsFragmentsResult?> ResolveHlsFragmentsAsync(
         string url,
+        string? formatId,
         string? referer,
         string? cookieHeader,
         string? cookieJarJson,
@@ -171,6 +171,7 @@ public sealed class YtDlpService
         {
             IReadOnlyList<string> arguments = YtDlpCommandBuilder.BuildResolveHlsFragments(
                 effectiveUrl,
+                formatId,
                 referer,
                 userAgent,
                 extraHeaders,
@@ -188,28 +189,6 @@ public sealed class YtDlpService
         {
             _cookieFileService.DeleteSafe(cookieFile);
         }
-    }
-
-    private static void EnsureDirectHttpStreams(
-        IReadOnlyCollection<ResolvedStream> streams)
-    {
-        ResolvedStream? unsupported = streams.FirstOrDefault(stream => !stream.IsDirectHttp);
-        if (unsupported == null)
-        {
-            return;
-        }
-
-        string format = string.IsNullOrWhiteSpace(unsupported.FormatId)
-            ? "unknown"
-            : unsupported.FormatId;
-        string protocol = string.IsNullOrWhiteSpace(unsupported.Protocol)
-            ? "unknown"
-            : unsupported.Protocol;
-
-        throw new InvalidOperationException(
-            $"yt-dlp selected a manifest/fragmented stream " +
-            $"(format {format}, protocol {protocol}) instead of a complete HTTP file. " +
-            "PDownloader cannot add this URL to the standard segment downloader.");
     }
 
     private static string? GetHeader(

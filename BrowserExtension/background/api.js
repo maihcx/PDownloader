@@ -471,20 +471,27 @@
     }
   }
 
-  async function ytAnalyze(url, sourceTabId = -1) {
-    const cookieContext = await getCookieContext(url, '', sourceTabId);
-    const headers = {};
-    applyBrowserHeaders(headers);
+  async function mediaAnalyze({
+    url,
+    referer,
+    extraHeaders,
+    sourceTabId = -1
+  }) {
+    const effectiveUrl = normalizeVimeoPlayerUrl(url);
+    const cookieContext = await getCookieContext(effectiveUrl, referer, sourceTabId);
+    const headers = { ...(extraHeaders || {}) };
     if (cookieContext.header) headers.Cookie = cookieContext.header;
+    if (referer) headers.Referer = referer;
+    applyBrowserHeaders(headers);
     if (cookieContext.cookies.length) headers[COOKIE_JAR_HEADER] = JSON.stringify(cookieContext.cookies);
 
-    return postJson(C.YT_ANALYZE_URL, {
-      url,
-      headers
+    return postJson(C.MEDIA_ANALYZE_URL, {
+      url: effectiveUrl,
+      headers: Object.keys(headers).length ? headers : undefined
     });
   }
 
-  async function ytDownload({
+  async function mediaDownload({
     url,
     formatId,
     filename,
@@ -503,7 +510,7 @@
     applyBrowserHeaders(headers);
     if (cookieContext.cookies.length) headers[COOKIE_JAR_HEADER] = JSON.stringify(cookieContext.cookies);
 
-    return postJson(C.YT_DOWNLOAD_URL, {
+    return postJson(C.MEDIA_DOWNLOAD_URL, {
       url: effectiveUrl,
       formatId,
       filename,
@@ -513,5 +520,13 @@
     });
   }
 
-  PD.Api = { ping, sendDownload, ytAnalyze, ytDownload };
+  function ytAnalyze(url, sourceTabId = -1) {
+    return mediaAnalyze({ url, sourceTabId });
+  }
+
+  function ytDownload(options) {
+    return mediaDownload(options);
+  }
+
+  PD.Api = { ping, sendDownload, mediaAnalyze, mediaDownload, ytAnalyze, ytDownload };
 })(self);

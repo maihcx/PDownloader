@@ -39,9 +39,11 @@
       "js": [
         "common/browserApi.js",
         "common/i18n.js",
+        "common/mediaTitle.js",
         "content/siteUrlResolver.js",
         "content/mediaObserver.js",
         "content/pdfObserver.js",
+        "content/qualityAnalyzer.js",
         "content/content.js"
       ],
       "all_frames": true,
@@ -54,6 +56,8 @@
       "js": [
         "common/browserApi.js",
         "common/i18n.js",
+        "common/mediaTitle.js",
+        "content/qualityAnalyzer.js",
         "content/youtube_content.js"
       ],
       "run_at": "document_end"
