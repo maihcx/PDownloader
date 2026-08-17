@@ -22,18 +22,18 @@ using System.Text;
 
 namespace PDownloader.Installer.Services;
 
-public static class InstallService
+public sealed class InstallService : IInstallService
 {
     private const string UninstallRegKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PDownloader";
 
     private const string PayloadResourceName = "PDownloader.Installer.Resources.payload.zip";
     private const string UpdateTempDirectoryName = "PDownloaderUpdate";
 
-    public static string DefaultInstallPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PDownloader");
+    public string DefaultInstallPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PDownloader");
 
-    public static readonly int EstimatedSize = 205824;
+    public int EstimatedSize => 205824;
 
-    public static async Task InstallAsync(
+    public async Task InstallAsync(
         string installDir,
         bool desktopShortcut,
         bool startMenuShortcut,
@@ -145,7 +145,7 @@ public static class InstallService
         }
     }
 
-    public static async Task UninstallAsync(
+    public async Task UninstallAsync(
         string installDir,
         IProgress<(double Percent, string Status)>? progress,
         CancellationToken ct,
@@ -312,7 +312,7 @@ public static class InstallService
         }
     }
 
-    public static void ScheduleTemporaryFilesCleanup(string? requestedUpdateTempDirectory = null)
+    public void ScheduleTemporaryFilesCleanup(string? requestedUpdateTempDirectory = null)
     {
         try
         {
@@ -425,7 +425,7 @@ public static class InstallService
                 StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void RegisterUninstaller(string installDir)
+    private void RegisterUninstaller(string installDir)
     {
         string exePath = Path.Combine(installDir, "PDownloader.exe");
         string uninstallerExe = Path.Combine(installDir, "PDownloader.Installer.exe");
@@ -448,7 +448,7 @@ public static class InstallService
         key.SetValue("EstimatedSize", EstimatedSize, RegistryValueKind.DWord);
     }
 
-    public static string? GetInstalledDir()
+    public string? GetInstalledDir()
     {
         using RegistryKey? key = Registry.LocalMachine.OpenSubKey(UninstallRegKey);
         return key?.GetValue("InstallLocation") as string;

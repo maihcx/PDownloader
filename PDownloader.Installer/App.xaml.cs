@@ -13,43 +13,59 @@
 //
 // Copyright (C) Song Mai Software.
 
-using PDownloader.Installer.Services;
-using PDownloader.Installer.Views;
 using System.Windows;
 
 namespace PDownloader.Installer;
 
-public partial class App : System.Windows.Application
+public partial class App
 {
-    private string? _updateTempDirectory;
+    private readonly IHost _host;
+    private readonly InstallerLaunchOptions _launchOptions;
 
-    protected override void OnStartup(StartupEventArgs e)
+    public App()
     {
-        base.OnStartup(e);
+        _launchOptions = InstallerLaunchOptions.Parse(
+            Environment.GetCommandLineArgs().Skip(1));
 
-        bool isUninstall = e.Args.Contains("--uninstall", StringComparer.OrdinalIgnoreCase);
-        _updateTempDirectory = GetOptionValue(e.Args, "--update-temp-dir");
-
-        var window = new MainWindow(isUninstall);
-        window.Show();
-    }
-
-    protected override void OnExit(ExitEventArgs e)
-    {
-        InstallService.ScheduleTemporaryFilesCleanup(_updateTempDirectory);
-        base.OnExit(e);
-    }
-
-    private static string? GetOptionValue(string[] args, string optionName)
-    {
-        for (int index = 0; index < args.Length - 1; index++)
-        {
-            if (args[index].Equals(optionName, StringComparison.OrdinalIgnoreCase))
+        _host = Host
+            .CreateDefaultBuilder()
+            .ConfigureServices((context, services) =>
             {
-                return args[index + 1];
-            }
-        }
+                services.AddSingleton(_launchOptions);
 
-        return null;
+                services.AddSingleton<IInstallService, InstallService>();
+                services.AddSingleton<ILicenseService, LicenseService>();
+                services.AddSingleton<IFolderPickerService, FolderPickerService>();
+                services.AddSingleton<IInstallerApplicationService, InstallerApplicationService>();
+
+                services.AddSingleton<InstallerViewModel>();
+                services.AddSingleton<IWindow, MainWindow>();
+                services.AddHostedService<ApplicationHostService>();
+            })
+            .Build();
+    }
+
+    public static IServiceProvider Services =>
+        ((App)Current)._host.Services;
+
+    private void OnStartup(object sender, StartupEventArgs e)
+    {
+        _host.StartAsync(CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    private void OnExit(object sender, ExitEventArgs e)
+    {
+        _host.Services
+            .GetRequiredService<IInstallService>()
+            .ScheduleTemporaryFilesCleanup(_launchOptions.UpdateTempDirectory);
+
+        _host.StopAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
+        _host.Dispose();
+    }
+
+    public static T GetRequiredService<T>()
+        where T : class
+    {
+        return Services.GetRequiredService<T>();
     }
 }
