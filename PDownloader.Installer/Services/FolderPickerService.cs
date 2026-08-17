@@ -13,16 +13,22 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Installer.Views;
+namespace PDownloader.Installer.Services;
 
-public partial class MainWindow : FluentWindow, IWindow
+public sealed class FolderPickerService : IFolderPickerService
 {
-    public InstallerViewModel ViewModel { get; }
-
-    public MainWindow(InstallerViewModel viewModel)
+    public string? PickFolder(string description, string initialPath)
     {
-        ViewModel = viewModel;
-        DataContext = this;
-        InitializeComponent();
+        using var dialog = new System.Windows.Forms.FolderBrowserDialog
+        {
+            Description = description,
+            SelectedPath = initialPath,
+            UseDescriptionForTitle = true,
+            ShowNewFolderButton = true,
+        };
+
+        return dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK
+            ? dialog.SelectedPath
+            : null;
     }
 }

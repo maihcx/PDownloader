@@ -13,16 +13,9 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Installer.Views;
+namespace PDownloader.Installer.Services.Contracts;
 
-public partial class MainWindow : FluentWindow, IWindow
+public interface IWindow
 {
-    public InstallerViewModel ViewModel { get; }
-
-    public MainWindow(InstallerViewModel viewModel)
-    {
-        ViewModel = viewModel;
-        DataContext = this;
-        InitializeComponent();
-    }
+    void Show();
 }

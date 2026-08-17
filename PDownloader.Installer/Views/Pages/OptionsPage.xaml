@@ -1,0 +1,38 @@
+<UserControl
+    x:Class="PDownloader.Installer.Views.Pages.OptionsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:PDownloader.Installer.Utils"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <Grid Margin="40,32">
+        <StackPanel>
+            <TextBlock Margin="0,0,0,32"
+                       FontSize="22"
+                       FontWeight="Bold"
+                       Text="{local:LocalizationExtension options_title}" />
+            <CheckBox Margin="0,0,0,12"
+                      FontSize="14"
+                      Content="{local:LocalizationExtension options_shortcut_desktop}"
+                      IsChecked="{Binding DesktopShortcut}" />
+            <CheckBox Margin="0,0,0,12"
+                      FontSize="14"
+                      Content="{local:LocalizationExtension options_shortcut_startmenu}"
+                      IsChecked="{Binding StartMenuShortcut}" />
+            <CheckBox FontSize="14"
+                      Content="{local:LocalizationExtension options_startup}"
+                      IsChecked="{Binding RunAtStartup}" />
+        </StackPanel>
+
+        <StackPanel HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    Orientation="Horizontal">
+            <ui:Button Margin="0,0,8,0"
+                       Command="{Binding BackFromOptionsCommand}"
+                       Content="{local:LocalizationExtension options_back}" />
+            <ui:Button Appearance="Primary"
+                       Command="{Binding NextFromOptionsCommand}"
+                       Content="{local:LocalizationExtension options_next}"
+                       Icon="{ui:SymbolIcon ArrowDownload24}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -13,16 +13,23 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Installer.Views;
+namespace PDownloader.Installer.Services.HostServices;
 
-public partial class MainWindow : FluentWindow, IWindow
+public sealed class ApplicationHostService : IHostedService
 {
-    public InstallerViewModel ViewModel { get; }
+    private readonly IWindow _mainWindow;
 
-    public MainWindow(InstallerViewModel viewModel)
+    public ApplicationHostService(IWindow mainWindow)
     {
-        ViewModel = viewModel;
-        DataContext = this;
-        InitializeComponent();
+        _mainWindow = mainWindow;
     }
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        _mainWindow.Show();
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken) =>
+        Task.CompletedTask;
 }

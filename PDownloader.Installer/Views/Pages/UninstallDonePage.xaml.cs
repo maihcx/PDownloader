@@ -13,16 +13,12 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Installer.Views;
+namespace PDownloader.Installer.Views.Pages;
 
-public partial class MainWindow : FluentWindow, IWindow
+public partial class UninstallDonePage : System.Windows.Controls.UserControl
 {
-    public InstallerViewModel ViewModel { get; }
-
-    public MainWindow(InstallerViewModel viewModel)
+    public UninstallDonePage()
     {
-        ViewModel = viewModel;
-        DataContext = this;
         InitializeComponent();
     }
 }
