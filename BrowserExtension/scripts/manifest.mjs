@@ -39,8 +39,10 @@ function requireHttpsUrl(value, fieldName) {
  * @param {'chromium'|'store'|'firefox'} target
  * @param {object} baseManifest parsed manifest.json
  * @param {object} firefoxConfig parsed manifests/firefox.json
+ * @param {{ listed?: boolean }} [options] listed=true khi submit cho AMO
  */
-export function buildManifestForTarget(target, baseManifest, firefoxConfig) {
+export function buildManifestForTarget(target, baseManifest, firefoxConfig, options = {}) {
+  const { listed = false } = options;
   const manifest = structuredClone(baseManifest);
 
   if (target === 'chromium') {
@@ -52,7 +54,6 @@ export function buildManifestForTarget(target, baseManifest, firefoxConfig) {
   if (target === 'store') {
     manifest.background = { service_worker: 'background.js' };
     delete manifest.browser_specific_settings;
-    // Chrome Web Store rejects manifest.json with a "key" field.
     delete manifest.key;
     return manifest;
   }
@@ -64,7 +65,7 @@ export function buildManifestForTarget(target, baseManifest, firefoxConfig) {
       gecko: {
         id: firefoxConfig.extension_id,
         strict_min_version: firefoxConfig.strict_min_version,
-        update_url: requireHttpsUrl(firefoxConfig.update_url, 'Firefox update_url'),
+        ...(listed ? {} : { update_url: requireHttpsUrl(firefoxConfig.update_url, 'Firefox update_url') }),
         data_collection_permissions: firefoxConfig.data_collection_permissions
       },
       gecko_android: {
