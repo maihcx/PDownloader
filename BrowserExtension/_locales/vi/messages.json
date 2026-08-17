@@ -185,6 +185,23 @@
   "contentAddingAudio": {
     "message": "Đang thêm audio…"
   },
+  "contentSpotifyDetected": {
+    "message": "Đã nhận diện Spotify"
+  },
+  "contentSpotifyProtected": {
+    "message": "⚠ Luồng Spotify được bảo vệ"
+  },
+  "contentSpotifyProtectedTitle": {
+    "message": "Đã nhận diện: $TRACK$\nSpotify phát bằng encrypted-media và không cung cấp URL audio trực tiếp.",
+    "placeholders": {
+      "track": {
+        "content": "$1"
+      }
+    }
+  },
+  "contentSpotifyTrack": {
+    "message": "Bài hát Spotify"
+  },
   "contentDownloadPdf": {
     "message": "Tải PDF này"
   },

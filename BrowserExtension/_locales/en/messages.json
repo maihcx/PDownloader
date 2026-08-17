@@ -185,6 +185,23 @@
   "contentAddingAudio": {
     "message": "Adding audio…"
   },
+  "contentSpotifyDetected": {
+    "message": "Spotify detected"
+  },
+  "contentSpotifyProtected": {
+    "message": "⚠ Protected Spotify stream"
+  },
+  "contentSpotifyProtectedTitle": {
+    "message": "Detected: $TRACK$\nSpotify uses encrypted media and does not expose a direct audio URL.",
+    "placeholders": {
+      "track": {
+        "content": "$1"
+      }
+    }
+  },
+  "contentSpotifyTrack": {
+    "message": "Spotify track"
+  },
   "contentDownloadPdf": {
     "message": "Download this PDF"
   },
