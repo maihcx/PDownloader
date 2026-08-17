@@ -9,7 +9,8 @@
     HlsCapture,
     Utils,
     MediaCandidateRegistry,
-    MediaCapture
+    MediaCapture,
+    MediaTitle
   } = PD;
 
   function resolveTabId(msg, sender) {
@@ -29,13 +30,7 @@
   }
 
   function sanitizeMediaName(value, fallback = 'media') {
-    const base = String(value || fallback)
-      .replace(/[\\/:*?"<>|]/g, '_')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .replace(/[. ]+$/g, '')
-      .slice(0, 120);
-    return base || fallback;
+    return MediaTitle.sanitize(value, fallback, 120);
   }
 
   function isGenericManifestName(value) {
@@ -44,7 +39,7 @@
       || /\.(?:m3u8|mpd)$/i.test(leaf);
   }
 
-  function candidateFilename(candidate, fallbackTitle = '') {
+  function candidateFilename(candidate, fallbackTitle = '', fallbackPageUrl = '') {
     const isManifest = candidate?.kind === 'hls'
       || candidate?.kind === 'dash'
       || candidate?.mediaType === 'manifest';
@@ -54,7 +49,15 @@
       const filenameStem = rawFilename && !isGenericManifestName(rawFilename)
         ? rawFilename.replace(/\.[^.]+$/, '')
         : '';
-      const title = candidate?.title || fallbackTitle || filenameStem || 'video';
+      const title = MediaTitle.resolve({
+        isManifest: true,
+        analyzedTitle: filenameStem,
+        contextTitle: candidate?.title,
+        pageTitle: fallbackTitle,
+        pageUrl: fallbackPageUrl || candidate?.pageUrl || candidate?.referer,
+        mediaUrl: candidate?.url,
+        fallback: 'video'
+      });
       const extension = candidate?.mediaType === 'audio' ? '.m4a' : '.mp4';
       return `${sanitizeMediaName(title, candidate?.mediaType === 'audio' ? 'audio' : 'video')}${extension}`;
     }
@@ -94,10 +97,15 @@
     await Notify.show(label || candidateFilename(candidate));
   }
 
-  async function downloadCandidate(candidate, fallbackTitle = '', sourceTabId = -1) {
+  async function downloadCandidate(
+    candidate,
+    fallbackTitle = '',
+    sourceTabId = -1,
+    fallbackPageUrl = ''
+  ) {
     if (!candidate?.url) return { success: false, error: 'Media candidate is unavailable.' };
 
-    const filename = candidateFilename(candidate, fallbackTitle);
+    const filename = candidateFilename(candidate, fallbackTitle, fallbackPageUrl);
     const isHls = candidate.kind === 'hls';
     const isDash = candidate.kind === 'dash';
     const useYtDlp = isDash || candidate.kind === 'page' || candidate.route === 'ytdlp';
@@ -305,7 +313,12 @@
           } catch (_) { }
         }
 
-        return downloadCandidate(candidate, fallbackTitle, tabId);
+        return downloadCandidate(
+          candidate,
+          fallbackTitle,
+          tabId,
+          sender.tab?.url || ''
+        );
       })().then(sendResponse);
       return true;
     },
@@ -331,18 +344,43 @@
       return true;
     },
 
-    analyze_youtube(msg, sender, sendResponse) {
-      Api.ytAnalyze(msg.url, resolveTabId(msg, sender)).then(sendResponse);
+    analyze_media(msg, sender, sendResponse) {
+      Api.mediaAnalyze({
+        url: msg.url,
+        referer: msg.referer,
+        extraHeaders: msg.headers || undefined,
+        sourceTabId: resolveTabId(msg, sender)
+      }).then(result => {
+        if (!result || typeof result !== 'object') {
+          sendResponse(result);
+          return;
+        }
+
+        sendResponse({
+          ...result,
+          pageTitle: sender.tab?.title || '',
+          pageUrl: sender.tab?.url || ''
+        });
+      });
       return true;
     },
 
-    download_youtube(msg, sender, sendResponse) {
-      Api.ytDownload({
+    download_media_format(msg, sender, sendResponse) {
+      Api.mediaDownload({
         url: msg.url, formatId: msg.formatId, filename: msg.filename,
         title: msg.title, filesize: msg.filesize || 0,
+        referer: msg.referer, extraHeaders: msg.headers || undefined,
         sourceTabId: resolveTabId(msg, sender)
       }).then(sendResponse);
       return true;
+    },
+
+    analyze_youtube(msg, sender, sendResponse) {
+      return handlers.analyze_media(msg, sender, sendResponse);
+    },
+
+    download_youtube(msg, sender, sendResponse) {
+      return handlers.download_media_format(msg, sender, sendResponse);
     }
   };
 

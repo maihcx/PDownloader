@@ -36,6 +36,7 @@ internal sealed class YtDlpHlsDownloadService
 
     public async Task<string> DownloadAsync(
         string url,
+        string? formatId,
         string tempDirectory,
         string outputPathWithoutExtension,
         string? referer,
@@ -62,6 +63,7 @@ internal sealed class YtDlpHlsDownloadService
             ProcessStartInfo startInfo = BuildStartInfo(
                 ytDlpPath,
                 url,
+                formatId,
                 temporaryOutputWithoutExtension,
                 referer,
                 userAgent,
@@ -114,6 +116,7 @@ internal sealed class YtDlpHlsDownloadService
     private static ProcessStartInfo BuildStartInfo(
         string ytDlpPath,
         string url,
+        string? formatId,
         string outputPathWithoutExtension,
         string? referer,
         string? userAgent,
@@ -135,6 +138,12 @@ internal sealed class YtDlpHlsDownloadService
         startInfo.ArgumentList.Add("--newline");
         startInfo.ArgumentList.Add("--no-warnings");
         startInfo.ArgumentList.Add("--no-playlist");
+
+        if (!string.IsNullOrWhiteSpace(formatId))
+        {
+            startInfo.ArgumentList.Add("-f");
+            startInfo.ArgumentList.Add(formatId);
+        }
 
         startInfo.ArgumentList.Add("--progress");
         startInfo.ArgumentList.Add("--progress-delta");

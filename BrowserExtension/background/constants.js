@@ -7,8 +7,11 @@
     APP_URL,
     PING_URL:     `${APP_URL}/ping`,
     DOWNLOAD_URL: `${APP_URL}/download`,
-    YT_ANALYZE_URL:  `${APP_URL}/youtube/analyze`,
-    YT_DOWNLOAD_URL: `${APP_URL}/youtube/download`,
+    MEDIA_ANALYZE_URL:  `${APP_URL}/media/analyze`,
+    MEDIA_DOWNLOAD_URL: `${APP_URL}/media/download`,
+    // Backward-compatible aliases for older extension code.
+    YT_ANALYZE_URL:  `${APP_URL}/media/analyze`,
+    YT_DOWNLOAD_URL: `${APP_URL}/media/download`,
 
     CACHE_TTL: 30000,
 

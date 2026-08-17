@@ -169,12 +169,14 @@ public sealed class HttpBridgeService : IDisposable
                     await HandleDownload(request, response, ct);
                     break;
 
+                case "/media/analyze":
                 case "/youtube/analyze":
-                    await HandleYouTubeAnalyze(request, response, ct);
+                    await HandleMediaAnalyze(request, response, ct);
                     break;
 
+                case "/media/download":
                 case "/youtube/download":
-                    await HandleYouTubeDownload(request, response, ct);
+                    await HandleMediaDownload(request, response, ct);
                     break;
 
                 default:
@@ -240,13 +242,13 @@ public sealed class HttpBridgeService : IDisposable
         await Json(response, new { ok = true });
     }
 
-    private static async Task HandleYouTubeAnalyze(
+    private static async Task HandleMediaAnalyze(
         HttpListenerRequest request,
         HttpListenerResponse response,
         CancellationToken ct)
     {
         EnsureJsonPost(request);
-        YouTubeAnalyzePayload payload = await ReadJsonAsync<YouTubeAnalyzePayload>(request, ct);
+        MediaAnalyzePayload payload = await ReadJsonAsync<MediaAnalyzePayload>(request, ct);
 
         string url = ValidateHttpUrl(payload.Url);
         Dictionary<string, string>? headers = SanitizeForwardedHeaders(payload.Headers);
@@ -267,13 +269,13 @@ public sealed class HttpBridgeService : IDisposable
         await Json(response, result);
     }
 
-    private async Task HandleYouTubeDownload(
+    private async Task HandleMediaDownload(
         HttpListenerRequest request,
         HttpListenerResponse response,
         CancellationToken ct)
     {
         EnsureJsonPost(request);
-        YoutubePayload payload = await ReadJsonAsync<YoutubePayload>(request, ct);
+        MediaDownloadPayload payload = await ReadJsonAsync<MediaDownloadPayload>(request, ct);
 
         string url = ValidateHttpUrl(payload.Url);
         string fileName = SanitizeBridgeFileName(payload.Filename);
@@ -523,7 +525,7 @@ public sealed class HttpBridgeService : IDisposable
 
     private static bool IsKnownPath(string path)
     {
-        return path is "/ping" or "/download" or "/youtube/analyze" or "/youtube/download";
+        return path is "/ping" or "/download" or "/media/analyze" or "/media/download" or "/youtube/analyze" or "/youtube/download";
     }
 
     private static string NormalizePath(string? path)
@@ -752,7 +754,7 @@ public sealed class HttpBridgeService : IDisposable
         public Dictionary<string, string>? Headers { get; set; }
     }
 
-    private sealed class YouTubeAnalyzePayload
+    private sealed class MediaAnalyzePayload
     {
         [JsonPropertyName("url")]
         public string Url { get; set; } = string.Empty;
@@ -761,7 +763,7 @@ public sealed class HttpBridgeService : IDisposable
         public Dictionary<string, string>? Headers { get; set; }
     }
 
-    private sealed class YoutubePayload
+    private sealed class MediaDownloadPayload
     {
         [JsonPropertyName("url")]
         public string Url { get; set; } = string.Empty;
