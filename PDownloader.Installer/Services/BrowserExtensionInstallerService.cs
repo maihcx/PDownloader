@@ -47,30 +47,72 @@ public static class BrowserExtensionInstallerService
         Gecko,
     }
 
-    private static readonly (string DisplayName, BrowserEngine Engine, string PolicyRoot)[] SupportedBrowsers =
+    private static readonly (
+        string DisplayName,
+        BrowserEngine Engine,
+        string ExtensionRoot,
+        string PolicyRoot)[] SupportedBrowsers =
     {
-        ("Google Chrome",   BrowserEngine.Chromium, @"SOFTWARE\Policies\Google\Chrome"),
-        ("Microsoft Edge",  BrowserEngine.Chromium, @"SOFTWARE\Policies\Microsoft\Edge"),
-        ("Brave",           BrowserEngine.Chromium, @"SOFTWARE\Policies\BraveSoftware\Brave"),
-        ("Cốc Cốc",         BrowserEngine.Chromium, @"SOFTWARE\Policies\CocCoc\CocCoc"),
+        (
+            "Google Chrome",
+            BrowserEngine.Chromium,
+            @"SOFTWARE\Google\Chrome\Extensions",
+            @"SOFTWARE\Policies\Google\Chrome"),
+        (
+            "Microsoft Edge",
+            BrowserEngine.Chromium,
+            @"SOFTWARE\Microsoft\Edge\Extensions",
+            @"SOFTWARE\Policies\Microsoft\Edge"),
+        (
+            "Brave",
+            BrowserEngine.Chromium,
+            @"SOFTWARE\BraveSoftware\Brave\Extensions",
+            @"SOFTWARE\Policies\BraveSoftware\Brave"),
+        (
+            "Cốc Cốc",
+            BrowserEngine.Chromium,
+            @"SOFTWARE\CocCoc\CocCoc\Extensions",
+            @"SOFTWARE\Policies\CocCoc\CocCoc"),
 
-        ("Mozilla Firefox", BrowserEngine.Gecko,    @"SOFTWARE\Policies\Mozilla\Firefox"),
-        ("Zen Browser",     BrowserEngine.Gecko,    @"SOFTWARE\Policies\Mozilla\Zen"),
+        (
+            "Mozilla Firefox",
+            BrowserEngine.Gecko,
+            string.Empty,
+            @"SOFTWARE\Policies\Mozilla\Firefox"),
+        (
+            "Zen Browser",
+            BrowserEngine.Gecko,
+            string.Empty,
+            @"SOFTWARE\Policies\Mozilla\Zen"),
     };
 
     public static void InstallForAllBrowsers(string installDir)
     {
         _ = installDir;
 
-        foreach ((string _, BrowserEngine engine, string policyRoot) in SupportedBrowsers)
+        foreach ((
+            string _,
+            BrowserEngine engine,
+            string extensionRoot,
+            string policyRoot) in SupportedBrowsers)
         {
             try
             {
                 switch (engine)
                 {
                     case BrowserEngine.Chromium when IsValidChromiumExtensionId():
+                        // Remove policies written by older PDownloader versions.
+                        // A policy-installed extension is managed by the browser and
+                        // does not show the normal third-party installation prompt.
+                        RemoveChromiumExtensionPolicy(policyRoot);
                         RemoveLegacySelfHostedChromiumPolicy(policyRoot);
-                        RegisterChromiumExtensionPolicy(policyRoot, ChromiumUpdateUri);
+
+                        // External registration is the consumer-facing flow used by
+                        // desktop applications that bundle a companion extension.
+                        // The browser asks the user to enable it on the next start.
+                        RegisterChromiumExternalExtension(
+                            extensionRoot,
+                            ChromiumUpdateUri);
                         break;
 
                     case BrowserEngine.Gecko when !string.IsNullOrWhiteSpace(GeckoExtensionId):
@@ -80,8 +122,8 @@ public static class BrowserExtensionInstallerService
             }
             catch
             {
-                // A browser may not support the expected enterprise-policy
-                // surface or an existing third-party policy may be malformed.
+                // A browser may not support the expected registration surface,
+                // or an existing third-party policy may be malformed.
                 // Extension installation must never abort the main installer.
             }
         }
@@ -89,13 +131,18 @@ public static class BrowserExtensionInstallerService
 
     public static void UninstallForAllBrowsers()
     {
-        foreach ((string _, BrowserEngine engine, string policyRoot) in SupportedBrowsers)
+        foreach ((
+            string _,
+            BrowserEngine engine,
+            string extensionRoot,
+            string policyRoot) in SupportedBrowsers)
         {
             try
             {
                 switch (engine)
                 {
                     case BrowserEngine.Chromium when IsValidChromiumExtensionId():
+                        RemoveChromiumExternalExtension(extensionRoot);
                         RemoveChromiumExtensionPolicy(policyRoot);
                         RemoveLegacySelfHostedChromiumPolicy(policyRoot);
                         break;
@@ -119,23 +166,18 @@ public static class BrowserExtensionInstallerService
             && !ChromiumExtensionId.StartsWith("REPLACE_", StringComparison.Ordinal);
     }
 
-    private static void RegisterChromiumExtensionPolicy(
-        string policyRoot,
+    private static void RegisterChromiumExternalExtension(
+        string extensionRoot,
         string updateUrl)
     {
-        using RegistryKey? extensionSettings =
-            Registry.LocalMachine.CreateSubKey(
-                $"{policyRoot}\\{ExtensionSettingsSubKey}",
-                writable: true);
-
-        if (extensionSettings == null)
-        {
-            return;
-        }
-
+        // Chrome and Edge document external extension registration in the
+        // 32-bit registry view. On 64-bit Windows this maps to Wow6432Node.
+        using RegistryKey localMachine = RegistryKey.OpenBaseKey(
+            RegistryHive.LocalMachine,
+            RegistryView.Registry32);
         using RegistryKey? extension =
-            extensionSettings.CreateSubKey(
-                ChromiumExtensionId,
+            localMachine.CreateSubKey(
+                extensionRoot + "\\" + ChromiumExtensionId,
                 writable: true);
 
         if (extension == null)
@@ -144,19 +186,23 @@ public static class BrowserExtensionInstallerService
         }
 
         extension.SetValue(
-            "installation_mode",
-            "normal_installed",
-            RegistryValueKind.String);
-
-        extension.SetValue(
-            "toolbar_pin",
-            "default_unpinned",
-            RegistryValueKind.String);
-
-        extension.SetValue(
             "update_url",
             updateUrl,
             RegistryValueKind.String);
+    }
+
+    private static void RemoveChromiumExternalExtension(string extensionRoot)
+    {
+        using RegistryKey localMachine = RegistryKey.OpenBaseKey(
+            RegistryHive.LocalMachine,
+            RegistryView.Registry32);
+        using RegistryKey? extensions = localMachine.OpenSubKey(
+            extensionRoot,
+            writable: true);
+
+        extensions?.DeleteSubKey(
+            ChromiumExtensionId,
+            throwOnMissingSubKey: false);
     }
 
     private static void RemoveChromiumExtensionPolicy(string policyRoot)
