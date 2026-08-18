@@ -6,6 +6,8 @@
   const CLIENT_VALUE = 'browser-extension';
   const TOKEN_HEADER = 'X-PDownloader-Token';
   const COOKIE_JAR_HEADER = 'X-PDownloader-Cookie-Jar';
+  const DOWNLOAD_TIMEOUT_MS = 15_000;
+  const MEDIA_REQUEST_TIMEOUT_MS = 120_000;
 
   let sessionToken = null;
   let sessionPromise = null;
@@ -43,7 +45,12 @@
     }
   }
 
-  async function authorizedFetch(url, options = {}, retryOnAuthFailure = true) {
+  async function authorizedFetch(
+    url,
+    options = {},
+    retryOnAuthFailure = true,
+    timeoutMs = DOWNLOAD_TIMEOUT_MS
+  ) {
     const token = await openSession();
     const headers = new Headers(options.headers || {});
     headers.set(CLIENT_HEADER, CLIENT_VALUE);
@@ -51,13 +58,14 @@
 
     const response = await fetch(url, {
       ...options,
-      headers
+      headers,
+      signal: options.signal || AbortSignal.timeout(timeoutMs)
     });
 
     if (retryOnAuthFailure && (response.status === 401 || response.status === 403)) {
       sessionToken = null;
       await openSession(true);
-      return authorizedFetch(url, options, false);
+      return authorizedFetch(url, options, false, timeoutMs);
     }
 
     return response;
@@ -444,13 +452,13 @@
     return (await getCookieContext(url, '', sourceTabId)).header;
   }
 
-  async function postJson(url, body) {
+  async function postJson(url, body, timeoutMs = MEDIA_REQUEST_TIMEOUT_MS) {
     try {
       const response = await authorizedFetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      });
+      }, true, timeoutMs);
 
       let data = null;
       try {

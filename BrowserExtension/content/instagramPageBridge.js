@@ -7,6 +7,8 @@
   const TITLE_ATTRIBUTE = 'data-pd-instagram-title';
   const mediaByCode = new Map();
   const mediaOrder = [];
+  const MAX_MEDIA_CACHE = 500;
+  const MAX_JSON_RESPONSE_BYTES = 8_000_000;
 
   function cleanText(value, maxLength = 180) {
     return String(value || '')
@@ -134,7 +136,12 @@
     }
 
     mediaByCode.set(media.code, media);
-    mediaOrder.push(media);
+    mediaOrder.push(media.code);
+
+    while (mediaOrder.length > MAX_MEDIA_CACHE) {
+      const oldestCode = mediaOrder.shift();
+      if (oldestCode) mediaByCode.delete(oldestCode);
+    }
   }
 
   function collectMedia(value, maxNodes = 120000) {
@@ -172,7 +179,7 @@
 
   function parseJsonText(text) {
     let value = String(text || '').trim();
-    if (!value || value.length > 8_000_000) return;
+    if (!value || value.length > MAX_JSON_RESPONSE_BYTES) return;
     if (!value.includes('"code"') && !value.includes('"shortcode"')) return;
 
     value = value.replace(/^for\s*\(;;\);?\s*/, '');
@@ -233,7 +240,10 @@
       try {
         const requestUrl = args[0]?.url || args[0] || response.url;
         if (shouldInspectResponse(requestUrl)) {
-          response.clone().text().then(parseJsonText).catch(() => { });
+          const contentLength = Number(response.headers?.get?.('content-length')) || 0;
+          if (!contentLength || contentLength <= MAX_JSON_RESPONSE_BYTES) {
+            response.clone().text().then(parseJsonText).catch(() => { });
+          }
         }
       } catch (_) { }
       return response;
