@@ -1,57 +1,97 @@
-/* ==========================================================================
-   Design tokens
-   Palette: near-black engineering surface + violet→cyan segment gradient,
-   amber used sparingly for "retry / resume" states.
+/* ========================================================================== 
+   PDownloader design tokens
+   Light is the default canvas; dark uses the same semantic surface system.
    ========================================================================== */
 :root {
-  /* Color */
-  --bg-void: #0a0a12;
-  --bg-surface: #131320;
-  --bg-surface-2: #1a1a2b;
-  --bg-surface-3: #20203570;
-  --border-soft: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  color-scheme: light;
 
-  --text-primary: #f3f2f9;
-  --text-secondary: #b8b6c9;
-  --text-muted: #83829a;
+  --bg-void: #f4f6fa;
+  --bg-surface: #ffffff;
+  --bg-surface-2: #f8f9fc;
+  --bg-surface-3: #edf0f7;
+  --bg-elevated: #ffffff;
+  --section-tint: rgba(232, 236, 246, 0.52);
+  --surface-fade: rgba(255, 255, 255, 0.72);
+  --navbar-bg: rgba(244, 246, 250, 0.82);
+  --navbar-bg-scrolled: rgba(255, 255, 255, 0.94);
+  --dialog-backdrop: rgba(25, 29, 43, 0.42);
 
-  --accent-violet: #7c5cfc;
-  --accent-violet-dim: #7c5cfc33;
-  --accent-cyan: #45d6ff;
-  --accent-cyan-dim: #45d6ff33;
-  --accent-amber: #ffb454;
-  --accent-green: #4ce0a1;
+  --border-soft: rgba(30, 37, 57, 0.1);
+  --border-strong: rgba(30, 37, 57, 0.2);
+  --text-primary: #171a26;
+  --text-secondary: #555c70;
+  --text-muted: #687084;
 
-  --gradient-segment: linear-gradient(90deg, var(--accent-violet), var(--accent-cyan));
-  --gradient-hero-glow: radial-gradient(60% 60% at 50% 0%, #7c5cfc22 0%, transparent 70%);
+  --accent-violet: #5b5bd6;
+  --accent-violet-dim: rgba(91, 91, 214, 0.12);
+  --accent-cyan: #087f9c;
+  --accent-cyan-dim: rgba(8, 127, 156, 0.12);
+  --accent-amber: #b86b0d;
+  --accent-green: #14805e;
+  --on-accent: #ffffff;
 
-  /* Type */
+  --gradient-segment: linear-gradient(90deg, var(--accent-violet), #1595b5);
+  --gradient-hero-glow: none;
+
   --font-display: "Space Grotesk", "Segoe UI", sans-serif;
   --font-body: "Inter", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  --fs-eyebrow: 0.8125rem;
+  --fs-eyebrow: 0.75rem;
   --fs-small: 0.875rem;
   --fs-body: 1.0625rem;
-  --fs-lead: 1.25rem;
-  --fs-h3: clamp(1.25rem, 1rem + 1vw, 1.625rem);
-  --fs-h2: clamp(1.875rem, 1.4rem + 2vw, 2.75rem);
-  --fs-h1: clamp(2.5rem, 1.6rem + 4vw, 4.25rem);
+  --fs-lead: 1.18rem;
+  --fs-h3: 1.4rem;
+  --fs-h2: 2.8rem;
+  --fs-h1: 4.25rem;
 
-  --lh-tight: 1.15;
+  --lh-tight: 1.12;
   --lh-snug: 1.35;
   --lh-body: 1.7;
 
-  /* Layout */
-  --content-width: 1120px;
+  --content-width: 1220px;
   --gutter: clamp(1.25rem, 4vw, 3rem);
-  --radius-sm: 8px;
-  --radius-md: 14px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
   --radius-lg: 22px;
+  --navbar-height: 72px;
+  --shadow-sm: 0 12px 32px rgba(34, 42, 67, 0.08);
+  --shadow-lg: 0 28px 80px rgba(34, 42, 67, 0.14);
 
-  /* Motion */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 180ms;
   --dur-med: 420ms;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-void: #0d1017;
+  --bg-surface: #141923;
+  --bg-surface-2: #191f2b;
+  --bg-surface-3: #232b3a;
+  --bg-elevated: #1b2230;
+  --section-tint: rgba(24, 30, 42, 0.72);
+  --surface-fade: rgba(20, 25, 35, 0.78);
+  --navbar-bg: rgba(13, 16, 23, 0.82);
+  --navbar-bg-scrolled: rgba(17, 21, 30, 0.95);
+  --dialog-backdrop: rgba(3, 5, 9, 0.74);
+
+  --border-soft: rgba(228, 233, 250, 0.09);
+  --border-strong: rgba(228, 233, 250, 0.18);
+  --text-primary: #f4f6fb;
+  --text-secondary: #bdc4d7;
+  --text-muted: #8991a6;
+
+  --accent-violet: #8d7bff;
+  --accent-violet-dim: rgba(141, 123, 255, 0.14);
+  --accent-cyan: #4ac6e5;
+  --accent-cyan-dim: rgba(74, 198, 229, 0.14);
+  --accent-amber: #ffc06a;
+  --accent-green: #56d6aa;
+  --on-accent: #0c1018;
+
+  --gradient-segment: linear-gradient(90deg, var(--accent-violet), var(--accent-cyan));
+  --shadow-sm: 0 12px 34px rgba(0, 0, 0, 0.22);
+  --shadow-lg: 0 30px 90px rgba(0, 0, 0, 0.36);
 }
