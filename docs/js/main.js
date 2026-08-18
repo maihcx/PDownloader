@@ -5,6 +5,7 @@ import { initRevealOnScroll } from "./modules/reveal-on-scroll.js";
 import { initSegmentBar } from "./modules/segment-bar.js";
 import { initCopySnippet } from "./modules/copy-snippet.js";
 import { applyConfigLinks } from "./modules/apply-config-links.js";
+import { initBrowserExtensionDialog } from "./modules/browser-extension-dialog.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   initI18n();
@@ -14,4 +15,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initRevealOnScroll();
   initSegmentBar();
   initCopySnippet();
+  initBrowserExtensionDialog();
 });
