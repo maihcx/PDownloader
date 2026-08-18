@@ -5,6 +5,7 @@ export function initBrowserExtensionDialog() {
   const openButtons = document.querySelectorAll("[data-extension-dialog-open]");
   const closeButton = dialog.querySelector("[data-extension-dialog-close]");
   const chromiumLink = dialog.querySelector("[data-extension-chromium-link]");
+  let activeTrigger = null;
 
   const closeDialog = () => {
     if (dialog.open) dialog.close();
@@ -12,7 +13,9 @@ export function initBrowserExtensionDialog() {
 
   openButtons.forEach((button) => {
     button.addEventListener("click", () => {
-      if (!dialog.open) dialog.showModal();
+      if (dialog.open) return;
+      activeTrigger = button;
+      dialog.showModal();
     });
   });
 
@@ -20,13 +23,11 @@ export function initBrowserExtensionDialog() {
   chromiumLink?.addEventListener("click", closeDialog);
 
   dialog.addEventListener("click", (event) => {
-    const bounds = dialog.getBoundingClientRect();
-    const isInside =
-      event.clientX >= bounds.left &&
-      event.clientX <= bounds.right &&
-      event.clientY >= bounds.top &&
-      event.clientY <= bounds.bottom;
+    if (event.target === dialog) closeDialog();
+  });
 
-    if (!isInside) closeDialog();
+  dialog.addEventListener("close", () => {
+    if (activeTrigger instanceof HTMLElement) activeTrigger.focus();
+    activeTrigger = null;
   });
 }

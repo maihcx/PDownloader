@@ -1,6 +1,7 @@
 .site-footer {
   border-top: 1px solid var(--border-soft);
-  padding-block: 2.5rem;
+  padding-block: 2.75rem;
+  background: var(--navbar-bg);
 }
 
 .footer-inner {
@@ -20,6 +21,10 @@
   color: var(--text-muted);
 }
 
+.footer-brand img {
+  border-radius: 5px;
+}
+
 .footer-links {
   display: flex;
   gap: 1.5rem;
@@ -29,4 +34,17 @@
 
 .footer-links a:hover {
   color: var(--accent-cyan);
+}
+
+@media (max-width: 640px) {
+  .footer-inner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .footer-links {
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+  }
 }
