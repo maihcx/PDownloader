@@ -606,7 +606,8 @@
   function isAllowedHost(hostname, site) {
     const host = String(hostname || '').toLowerCase();
     if (site === 'facebook') {
-      return host === 'facebook.com' || host.endsWith('.facebook.com') || host === 'fb.watch';
+      return host === 'facebook.com' || host.endsWith('.facebook.com')
+        || host === 'fb.watch';
     }
     if (site === 'tiktok') {
       return host === 'tiktok.com' || host.endsWith('.tiktok.com');

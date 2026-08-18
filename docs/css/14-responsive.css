@@ -1,28 +1,30 @@
 @media (max-width: 640px) {
+  :root {
+    --fs-body: 1rem;
+    --fs-lead: 1.1rem;
+    --fs-h3: 1.3rem;
+    --fs-h2: 2.2rem;
+    --fs-h1: 3rem;
+  }
+
   .hero-meta {
     gap: 1rem 1.5rem;
-  }
-
-  .segbar-track {
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(2, 34px);
-    height: auto;
-  }
-
-  .segbar-labels {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .segbar-labels span:nth-child(n + 5) {
-    display: none;
-  }
-
-  .segbar-track.is-merged {
-    grid-template-columns: repeat(8, 1fr);
-    grid-template-rows: 34px;
   }
 
   .arch-legend-grid {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 480px) {
+  .hero-actions .btn,
+  .cta-actions .btn,
+  .ext-store-button {
+    width: 100%;
+  }
+
+  .hero-actions .btn-quiet {
+    width: auto;
+  }
+
 }

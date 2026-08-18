@@ -103,16 +103,24 @@
 
       const url = item.url || '';
       if (!url || url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('chrome-extension:')) return;
-      if (await Utils.isBlacklisted(url, settings.blacklistedDomains || [])) return;
-
       const activeTab = await resolveDownloadSourceTab(item);
       const activeTabUrl = activeTab?.url || '';
 
+      const finalUrl = item.finalUrl || url;
+      const blacklistTargets = [url, finalUrl, item.referrer || '', activeTabUrl]
+        .filter(Boolean);
+      const isBlacklisted = await Promise.all(
+        blacklistTargets.map(target => Utils.isBlacklisted(
+          target,
+          settings.blacklistedDomains || []
+        ))
+      );
+      if (isBlacklisted.some(Boolean)) return;
+
       if (Utils.isIncompatibleSite(url) ||
+          Utils.isIncompatibleSite(finalUrl) ||
           Utils.isIncompatibleSite(item.referrer || '') ||
           Utils.isIncompatibleSite(activeTabUrl)) return;
-
-      const finalUrl = item.finalUrl || url;
 
       let filename = item.filename || ContentDisposition.lookup([finalUrl, url]);
 
@@ -126,17 +134,19 @@
 
       if (!byExt && !bySize && !byMime) return;
 
-      await PDWebExt.downloads.cancel(item.id).catch(() => {});
-      await PDWebExt.downloads.erase({ id: item.id }).catch(() => {});
-
       const referer = activeTabUrl;
 
       const displayName = filename
         ? filename.split(/[/\\]/).pop()
         : (Utils.getFilenameFromUrl(finalUrl) || Utils.getFilenameFromUrl(url) || null);
 
-      const ok = await PD.Api.sendDownload(url, displayName, referer, {}, activeTab?.id ?? -1);
+      // Keep the browser download alive until the desktop app confirms that it
+      // accepted the task. If the bridge is offline or rejects the request,
+      // the user's original download continues normally.
+      const ok = await PD.Api.sendDownload(finalUrl, displayName, referer, {}, activeTab?.id ?? -1);
       if (ok) {
+        await PDWebExt.downloads.cancel(item.id).catch(() => {});
+        await PDWebExt.downloads.erase({ id: item.id }).catch(() => {});
         PD.State.incrementInterceptCount();
         PD.Badge.update();
         await PD.Notify.show(displayName || Utils.getFilenameFromUrl(url));

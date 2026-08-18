@@ -4,7 +4,7 @@
   const PDF_EXTENSIONS = /\.pdf(?:[?#]|$)/i;
   const MANIFEST_EXTENSIONS = /\.(?:m3u8|mpd)(?:[?#]|$)/i;
   const AUDIO_SITE_HINTS = [
-    'soundcloud.com', 'bandcamp.com', 'mixcloud.com', 'audiomack.com'
+    'soundcloud.com', 'bandcamp.com', 'mixcloud.com', 'audiomack.com', 'spotify.com'
   ];
 
   const IS_TOP_FRAME = window === window.top;
@@ -235,11 +235,58 @@
   }
 
   function isAudioFocusedPage() {
-    return AUDIO_SITE_HINTS.some(host => location.hostname.includes(host));
+    const hostname = location.hostname.toLowerCase();
+    return AUDIO_SITE_HINTS.some(host =>
+      hostname === host || hostname.endsWith(`.${host}`));
+  }
+
+  function isSpotifyPage() {
+    return /(^|\.)spotify\.com$/i.test(location.hostname);
+  }
+
+  function isSpotifyPreviewUrl(value) {
+    try {
+      const url = new URL(String(value || ''));
+      return url.protocol === 'https:'
+        && /(^|\.)scdn\.co$/i.test(url.hostname)
+        && /\/mp3-preview\//i.test(url.pathname);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function getSpotifyTrackTitle() {
+    const nowPlayingTitle = document.querySelector(
+      '[data-testid="now-playing-widget"] [data-testid="context-item-info-title"]'
+    )?.textContent?.trim();
+    if (nowPlayingTitle) return nowPlayingTitle;
+
+    const pageTitle = String(document.title || '').split(' • ')[0].trim();
+    return pageTitle && !/^spotify(?:\s*[–-]\s*web player)?$/i.test(pageTitle)
+      ? pageTitle
+      : PD.I18n.t('contentSpotifyTrack');
+  }
+
+  function getDownloadableAudioCandidate() {
+    if (!isSpotifyPage()) return bestAudioCandidate;
+    return isSpotifyPreviewUrl(bestAudioCandidate?.url) ? bestAudioCandidate : null;
+  }
+
+  function isSpotifyProtectedPlayback(state = collectPlaybackState()) {
+    if (!isSpotifyPage() || !tabAudible || state.playingVideo) return false;
+
+    const hasPreview = isSpotifyPreviewUrl(bestAudioCandidate?.url)
+      || (state.activeAudioUrls || []).some(isSpotifyPreviewUrl);
+    return !hasPreview;
   }
 
   function canShowAudioButton(state) {
-    if (!IS_TOP_FRAME || location.hostname.includes('youtube.com')) return false;
+    const hostname = location.hostname.toLowerCase();
+    const isYouTube = hostname === 'youtube.com'
+      || hostname.endsWith('.youtube.com')
+      || hostname === 'youtube-nocookie.com'
+      || hostname.endsWith('.youtube-nocookie.com');
+    if (!IS_TOP_FRAME || isYouTube) return false;
     if (state.playingVideo) return false;
     return state.playingAudio || (tabAudible && (!!bestAudioCandidate || isAudioFocusedPage()));
   }
@@ -283,6 +330,9 @@
       .pd-audio-grab-btn.pd-success {
         border-color: var(--pd-green, #4caf50);
       }
+      .pd-audio-grab-btn.pd-protected {
+        border-color: var(--pd-warning, #ffb74d);
+      }
       .pd-audio-grab-note {
         width: 15px;
         height: 15px;
@@ -319,16 +369,30 @@
       event.stopPropagation();
 
       const label = audioButton.querySelector('.pd-audio-grab-label');
+      const playback = collectPlaybackState();
+      if (isSpotifyProtectedPlayback(playback)) {
+        label.textContent = PD.I18n.t('contentSpotifyProtected');
+        audioButton.classList.add('pd-protected');
+
+        setTimeout(() => {
+          if (!audioButton?.isConnected) return;
+          updateAudioButtonPresentation(playback);
+        }, 3200);
+        return;
+      }
+
       label.textContent = PD.I18n.t('contentAddingAudio');
 
       let response = null;
-      const playback = collectPlaybackState();
-      const preferredUrl = playback.activeAudioUrls?.[0] || '';
+      const downloadableCandidate = getDownloadableAudioCandidate();
+      const preferredUrl = isSpotifyPage()
+        ? (playback.activeAudioUrls || []).find(isSpotifyPreviewUrl) || ''
+        : playback.activeAudioUrls?.[0] || '';
 
-      if (bestAudioCandidate?.id || preferredUrl) {
+      if (downloadableCandidate?.id || preferredUrl) {
         response = await sendMessage({
           action: 'download_media_candidate',
-          candidateId: bestAudioCandidate?.id || '',
+          candidateId: downloadableCandidate?.id || '',
           preferredUrl,
           mediaType: 'audio'
         });
@@ -349,8 +413,7 @@
 
       setTimeout(() => {
         if (!audioButton?.isConnected) return;
-        label.textContent = PD.I18n.t('contentDownloadAudio');
-        audioButton.classList.remove('pd-success');
+        updateAudioButtonPresentation();
       }, 2200);
     });
 
@@ -358,8 +421,27 @@
     return audioButton;
   }
 
-  function refreshAudioButton(state = collectPlaybackState()) {
+  function updateAudioButtonPresentation(state = collectPlaybackState()) {
     const button = ensureAudioButton();
+    const label = button.querySelector('.pd-audio-grab-label');
+    const note = button.querySelector('.pd-audio-grab-note');
+    const spotifyProtected = isSpotifyProtectedPlayback(state);
+
+    button.classList.remove('pd-success', 'pd-protected');
+    button.classList.toggle('pd-protected', spotifyProtected);
+    note.textContent = spotifyProtected ? '🔒' : '♪';
+    label.textContent = spotifyProtected
+      ? PD.I18n.t('contentSpotifyDetected')
+      : PD.I18n.t('contentDownloadAudio');
+    button.title = spotifyProtected
+      ? PD.I18n.t('contentSpotifyProtectedTitle', [getSpotifyTrackTitle()])
+      : '';
+  }
+
+  function refreshAudioButton(state = collectPlaybackState()) {
+    if (!IS_TOP_FRAME) return;
+    const button = ensureAudioButton();
+    updateAudioButtonPresentation(state);
     button.classList.toggle('pd-visible', canShowAudioButton(state));
   }
 

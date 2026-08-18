@@ -10,6 +10,7 @@
   --pd-accent-bg: rgb(0, 30, 48);
   --pd-green:     #4CAF50;
   --pd-green-bg:  rgba(76, 175, 80, 0.15);
+  --pd-warning:   #ffb74d;
   --pd-red:       #f44336;
   --pd-red-bg:    rgba(244, 67, 54, 0.92);
   --pd-shadow:    rgba(0, 0, 0, 0.45);
@@ -28,6 +29,7 @@
     --pd-accent-bg: rgb(213 239 255);
     --pd-green:     #2E7D32;
     --pd-green-bg:  rgba(46, 125, 50, 0.14);
+    --pd-warning:   #ef6c00;
     --pd-red:       #C62828;
     --pd-red-bg:    rgba(198, 40, 40, 0.92);
     --pd-shadow:    rgba(0, 0, 0, 0.18);

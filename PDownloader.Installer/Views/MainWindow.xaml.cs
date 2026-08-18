@@ -13,22 +13,16 @@
 //
 // Copyright (C) Song Mai Software.
 
-using PDownloader.Installer.ViewModels;
-using System.Windows;
-using Wpf.Ui.Controls;
-
 namespace PDownloader.Installer.Views;
 
-public partial class MainWindow : FluentWindow
+public partial class MainWindow : FluentWindow, IWindow
 {
-    public MainWindow(bool uninstallMode = false)
-    {
-        DataContext = new InstallerViewModel(uninstallMode);
-        InitializeComponent();
-    }
+    public InstallerViewModel ViewModel { get; }
 
-    private void CloseButton_Click(object sender, RoutedEventArgs e)
+    public MainWindow(InstallerViewModel viewModel)
     {
-        System.Windows.Application.Current.Shutdown();
+        ViewModel = viewModel;
+        DataContext = this;
+        InitializeComponent();
     }
 }

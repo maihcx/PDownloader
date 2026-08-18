@@ -1,0 +1,12 @@
+{
+  "version": {
+    "license": "GPL-3.0-only"
+  },
+  "categories": {
+    "firefox": ["download-management"]
+  },
+  "summary": {
+    "en-US": "Automatically catches download links and sends them to PDownloader.",
+    "vi": "Tự động bắt link tải xuống và gửi tới PDownloader."
+  }
+}

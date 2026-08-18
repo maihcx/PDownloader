@@ -6,16 +6,22 @@
 }
 
 section {
-  padding-block: clamp(4rem, 9vw, 7.5rem);
+  padding-block: 7rem;
+}
+
+#features,
+#extension {
+  border-block: 1px solid var(--border-soft);
+  background: var(--section-tint);
 }
 
 .section-head {
-  max-width: 640px;
-  margin-bottom: clamp(2.5rem, 5vw, 3.5rem);
+  max-width: 680px;
+  margin-bottom: 3.5rem;
 }
 
 .section-head--center {
-  max-width: 640px;
+  max-width: 680px;
   margin-inline: auto;
   text-align: center;
 }
@@ -26,7 +32,7 @@ section {
   gap: 0.6em;
   font-family: var(--font-mono);
   font-size: var(--fs-eyebrow);
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--accent-cyan);
   margin-bottom: 1rem;
@@ -55,4 +61,14 @@ section {
 .reveal.is-visible {
   opacity: 1;
   transform: none;
+}
+
+@media (max-width: 720px) {
+  section {
+    padding-block: 5rem;
+  }
+
+  .section-head {
+    margin-bottom: 2.5rem;
+  }
 }

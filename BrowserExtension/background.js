@@ -1,6 +1,7 @@
 importScripts(
   'common/browserApi.js',
   'common/i18n.js',
+  'common/mediaTitle.js',
 
   'background/constants.js',
   'background/state.js',

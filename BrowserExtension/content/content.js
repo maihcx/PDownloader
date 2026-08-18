@@ -1,58 +1,3 @@
-const _themeLink = document.createElement('link');
-_themeLink.rel = 'stylesheet';
-_themeLink.href = PDWebExt.runtime.getURL('common/theme.css');
-document.head.appendChild(_themeLink);
-
-const _style = document.createElement('style');
-_style.textContent = `
-.pd-grab-btn {
-  position: fixed;
-  z-index: 2147483647;
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  user-select: none;
-  background: var(--pd-bg);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--pd-border);
-  border-radius: 8px;
-  box-shadow: 0 4px 20px var(--pd-shadow),
-              0 0 0 1px rgba(79,195,247,0.08);
-  padding: 5px 12px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--pd-text);
-  cursor: pointer;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity .18s, transform .1s, border-color .15s;
-  pointer-events: auto;
-}
-.pd-grab-btn:hover {
-  background: var(--pd-accent-bg);
-  border-color: var(--pd-accent);
-  color: var(--pd-text);
-}
-.pd-grab-btn:active { transform: scale(0.96); }
-.pd-grab-icon {
-  width: 0; height: 0;
-  border-left: 9px solid var(--pd-accent);
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  display: inline-block;
-}
-.pd-grab-btn.success {
-  border-color: var(--pd-green);
-  background: var(--pd-green-bg);
-}
-.pd-grab-btn.success .pd-grab-icon {
-  border-left-color: var(--pd-green);
-}
-`;
-document.head.appendChild(_style);
-
 const VIDEO_CONTEXT_SELECTOR = [
   '[data-video-id]',
   '[aria-label="Video player"]',
@@ -66,14 +11,22 @@ const VIDEO_CONTEXT_SELECTOR = [
 
 let _activeVideo = null;
 let _activeContextNode = null;
-let _pressedVideo = null;
-let _pressedContextNode = null;
+let _activePlayer = null;
+let _activeMediaKey = '';
 let _btn = null;
+let _qualityPanel = null;
+let _dismissedMediaKey = '';
 let _hideTimer = null;
 let _pointerFrame = 0;
 let _lastPointerEvent = null;
 let _forcePointerRefresh = false;
 let _contextInvalidated = false;
+
+function hostnameMatches(hostname, expected) {
+  const host = String(hostname || '').toLowerCase().replace(/^www\./, '');
+  const domain = String(expected || '').toLowerCase().replace(/^www\./, '');
+  return host === domain || host.endsWith(`.${domain}`);
+}
 
 function isYouTubeHost(hostname = location.hostname) {
   const host = String(hostname || '').toLowerCase().replace(/^www\./, '');
@@ -173,29 +126,30 @@ function getEmbeddingPageReferer() {
   return '';
 }
 
-function isYouTubeWatch() {
+function usesDedicatedYouTubePanel() {
   const host = location.hostname.toLowerCase();
   const isRegularYouTube = host === 'youtube.com' || host.endsWith('.youtube.com');
 
-  return window === window.top
-    && isRegularYouTube
-    && !location.pathname.startsWith('/shorts/');
+  return window === window.top && isRegularYouTube;
 }
 
 function getBtn() {
   if (_btn) return _btn;
 
-  _btn = document.createElement('div');
-  _btn.className = 'pd-grab-btn pd-theme-root';
+  if (!PD.QualityAnalyzer) {
+    throw new Error('Quality analyzer is not available.');
+  }
 
-  const icon = document.createElement('span');
-  icon.className = 'pd-grab-icon';
+  _qualityPanel = PD.QualityAnalyzer.createPanel({
+    fixed: true,
+    getContext: () => resolveQualityContext(_activeVideo, _activeContextNode),
+    onClose: () => {
+      _dismissedMediaKey = _activeMediaKey;
+      hideButton(false);
+    }
+  });
 
-  const label = document.createElement('span');
-  label.className = 'pd-grab-label';
-  label.textContent = PD.I18n.t('ytDownloadThisVideo');
-
-  _btn.append(icon, label);
+  _btn = _qualityPanel.element;
 
   _btn.addEventListener('pointerenter', () => {
     clearHide();
@@ -203,230 +157,113 @@ function getBtn() {
   });
   _btn.addEventListener('pointerleave', () => scheduleHide(300));
 
-  _btn.addEventListener('pointerdown', () => {
-    if (!_activeVideo || !isRenderedVideo(_activeVideo)) {
-      refreshActiveVideoFromPointer();
-    }
-
-    _pressedVideo = _activeVideo;
-    _pressedContextNode = _activeContextNode;
-  }, true);
-
-  _btn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const activeVideo = isRenderedVideo(_pressedVideo)
-      ? _pressedVideo
-      : _activeVideo;
-    const activeContextNode = activeVideo === _pressedVideo
-      ? _pressedContextNode
-      : _activeContextNode;
-
-    _pressedVideo = null;
-    _pressedContextNode = null;
-
-    if (!activeVideo || !activeVideo.isConnected) return;
-
-    const hostname = location.hostname;
-    const isSpecial = [
-      'tiktok.com', 'facebook.com', 'fb.watch', 'instagram.com',
-      'x.com', 'twitter.com', 'vimeo.com', 'twitch.tv',
-      'reddit.com', 'bilibili.com', 'bilibili.tv', 'soundcloud.com'
-    ].some(h => hostname.includes(h)) || location.pathname.startsWith('/shorts/');
-
-    try {
-      let url;
-      let filename;
-
-      if (isYouTubeHost(hostname)) {
-        const videoId = getYouTubeVideoId(location.href);
-        const youtubeUrl = getCanonicalYouTubeUrl(location.href);
-
-        if (!youtubeUrl) {
-          showBtnFeedback(PD.I18n.t('genericError'), false);
-          return;
-        }
-
-        const rawTitle = String(document.title || '').trim();
-        const mediaTitle = rawTitle && !/^youtube$/i.test(rawTitle)
-          ? rawTitle
-          : `YouTube_${videoId}`;
-        filename = sanitizeName(mediaTitle) + '.mp4';
-
-        const resp = await sendMessageSafe({
-          action: 'download_via_ytdlp',
-          url: youtubeUrl,
-          filename,
-          title: mediaTitle,
-          referer: location.href
-        });
-
-        showBtnFeedback(
-          resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
-          resp?.success
-        );
-        return;
-      }
-
-      if (isVimeoHost(hostname)) {
-        const embeddingReferer = getEmbeddingPageReferer();
-        const canonicalUrl = getCanonicalVimeoUrl(location.href);
-
-        url = canonicalUrl || getSiteUrl(activeVideo, activeContextNode);
-
-        const mediaTitle = getMediaTitle(activeVideo, activeContextNode);
-        filename = sanitizeName(mediaTitle) + '.mp4';
-
-        const resp = await sendMessageSafe({
-          action: 'download_via_ytdlp',
-          url,
-          filename,
-          title: mediaTitle,
-          referer: embeddingReferer || url || location.href
-        });
-
-        showBtnFeedback(
-          resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
-          resp?.success
-        );
-        return;
-      }
-
-      if (isSpecial) {
-        url = getSiteUrl(activeVideo, activeContextNode);
-        const mediaTitle = getMediaTitle(activeVideo, activeContextNode);
-        filename = sanitizeName(mediaTitle) + (hostname.includes('soundcloud.com') ? '.mp3' : '.mp4');
-
-        const detected = await sendMessageSafe({
-          action: 'get_best_media_candidate',
-          mediaType: hostname.includes('soundcloud.com') ? 'audio' : 'video',
-          minScore: 80
-        });
-        const candidate = detected?.candidate || null;
-
-        const shouldUseCandidate = candidate?.id && (
-          candidate.kind === 'hls'
-          || candidate.kind === 'dash'
-          || !isSpecificMediaPageUrl(url, hostname)
-        );
-        let candidateTried = false;
-
-        if (shouldUseCandidate) {
-          candidateTried = true;
-          const resp = await sendMessageSafe({
-            action: 'download_media_candidate',
-            candidateId: candidate.id,
-            mediaType: hostname.includes('soundcloud.com') ? 'audio' : 'video'
-          });
-
-          showBtnFeedback(
-            resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
-            resp?.success
-          );
-          if (resp?.success) return;
-        }
-
-        const resp = await sendMessageSafe({
-          action: 'download_via_ytdlp',
-          url,
-          filename,
-          title: mediaTitle,
-          referer: location.href,
-          audioOnly: hostname.includes('soundcloud.com')
-        });
-
-        if (!resp?.success && candidate?.id && !candidateTried) {
-          const fallback = await sendMessageSafe({
-            action: 'download_media_candidate',
-            candidateId: candidate.id,
-            mediaType: hostname.includes('soundcloud.com') ? 'audio' : 'video'
-          });
-
-          if (fallback?.success) {
-            showBtnFeedback(PD.I18n.t('ytAdded'), true);
-            return;
-          }
-        }
-
-        showBtnFeedback(
-          resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
-          resp?.success
-        );
-        return;
-      }
-
-      const detected = await sendMessageSafe({
-        action: 'get_best_media_candidate',
-        mediaType: 'video',
-        minScore: 70
-      });
-      if (detected?.candidate?.id) {
-        const resp = await sendMessageSafe({
-          action: 'download_media_candidate',
-          candidateId: detected.candidate.id,
-          mediaType: 'video'
-        });
-
-        showBtnFeedback(
-          resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
-          resp?.success
-        );
-        if (resp?.success) return;
-      }
-
-      url = activeVideo.currentSrc || activeVideo.src;
-      const isPlaceholderSrc = !url
-        || url.startsWith('blob:')
-        || /(^|[\/_-])(blank|dummy|placeholder|empty)([\/_.-]|$)/i.test(url)
-        || (isFinite(activeVideo.duration) && activeVideo.duration > 0 && activeVideo.duration < 2);
-
-      if (isPlaceholderSrc) {
-        const manifest = await sendMessageSafe({ action: 'get_hls_manifest' });
-        if (manifest?.url) {
-          filename = sanitizeName(document.title) + '.mp4';
-          const resp = await sendMessageSafe({
-            action: 'download_via_ytdlp',
-            url: manifest.url,
-            filename,
-            title: document.title,
-            referer: manifest.referer
-          });
-          showBtnFeedback(
-            resp?.success ? PD.I18n.t('ytAdded') : ('✗ ' + (resp?.error || PD.I18n.t('genericError'))),
-            resp?.success
-          );
-        } else {
-          showBtnFeedback(PD.I18n.t('contentDrmUnsupported'), false);
-        }
-        return;
-      }
-
-      try {
-        const p = new URL(url).pathname;
-        const seg = p.substring(p.lastIndexOf('/') + 1);
-        filename = seg.includes('.') ? seg : sanitizeName(document.title) + '.mp4';
-      } catch (_) {
-        filename = 'video.mp4';
-      }
-
-      const resp = await sendMessageSafe({
-        action: 'download',
-        url,
-        filename,
-        referer: location.href
-      });
-      showBtnFeedback(
-        resp?.success ? PD.I18n.t('ytAdded') : PD.I18n.t('contentConnError'),
-        resp?.success
-      );
-    } catch (error) {
-      showBtnFeedback('✗ ' + (error?.message || PD.I18n.t('genericError')), false);
-    }
-  });
-
   document.body.appendChild(_btn);
   return _btn;
+}
+
+async function resolveQualityContext(video, contextNode) {
+  if (!video || !video.isConnected) return null;
+
+  const hostname = location.hostname;
+  const mediaTitle = getMediaTitle(video, contextNode);
+  const mediaUrl = getDirectMediaUrl(video);
+  const mediaKey = getVideoMediaKey(video, contextNode);
+  let url = '';
+  let referer = location.href;
+
+  if (isYouTubeHost(hostname)) {
+    url = getCanonicalYouTubeUrl(location.href) || location.href;
+  } else if (isVimeoHost(hostname)) {
+    const embeddingReferer = getEmbeddingPageReferer();
+    url = getCanonicalVimeoUrl(location.href) || getSiteUrl(video, contextNode);
+    referer = embeddingReferer || location.href;
+  } else {
+    const siteUrl = getSiteUrl(video, contextNode);
+    if (siteUrl && /^https?:\/\//i.test(siteUrl)) {
+      url = siteUrl;
+    }
+
+    const shouldPreferPageUrl = [
+      'tiktok.com', 'facebook.com', 'fb.watch', 'instagram.com',
+      'x.com', 'twitter.com', 'twitch.tv', 'reddit.com',
+      'bilibili.com', 'bilibili.tv', 'soundcloud.com'
+    ].some(host => hostnameMatches(hostname, host));
+
+    if (!shouldPreferPageUrl && (!url || url === location.href)) {
+      const directUrl = video.currentSrc || video.src || '';
+      if (/^https?:\/\//i.test(directUrl)) url = directUrl;
+    }
+
+    const shouldUseCapturedMedia = !url
+      || url === location.href
+      || url.startsWith('blob:')
+      || /\.(?:m3u8|mpd)(?:$|[?#])/i.test(url);
+
+    if (!shouldPreferPageUrl && shouldUseCapturedMedia) {
+      const detected = await sendMessageSafe({
+        action: 'get_media_candidates',
+        mediaType: 'video',
+        minScore: 45
+      });
+
+      const candidates = Array.isArray(detected?.candidates)
+        ? detected.candidates.filter(candidate => /^https?:\/\//i.test(candidate?.url || ''))
+        : [];
+      const bestCandidate = candidates[0] || null;
+      const manifestCandidates = candidates.filter(candidate =>
+        candidate.kind === 'hls' || candidate.kind === 'dash');
+
+      let candidate = bestCandidate;
+      if (manifestCandidates.length) {
+        let bestOrigin = '';
+        try { bestOrigin = new URL(bestCandidate?.url || '').origin; } catch (_) { }
+        const bestManifestKind = ['hls', 'dash'].includes(bestCandidate?.kind)
+          ? bestCandidate.kind
+          : '';
+
+        const sameOriginManifests = bestOrigin
+          ? manifestCandidates.filter(item => {
+              try {
+                return new URL(item.url).origin === bestOrigin
+                  && (!bestManifestKind || item.kind === bestManifestKind);
+              } catch (_) {
+                return false;
+              }
+            })
+          : manifestCandidates;
+
+        candidate = [...(sameOriginManifests.length ? sameOriginManifests : manifestCandidates)]
+          .sort((a, b) =>
+            Number(b.lastSeenAt || b.foundAt || 0)
+            - Number(a.lastSeenAt || a.foundAt || 0))[0];
+      }
+
+      if (candidate?.url) {
+        url = candidate.url;
+        referer = candidate.referer || candidate.pageUrl || location.href;
+      }
+    }
+
+    if (!url || url === location.href || url.startsWith('blob:')) {
+      const manifest = await sendMessageSafe({ action: 'get_hls_manifest' });
+      if (manifest?.url && /^https?:\/\//i.test(manifest.url)) {
+        url = manifest.url;
+        referer = manifest.referer || location.href;
+      }
+    }
+
+    if (!url || url.startsWith('blob:')) url = location.href;
+  }
+
+  return {
+    url,
+    cacheKey: `${url}|${mediaKey}|${mediaUrl}|${mediaTitle}`,
+    title: mediaTitle,
+    referer,
+    mediaUrl,
+    mediaKey,
+    allowDirectFallback: !isYouTubeHost(hostname)
+  };
 }
 
 async function sendMessageSafe(message) {
@@ -450,23 +287,9 @@ async function sendMessageSafe(message) {
   }
 }
 
-function showBtnFeedback(text, ok) {
-  const btn = getBtn();
-  const lbl = btn.querySelector('.pd-grab-label');
-  const origText = PD.I18n.t('ytDownloadThisVideo');
-  lbl.textContent = text;
-  btn.classList.toggle('success', !!ok);
-  showButton();
-
-  setTimeout(() => {
-    if (!lbl.isConnected) return;
-    lbl.textContent = origText;
-    btn.classList.remove('success');
-  }, 2000);
-}
-
 function showButton() {
   const btn = getBtn();
+  btn.style.display = 'flex';
   btn.style.visibility = 'visible';
   btn.style.opacity = '1';
 }
@@ -512,10 +335,11 @@ function hideButton(clearActive = true) {
   }
 
   if (clearActive) {
+    _qualityPanel?.invalidateContext?.();
     _activeVideo = null;
     _activeContextNode = null;
-    _pressedVideo = null;
-    _pressedContextNode = null;
+    _activePlayer = null;
+    _activeMediaKey = '';
   }
 }
 
@@ -527,18 +351,17 @@ function positionBtn(video) {
 
   const rect = video.getBoundingClientRect();
   const btn = mountButtonForVideo(video);
-  const isVertical = ['tiktok.com', 'instagram.com', 'facebook.com'].some(h => location.hostname.includes(h))
-    || location.pathname.startsWith('/shorts/');
 
-  const estimatedWidth = Math.max(btn.offsetWidth || 0, 132);
+  const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+  const estimatedWidth = Math.max(btn.offsetWidth || 0, 176);
   const top = clamp(rect.top + 10, 8, Math.max(8, window.innerHeight - 40));
-  const preferredLeft = isVertical
-    ? rect.left + 12
-    : rect.right - estimatedWidth - 12;
-  const left = clamp(preferredLeft, 8, Math.max(8, window.innerWidth - estimatedWidth - 8));
+  const preferredRight = viewportWidth - rect.right + 12;
+  const right = clamp(preferredRight, 8, Math.max(8, viewportWidth - estimatedWidth - 8));
 
   btn.style.top = `${Math.round(top)}px`;
-  btn.style.left = `${Math.round(left)}px`;
+  btn.style.left = 'auto';
+  btn.style.right = `${right}px`;
+  _qualityPanel?.setDropdownAlignment('right');
   showButton();
 }
 
@@ -561,44 +384,52 @@ function getSiteUrl(video, contextNode) {
   return PD.SiteUrlResolver?.resolve(video, contextNode || video) || location.href;
 }
 
-function isSpecificMediaPageUrl(rawUrl, hostname = location.hostname) {
-  try {
-    const url = new URL(rawUrl, location.href);
-    const path = url.pathname;
-    const host = String(hostname || url.hostname).toLowerCase();
-
-    if (host.includes('tiktok.com')) return /\/@[^/]+\/video\/\d+/i.test(path);
-    if (host.includes('instagram.com')) return /^\/(?:reel|reels|p|tv)\/[^/]+/i.test(path);
-    if (host.includes('facebook.com') || host.includes('fb.watch')) {
-      return !!url.searchParams.get('v')
-        || /\/(?:reel|videos|watch)\//i.test(path)
-        || /\/video\.php$/i.test(path);
-    }
-    if (host.includes('x.com') || host.includes('twitter.com')) return /\/status\/\d+/i.test(path);
-    if (host.includes('reddit.com')) return /\/comments\/[A-Za-z0-9]+/i.test(path);
-    if (host.includes('vimeo.com')) return /\/\d+(?:$|\/)/.test(path);
-    if (host.includes('bilibili.')) return /\/video\//i.test(path);
-    if (host.includes('soundcloud.com')) return path.split('/').filter(Boolean).length >= 2;
-
-    return rawUrl !== location.href;
-  } catch (_) {
-    return false;
-  }
-}
-
 function getMediaTitle(video, contextNode) {
   return PD.SiteUrlResolver?.getMediaTitle?.(video, contextNode || video)
     || document.title
     || 'video';
 }
 
-function sanitizeName(name) {
-  const sanitized = String(name || 'video')
-    .replace(/[\\/:*?"<>|]/g, '_')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 80);
-  return sanitized || 'video';
+function getDirectMediaUrl(video) {
+  const values = [
+    video?.currentSrc,
+    video?.src,
+    video?.getAttribute?.('src')
+  ];
+
+  try {
+    for (const source of video?.querySelectorAll?.('source[src]') || []) {
+      values.push(source.src, source.getAttribute('src'));
+    }
+  } catch (_) { }
+
+  return values.find(value => /^https?:\/\//i.test(String(value || ''))) || '';
+}
+
+function getVideoMediaKey(video, contextNode = video) {
+  if (!(video instanceof HTMLVideoElement)) return '';
+
+  const wrapper = video.closest?.('[id^="xgwrapper-"]');
+  const mediaNode = video.closest?.(
+    '[data-item-id],[data-video-id],[data-aweme-id],[data-e2e="feed-video"],[data-e2e="browse-video"]'
+  );
+  const values = [
+    wrapper?.id,
+    mediaNode?.getAttribute?.('data-item-id'),
+    mediaNode?.getAttribute?.('data-video-id'),
+    mediaNode?.getAttribute?.('data-aweme-id'),
+    mediaNode?.id,
+    contextNode?.getAttribute?.('data-item-id'),
+    contextNode?.getAttribute?.('data-video-id'),
+    contextNode?.getAttribute?.('data-aweme-id'),
+    video.currentSrc,
+    video.src,
+    video.getAttribute?.('src'),
+    video.poster,
+    video.getAttribute?.('poster')
+  ].map(value => String(value || '').trim()).filter(Boolean);
+
+  return [...new Set(values)].join('|');
 }
 
 function clamp(value, min, max) {
@@ -614,10 +445,34 @@ function isRenderedVideo(video) {
     return false;
   }
 
-  const style = getComputedStyle(video);
-  return style.display !== 'none'
-    && style.visibility !== 'hidden'
-    && Number.parseFloat(style.opacity || '1') > 0.01;
+  if (!video.getClientRects().length) return false;
+
+  const allowTransparentVideoElement = hostnameMatches(location.hostname, 'tiktok.com')
+    && !!video.closest?.(
+      '[data-e2e="feed-video"],[data-e2e="browse-video"],[data-e2e="recommend-list-item-container"]'
+    );
+
+  let element = video;
+  for (let depth = 0; element && depth < 24; depth++, element = element.parentElement) {
+    if (element.hidden
+        || element.hasAttribute?.('inert')
+        || element.getAttribute?.('aria-hidden') === 'true') {
+      return false;
+    }
+
+    const style = getComputedStyle(element);
+    const isTransparent = Number.parseFloat(style.opacity || '1') <= 0.01;
+    if (style.display === 'none'
+        || style.visibility === 'hidden'
+        || style.visibility === 'collapse'
+        || (isTransparent && !(element === video && allowTransparentVideoElement))) {
+      return false;
+    }
+
+    if (element === document.body || element === document.documentElement) break;
+  }
+
+  return true;
 }
 
 function containsPoint(rect, x, y, margin = 1) {
@@ -644,11 +499,61 @@ function addVideosFromRoot(root, candidates) {
 function getVideoContextNode(target, video) {
   const targetElement = target instanceof Element ? target : null;
   const targetContext = targetElement?.closest?.(VIDEO_CONTEXT_SELECTOR);
+  if (targetContext?.matches?.('[aria-label="Video player"]')) {
+    return targetContext;
+  }
   if (targetContext && (targetContext === video || targetContext.contains(video))) {
     return targetContext;
   }
 
   return video.closest?.(VIDEO_CONTEXT_SELECTOR) || video;
+}
+
+function getVideoPlayerNode(target, video, contextNode) {
+  const targetElement = target instanceof Element ? target : null;
+  const pointedPlayer = targetElement?.closest?.('[aria-label="Video player"]');
+  if (pointedPlayer) return pointedPlayer;
+
+  if (contextNode?.matches?.('[aria-label="Video player"]')) return contextNode;
+
+  // Facebook renders its control layer as a sibling of <video>, not as the
+  // video's ancestor. Walk to the first small media root that owns exactly one
+  // video and one control layer so each feed player gets a stable identity.
+  let root = video?.parentElement || null;
+  for (let depth = 0; root && depth < 10; depth++, root = root.parentElement) {
+    let players = [];
+    let videos = [];
+    try {
+      players = root.querySelectorAll('[aria-label="Video player"]');
+      videos = root.querySelectorAll('video');
+    } catch (_) { }
+
+    if (players.length === 1 && videos.length === 1 && videos[0] === video) {
+      return players[0];
+    }
+  }
+
+  return video?.closest?.('[data-video-id],article,[role="article"],[aria-posinset]')
+    || contextNode
+    || video;
+}
+
+function activateVideoPlayer(video, target) {
+  const contextNode = getVideoContextNode(target, video);
+  const player = getVideoPlayerNode(target, video, contextNode);
+  const mediaKey = getVideoMediaKey(video, contextNode);
+
+  if ((_activePlayer && player !== _activePlayer)
+      || (_activeMediaKey && mediaKey !== _activeMediaKey)) {
+    _qualityPanel?.invalidateContext?.();
+  }
+
+  _activeVideo = video;
+  _activeContextNode = contextNode;
+  _activePlayer = player;
+  _activeMediaKey = mediaKey;
+
+  return { player, mediaKey };
 }
 
 function findVideoAtPoint(x, y, target) {
@@ -693,6 +598,27 @@ function findVideoAtPoint(x, y, target) {
     if (video.currentSrc || video.src) score += 30;
     if (video.readyState > 0) score += 20;
 
+    const videoContext = video.closest?.(
+      '[data-video-id],[aria-label="Video player"],article,[role="article"],[data-pagelet^="FeedUnit"],[aria-posinset]'
+    );
+    for (let index = 0; index < stack.length; index++) {
+      const painted = stack[index];
+      if (!(painted instanceof Element)) continue;
+
+      if (painted === video || video.contains(painted)) {
+        score += Math.max(300, 600 - (index * 20));
+        break;
+      }
+
+      const paintedContext = painted.closest?.(
+        '[data-video-id],[aria-label="Video player"],article,[role="article"],[data-pagelet^="FeedUnit"],[aria-posinset]'
+      );
+      if (videoContext && paintedContext === videoContext) {
+        score += Math.max(180, 420 - (index * 15));
+        break;
+      }
+    }
+
     const centerDistance = Math.hypot(
       x - (rect.left + rect.width / 2),
       y - (rect.top + rect.height / 2)
@@ -717,15 +643,6 @@ function getVideoUnderLastPointer() {
   return { video, target };
 }
 
-function refreshActiveVideoFromPointer() {
-  const pointed = getVideoUnderLastPointer();
-  if (!pointed?.video) return false;
-
-  _activeVideo = pointed.video;
-  _activeContextNode = getVideoContextNode(pointed.target, pointed.video);
-  return true;
-}
-
 function queuePointerProcessing(forceRefresh = false) {
   if (forceRefresh) _forcePointerRefresh = true;
   if (!_pointerFrame) {
@@ -738,7 +655,7 @@ function processPointerEvent() {
   const forceRefresh = _forcePointerRefresh;
   _forcePointerRefresh = false;
 
-  if (!_lastPointerEvent || _contextInvalidated || isYouTubeWatch()) return;
+  if (!_lastPointerEvent || _contextInvalidated || usesDedicatedYouTubePanel()) return;
 
   const pointed = getVideoUnderLastPointer();
   const target = pointed?.target || _lastPointerEvent.target;
@@ -754,14 +671,22 @@ function processPointerEvent() {
     return;
   }
 
+  const nextContext = getVideoContextNode(target, video);
+  const nextMediaKey = getVideoMediaKey(video, nextContext);
+
+  if (nextMediaKey && nextMediaKey === _dismissedMediaKey) {
+    hideButton(false);
+    return;
+  }
+  if (_dismissedMediaKey && nextMediaKey !== _dismissedMediaKey) _dismissedMediaKey = '';
+
   clearHide();
-  _activeVideo = video;
-  _activeContextNode = getVideoContextNode(target, video);
+  activateVideoPlayer(video, target);
   positionBtn(video);
 }
 
 function initListeners() {
-  if (isYouTubeWatch()) return;
+  if (usesDedicatedYouTubePanel()) return;
 
   document.addEventListener('pointermove', (event) => {
     _lastPointerEvent = {
@@ -785,13 +710,32 @@ function initListeners() {
     const pointed = getVideoUnderLastPointer();
     if (!pointed?.video) return;
 
+    const nextContext = getVideoContextNode(pointed.target, pointed.video);
+    const nextMediaKey = getVideoMediaKey(pointed.video, nextContext);
+    if (nextMediaKey && nextMediaKey === _dismissedMediaKey) return;
+    if (_dismissedMediaKey && nextMediaKey !== _dismissedMediaKey) _dismissedMediaKey = '';
+
     clearHide();
-    _activeVideo = pointed.video;
-    _activeContextNode = getVideoContextNode(pointed.target, pointed.video);
+    activateVideoPlayer(pointed.video, pointed.target);
     positionBtn(pointed.video);
   }, true);
 
   document.addEventListener('pointerleave', () => scheduleHide(150), true);
+
+  const handleMediaIdentityChange = event => {
+    if (!(event.target instanceof HTMLVideoElement)) return;
+
+    if (event.target === _activeVideo) {
+      _qualityPanel?.invalidateContext?.();
+      _activeMediaKey = '';
+    }
+
+    queuePointerProcessing(true);
+  };
+
+  document.addEventListener('loadstart', handleMediaIdentityChange, true);
+  document.addEventListener('emptied', handleMediaIdentityChange, true);
+  document.addEventListener('loadedmetadata', handleMediaIdentityChange, true);
 
   const reposition = () => {
     if (_activeVideo && isRenderedVideo(_activeVideo)) {
