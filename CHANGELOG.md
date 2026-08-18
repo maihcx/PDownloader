@@ -1,3 +1,29 @@
+## v0.11.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- [installer] Register Chromium extensions externally (#150) — @maihcx
+- [extension] Add media analyze/download and quality UI (#147) — @maihcx
+
+## 🐛 Bug Fixes
+
+- [ui] Replace locale strings with resource keys (#140) — @maihcx
+
+## 🧹 Maintenance
+
+- [webpage] Revamp docs UI: theme, runner preview, i18n & a11y (#152) — @maihcx
+- [webpage] Add browser extension dialog and assets (#151) — @maihcx
+- [extension] improve media detection & add checks (#149) — @maihcx
+- [extension] Add Spotify detection and protected-preview handling (#148) — @maihcx
+- [installer] Refactor installer: DI host & services (#146) — @maihcx
+- [extension] Support Firefox listed/unlisted builds (#145) — @maihcx
+- [extension] Use Vite for BrowserExtension builds (#144) — @maihcx
+- [installer-core] Update browser extension install/update handling (#143) — @maihcx
+
+
+---
+
 ## v0.10.0
 
 ## 🚀 Changelog
