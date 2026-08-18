@@ -190,7 +190,10 @@
   }
 
   function candidateFromContext(context) {
-    const rawUrl = String(context?.url || '').trim();
+    const directMediaUrl = String(context?.mediaUrl || '').trim();
+    const rawUrl = /^https?:\/\//i.test(directMediaUrl)
+      ? directMediaUrl
+      : String(context?.url || '').trim();
     if (!/^https?:\/\//i.test(rawUrl)) return null;
 
     let extension = '';
@@ -202,7 +205,8 @@
     const manifestKind = extension === 'm3u8' ? 'hls' : extension === 'mpd' ? 'dash' : '';
     const isDirectVideo = ['mp4', 'webm', 'mkv', 'mov', 'm4v', 'avi', 'flv', 'wmv', 'mpeg', 'mpg', 'ogv']
       .includes(extension);
-    if (!manifestKind && !isDirectVideo) return null;
+    const isCurrentMediaUrl = rawUrl === directMediaUrl;
+    if (!manifestKind && !isDirectVideo && !isCurrentMediaUrl) return null;
 
     return {
       url: rawUrl,
@@ -216,35 +220,75 @@
     };
   }
 
+  function normalizeComparableUrl(value) {
+    try {
+      const url = new URL(String(value || ''), location.href);
+      url.hash = '';
+      return url.href;
+    } catch (_) {
+      return String(value || '').split('#')[0];
+    }
+  }
+
+  function candidateRelationScore(candidate, context, activeUrls) {
+    const candidateUrl = normalizeComparableUrl(candidate?.url);
+    const contextUrl = normalizeComparableUrl(context?.url);
+    const mediaUrl = normalizeComparableUrl(context?.mediaUrl);
+    const contextPage = normalizeComparableUrl(context?.referer || location.href);
+    const candidatePage = normalizeComparableUrl(candidate?.pageUrl || candidate?.referer);
+    let score = 0;
+
+    if (candidateUrl && candidateUrl === mediaUrl) score += 20_000;
+    if (candidateUrl && activeUrls.has(candidateUrl)) score += 15_000;
+    if (candidateUrl && candidateUrl === contextUrl) score += 10_000;
+    if (candidatePage && candidatePage === contextPage) score += 1_000;
+
+    try {
+      if (candidateUrl && contextUrl
+          && new URL(candidateUrl).origin === new URL(contextUrl).origin) {
+        score += 500;
+      }
+    } catch (_) { }
+
+    return score;
+  }
+
+  function selectContextCandidate(candidates, context, playback) {
+    const sourceCandidates = candidates || [];
+    const activeUrls = new Set((playback?.activeVideoUrls || [])
+      .map(normalizeComparableUrl)
+      .filter(Boolean));
+    const related = sourceCandidates
+      .filter(candidate => /^https?:\/\//i.test(candidate?.url || ''))
+      .map(candidate => ({
+        candidate,
+        relation: candidateRelationScore(candidate, context, activeUrls),
+        freshness: Number(candidate.lastSeenAt || candidate.foundAt || 0)
+      }))
+      .filter(item => item.relation >= 10_000
+        || (sourceCandidates.length === 1 && item.relation > 0))
+      .sort((a, b) => (b.relation - a.relation) || (b.freshness - a.freshness));
+
+    return related[0]?.candidate || null;
+  }
+
   async function downloadDirectFallback(context) {
     if (context?.allowDirectFallback !== true) return null;
 
     try {
       const detected = await PDWebExt.runtime.sendMessage({
-        action: 'get_best_media_candidate',
+        action: 'get_media_candidates',
         mediaType: 'video',
         minScore: 45
       });
 
-      let candidate = detected?.candidate?.url ? detected.candidate : null;
-
-      if (!candidate) {
-        const manifest = await PDWebExt.runtime.sendMessage({ action: 'get_hls_manifest' });
-        if (manifest?.url && /^https?:\/\//i.test(manifest.url)) {
-          candidate = {
-            url: manifest.url,
-            mediaType: 'manifest',
-            kind: 'hls',
-            extension: 'm3u8',
-            title: context?.title || '',
-            referer: manifest.referer || context?.referer || location.href,
-            pageUrl: context?.referer || location.href,
-            requestHeaders: { ...(context?.headers || {}) }
-          };
-        }
-      }
-
+      let candidate = selectContextCandidate(
+        detected?.candidates,
+        context,
+        detected?.playback
+      );
       candidate ||= candidateFromContext(context);
+
       if (!candidate?.url) return null;
 
       return await PDWebExt.runtime.sendMessage({
@@ -432,6 +476,7 @@
 
     let contextProvider = options.getContext || (() => null);
     let outsideHandler = null;
+    let contextRevision = 0;
 
     function setLoading(loading) {
       const icon = document.createElement(loading ? 'div' : 'span');
@@ -449,6 +494,12 @@
       outsideHandler = null;
     }
 
+    function invalidateContext() {
+      contextRevision++;
+      closeDropdown();
+      setLoading(false);
+    }
+
     function openDropdown(data, context) {
       renderDropdown(dropdown, data, context, panel);
       dropdown.classList.add('open');
@@ -464,7 +515,7 @@
     closeButton.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
-      closeDropdown();
+      invalidateContext();
       options.onClose?.(panel);
     });
 
@@ -477,13 +528,18 @@
         return;
       }
 
+      const requestRevision = ++contextRevision;
+
       let context;
       try {
         context = await contextProvider();
       } catch (error) {
+        if (requestRevision !== contextRevision) return;
         showToast(panel, error?.message || PD.I18n.t('ytCannotAnalyze'), true);
         return;
       }
+
+      if (requestRevision !== contextRevision) return;
 
       if (!context?.url) {
         showToast(panel, PD.I18n.t('ytCannotAnalyze'), true);
@@ -496,6 +552,8 @@
         response = await analyze(context);
       } catch (_) { }
 
+      if (requestRevision !== contextRevision) return;
+
       if (response?.success && Array.isArray(response.formats) && response.formats.length) {
         setLoading(false);
         openDropdown(response, context);
@@ -503,6 +561,7 @@
       }
 
       const fallbackResponse = await downloadDirectFallback(context);
+      if (requestRevision !== contextRevision) return;
       setLoading(false);
 
       if (fallbackResponse?.success) {
@@ -518,17 +577,18 @@
 
     return {
       element: panel,
-      setContextProvider(provider) { contextProvider = provider || (() => null); },
+      setContextProvider(provider) {
+        invalidateContext();
+        contextProvider = provider || (() => null);
+      },
       setDropdownAlignment(alignment) {
         panel.classList.toggle('pd-quality-align-left', alignment === 'left');
       },
+      invalidateContext,
       closeDropdown,
       showToast(message, error = false) { showToast(panel, message, error); }
     };
   }
-
-  ensureTheme();
-  ensureStyle();
 
   PD.QualityAnalyzer = {
     analyze,

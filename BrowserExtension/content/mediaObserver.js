@@ -235,7 +235,9 @@
   }
 
   function isAudioFocusedPage() {
-    return AUDIO_SITE_HINTS.some(host => location.hostname.includes(host));
+    const hostname = location.hostname.toLowerCase();
+    return AUDIO_SITE_HINTS.some(host =>
+      hostname === host || hostname.endsWith(`.${host}`));
   }
 
   function isSpotifyPage() {
@@ -279,7 +281,12 @@
   }
 
   function canShowAudioButton(state) {
-    if (!IS_TOP_FRAME || location.hostname.includes('youtube.com')) return false;
+    const hostname = location.hostname.toLowerCase();
+    const isYouTube = hostname === 'youtube.com'
+      || hostname.endsWith('.youtube.com')
+      || hostname === 'youtube-nocookie.com'
+      || hostname.endsWith('.youtube-nocookie.com');
+    if (!IS_TOP_FRAME || isYouTube) return false;
     if (state.playingVideo) return false;
     return state.playingAudio || (tabAudible && (!!bestAudioCandidate || isAudioFocusedPage()));
   }
@@ -432,6 +439,7 @@
   }
 
   function refreshAudioButton(state = collectPlaybackState()) {
+    if (!IS_TOP_FRAME) return;
     const button = ensureAudioButton();
     updateAudioButtonPresentation(state);
     button.classList.toggle('pd-visible', canShowAudioButton(state));

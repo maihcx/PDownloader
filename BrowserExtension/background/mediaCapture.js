@@ -19,6 +19,7 @@
   const requestMetadata = new Map();
   const playbackStateByTab = new Map(); // tabId -> Map(frameId, state)
   const notifyTimers = new Map();
+  const PLAYBACK_STATE_TTL_MS = 30 * 1000;
 
   function headerValue(headers, name) {
     const wanted = String(name || '').toLowerCase();
@@ -311,6 +312,15 @@
   function aggregatePlaybackState(tabId) {
     const frames = playbackStateByTab.get(tabId);
     if (!frames) return null;
+
+    const cutoff = Date.now() - PLAYBACK_STATE_TTL_MS;
+    for (const [frameId, state] of frames) {
+      if ((state?.updatedAt || 0) < cutoff) frames.delete(frameId);
+    }
+    if (!frames.size) {
+      playbackStateByTab.delete(tabId);
+      return null;
+    }
 
     const result = {
       playingAudio: false,

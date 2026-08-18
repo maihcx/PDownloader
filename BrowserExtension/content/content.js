@@ -11,14 +11,22 @@ const VIDEO_CONTEXT_SELECTOR = [
 
 let _activeVideo = null;
 let _activeContextNode = null;
+let _activePlayer = null;
+let _activeMediaKey = '';
 let _btn = null;
 let _qualityPanel = null;
-let _dismissedVideo = null;
+let _dismissedMediaKey = '';
 let _hideTimer = null;
 let _pointerFrame = 0;
 let _lastPointerEvent = null;
 let _forcePointerRefresh = false;
 let _contextInvalidated = false;
+
+function hostnameMatches(hostname, expected) {
+  const host = String(hostname || '').toLowerCase().replace(/^www\./, '');
+  const domain = String(expected || '').toLowerCase().replace(/^www\./, '');
+  return host === domain || host.endsWith(`.${domain}`);
+}
 
 function isYouTubeHost(hostname = location.hostname) {
   const host = String(hostname || '').toLowerCase().replace(/^www\./, '');
@@ -136,7 +144,7 @@ function getBtn() {
     fixed: true,
     getContext: () => resolveQualityContext(_activeVideo, _activeContextNode),
     onClose: () => {
-      _dismissedVideo = _activeVideo;
+      _dismissedMediaKey = _activeMediaKey;
       hideButton(false);
     }
   });
@@ -158,6 +166,8 @@ async function resolveQualityContext(video, contextNode) {
 
   const hostname = location.hostname;
   const mediaTitle = getMediaTitle(video, contextNode);
+  const mediaUrl = getDirectMediaUrl(video);
+  const mediaKey = getVideoMediaKey(video, contextNode);
   let url = '';
   let referer = location.href;
 
@@ -169,13 +179,15 @@ async function resolveQualityContext(video, contextNode) {
     referer = embeddingReferer || location.href;
   } else {
     const siteUrl = getSiteUrl(video, contextNode);
-    if (siteUrl && /^https?:\/\//i.test(siteUrl)) url = siteUrl;
+    if (siteUrl && /^https?:\/\//i.test(siteUrl)) {
+      url = siteUrl;
+    }
 
     const shouldPreferPageUrl = [
       'tiktok.com', 'facebook.com', 'fb.watch', 'instagram.com',
       'x.com', 'twitter.com', 'twitch.tv', 'reddit.com',
       'bilibili.com', 'bilibili.tv', 'soundcloud.com'
-    ].some(host => hostname.includes(host));
+    ].some(host => hostnameMatches(hostname, host));
 
     if (!shouldPreferPageUrl && (!url || url === location.href)) {
       const directUrl = video.currentSrc || video.src || '';
@@ -221,7 +233,9 @@ async function resolveQualityContext(video, contextNode) {
           : manifestCandidates;
 
         candidate = [...(sameOriginManifests.length ? sameOriginManifests : manifestCandidates)]
-          .sort((a, b) => (a.foundAt || 0) - (b.foundAt || 0))[0];
+          .sort((a, b) =>
+            Number(b.lastSeenAt || b.foundAt || 0)
+            - Number(a.lastSeenAt || a.foundAt || 0))[0];
       }
 
       if (candidate?.url) {
@@ -243,9 +257,11 @@ async function resolveQualityContext(video, contextNode) {
 
   return {
     url,
-    cacheKey: `${url}|${mediaTitle}`,
+    cacheKey: `${url}|${mediaKey}|${mediaUrl}|${mediaTitle}`,
     title: mediaTitle,
     referer,
+    mediaUrl,
+    mediaKey,
     allowDirectFallback: !isYouTubeHost(hostname)
   };
 }
@@ -319,8 +335,11 @@ function hideButton(clearActive = true) {
   }
 
   if (clearActive) {
+    _qualityPanel?.invalidateContext?.();
     _activeVideo = null;
     _activeContextNode = null;
+    _activePlayer = null;
+    _activeMediaKey = '';
   }
 }
 
@@ -332,8 +351,6 @@ function positionBtn(video) {
 
   const rect = video.getBoundingClientRect();
   const btn = mountButtonForVideo(video);
-  const isVertical = ['tiktok.com', 'instagram.com', 'facebook.com'].some(h => location.hostname.includes(h))
-    || location.pathname.startsWith('/shorts/');
 
   const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
   const estimatedWidth = Math.max(btn.offsetWidth || 0, 176);
@@ -344,7 +361,7 @@ function positionBtn(video) {
   btn.style.top = `${Math.round(top)}px`;
   btn.style.left = 'auto';
   btn.style.right = `${right}px`;
-  _qualityPanel?.setDropdownAlignment(isVertical ? 'left' : 'right');
+  _qualityPanel?.setDropdownAlignment('right');
   showButton();
 }
 
@@ -373,6 +390,48 @@ function getMediaTitle(video, contextNode) {
     || 'video';
 }
 
+function getDirectMediaUrl(video) {
+  const values = [
+    video?.currentSrc,
+    video?.src,
+    video?.getAttribute?.('src')
+  ];
+
+  try {
+    for (const source of video?.querySelectorAll?.('source[src]') || []) {
+      values.push(source.src, source.getAttribute('src'));
+    }
+  } catch (_) { }
+
+  return values.find(value => /^https?:\/\//i.test(String(value || ''))) || '';
+}
+
+function getVideoMediaKey(video, contextNode = video) {
+  if (!(video instanceof HTMLVideoElement)) return '';
+
+  const wrapper = video.closest?.('[id^="xgwrapper-"]');
+  const mediaNode = video.closest?.(
+    '[data-item-id],[data-video-id],[data-aweme-id],[data-e2e="feed-video"],[data-e2e="browse-video"]'
+  );
+  const values = [
+    wrapper?.id,
+    mediaNode?.getAttribute?.('data-item-id'),
+    mediaNode?.getAttribute?.('data-video-id'),
+    mediaNode?.getAttribute?.('data-aweme-id'),
+    mediaNode?.id,
+    contextNode?.getAttribute?.('data-item-id'),
+    contextNode?.getAttribute?.('data-video-id'),
+    contextNode?.getAttribute?.('data-aweme-id'),
+    video.currentSrc,
+    video.src,
+    video.getAttribute?.('src'),
+    video.poster,
+    video.getAttribute?.('poster')
+  ].map(value => String(value || '').trim()).filter(Boolean);
+
+  return [...new Set(values)].join('|');
+}
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -386,10 +445,34 @@ function isRenderedVideo(video) {
     return false;
   }
 
-  const style = getComputedStyle(video);
-  return style.display !== 'none'
-    && style.visibility !== 'hidden'
-    && Number.parseFloat(style.opacity || '1') > 0.01;
+  if (!video.getClientRects().length) return false;
+
+  const allowTransparentVideoElement = hostnameMatches(location.hostname, 'tiktok.com')
+    && !!video.closest?.(
+      '[data-e2e="feed-video"],[data-e2e="browse-video"],[data-e2e="recommend-list-item-container"]'
+    );
+
+  let element = video;
+  for (let depth = 0; element && depth < 24; depth++, element = element.parentElement) {
+    if (element.hidden
+        || element.hasAttribute?.('inert')
+        || element.getAttribute?.('aria-hidden') === 'true') {
+      return false;
+    }
+
+    const style = getComputedStyle(element);
+    const isTransparent = Number.parseFloat(style.opacity || '1') <= 0.01;
+    if (style.display === 'none'
+        || style.visibility === 'hidden'
+        || style.visibility === 'collapse'
+        || (isTransparent && !(element === video && allowTransparentVideoElement))) {
+      return false;
+    }
+
+    if (element === document.body || element === document.documentElement) break;
+  }
+
+  return true;
 }
 
 function containsPoint(rect, x, y, margin = 1) {
@@ -416,11 +499,61 @@ function addVideosFromRoot(root, candidates) {
 function getVideoContextNode(target, video) {
   const targetElement = target instanceof Element ? target : null;
   const targetContext = targetElement?.closest?.(VIDEO_CONTEXT_SELECTOR);
+  if (targetContext?.matches?.('[aria-label="Video player"]')) {
+    return targetContext;
+  }
   if (targetContext && (targetContext === video || targetContext.contains(video))) {
     return targetContext;
   }
 
   return video.closest?.(VIDEO_CONTEXT_SELECTOR) || video;
+}
+
+function getVideoPlayerNode(target, video, contextNode) {
+  const targetElement = target instanceof Element ? target : null;
+  const pointedPlayer = targetElement?.closest?.('[aria-label="Video player"]');
+  if (pointedPlayer) return pointedPlayer;
+
+  if (contextNode?.matches?.('[aria-label="Video player"]')) return contextNode;
+
+  // Facebook renders its control layer as a sibling of <video>, not as the
+  // video's ancestor. Walk to the first small media root that owns exactly one
+  // video and one control layer so each feed player gets a stable identity.
+  let root = video?.parentElement || null;
+  for (let depth = 0; root && depth < 10; depth++, root = root.parentElement) {
+    let players = [];
+    let videos = [];
+    try {
+      players = root.querySelectorAll('[aria-label="Video player"]');
+      videos = root.querySelectorAll('video');
+    } catch (_) { }
+
+    if (players.length === 1 && videos.length === 1 && videos[0] === video) {
+      return players[0];
+    }
+  }
+
+  return video?.closest?.('[data-video-id],article,[role="article"],[aria-posinset]')
+    || contextNode
+    || video;
+}
+
+function activateVideoPlayer(video, target) {
+  const contextNode = getVideoContextNode(target, video);
+  const player = getVideoPlayerNode(target, video, contextNode);
+  const mediaKey = getVideoMediaKey(video, contextNode);
+
+  if ((_activePlayer && player !== _activePlayer)
+      || (_activeMediaKey && mediaKey !== _activeMediaKey)) {
+    _qualityPanel?.invalidateContext?.();
+  }
+
+  _activeVideo = video;
+  _activeContextNode = contextNode;
+  _activePlayer = player;
+  _activeMediaKey = mediaKey;
+
+  return { player, mediaKey };
 }
 
 function findVideoAtPoint(x, y, target) {
@@ -464,6 +597,27 @@ function findVideoAtPoint(x, y, target) {
     if (!video.paused && !video.ended) score += 80;
     if (video.currentSrc || video.src) score += 30;
     if (video.readyState > 0) score += 20;
+
+    const videoContext = video.closest?.(
+      '[data-video-id],[aria-label="Video player"],article,[role="article"],[data-pagelet^="FeedUnit"],[aria-posinset]'
+    );
+    for (let index = 0; index < stack.length; index++) {
+      const painted = stack[index];
+      if (!(painted instanceof Element)) continue;
+
+      if (painted === video || video.contains(painted)) {
+        score += Math.max(300, 600 - (index * 20));
+        break;
+      }
+
+      const paintedContext = painted.closest?.(
+        '[data-video-id],[aria-label="Video player"],article,[role="article"],[data-pagelet^="FeedUnit"],[aria-posinset]'
+      );
+      if (videoContext && paintedContext === videoContext) {
+        score += Math.max(180, 420 - (index * 15));
+        break;
+      }
+    }
 
     const centerDistance = Math.hypot(
       x - (rect.left + rect.width / 2),
@@ -517,15 +671,17 @@ function processPointerEvent() {
     return;
   }
 
-  if (video === _dismissedVideo) {
+  const nextContext = getVideoContextNode(target, video);
+  const nextMediaKey = getVideoMediaKey(video, nextContext);
+
+  if (nextMediaKey && nextMediaKey === _dismissedMediaKey) {
     hideButton(false);
     return;
   }
-  if (_dismissedVideo && video !== _dismissedVideo) _dismissedVideo = null;
+  if (_dismissedMediaKey && nextMediaKey !== _dismissedMediaKey) _dismissedMediaKey = '';
 
   clearHide();
-  _activeVideo = video;
-  _activeContextNode = getVideoContextNode(target, video);
+  activateVideoPlayer(video, target);
   positionBtn(video);
 }
 
@@ -552,16 +708,34 @@ function initListeners() {
     };
 
     const pointed = getVideoUnderLastPointer();
-    if (!pointed?.video || pointed.video === _dismissedVideo) return;
-    if (_dismissedVideo && pointed.video !== _dismissedVideo) _dismissedVideo = null;
+    if (!pointed?.video) return;
+
+    const nextContext = getVideoContextNode(pointed.target, pointed.video);
+    const nextMediaKey = getVideoMediaKey(pointed.video, nextContext);
+    if (nextMediaKey && nextMediaKey === _dismissedMediaKey) return;
+    if (_dismissedMediaKey && nextMediaKey !== _dismissedMediaKey) _dismissedMediaKey = '';
 
     clearHide();
-    _activeVideo = pointed.video;
-    _activeContextNode = getVideoContextNode(pointed.target, pointed.video);
+    activateVideoPlayer(pointed.video, pointed.target);
     positionBtn(pointed.video);
   }, true);
 
   document.addEventListener('pointerleave', () => scheduleHide(150), true);
+
+  const handleMediaIdentityChange = event => {
+    if (!(event.target instanceof HTMLVideoElement)) return;
+
+    if (event.target === _activeVideo) {
+      _qualityPanel?.invalidateContext?.();
+      _activeMediaKey = '';
+    }
+
+    queuePointerProcessing(true);
+  };
+
+  document.addEventListener('loadstart', handleMediaIdentityChange, true);
+  document.addEventListener('emptied', handleMediaIdentityChange, true);
+  document.addEventListener('loadedmetadata', handleMediaIdentityChange, true);
 
   const reposition = () => {
     if (_activeVideo && isRenderedVideo(_activeVideo)) {
