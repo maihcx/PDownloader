@@ -72,6 +72,12 @@
         <div class="hero-actions">
           <a class="btn btn-primary" href="#" data-href-config="releasesUrl" target="_blank" rel="noopener" data-i18n="hero.ctaPrimary">Download for Windows</a>
           <a class="btn btn-ghost" href="#" data-href-config="repoUrl" target="_blank" rel="noopener" data-i18n="hero.ctaSecondary">View source on GitHub</a>
+          <button class="btn btn-ghost" type="button" data-extension-dialog-open>
+            <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M7.25 3.25h5.5v3.1a2.1 2.1 0 1 1 0 4.2v6.2h-4v-2.1a2.1 2.1 0 1 0-4.2 0v2.1h-1.3v-5.5h3.1a2.1 2.1 0 1 0 0-4.2h-3.1v-3.8h4Z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span data-i18n="hero.ctaExtension">Install browser extension</span>
+          </button>
         </div>
 
         <!-- Signature visual: segmented download bar -->
@@ -262,13 +268,14 @@
           <h2 style="margin-bottom:1rem;" data-i18n="extension.title">Capture links without leaving the page</h2>
           <p style="margin-bottom:1.5rem;color:var(--text-secondary);" data-i18n="extension.subtitle">Installed automatically alongside the desktop app.</p>
 
-          <div class="browser-row">
-            <span class="pill">Chrome</span>
-            <span class="pill">Edge</span>
-            <span class="pill">Brave</span>
-            <span class="pill">Cốc Cốc</span>
-            <span class="pill">Firefox</span>
-            <span class="pill">Zen Browser</span>
+          <div class="ext-store-actions">
+            <button class="btn btn-primary ext-store-button" type="button" data-extension-dialog-open>
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M10 2.5a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15Z" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M3.9 6.25h12.2M7.1 17l6.1-10.75M8.1 10.4a2.4 2.4 0 1 0 4.8 0 2.4 2.4 0 0 0-4.8 0Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <span data-i18n="extension.storeButton">Install browser extension</span>
+            </button>
           </div>
 
           <ul class="ext-list">
@@ -345,6 +352,65 @@
       </div>
     </section>
   </main>
+
+  <dialog class="browser-extension-dialog" id="browser-extension-dialog" aria-labelledby="browser-extension-dialog-title">
+    <div class="browser-extension-dialog__panel">
+      <div class="browser-extension-dialog__head">
+        <div>
+          <span class="eyebrow" data-i18n="extension.modal.eyebrow">Official browser extension</span>
+          <h2 id="browser-extension-dialog-title" data-i18n="extension.modal.title">Choose your browser engine</h2>
+          <p data-i18n="extension.modal.subtitle">One extension package supports every browser built on the same engine.</p>
+        </div>
+        <button class="browser-extension-dialog__close" type="button" data-extension-dialog-close data-i18n-attr="aria-label:extension.modal.close" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="browser-engine-grid">
+        <a class="browser-engine-card browser-engine-card--available" href="https://chromewebstore.google.com/detail/kdbapmeegoljihpndnbfeockjjcoogbp" target="_blank" rel="noopener" data-extension-chromium-link>
+          <div class="browser-engine-card__top">
+            <span class="browser-engine-card__icon browser-engine-card__icon--chromium" aria-hidden="true"><span></span></span>
+            <span class="browser-engine-card__status browser-engine-card__status--available" data-i18n="extension.modal.available">Available</span>
+          </div>
+          <div>
+            <h3 data-i18n="extension.modal.chromiumTitle">Chromium engine</h3>
+            <p data-i18n="extension.modal.chromiumDesc">Install the official extension from the Chrome Web Store.</p>
+          </div>
+          <div class="browser-engine-card__browsers" aria-label="Supported Chromium browsers">
+            <span>Chrome</span><span>Edge</span><span>Brave</span><span>Cốc Cốc</span>
+          </div>
+          <span class="browser-engine-card__action">
+            <span data-i18n="extension.modal.openStore">Open Chrome Web Store</span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M6 3h7v7M13 3 5 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M11 8.5V13H3V5h4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        </a>
+
+        <div class="browser-engine-card browser-engine-card--soon" aria-disabled="true">
+          <div class="browser-engine-card__top">
+            <span class="browser-engine-card__icon browser-engine-card__icon--gecko" aria-hidden="true">
+              <svg width="25" height="25" viewBox="0 0 25 25" fill="none">
+                <path d="M17.9 4.1c.1 2.2-.8 3.8-2.5 4.8.4-2.4-.8-4.8-3-6.4.2 2.5-1.2 4.4-3 6.1-1.9 1.9-2.8 4-2.2 6.7.7 3.1 3.5 5.4 6.8 5.4 3.8 0 6.9-3.1 6.9-6.9 0-3.7-1.8-7-3-9.7Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                <path d="M12.1 19c-1.7-1-2.3-2.3-1.8-3.8.4-1.3 1.5-2.1 2.7-3.1.1 1.4.7 2.3 1.7 3 .9.7 1.2 1.7.8 2.7-.5 1.2-2 1.8-3.4 1.2Z" fill="currentColor" opacity=".75"/>
+              </svg>
+            </span>
+            <span class="browser-engine-card__status browser-engine-card__status--soon" data-i18n="extension.modal.comingSoon">Coming soon</span>
+          </div>
+          <div>
+            <h3 data-i18n="extension.modal.geckoTitle">Firefox engine (Gecko)</h3>
+            <p data-i18n="extension.modal.geckoDesc">The Firefox and Zen Browser release is being prepared.</p>
+          </div>
+          <div class="browser-engine-card__browsers" aria-label="Planned Gecko browsers">
+            <span>Firefox</span><span>Zen Browser</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
 
   <footer class="site-footer">
     <div class="container footer-inner">
