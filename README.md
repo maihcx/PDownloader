@@ -4,6 +4,18 @@ A multi-threaded download manager for Windows, built with .NET 10, WPF, and MVVM
 
 ---
 
+## Source Code
+
+PDownloader is developed across the following repositories:
+
+| Component | Repository | Purpose |
+| --- | --- | --- |
+| **Main App** | **[maihcx/PDownloader](https://github.com/maihcx/PDownloader) ← You are here** | Windows application, download engine, and releases. |
+| Browser Extension | [maihcx/PDownloader-browser-ext](https://github.com/maihcx/PDownloader-browser-ext) | Browser integration, download interception, and media capture. |
+| Website | [maihcx/PDownloader-site](https://github.com/maihcx/PDownloader-site) | Website interface, translations, documentation reader, and Markdown articles. |
+
+---
+
 ## Highlights
 
 - **Multi-segment downloading** — splits a file into parallel byte-range requests (default 8 threads) to accelerate transfers, with automatic fallback to single-stream when the server doesn't support ranges.
