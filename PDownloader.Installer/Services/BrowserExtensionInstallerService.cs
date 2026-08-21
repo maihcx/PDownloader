@@ -23,10 +23,9 @@ namespace PDownloader.Installer.Services;
 public static class BrowserExtensionInstallerService
 {
     public const string ExtensionId = "kdbapmeegoljihpndnbfeockjjcoogbp";
-    public const string FirefoxExtensionId = "pdownloader@maisoft.io.vn";
 
     private const string ChromiumExtensionId = ExtensionId;
-    private const string GeckoExtensionId = FirefoxExtensionId;
+    private const string LegacyGeckoExtensionId = "pdownloader@maisoft.io.vn";
 
     private const string ExtensionSettingsSubKey = "ExtensionSettings";
 
@@ -35,55 +34,36 @@ public static class BrowserExtensionInstallerService
 
     private const string GeckoExtensionSettingsValue = "ExtensionSettings";
 
-    private const string GeckoInstallUrl =
-        "https://raw.githubusercontent.com/maihcx/PDownloader/main/BrowserExtension/PDownloader.xpi";
-
     private const string LegacySelfHostedChromiumExtensionId =
         "nliblbkhgljcpdboininiepogjaegien";
 
-    private enum BrowserEngine
-    {
-        Chromium,
-        Gecko,
-    }
-
     private static readonly (
         string DisplayName,
-        BrowserEngine Engine,
         string ExtensionRoot,
-        string PolicyRoot)[] SupportedBrowsers =
+        string PolicyRoot)[] SupportedChromiumBrowsers =
     {
         (
             "Google Chrome",
-            BrowserEngine.Chromium,
             @"SOFTWARE\Google\Chrome\Extensions",
             @"SOFTWARE\Policies\Google\Chrome"),
         (
             "Microsoft Edge",
-            BrowserEngine.Chromium,
             @"SOFTWARE\Microsoft\Edge\Extensions",
             @"SOFTWARE\Policies\Microsoft\Edge"),
         (
             "Brave",
-            BrowserEngine.Chromium,
             @"SOFTWARE\BraveSoftware\Brave\Extensions",
             @"SOFTWARE\Policies\BraveSoftware\Brave"),
         (
             "Cốc Cốc",
-            BrowserEngine.Chromium,
             @"SOFTWARE\CocCoc\CocCoc\Extensions",
             @"SOFTWARE\Policies\CocCoc\CocCoc"),
+    };
 
-        (
-            "Mozilla Firefox",
-            BrowserEngine.Gecko,
-            string.Empty,
-            @"SOFTWARE\Policies\Mozilla\Firefox"),
-        (
-            "Zen Browser",
-            BrowserEngine.Gecko,
-            string.Empty,
-            @"SOFTWARE\Policies\Mozilla\Zen"),
+    private static readonly string[] LegacyGeckoPolicyRoots =
+    {
+        @"SOFTWARE\Policies\Mozilla\Firefox",
+        @"SOFTWARE\Policies\Mozilla\Zen",
     };
 
     public static void InstallForAllBrowsers(string installDir)
@@ -92,33 +72,28 @@ public static class BrowserExtensionInstallerService
 
         foreach ((
             string _,
-            BrowserEngine engine,
             string extensionRoot,
-            string policyRoot) in SupportedBrowsers)
+            string policyRoot) in SupportedChromiumBrowsers)
         {
             try
             {
-                switch (engine)
+                if (!IsValidChromiumExtensionId())
                 {
-                    case BrowserEngine.Chromium when IsValidChromiumExtensionId():
-                        // Remove policies written by older PDownloader versions.
-                        // A policy-installed extension is managed by the browser and
-                        // does not show the normal third-party installation prompt.
-                        RemoveChromiumExtensionPolicy(policyRoot);
-                        RemoveLegacySelfHostedChromiumPolicy(policyRoot);
-
-                        // External registration is the consumer-facing flow used by
-                        // desktop applications that bundle a companion extension.
-                        // The browser asks the user to enable it on the next start.
-                        RegisterChromiumExternalExtension(
-                            extensionRoot,
-                            ChromiumUpdateUri);
-                        break;
-
-                    case BrowserEngine.Gecko when !string.IsNullOrWhiteSpace(GeckoExtensionId):
-                        RegisterGeckoExtensionPolicy(policyRoot);
-                        break;
+                    continue;
                 }
+
+                // Remove policies written by older PDownloader versions.
+                // A policy-installed extension is managed by the browser and
+                // does not show the normal third-party installation prompt.
+                RemoveChromiumExtensionPolicy(policyRoot);
+                RemoveLegacySelfHostedChromiumPolicy(policyRoot);
+
+                // External registration is the consumer-facing flow used by
+                // desktop applications that bundle a companion extension.
+                // The browser asks the user to enable it on the next start.
+                RegisterChromiumExternalExtension(
+                    extensionRoot,
+                    ChromiumUpdateUri);
             }
             catch
             {
@@ -127,29 +102,24 @@ public static class BrowserExtensionInstallerService
                 // Extension installation must never abort the main installer.
             }
         }
+
+        RemoveLegacyGeckoExtensionPolicies();
     }
 
     public static void UninstallForAllBrowsers()
     {
         foreach ((
             string _,
-            BrowserEngine engine,
             string extensionRoot,
-            string policyRoot) in SupportedBrowsers)
+            string policyRoot) in SupportedChromiumBrowsers)
         {
             try
             {
-                switch (engine)
+                if (IsValidChromiumExtensionId())
                 {
-                    case BrowserEngine.Chromium when IsValidChromiumExtensionId():
-                        RemoveChromiumExternalExtension(extensionRoot);
-                        RemoveChromiumExtensionPolicy(policyRoot);
-                        RemoveLegacySelfHostedChromiumPolicy(policyRoot);
-                        break;
-
-                    case BrowserEngine.Gecko when !string.IsNullOrWhiteSpace(GeckoExtensionId):
-                        RemoveGeckoExtensionPolicy(policyRoot);
-                        break;
+                    RemoveChromiumExternalExtension(extensionRoot);
+                    RemoveChromiumExtensionPolicy(policyRoot);
+                    RemoveLegacySelfHostedChromiumPolicy(policyRoot);
                 }
             }
             catch
@@ -158,6 +128,8 @@ public static class BrowserExtensionInstallerService
                 // browser policy key is inaccessible or was changed externally.
             }
         }
+
+        RemoveLegacyGeckoExtensionPolicies();
     }
 
     private static bool IsValidChromiumExtensionId()
@@ -234,31 +206,22 @@ public static class BrowserExtensionInstallerService
             throwOnMissingSubKey: false);
     }
 
-    private static void RegisterGeckoExtensionPolicy(string policyRoot)
+    private static void RemoveLegacyGeckoExtensionPolicies()
     {
-        using RegistryKey? browserPolicy =
-            Registry.LocalMachine.CreateSubKey(
-                policyRoot,
-                writable: true);
-
-        if (browserPolicy == null)
+        foreach (string policyRoot in LegacyGeckoPolicyRoots)
         {
-            return;
+            try
+            {
+                // Cleanup only. Current installers never register, download, or
+                // launch extensions for Firefox and other Gecko-based browsers.
+                RemoveGeckoExtensionPolicy(policyRoot);
+            }
+            catch
+            {
+                // Preserve unrelated browser policies if their existing value
+                // cannot be parsed or updated safely.
+            }
         }
-
-        JsonObject extensionSettings =
-            ReadGeckoExtensionSettings(browserPolicy);
-
-        extensionSettings[GeckoExtensionId] = new JsonObject
-        {
-            ["installation_mode"] = "normal_installed",
-            ["install_url"] = GeckoInstallUrl,
-            ["updates_disabled"] = false,
-        };
-
-        WriteGeckoExtensionSettings(
-            browserPolicy,
-            extensionSettings);
     }
 
     private static void RemoveGeckoExtensionPolicy(string policyRoot)
@@ -276,7 +239,7 @@ public static class BrowserExtensionInstallerService
         JsonObject extensionSettings =
             ReadGeckoExtensionSettings(browserPolicy);
 
-        if (!extensionSettings.Remove(GeckoExtensionId))
+        if (!extensionSettings.Remove(LegacyGeckoExtensionId))
         {
             return;
         }

@@ -17,17 +17,6 @@ namespace PDownloader.Core.Download.ExternalTools.YtDlp;
 
 internal static class YtDlpCommandBuilder
 {
-    // Temporary workaround for yt-dlp issue #17405
-    // (https://github.com/yt-dlp/yt-dlp/issues/17405): with cookies attached,
-    // YouTube sometimes returns "The page needs to be reloaded" because the
-    // tv_downgraded client comes back UNPLAYABLE while other clients get
-    // skipped for SABR. Excluding tv_downgraded and pinning to
-    // web_safari/web_embedded avoids that failure path. This is scoped to the
-    // "youtube:" extractor namespace, so it's a no-op for any other site.
-    // Remove once yt-dlp ships an upstream fix for #17405.
-    private const string YoutubePlayerClientWorkaround =
-        "youtube:player_client=default,web_embedded";
-
     public static IReadOnlyList<string> BuildResolveDirectUrls(
         string pageUrl,
         string formatId,
@@ -46,7 +35,6 @@ internal static class YtDlpCommandBuilder
             "--no-playlist",
         };
 
-        AddYoutubePlayerClientWorkaround(arguments);
         AddReferer(arguments, referer);
         AddUserAgent(arguments, userAgent);
         AddExtraHeaders(arguments, extraHeaders);
@@ -71,7 +59,6 @@ internal static class YtDlpCommandBuilder
             "--no-playlist",
         };
 
-        AddYoutubePlayerClientWorkaround(arguments);
         AddReferer(arguments, referer);
         AddUserAgent(arguments, userAgent);
         AddExtraHeaders(arguments, extraHeaders);
@@ -99,7 +86,6 @@ internal static class YtDlpCommandBuilder
 
         AddFormat(arguments, formatId);
 
-        AddYoutubePlayerClientWorkaround(arguments);
         AddReferer(arguments, referer);
         AddUserAgent(arguments, userAgent);
         AddExtraHeaders(arguments, extraHeaders);
@@ -107,12 +93,6 @@ internal static class YtDlpCommandBuilder
         AddCookieFile(arguments, cookieFile);
         AddUrl(arguments, url);
         return arguments;
-    }
-
-    private static void AddYoutubePlayerClientWorkaround(List<string> arguments)
-    {
-        arguments.Add("--extractor-args");
-        arguments.Add(YoutubePlayerClientWorkaround);
     }
 
     private static void AddFormat(List<string> arguments, string? formatId)
