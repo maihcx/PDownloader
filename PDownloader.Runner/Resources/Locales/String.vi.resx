@@ -213,18 +213,6 @@
   <data name="download_thread_visualization_unsupported_generic" xml:space="preserve">
     <value>Phiên tải này không hỗ trợ hiển thị tiến trình trực quan theo từng luồng.</value>
   </data>
-  <data name="download_thread_stage_file" xml:space="preserve">
-    <value>Tệp</value>
-  </data>
-  <data name="download_thread_stage_video" xml:space="preserve">
-    <value>Video</value>
-  </data>
-  <data name="download_thread_stage_audio" xml:space="preserve">
-    <value>Âm thanh</value>
-  </data>
-  <data name="download_thread_stage_hls" xml:space="preserve">
-    <value>HLS</value>
-  </data>
   <data name="download_thread_item_title" xml:space="preserve">
     <value>Luồng {0}</value>
   </data>
@@ -264,6 +252,18 @@
   <data name="download_compact_status_no_threads_description" xml:space="preserve">
     <value>Tiến trình theo từng luồng sẽ tự động xuất hiện khi có nhiều hơn một luồng tải đang hoạt động.</value>
   </data>
+  <data name="download_thread_stage_file" xml:space="preserve">
+    <value>Tệp</value>
+  </data>
+  <data name="download_thread_stage_video" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="download_thread_stage_audio" xml:space="preserve">
+    <value>Âm thanh</value>
+  </data>
+  <data name="download_thread_stage_hls" xml:space="preserve">
+    <value>HLS</value>
+  </data>
   <data name="download_compact_status_paused_merge_title" xml:space="preserve">
     <value>Đã tạm dừng ghép tệp</value>
   </data>
@@ -284,5 +284,11 @@
   </data>
   <data name="download_compact_status_error_description" xml:space="preserve">
     <value>Tác vụ gặp lỗi. Bạn có thể thử lại để tiếp tục.</value>
+  </data>
+  <data name="retry_title" xml:space="preserve">
+    <value>Thử lại</value>
+  </data>
+  <data name="download_status_retry_title" xml:space="preserve">
+    <value>Đang thử lại: {0}</value>
   </data>
 </root>

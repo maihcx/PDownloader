@@ -64,6 +64,9 @@ public partial class DownloaderProgressViewModel : ObservableObject
     private bool _isCancelButtonEnabled = true;
 
     [ObservableProperty]
+    private bool _isRetryButtonEnabled = true;
+
+    [ObservableProperty]
     private bool _isThreadProgressVisible;
 
     [ObservableProperty]
@@ -143,6 +146,9 @@ public partial class DownloaderProgressViewModel : ObservableObject
             Enum.TryParse(obj.Status, ignoreCase: true, out DownloadStatus status);
             CurrentDownloadStatus = status;
 
+            IsRetryButtonEnabled = false;
+            DownloaderStatus.HasError = false;
+
             switch (status)
             {
                 case DownloadStatus.Queued:
@@ -204,8 +210,18 @@ public partial class DownloaderProgressViewModel : ObservableObject
                     StatusText = LanguageBase.GetLangValue(
                         "download_status_error_title",
                         obj.ErrorMessage);
+                    DownloaderStatus.HasError = true;
                     IsPauseResumeButtonEnabled = false;
-                    IsCancelButtonEnabled = false;
+                    IsCancelButtonEnabled = true;
+                    IsRetryButtonEnabled = true;
+                    break;
+
+                case DownloadStatus.Retrying:
+                    StatusText = LanguageBase.GetLangValue(
+                        "download_status_retry_title",
+                        obj.ErrorMessage);
+                    IsPauseResumeButtonEnabled = false;
+                    IsCancelButtonEnabled = true;
                     break;
             }
 
@@ -577,5 +593,17 @@ public partial class DownloaderProgressViewModel : ObservableObject
 
         IsPauseResumeButtonEnabled = false;
         _downloaderService.ResumeDownload();
+    }
+
+    [RelayCommand]
+    private void Retry()
+    {
+        if (!IsRetryButtonEnabled)
+        {
+            return;
+        }
+
+        IsRetryButtonEnabled = false;
+        _downloaderService.RetryDownload();
     }
 }

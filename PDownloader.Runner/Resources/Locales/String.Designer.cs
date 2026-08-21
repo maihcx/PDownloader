@@ -277,6 +277,15 @@ namespace PDownloader.Runner.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to download_status_retry_title.
+        /// </summary>
+        internal static string download_status_retry_title {
+            get {
+                return ResourceManager.GetString("download_status_retry_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to download_thread_fragment_detail.
         /// </summary>
         internal static string download_thread_fragment_detail {
@@ -507,6 +516,15 @@ namespace PDownloader.Runner.Resources.Locales {
         internal static string Retry {
             get {
                 return ResourceManager.GetString("Retry", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to retry_title.
+        /// </summary>
+        internal static string retry_title {
+            get {
+                return ResourceManager.GetString("retry_title", resourceCulture);
             }
         }
         

@@ -213,18 +213,6 @@
   <data name="download_thread_visualization_unsupported_generic" xml:space="preserve">
     <value>Visual per-thread progress is not available for this transfer.</value>
   </data>
-  <data name="download_thread_stage_file" xml:space="preserve">
-    <value>File</value>
-  </data>
-  <data name="download_thread_stage_video" xml:space="preserve">
-    <value>Video</value>
-  </data>
-  <data name="download_thread_stage_audio" xml:space="preserve">
-    <value>Audio</value>
-  </data>
-  <data name="download_thread_stage_hls" xml:space="preserve">
-    <value>HLS</value>
-  </data>
   <data name="download_thread_item_title" xml:space="preserve">
     <value>Thread {0}</value>
   </data>
@@ -264,6 +252,18 @@
   <data name="download_compact_status_no_threads_description" xml:space="preserve">
     <value>Per-thread visualization will appear automatically when more than one download worker is active.</value>
   </data>
+  <data name="download_thread_stage_file" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="download_thread_stage_video" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="download_thread_stage_audio" xml:space="preserve">
+    <value>Audio</value>
+  </data>
+  <data name="download_thread_stage_hls" xml:space="preserve">
+    <value>HLS</value>
+  </data>
   <data name="download_compact_status_paused_merge_title" xml:space="preserve">
     <value>File merge paused</value>
   </data>
@@ -284,5 +284,11 @@
   </data>
   <data name="download_compact_status_error_description" xml:space="preserve">
     <value>The task encountered an error. You can retry to continue.</value>
+  </data>
+  <data name="retry_title" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="download_status_retry_title" xml:space="preserve">
+    <value>Retrying: {0}</value>
   </data>
 </root>
