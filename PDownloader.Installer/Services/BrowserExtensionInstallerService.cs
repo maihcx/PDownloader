@@ -77,29 +77,54 @@ public static class BrowserExtensionInstallerService
         {
             try
             {
+                RemoveLegacyChromiumExtension(
+                    extensionRoot,
+                    policyRoot);
+
                 if (!IsValidChromiumExtensionId())
                 {
                     continue;
                 }
 
-                // Remove policies written by older PDownloader versions.
-                // A policy-installed extension is managed by the browser and
-                // does not show the normal third-party installation prompt.
-                RemoveChromiumExtensionPolicy(policyRoot);
-                RemoveLegacySelfHostedChromiumPolicy(policyRoot);
-
-                // External registration is the consumer-facing flow used by
-                // desktop applications that bundle a companion extension.
-                // The browser asks the user to enable it on the next start.
-                RegisterChromiumExternalExtension(
-                    extensionRoot,
-                    ChromiumUpdateUri);
+                if (!IsChromiumExtensionProvisioned(
+                        extensionRoot,
+                        policyRoot))
+                {
+                    // Register only on the first installation. Updates preserve
+                    // the existing browser extension and its user state.
+                    RegisterChromiumExternalExtension(
+                        extensionRoot,
+                        ChromiumUpdateUri);
+                }
             }
             catch
             {
                 // A browser may not support the expected registration surface,
                 // or an existing third-party policy may be malformed.
                 // Extension installation must never abort the main installer.
+            }
+        }
+
+        RemoveLegacyGeckoExtensionPolicies();
+    }
+
+    public static void RemoveLegacyExtensionsForAllBrowsers()
+    {
+        foreach ((
+            string _,
+            string extensionRoot,
+            string policyRoot) in SupportedChromiumBrowsers)
+        {
+            try
+            {
+                RemoveLegacyChromiumExtension(
+                    extensionRoot,
+                    policyRoot);
+            }
+            catch
+            {
+                // Best-effort migration cleanup. Never make an application
+                // update fail because a browser registry key is inaccessible.
             }
         }
 
@@ -117,10 +142,17 @@ public static class BrowserExtensionInstallerService
             {
                 if (IsValidChromiumExtensionId())
                 {
-                    RemoveChromiumExternalExtension(extensionRoot);
-                    RemoveChromiumExtensionPolicy(policyRoot);
-                    RemoveLegacySelfHostedChromiumPolicy(policyRoot);
+                    RemoveChromiumExternalExtension(
+                        extensionRoot,
+                        ChromiumExtensionId);
+                    RemoveChromiumExtensionPolicy(
+                        policyRoot,
+                        ChromiumExtensionId);
                 }
+
+                RemoveLegacyChromiumExtension(
+                    extensionRoot,
+                    policyRoot);
             }
             catch
             {
@@ -130,6 +162,36 @@ public static class BrowserExtensionInstallerService
         }
 
         RemoveLegacyGeckoExtensionPolicies();
+    }
+
+    private static bool IsChromiumExtensionProvisioned(
+        string extensionRoot,
+        string policyRoot)
+    {
+        return IsChromiumExternalExtensionRegistered(extensionRoot)
+            || IsChromiumExtensionPolicyRegistered(policyRoot);
+    }
+
+    private static bool IsChromiumExternalExtensionRegistered(
+        string extensionRoot)
+    {
+        using RegistryKey localMachine = RegistryKey.OpenBaseKey(
+            RegistryHive.LocalMachine,
+            RegistryView.Registry32);
+        using RegistryKey? extension = localMachine.OpenSubKey(
+            extensionRoot + "\\" + ChromiumExtensionId);
+
+        return extension?.GetValue("update_url") is string updateUrl
+            && !string.IsNullOrWhiteSpace(updateUrl);
+    }
+
+    private static bool IsChromiumExtensionPolicyRegistered(
+        string policyRoot)
+    {
+        using RegistryKey? extension = Registry.LocalMachine.OpenSubKey(
+            $"{policyRoot}\\{ExtensionSettingsSubKey}\\{ChromiumExtensionId}");
+
+        return extension != null;
     }
 
     private static bool IsValidChromiumExtensionId()
@@ -163,7 +225,9 @@ public static class BrowserExtensionInstallerService
             RegistryValueKind.String);
     }
 
-    private static void RemoveChromiumExternalExtension(string extensionRoot)
+    private static void RemoveChromiumExternalExtension(
+        string extensionRoot,
+        string extensionId)
     {
         using RegistryKey localMachine = RegistryKey.OpenBaseKey(
             RegistryHive.LocalMachine,
@@ -173,11 +237,13 @@ public static class BrowserExtensionInstallerService
             writable: true);
 
         extensions?.DeleteSubKey(
-            ChromiumExtensionId,
+            extensionId,
             throwOnMissingSubKey: false);
     }
 
-    private static void RemoveChromiumExtensionPolicy(string policyRoot)
+    private static void RemoveChromiumExtensionPolicy(
+        string policyRoot,
+        string extensionId)
     {
         using RegistryKey? extensionSettings =
             Registry.LocalMachine.OpenSubKey(
@@ -190,20 +256,20 @@ public static class BrowserExtensionInstallerService
         }
 
         extensionSettings.DeleteSubKey(
-            ChromiumExtensionId,
+            extensionId,
             throwOnMissingSubKey: false);
     }
 
-    private static void RemoveLegacySelfHostedChromiumPolicy(string policyRoot)
+    private static void RemoveLegacyChromiumExtension(
+        string extensionRoot,
+        string policyRoot)
     {
-        using RegistryKey? extensionSettings =
-            Registry.LocalMachine.OpenSubKey(
-                $"{policyRoot}\\{ExtensionSettingsSubKey}",
-                writable: true);
-
-        extensionSettings?.DeleteSubKey(
-            LegacySelfHostedChromiumExtensionId,
-            throwOnMissingSubKey: false);
+        RemoveChromiumExternalExtension(
+            extensionRoot,
+            LegacySelfHostedChromiumExtensionId);
+        RemoveChromiumExtensionPolicy(
+            policyRoot,
+            LegacySelfHostedChromiumExtensionId);
     }
 
     private static void RemoveLegacyGeckoExtensionPolicies()
