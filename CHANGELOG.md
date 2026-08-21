@@ -1,3 +1,21 @@
+## v0.11.2
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- [core] Revert remove yt-dlp YouTube workaround | see #155 (#165) — @maihcx
+- [ui] Add retry status label mapping (#162) — @maihcx
+- [installer] Use explicit Chromium registration state (#161) — @maihcx
+- [installer] Preserve Chromium extension registrations on update (#160) — @maihcx
+
+## 🧹 Maintenance
+
+- [runner] Add retry flow to downloader UI (#164) — @maihcx
+- [runner] Add combined visibility converters (#163) — @maihcx
+
+
+---
+
 ## v0.11.1
 
 ## 🚀 Changelog
