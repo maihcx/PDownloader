@@ -13,17 +13,16 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Runner.Models;
+namespace PDownloader.Runner.Helpers;
 
-public enum DownloadStatus
+internal class OrVisibilityConverter : IMultiValueConverter
 {
-    Queued,
-    Connecting,
-    Downloading,
-    Paused,
-    Merging,
-    Completed,
-    Cancelled,
-    Error,
-    Retrying,
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        return values.Any(x => x is Visibility.Visible)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)  => throw new NotSupportedException();
 }

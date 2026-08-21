@@ -224,7 +224,20 @@ public sealed class InstallService : IInstallService
 
         progress?.Report((0.75, Utils.LocalizationHelper.Get("uninstall_removing")));
 
-        await Task.Run(BrowserExtensionInstallerService.UninstallForAllBrowsers, ct);
+        if (isCleanup)
+        {
+            await Task.Run(
+                BrowserExtensionInstallerService.UninstallForAllBrowsers,
+                ct);
+        }
+        else
+        {
+            // This is an in-place application update. Preserve the current
+            // browser extension registration and remove legacy IDs only.
+            await Task.Run(
+                BrowserExtensionInstallerService.RemoveLegacyExtensionsForAllBrowsers,
+                ct);
+        }
 
         progress?.Report((0.85, Utils.LocalizationHelper.Get("uninstall_removing")));
 
