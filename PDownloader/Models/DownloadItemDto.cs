@@ -130,6 +130,10 @@ public partial class DownloadItemDto : ObservableObject
         {
             StatusText = LanguageBase.GetLangValue("download_status_error_title", ErrorMessage);
         }
+        else if (StatusState == DownloadStatus.Retrying)
+        {
+            StatusText = LanguageBase.GetLangValue("download_status_retrying_title", ErrorMessage);
+        }
         else
         {
             StatusText = LanguageBase.GetLangValue(
