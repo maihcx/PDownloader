@@ -37,6 +37,13 @@ public static class BrowserExtensionInstallerService
     private const string LegacySelfHostedChromiumExtensionId =
         "nliblbkhgljcpdboininiepogjaegien";
 
+    private enum ChromiumExternalRegistrationState
+    {
+        Missing,
+        MatchesInstaller,
+        DiffersFromInstaller,
+    }
+
     private static readonly (
         string DisplayName,
         string ExtensionRoot,
@@ -86,9 +93,24 @@ public static class BrowserExtensionInstallerService
                     continue;
                 }
 
-                if (!IsChromiumExtensionProvisioned(
+                ChromiumExternalRegistrationState registrationState =
+                    GetChromiumExternalRegistrationState(extensionRoot);
+
+                if (registrationState ==
+                    ChromiumExternalRegistrationState.DiffersFromInstaller)
+                {
+                    // Replace only a stale or malformed registration. A matching
+                    // registration is preserved across application updates.
+                    RemoveChromiumExternalExtension(
                         extensionRoot,
-                        policyRoot))
+                        ChromiumExtensionId);
+                    RegisterChromiumExternalExtension(
+                        extensionRoot,
+                        ChromiumUpdateUri);
+                }
+                else if (registrationState ==
+                             ChromiumExternalRegistrationState.Missing
+                         && !IsChromiumExtensionPolicyRegistered(policyRoot))
                 {
                     // Register only on the first installation. Updates preserve
                     // the existing browser extension and its user state.
@@ -164,15 +186,7 @@ public static class BrowserExtensionInstallerService
         RemoveLegacyGeckoExtensionPolicies();
     }
 
-    private static bool IsChromiumExtensionProvisioned(
-        string extensionRoot,
-        string policyRoot)
-    {
-        return IsChromiumExternalExtensionRegistered(extensionRoot)
-            || IsChromiumExtensionPolicyRegistered(policyRoot);
-    }
-
-    private static bool IsChromiumExternalExtensionRegistered(
+    private static ChromiumExternalRegistrationState GetChromiumExternalRegistrationState(
         string extensionRoot)
     {
         using RegistryKey localMachine = RegistryKey.OpenBaseKey(
@@ -181,8 +195,18 @@ public static class BrowserExtensionInstallerService
         using RegistryKey? extension = localMachine.OpenSubKey(
             extensionRoot + "\\" + ChromiumExtensionId);
 
-        return extension?.GetValue("update_url") is string updateUrl
-            && !string.IsNullOrWhiteSpace(updateUrl);
+        if (extension == null)
+        {
+            return ChromiumExternalRegistrationState.Missing;
+        }
+
+        return extension.GetValue("update_url") is string updateUrl
+            && string.Equals(
+                updateUrl,
+                ChromiumUpdateUri,
+                StringComparison.Ordinal)
+            ? ChromiumExternalRegistrationState.MatchesInstaller
+            : ChromiumExternalRegistrationState.DiffersFromInstaller;
     }
 
     private static bool IsChromiumExtensionPolicyRegistered(
