@@ -1,3 +1,18 @@
+## v0.11.1
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- [core] Remove yt-dlp YouTube workaround | see #138 (#155) — @maihcx
+
+## 🧹 Maintenance
+
+- [installer] Remove Gecko (Firefox) extension registration (#158) — @maihcx
+- [extension] Move BrowserExtension to https://github.com/maihcx/PDownloader-browser-ext (#157) — @maihcx
+
+
+---
+
 ## v0.11.0
 
 ## 🚀 Changelog
