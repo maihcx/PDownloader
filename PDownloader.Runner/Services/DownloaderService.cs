@@ -143,6 +143,17 @@ public class DownloaderService : IHostedService, IDisposable
         //DownloaderStatus.IsPaused = false;
     }
 
+    public void RetryDownload()
+    {
+        if (!DownloaderStatus.HasError)
+        {
+            return;
+        }
+
+        CfsContact?.Send("runner-retry", _runnerConfig.Token, TimeSpan.FromSeconds(30));
+        //DownloaderStatus.IsPaused = false;
+    }
+
     public void CancelDownload()
     {
         CfsContact?.Send("runner-cancel", _runnerConfig.Token, TimeSpan.FromSeconds(30));

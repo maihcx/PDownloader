@@ -302,8 +302,18 @@
                                Margin="0,0,8,0"
                                Content="{utils:Localization pause_title}"
                                Command="{Binding ViewModel.PauseCommand}"
-                               Visibility="{Binding ViewModel.DownloaderStatus.IsPaused, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=invert}"
                                IsEnabled="{Binding ViewModel.IsPauseResumeButtonEnabled, Mode=OneWay}">
+                        <ui:Button.Visibility>
+                            <MultiBinding Converter="{StaticResource AndVisibilityConverter}">
+                                <Binding Path="ViewModel.DownloaderStatus.IsPaused"
+                                         Converter="{StaticResource BoolToVisibilityConverter}"
+                                         ConverterParameter="invert" />
+
+                                <Binding Path="ViewModel.DownloaderStatus.HasError"
+                                         Converter="{StaticResource BoolToVisibilityConverter}"
+                                         ConverterParameter="invert" />
+                            </MultiBinding>
+                        </ui:Button.Visibility>
                         <ui:Button.Icon>
                             <ui:SymbolIcon Symbol="Pause16" />
                         </ui:Button.Icon>
@@ -317,6 +327,17 @@
                                IsEnabled="{Binding ViewModel.IsPauseResumeButtonEnabled, Mode=OneWay}">
                         <ui:Button.Icon>
                             <ui:SymbolIcon Symbol="Play16" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+
+                    <ui:Button Grid.Column="1"
+                               Margin="0,0,8,0"
+                               Content="{utils:Localization retry_title}"
+                               Command="{Binding ViewModel.RetryCommand}"
+                               Visibility="{Binding ViewModel.DownloaderStatus.HasError, Converter={StaticResource BoolToVisibilityConverter}}"
+                               IsEnabled="{Binding ViewModel.IsRetryButtonEnabled, Mode=OneWay}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="ArrowCounterclockwise24" />
                         </ui:Button.Icon>
                     </ui:Button>
 

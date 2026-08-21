@@ -285,4 +285,10 @@
   <data name="download_compact_status_error_description" xml:space="preserve">
     <value>download_compact_status_error_description</value>
   </data>
+  <data name="retry_title" xml:space="preserve">
+    <value>retry_title</value>
+  </data>
+  <data name="download_status_retry_title" xml:space="preserve">
+    <value>download_status_retry_title</value>
+  </data>
 </root>
