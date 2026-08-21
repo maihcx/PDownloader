@@ -17,6 +17,8 @@
             <helpers:EnumToVisibilityConverter x:Key="EnumToVisibilityConverter" />
             <helpers:ProgressToWidthConverter  x:Key="ProgressToWidthConverter" />
             <helpers:WidthToColumnsConverter  x:Key="WidthToColumnsConverter" />
+            <helpers:AndVisibilityConverter  x:Key="AndVisibilityConverter" />
+            <helpers:OrVisibilityConverter  x:Key="OrVisibilityConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
