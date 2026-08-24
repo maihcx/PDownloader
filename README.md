@@ -155,6 +155,30 @@ pnpm run build:firefox   # dist/firefox, signs with AMO, publishes PDownloader.x
 
 `build:firefox` submits to Mozilla AMO for unlisted signing and requires `WEB_EXT_API_KEY`/`WEB_EXT_API_SECRET` environment variables (never commit these).
 
+### Silent installer
+
+Use `--silent` (or `--quiet`, `-s`, `/S`) to install without displaying the
+installer window or asking for input:
+
+```powershell
+PDownloader.Installer.exe --silent
+```
+
+The silent mode supports these optional parameters:
+
+| Parameter | Effect |
+| --- | --- |
+| `--install-dir "C:\Apps\PDownloader"` | Sets a custom installation directory. `/DIR=...` is also accepted. |
+| `--no-desktop-shortcut` | Does not create the desktop shortcut. |
+| `--no-start-menu-shortcut` | Does not create the Start menu shortcut. |
+| `--run-at-startup` / `--no-run-at-startup` | Enables or disables starting PDownloader with Windows. The existing setting is preserved when neither is supplied. |
+| `--launch-after-install` | Launches PDownloader after installation. Silent mode does not launch it by default. |
+| `--uninstall --silent` | Uninstalls PDownloader without displaying the installer window. |
+
+The process exits with code `0` on success and `1` on failure. Windows may
+still display a UAC elevation prompt because installation requires administrator
+privileges.
+
 ---
 
 ## License
