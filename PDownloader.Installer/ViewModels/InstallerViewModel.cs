@@ -38,7 +38,9 @@ public partial class InstallerViewModel : ObservableObject
     private readonly ILicenseService _licenseService;
     private readonly IFolderPickerService _folderPickerService;
     private readonly IInstallerApplicationService _applicationService;
+    private readonly InstallerLaunchOptions _launchOptions;
     private readonly string _uninstallDirectory;
+    private readonly InstallScope _uninstallScope;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StepIndex))]
@@ -46,6 +48,11 @@ public partial class InstallerViewModel : ObservableObject
 
     [ObservableProperty]
     private string _installPath;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCurrentUserInstall))]
+    [NotifyPropertyChangedFor(nameof(IsAllUsersInstall))]
+    private InstallScope _selectedInstallScope;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SelectLanguageCommand))]
@@ -93,11 +100,18 @@ public partial class InstallerViewModel : ObservableObject
         _licenseService = licenseService;
         _folderPickerService = folderPickerService;
         _applicationService = applicationService;
+        _launchOptions = launchOptions;
 
         IsUninstallMode = launchOptions.IsUninstallMode;
-        _installPath = installService.DefaultInstallPath;
-        _uninstallDirectory = installService.GetInstalledDir()
-            ?? installService.DefaultInstallPath;
+        _selectedInstallScope = launchOptions.RequestedInstallScope
+            ?? installService.GetInstalledScope()
+            ?? InstallScope.CurrentUser;
+        _installPath = GetPreferredInstallPath(_selectedInstallScope);
+        _uninstallScope = launchOptions.RequestedInstallScope
+            ?? installService.GetInstalledScope()
+            ?? InstallScope.CurrentUser;
+        _uninstallDirectory = installService.GetInstalledDir(_uninstallScope)
+            ?? installService.GetDefaultInstallPath(_uninstallScope);
         _installBrowserExtension = launchOptions.InstallBrowserExtension;
         _runAtStartup = UserDataStore.GetValue<bool>("IsStartAtBoot");
         _selectedLanguage = Languages.FirstOrDefault(language => language.Code == "en")
@@ -109,6 +123,30 @@ public partial class InstallerViewModel : ObservableObject
         LanguageBase.GetLanguageItems();
 
     public bool IsUninstallMode { get; }
+
+    public bool IsCurrentUserInstall
+    {
+        get => SelectedInstallScope == InstallScope.CurrentUser;
+        set
+        {
+            if (value)
+            {
+                SelectedInstallScope = InstallScope.CurrentUser;
+            }
+        }
+    }
+
+    public bool IsAllUsersInstall
+    {
+        get => SelectedInstallScope == InstallScope.AllUsers;
+        set
+        {
+            if (value)
+            {
+                SelectedInstallScope = InstallScope.AllUsers;
+            }
+        }
+    }
 
     public int EstimatedSize => _installService.EstimatedSize / 1024;
 
@@ -188,6 +226,34 @@ public partial class InstallerViewModel : ObservableObject
         Step = InstallerStep.Installing;
         ResetOperationState();
 
+        if (SelectedInstallScope == InstallScope.AllUsers
+            && !_applicationService.IsAdministrator)
+        {
+            StatusText = LocalizationHelper.Get("installing_waiting_for_admin");
+
+            InstallerLaunchOptions elevatedOptions = CreateInstallOptions() with
+            {
+                IsSilentMode = true,
+                LaunchAfterInstall = false,
+            };
+
+            int? elevatedExitCode = await _applicationService.RunElevatedAsync(
+                elevatedOptions.ToArguments(),
+                CancellationToken.None);
+
+            if (elevatedExitCode == 0)
+            {
+                Step = InstallerStep.Finish;
+            }
+            else
+            {
+                ShowError(new InvalidOperationException(
+                    LocalizationHelper.Get("elevation_failed")));
+            }
+
+            return;
+        }
+
         var progress = new Progress<(double Percent, string Status)>(result =>
         {
             Progress = result.Percent * 100;
@@ -198,6 +264,7 @@ public partial class InstallerViewModel : ObservableObject
         {
             await _installService.InstallAsync(
                 InstallPath,
+                SelectedInstallScope,
                 DesktopShortcut,
                 StartMenuShortcut,
                 InstallBrowserExtension,
@@ -218,6 +285,37 @@ public partial class InstallerViewModel : ObservableObject
         Step = InstallerStep.Uninstalling;
         ResetOperationState();
 
+        if (_uninstallScope == InstallScope.AllUsers
+            && !_applicationService.IsAdministrator)
+        {
+            StatusText = LocalizationHelper.Get("installing_waiting_for_admin");
+
+            InstallerLaunchOptions elevatedOptions = _launchOptions with
+            {
+                IsUninstallMode = true,
+                IsSilentMode = true,
+                RequestedInstallScope = InstallScope.AllUsers,
+                InstallDirectory = _uninstallDirectory,
+                LaunchAfterInstall = false,
+            };
+
+            int? elevatedExitCode = await _applicationService.RunElevatedAsync(
+                elevatedOptions.ToArguments(),
+                CancellationToken.None);
+
+            if (elevatedExitCode == 0)
+            {
+                Step = InstallerStep.UninstallDone;
+            }
+            else
+            {
+                ShowError(new InvalidOperationException(
+                    LocalizationHelper.Get("elevation_failed")));
+            }
+
+            return;
+        }
+
         var progress = new Progress<(double Percent, string Status)>(result =>
         {
             Progress = result.Percent * 100;
@@ -228,6 +326,7 @@ public partial class InstallerViewModel : ObservableObject
         {
             await _installService.UninstallAsync(
                 _uninstallDirectory,
+                _uninstallScope,
                 progress,
                 CancellationToken.None);
             Step = InstallerStep.UninstallDone;
@@ -267,6 +366,27 @@ public partial class InstallerViewModel : ObservableObject
         ErrorDetail = exception.Message;
         Step = InstallerStep.Error;
     }
+
+    partial void OnSelectedInstallScopeChanged(InstallScope value)
+    {
+        InstallPath = GetPreferredInstallPath(value);
+    }
+
+    private string GetPreferredInstallPath(InstallScope installScope) =>
+        _installService.GetInstalledDir(installScope)
+        ?? _installService.GetDefaultInstallPath(installScope);
+
+    private InstallerLaunchOptions CreateInstallOptions() =>
+        _launchOptions with
+        {
+            IsUninstallMode = false,
+            RequestedInstallScope = SelectedInstallScope,
+            InstallDirectory = InstallPath,
+            DesktopShortcut = DesktopShortcut,
+            StartMenuShortcut = StartMenuShortcut,
+            InstallBrowserExtension = InstallBrowserExtension,
+            RunAtStartup = RunAtStartup,
+        };
 
     private static string GetApplicationVersion()
     {

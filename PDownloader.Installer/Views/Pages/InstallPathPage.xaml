@@ -10,6 +10,28 @@
                        FontSize="22"
                        FontWeight="Bold"
                        Text="{local:LocalizationExtension path_title}" />
+
+            <TextBlock Margin="0,0,0,8"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       Text="{local:LocalizationExtension path_scope_label}" />
+            <RadioButton GroupName="InstallScope"
+                         Content="{local:LocalizationExtension path_scope_current_user}"
+                         IsChecked="{Binding IsCurrentUserInstall, Mode=TwoWay}" />
+            <TextBlock Margin="24,2,0,10"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                       Text="{local:LocalizationExtension path_scope_current_user_description}"
+                       TextWrapping="Wrap" />
+            <RadioButton GroupName="InstallScope"
+                         Content="{local:LocalizationExtension path_scope_all_users}"
+                         IsChecked="{Binding IsAllUsersInstall, Mode=TwoWay}" />
+            <TextBlock Margin="24,2,0,18"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                       Text="{local:LocalizationExtension path_scope_all_users_description}"
+                       TextWrapping="Wrap" />
+
             <TextBlock Margin="0,0,0,8"
                        FontSize="13"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"

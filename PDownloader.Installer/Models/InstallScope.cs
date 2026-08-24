@@ -13,17 +13,10 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Installer.Services.Contracts;
+namespace PDownloader.Installer.Models;
 
-public interface IInstallerApplicationService
+public enum InstallScope
 {
-    bool IsAdministrator { get; }
-
-    void Shutdown(int exitCode = 0);
-
-    bool TryLaunch(string executablePath, string workingDirectory);
-
-    Task<int?> RunElevatedAsync(
-        IReadOnlyCollection<string> arguments,
-        CancellationToken cancellationToken);
+    CurrentUser,
+    AllUsers,
 }

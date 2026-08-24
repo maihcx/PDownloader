@@ -29,12 +29,25 @@ public sealed class InstallService : IInstallService
     private const string PayloadResourceName = "PDownloader.Installer.Resources.payload.zip";
     private const string UpdateTempDirectoryName = "PDownloaderUpdate";
 
-    public string DefaultInstallPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PDownloader");
+    public string DefaultInstallPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Programs",
+        "PDownloader");
+
+    public string AllUsersDefaultInstallPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+        "PDownloader");
 
     public int EstimatedSize => 205824;
 
+    public string GetDefaultInstallPath(InstallScope installScope) =>
+        installScope == InstallScope.AllUsers
+            ? AllUsersDefaultInstallPath
+            : DefaultInstallPath;
+
     public async Task InstallAsync(
         string installDir,
+        InstallScope installScope,
         bool desktopShortcut,
         bool startMenuShortcut,
         bool installBrowserExtension,
@@ -48,11 +61,17 @@ public sealed class InstallService : IInstallService
 
         await Task.Delay(800, ct);
 
-        string _uninstallDir = GetInstalledDir() ?? DefaultInstallPath;
+        string _uninstallDir = GetInstalledDir(installScope)
+            ?? GetDefaultInstallPath(installScope);
         if (Directory.Exists(_uninstallDir))
         {
             progress.Report((0.01, Utils.LocalizationHelper.Get("uninstall_progress_title")));
-            await UninstallAsync(_uninstallDir, null, ct, false);
+            await UninstallAsync(
+                _uninstallDir,
+                installScope,
+                null,
+                ct,
+                false);
 
             await Task.Delay(800, ct);
         }
@@ -70,7 +89,10 @@ public sealed class InstallService : IInstallService
             {
                 CreateShortcut(
                     Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                        Environment.GetFolderPath(
+                            installScope == InstallScope.AllUsers
+                                ? Environment.SpecialFolder.CommonDesktopDirectory
+                                : Environment.SpecialFolder.DesktopDirectory),
                         "PDownloader.lnk"),
                     exePath, installDir);
             }
@@ -78,7 +100,10 @@ public sealed class InstallService : IInstallService
             if (startMenuShortcut)
             {
                 string smDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),
+                    Environment.GetFolderPath(
+                        installScope == InstallScope.AllUsers
+                            ? Environment.SpecialFolder.CommonPrograms
+                            : Environment.SpecialFolder.Programs),
                     "PDownloader");
                 Directory.CreateDirectory(smDir);
                 CreateShortcut(Path.Combine(smDir, "PDownloader.lnk"), exePath, installDir);
@@ -86,7 +111,7 @@ public sealed class InstallService : IInstallService
 
             if (runAtStartup)
             {
-                SetStartup(true, exePath);
+                SetStartup(true, exePath, installScope);
             }
         }, ct);
 
@@ -95,13 +120,17 @@ public sealed class InstallService : IInstallService
             ct.ThrowIfCancellationRequested();
             progress.Report((0.88, Utils.LocalizationHelper.Get("installing_browser_extension")));
             await Task.Run(
-                () => BrowserExtensionInstallerService.InstallForAllBrowsers(installDir),
+                () => BrowserExtensionInstallerService.InstallForBrowsers(
+                    installDir,
+                    installScope),
                 ct);
         }
 
         ct.ThrowIfCancellationRequested();
         progress.Report((0.92, Utils.LocalizationHelper.Get("installing_registry")));
-        await Task.Run(() => RegisterUninstaller(installDir), ct);
+        await Task.Run(
+            () => RegisterUninstaller(installDir, installScope),
+            ct);
 
         progress.Report((1.0, Utils.LocalizationHelper.Get("installing_done")));
     }
@@ -153,6 +182,7 @@ public sealed class InstallService : IInstallService
 
     public async Task UninstallAsync(
         string installDir,
+        InstallScope installScope,
         IProgress<(double Percent, string Status)>? progress,
         CancellationToken ct,
         bool isCleanup = true)
@@ -209,23 +239,47 @@ public sealed class InstallService : IInstallService
 
         await Task.Run(() =>
         {
-            string desktopLnk = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                "PDownloader.lnk");
-            if (File.Exists(desktopLnk))
+            var desktopFolders = new List<Environment.SpecialFolder>
             {
-                File.Delete(desktopLnk);
+                installScope == InstallScope.AllUsers
+                    ? Environment.SpecialFolder.CommonDesktopDirectory
+                    : Environment.SpecialFolder.DesktopDirectory,
+            };
+
+            if (installScope == InstallScope.AllUsers)
+            {
+                // Older PDownloader installers created the desktop shortcut and
+                // startup entry for the installing user even in machine scope.
+                desktopFolders.Add(Environment.SpecialFolder.DesktopDirectory);
+            }
+
+            foreach (Environment.SpecialFolder desktopFolder in desktopFolders)
+            {
+                string desktopLnk = Path.Combine(
+                    Environment.GetFolderPath(desktopFolder),
+                    "PDownloader.lnk");
+                if (File.Exists(desktopLnk))
+                {
+                    File.Delete(desktopLnk);
+                }
             }
 
             string smDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),
+                Environment.GetFolderPath(
+                    installScope == InstallScope.AllUsers
+                        ? Environment.SpecialFolder.CommonPrograms
+                        : Environment.SpecialFolder.Programs),
                 "PDownloader");
             if (Directory.Exists(smDir))
             {
                 try { Directory.Delete(smDir, true); } catch { }
             }
 
-            SetStartup(false, "");
+            SetStartup(false, "", installScope);
+            if (installScope == InstallScope.AllUsers)
+            {
+                SetStartup(false, "", InstallScope.CurrentUser);
+            }
         }, ct);
 
         progress?.Report((0.75, Utils.LocalizationHelper.Get("uninstall_removing")));
@@ -233,7 +287,8 @@ public sealed class InstallService : IInstallService
         if (isCleanup)
         {
             await Task.Run(
-                BrowserExtensionInstallerService.UninstallForAllBrowsers,
+                () => BrowserExtensionInstallerService.UninstallForBrowsers(
+                    installScope),
                 ct);
         }
         else
@@ -241,7 +296,8 @@ public sealed class InstallService : IInstallService
             // This is an in-place application update. Preserve the current
             // browser extension registration and remove legacy IDs only.
             await Task.Run(
-                BrowserExtensionInstallerService.RemoveLegacyExtensionsForAllBrowsers,
+                () => BrowserExtensionInstallerService.RemoveLegacyExtensionsForBrowsers(
+                    installScope),
                 ct);
         }
 
@@ -249,7 +305,12 @@ public sealed class InstallService : IInstallService
 
         await Task.Run(() =>
         {
-            Registry.LocalMachine.DeleteSubKey(UninstallRegKey, throwOnMissingSubKey: false);
+            using RegistryKey registryBase = OpenRegistryBaseKey(
+                installScope,
+                RegistryView.Registry64);
+            registryBase.DeleteSubKey(
+                UninstallRegKey,
+                throwOnMissingSubKey: false);
         }, ct);
 
         if (isCleanup)
@@ -444,7 +505,9 @@ public sealed class InstallService : IInstallService
                 StringComparison.OrdinalIgnoreCase);
     }
 
-    private void RegisterUninstaller(string installDir)
+    private void RegisterUninstaller(
+        string installDir,
+        InstallScope installScope)
     {
         string exePath = Path.Combine(installDir, "PDownloader.exe");
         string uninstallerExe = Path.Combine(installDir, "PDownloader.Installer.exe");
@@ -452,25 +515,47 @@ public sealed class InstallService : IInstallService
         Version? AssemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
         string _appVersion = AssemblyName != null ? AssemblyName.ToString() : "0.0.0.0";
 
-        using RegistryKey key = Registry.LocalMachine.CreateSubKey(UninstallRegKey);
+        using RegistryKey registryBase = OpenRegistryBaseKey(
+            installScope,
+            RegistryView.Registry64);
+        using RegistryKey key = registryBase.CreateSubKey(UninstallRegKey);
         key.SetValue("DisplayName", "PDownloader");
         key.SetValue("DisplayVersion", _appVersion);
         key.SetValue("Publisher", "PDownloader");
         key.SetValue("InstallLocation", installDir);
         key.SetValue("DisplayIcon", exePath);
         key.SetValue("UninstallString",
-            $"\"{uninstallerExe}\" --uninstall");
+            $"\"{uninstallerExe}\" --uninstall {GetScopeArgument(installScope)}");
         key.SetValue("QuietUninstallString",
-            $"\"{uninstallerExe}\" --uninstall --quiet");
+            $"\"{uninstallerExe}\" --uninstall --quiet {GetScopeArgument(installScope)}");
+        key.SetValue(
+            "InstallScope",
+            installScope.ToString(),
+            RegistryValueKind.String);
         key.SetValue("NoModify", 1, RegistryValueKind.DWord);
         key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
         key.SetValue("EstimatedSize", EstimatedSize, RegistryValueKind.DWord);
     }
 
-    public string? GetInstalledDir()
+    public string? GetInstalledDir(InstallScope installScope)
     {
-        using RegistryKey? key = Registry.LocalMachine.OpenSubKey(UninstallRegKey);
+        using RegistryKey registryBase = OpenRegistryBaseKey(
+            installScope,
+            RegistryView.Registry64);
+        using RegistryKey? key = registryBase.OpenSubKey(UninstallRegKey);
         return key?.GetValue("InstallLocation") as string;
+    }
+
+    public InstallScope? GetInstalledScope()
+    {
+        if (!string.IsNullOrWhiteSpace(GetInstalledDir(InstallScope.CurrentUser)))
+        {
+            return InstallScope.CurrentUser;
+        }
+
+        return !string.IsNullOrWhiteSpace(GetInstalledDir(InstallScope.AllUsers))
+            ? InstallScope.AllUsers
+            : null;
     }
 
     private static void CreateShortcut(string lnkPath, string targetPath, string workDir)
@@ -489,10 +574,18 @@ public sealed class InstallService : IInstallService
         shortcut.Save();
     }
 
-    private static void SetStartup(bool enable, string exePath)
+    private static void SetStartup(
+        bool enable,
+        string exePath,
+        InstallScope installScope)
     {
         const string startupKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
-        using RegistryKey? key = Registry.CurrentUser.OpenSubKey(startupKey, writable: true);
+        using RegistryKey registryBase = OpenRegistryBaseKey(
+            installScope,
+            RegistryView.Registry64);
+        using RegistryKey? key = enable
+            ? registryBase.CreateSubKey(startupKey, writable: true)
+            : registryBase.OpenSubKey(startupKey, writable: true);
         if (key == null)
         {
             return;
@@ -507,6 +600,22 @@ public sealed class InstallService : IInstallService
             key.DeleteValue("PDownloader", throwOnMissingValue: false);
         }
     }
+
+    private static RegistryKey OpenRegistryBaseKey(
+        InstallScope installScope,
+        RegistryView registryView)
+    {
+        RegistryHive registryHive = installScope == InstallScope.AllUsers
+            ? RegistryHive.LocalMachine
+            : RegistryHive.CurrentUser;
+
+        return RegistryKey.OpenBaseKey(registryHive, registryView);
+    }
+
+    private static string GetScopeArgument(InstallScope installScope) =>
+        installScope == InstallScope.AllUsers
+            ? "--all-users"
+            : "--just-me";
 
     private static async Task KillAllService(CancellationToken ct)
     {
