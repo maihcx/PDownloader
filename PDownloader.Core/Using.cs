@@ -28,6 +28,7 @@ global using PDownloader.Core.Download.Segments;
 global using PDownloader.Core.Models;
 global using PDownloader.Core.Runtime;
 global using PDownloader.Core.Service;
+global using PDownloader.Core.Update;
 global using PDownloader.Core.Utils;
 global using System.Collections.Concurrent;
 global using System.Collections.Generic;
