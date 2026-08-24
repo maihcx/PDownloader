@@ -219,6 +219,12 @@
   <data name="page_settings_update_title" xml:space="preserve">
     <value>Cập nhật ứng dụng</value>
   </data>
+  <data name="page_settings_auto_update_title" xml:space="preserve">
+    <value>Tự động tải xuống và cài đặt bản cập nhật</value>
+  </data>
+  <data name="page_settings_auto_update_summary" xml:space="preserve">
+    <value>PDownloader Core kiểm tra mỗi 15 phút, kể cả khi cửa sổ chính đã đóng. Bản cập nhật khả dụng sẽ được tải và cài đặt im lặng, sau đó PDownloader tự khởi động lại.</value>
+  </data>
   <data name="page_settings_update_current_version_title" xml:space="preserve">
     <value>Phiên bản hiện tại</value>
   </data>

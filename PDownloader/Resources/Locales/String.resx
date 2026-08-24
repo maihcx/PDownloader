@@ -219,6 +219,12 @@
   <data name="page_settings_update_title" xml:space="preserve">
     <value>page_settings_update_title</value>
   </data>
+  <data name="page_settings_auto_update_title" xml:space="preserve">
+    <value>page_settings_auto_update_title</value>
+  </data>
+  <data name="page_settings_auto_update_summary" xml:space="preserve">
+    <value>page_settings_auto_update_summary</value>
+  </data>
   <data name="page_settings_update_current_version_title" xml:space="preserve">
     <value>page_settings_update_current_version_title</value>
   </data>
