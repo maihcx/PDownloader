@@ -61,22 +61,65 @@ public sealed class ApplicationHostService : IHostedService
         try
         {
             var progress = new Progress<(double Percent, string Status)>(_ => { });
-            InstallScope installScope = _launchOptions.RequestedInstallScope
-                ?? _installService.GetInstalledScope()
-                ?? InstallScope.CurrentUser;
+            InstallerPreferences preferences = InstallerPreferencesStore.Load();
+            string language = InstallerPreferencesStore.NormalizeLanguage(
+                _launchOptions.RequestedLanguage ?? preferences.Language);
+            LanguageBase.SetLanguage(language);
+
+            InstallScope? existingInstallScope = _launchOptions.IsUninstallMode
+                ? null
+                : GetExistingInstallScope(_launchOptions.RequestedInstallScope);
+            InstallScope installScope = _launchOptions.IsUninstallMode
+                ? _launchOptions.RequestedInstallScope
+                    ?? _installService.GetInstalledScope()
+                    ?? preferences.InstallScope
+                : existingInstallScope
+                    ?? _launchOptions.RequestedInstallScope
+                    ?? preferences.InstallScope;
+            string? existingInstallDirectory = existingInstallScope.HasValue
+                ? _installService.GetInstalledDir(existingInstallScope.Value)
+                : null;
+            string? registeredUninstallDirectory = _launchOptions.IsUninstallMode
+                ? _installService.GetInstalledDir(installScope)
+                : null;
+            bool desktopShortcut = _launchOptions.DesktopShortcut
+                ?? preferences.DesktopShortcut;
+            bool startMenuShortcut = _launchOptions.StartMenuShortcut
+                ?? preferences.StartMenuShortcut;
+            bool installBrowserExtension = _launchOptions.InstallBrowserExtension
+                ?? preferences.InstallBrowserExtension;
+            bool runAtStartup = _launchOptions.RunAtStartup
+                ?? preferences.RunAtStartup;
+
+            InstallerLaunchOptions resolvedOptions = _launchOptions with
+            {
+                RequestedInstallScope = installScope,
+                RequestedLanguage = language,
+                InstallDirectory = existingInstallDirectory
+                    ?? registeredUninstallDirectory
+                    ?? _launchOptions.InstallDirectory,
+                DesktopShortcut = desktopShortcut,
+                StartMenuShortcut = startMenuShortcut,
+                InstallBrowserExtension = installBrowserExtension,
+                RunAtStartup = runAtStartup,
+            };
 
             if (installScope == InstallScope.AllUsers
                 && !_applicationService.IsAdministrator)
             {
-                InstallerLaunchOptions elevatedOptions = _launchOptions with
+                InstallerLaunchOptions elevatedOptions = resolvedOptions with
                 {
                     IsSilentMode = true,
-                    RequestedInstallScope = InstallScope.AllUsers,
                 };
 
                 int? elevatedExitCode = await _applicationService.RunElevatedAsync(
                     elevatedOptions.ToArguments(),
                     cancellationToken);
+
+                if (elevatedExitCode == 0 && !_launchOptions.IsUninstallMode)
+                {
+                    SavePreferences(resolvedOptions, installScope);
+                }
 
                 _applicationService.Shutdown(elevatedExitCode ?? 1);
                 return;
@@ -84,7 +127,7 @@ public sealed class ApplicationHostService : IHostedService
 
             if (_launchOptions.IsUninstallMode)
             {
-                string uninstallDirectory = _launchOptions.InstallDirectory
+                string uninstallDirectory = resolvedOptions.InstallDirectory
                     ?? _installService.GetInstalledDir(installScope)
                     ?? _installService.GetDefaultInstallPath(installScope);
 
@@ -97,24 +140,23 @@ public sealed class ApplicationHostService : IHostedService
             else
             {
                 string installDirectory = Path.GetFullPath(
-                    _launchOptions.InstallDirectory
+                    resolvedOptions.InstallDirectory
                     ?? _installService.GetInstalledDir(installScope)
                     ?? _installService.GetDefaultInstallPath(installScope));
-
-                bool runAtStartup = _launchOptions.RunAtStartup
-                    ?? UserDataStore.GetValue<bool>("IsStartAtBoot");
 
                 await _installService.InstallAsync(
                     installDirectory,
                     installScope,
-                    _launchOptions.DesktopShortcut,
-                    _launchOptions.StartMenuShortcut,
-                    _launchOptions.InstallBrowserExtension,
+                    desktopShortcut,
+                    startMenuShortcut,
+                    installBrowserExtension,
                     runAtStartup,
                     progress,
                     cancellationToken);
 
-                if (_launchOptions.LaunchAfterInstall)
+                SavePreferences(resolvedOptions, installScope);
+
+                if (resolvedOptions.LaunchAfterInstall)
                 {
                     _applicationService.TryLaunch(
                         Path.Combine(installDirectory, "PDownloader.exe"),
@@ -128,5 +170,32 @@ public sealed class ApplicationHostService : IHostedService
         }
 
         _applicationService.Shutdown(exitCode);
+    }
+
+    private static void SavePreferences(
+        InstallerLaunchOptions options,
+        InstallScope installScope)
+    {
+        InstallerPreferencesStore.Save(new InstallerPreferences
+        {
+            InstallScope = installScope,
+            Language = options.RequestedLanguage ?? "en",
+            DesktopShortcut = options.DesktopShortcut ?? true,
+            StartMenuShortcut = options.StartMenuShortcut ?? true,
+            InstallBrowserExtension = options.InstallBrowserExtension ?? true,
+            RunAtStartup = options.RunAtStartup ?? false,
+        });
+    }
+
+    private InstallScope? GetExistingInstallScope(InstallScope? preferredScope)
+    {
+        if (preferredScope.HasValue
+            && !string.IsNullOrWhiteSpace(
+                _installService.GetInstalledDir(preferredScope.Value)))
+        {
+            return preferredScope.Value;
+        }
+
+        return _installService.GetInstalledScope();
     }
 }

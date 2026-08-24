@@ -21,9 +21,10 @@ public sealed record InstallerLaunchOptions(
     string? InstallDirectory,
     string? UpdateTempDirectory,
     InstallScope? RequestedInstallScope,
-    bool DesktopShortcut,
-    bool StartMenuShortcut,
-    bool InstallBrowserExtension,
+    string? RequestedLanguage,
+    bool? DesktopShortcut,
+    bool? StartMenuShortcut,
+    bool? InstallBrowserExtension,
     bool? RunAtStartup,
     bool LaunchAfterInstall)
 {
@@ -37,9 +38,19 @@ public sealed record InstallerLaunchOptions(
             GetOptionValue(args, "--install-dir", "/dir"),
             GetOptionValue(args, "--update-temp-dir"),
             GetInstallScope(args),
-            !HasSwitch(args, "--no-desktop-shortcut"),
-            !HasSwitch(args, "--no-start-menu-shortcut"),
-            !HasSwitch(args, "--no-browser-extension"),
+            GetOptionValue(args, "--language", "/language"),
+            GetOptionalSwitch(
+                args,
+                "--desktop-shortcut",
+                "--no-desktop-shortcut"),
+            GetOptionalSwitch(
+                args,
+                "--start-menu-shortcut",
+                "--no-start-menu-shortcut"),
+            GetOptionalSwitch(
+                args,
+                "--browser-extension",
+                "--no-browser-extension"),
             GetOptionalSwitch(args, "--run-at-startup", "--no-run-at-startup"),
             HasSwitch(args, "--launch-after-install"));
     }
@@ -64,30 +75,30 @@ public sealed record InstallerLaunchOptions(
             _ => "--just-me",
         });
 
+        AddOption(arguments, "--language", RequestedLanguage);
         AddOption(arguments, "--install-dir", InstallDirectory);
         AddOption(arguments, "--update-temp-dir", UpdateTempDirectory);
 
-        if (!DesktopShortcut)
-        {
-            arguments.Add("--no-desktop-shortcut");
-        }
-
-        if (!StartMenuShortcut)
-        {
-            arguments.Add("--no-start-menu-shortcut");
-        }
-
-        if (!InstallBrowserExtension)
-        {
-            arguments.Add("--no-browser-extension");
-        }
-
-        if (RunAtStartup.HasValue)
-        {
-            arguments.Add(RunAtStartup.Value
-                ? "--run-at-startup"
-                : "--no-run-at-startup");
-        }
+        AddOptionalSwitch(
+            arguments,
+            DesktopShortcut,
+            "--desktop-shortcut",
+            "--no-desktop-shortcut");
+        AddOptionalSwitch(
+            arguments,
+            StartMenuShortcut,
+            "--start-menu-shortcut",
+            "--no-start-menu-shortcut");
+        AddOptionalSwitch(
+            arguments,
+            InstallBrowserExtension,
+            "--browser-extension",
+            "--no-browser-extension");
+        AddOptionalSwitch(
+            arguments,
+            RunAtStartup,
+            "--run-at-startup",
+            "--no-run-at-startup");
 
         if (LaunchAfterInstall)
         {
@@ -121,6 +132,18 @@ public sealed record InstallerLaunchOptions(
 
         arguments.Add(optionName);
         arguments.Add(value);
+    }
+
+    private static void AddOptionalSwitch(
+        ICollection<string> arguments,
+        bool? value,
+        string enabledOption,
+        string disabledOption)
+    {
+        if (value.HasValue)
+        {
+            arguments.Add(value.Value ? enabledOption : disabledOption);
+        }
     }
 
     private static bool HasSwitch(string[] args, params string[] optionNames) =>
