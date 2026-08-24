@@ -153,6 +153,21 @@
   <data name="path_title" xml:space="preserve">
     <value>path_title</value>
   </data>
+  <data name="path_scope_label" xml:space="preserve">
+    <value>path_scope_label</value>
+  </data>
+  <data name="path_scope_current_user" xml:space="preserve">
+    <value>path_scope_current_user</value>
+  </data>
+  <data name="path_scope_current_user_description" xml:space="preserve">
+    <value>path_scope_current_user_description</value>
+  </data>
+  <data name="path_scope_all_users" xml:space="preserve">
+    <value>path_scope_all_users</value>
+  </data>
+  <data name="path_scope_all_users_description" xml:space="preserve">
+    <value>path_scope_all_users_description</value>
+  </data>
   <data name="path_label" xml:space="preserve">
     <value>path_label</value>
   </data>
@@ -201,6 +216,9 @@
   <data name="installing_browser_extension" xml:space="preserve">
     <value>installing_browser_extension</value>
   </data>
+  <data name="installing_waiting_for_admin" xml:space="preserve">
+    <value>installing_waiting_for_admin</value>
+  </data>
   <data name="installing_registry" xml:space="preserve">
     <value>installing_registry</value>
   </data>
@@ -227,6 +245,9 @@
   </data>
   <data name="error_close" xml:space="preserve">
     <value>error_close</value>
+  </data>
+  <data name="elevation_failed" xml:space="preserve">
+    <value>elevation_failed</value>
   </data>
   <data name="uninstall_title" xml:space="preserve">
     <value>uninstall_title</value>

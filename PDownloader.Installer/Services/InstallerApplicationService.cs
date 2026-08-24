@@ -13,10 +13,23 @@
 //
 // Copyright (C) Song Mai Software.
 
+using System.Diagnostics;
+using System.Security.Principal;
+
 namespace PDownloader.Installer.Services;
 
 public sealed class InstallerApplicationService : IInstallerApplicationService
 {
+    public bool IsAdministrator
+    {
+        get
+        {
+            using WindowsIdentity identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
+    }
+
     public void Shutdown(int exitCode = 0)
     {
         System.Windows.Application.Current.Shutdown(exitCode);
@@ -28,5 +41,47 @@ public sealed class InstallerApplicationService : IInstallerApplicationService
             && UnelevatedProcessLauncher.TryStart(
                 executablePath,
                 workingDirectory);
+    }
+
+    public async Task<int?> RunElevatedAsync(
+        IReadOnlyCollection<string> arguments,
+        CancellationToken cancellationToken)
+    {
+        string? installerPath = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(installerPath) || !File.Exists(installerPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = installerPath,
+                WorkingDirectory = Path.GetDirectoryName(installerPath)
+                    ?? AppContext.BaseDirectory,
+                UseShellExecute = true,
+                Verb = "runas",
+            };
+
+            foreach (string argument in arguments)
+            {
+                startInfo.ArgumentList.Add(argument);
+            }
+
+            using Process? process = Process.Start(startInfo);
+            if (process is null)
+            {
+                return null;
+            }
+
+            await process.WaitForExitAsync(cancellationToken);
+            return process.ExitCode;
+        }
+        catch
+        {
+            // This includes the user declining the UAC consent prompt.
+            return null;
+        }
     }
 }

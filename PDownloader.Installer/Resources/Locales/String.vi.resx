@@ -153,6 +153,21 @@
   <data name="path_title" xml:space="preserve">
     <value>Chọn thư mục cài đặt</value>
   </data>
+  <data name="path_scope_label" xml:space="preserve">
+    <value>Phạm vi cài đặt</value>
+  </data>
+  <data name="path_scope_current_user" xml:space="preserve">
+    <value>Chỉ tôi (Just me)</value>
+  </data>
+  <data name="path_scope_current_user_description" xml:space="preserve">
+    <value>Cài cho tài khoản hiện tại, không yêu cầu quyền Administrator.</value>
+  </data>
+  <data name="path_scope_all_users" xml:space="preserve">
+    <value>Mọi người dùng (All users)</value>
+  </data>
+  <data name="path_scope_all_users_description" xml:space="preserve">
+    <value>Cài vào Program Files và yêu cầu quyền Administrator.</value>
+  </data>
   <data name="path_label" xml:space="preserve">
     <value>Cài đặt PDownloader vào thư mục sau:</value>
   </data>
@@ -201,6 +216,9 @@
   <data name="installing_browser_extension" xml:space="preserve">
     <value>Đang thiết lập extension trình duyệt...</value>
   </data>
+  <data name="installing_waiting_for_admin" xml:space="preserve">
+    <value>Đang chờ tiến trình cài đặt với quyền Administrator hoàn tất...</value>
+  </data>
   <data name="installing_registry" xml:space="preserve">
     <value>Đang đăng ký gỡ cài đặt...</value>
   </data>
@@ -227,6 +245,9 @@
   </data>
   <data name="error_close" xml:space="preserve">
     <value>Đóng</value>
+  </data>
+  <data name="elevation_failed" xml:space="preserve">
+    <value>Quyền Administrator đã bị từ chối hoặc không thể khởi chạy installer nâng quyền.</value>
   </data>
   <data name="uninstall_title" xml:space="preserve">
     <value>Gỡ cài đặt PDownloader</value>

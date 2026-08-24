@@ -61,15 +61,36 @@ public sealed class ApplicationHostService : IHostedService
         try
         {
             var progress = new Progress<(double Percent, string Status)>(_ => { });
+            InstallScope installScope = _launchOptions.RequestedInstallScope
+                ?? _installService.GetInstalledScope()
+                ?? InstallScope.CurrentUser;
+
+            if (installScope == InstallScope.AllUsers
+                && !_applicationService.IsAdministrator)
+            {
+                InstallerLaunchOptions elevatedOptions = _launchOptions with
+                {
+                    IsSilentMode = true,
+                    RequestedInstallScope = InstallScope.AllUsers,
+                };
+
+                int? elevatedExitCode = await _applicationService.RunElevatedAsync(
+                    elevatedOptions.ToArguments(),
+                    cancellationToken);
+
+                _applicationService.Shutdown(elevatedExitCode ?? 1);
+                return;
+            }
 
             if (_launchOptions.IsUninstallMode)
             {
                 string uninstallDirectory = _launchOptions.InstallDirectory
-                    ?? _installService.GetInstalledDir()
-                    ?? _installService.DefaultInstallPath;
+                    ?? _installService.GetInstalledDir(installScope)
+                    ?? _installService.GetDefaultInstallPath(installScope);
 
                 await _installService.UninstallAsync(
                     Path.GetFullPath(uninstallDirectory),
+                    installScope,
                     progress,
                     cancellationToken);
             }
@@ -77,14 +98,15 @@ public sealed class ApplicationHostService : IHostedService
             {
                 string installDirectory = Path.GetFullPath(
                     _launchOptions.InstallDirectory
-                    ?? _installService.GetInstalledDir()
-                    ?? _installService.DefaultInstallPath);
+                    ?? _installService.GetInstalledDir(installScope)
+                    ?? _installService.GetDefaultInstallPath(installScope));
 
                 bool runAtStartup = _launchOptions.RunAtStartup
                     ?? UserDataStore.GetValue<bool>("IsStartAtBoot");
 
                 await _installService.InstallAsync(
                     installDirectory,
+                    installScope,
                     _launchOptions.DesktopShortcut,
                     _launchOptions.StartMenuShortcut,
                     _launchOptions.InstallBrowserExtension,

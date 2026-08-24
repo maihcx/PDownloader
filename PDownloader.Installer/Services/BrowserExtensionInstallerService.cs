@@ -73,7 +73,9 @@ public static class BrowserExtensionInstallerService
         @"SOFTWARE\Policies\Mozilla\Zen",
     };
 
-    public static void InstallForAllBrowsers(string installDir)
+    public static void InstallForBrowsers(
+        string installDir,
+        InstallScope installScope)
     {
         _ = installDir;
 
@@ -86,7 +88,8 @@ public static class BrowserExtensionInstallerService
             {
                 RemoveLegacyChromiumExtension(
                     extensionRoot,
-                    policyRoot);
+                    policyRoot,
+                    installScope);
 
                 if (!IsValidChromiumExtensionId())
                 {
@@ -94,7 +97,9 @@ public static class BrowserExtensionInstallerService
                 }
 
                 ChromiumExternalRegistrationState registrationState =
-                    GetChromiumExternalRegistrationState(extensionRoot);
+                    GetChromiumExternalRegistrationState(
+                        extensionRoot,
+                        installScope);
 
                 if (registrationState ==
                     ChromiumExternalRegistrationState.DiffersFromInstaller)
@@ -103,20 +108,25 @@ public static class BrowserExtensionInstallerService
                     // registration is preserved across application updates.
                     RemoveChromiumExternalExtension(
                         extensionRoot,
-                        ChromiumExtensionId);
+                        ChromiumExtensionId,
+                        installScope);
                     RegisterChromiumExternalExtension(
                         extensionRoot,
-                        ChromiumUpdateUri);
+                        ChromiumUpdateUri,
+                        installScope);
                 }
                 else if (registrationState ==
                              ChromiumExternalRegistrationState.Missing
-                         && !IsChromiumExtensionPolicyRegistered(policyRoot))
+                         && !IsChromiumExtensionPolicyRegistered(
+                             policyRoot,
+                             installScope))
                 {
                     // Register only on the first installation. Updates preserve
                     // the existing browser extension and its user state.
                     RegisterChromiumExternalExtension(
                         extensionRoot,
-                        ChromiumUpdateUri);
+                        ChromiumUpdateUri,
+                        installScope);
                 }
             }
             catch
@@ -127,10 +137,11 @@ public static class BrowserExtensionInstallerService
             }
         }
 
-        RemoveLegacyGeckoExtensionPolicies();
+        RemoveLegacyGeckoExtensionPolicies(installScope);
     }
 
-    public static void RemoveLegacyExtensionsForAllBrowsers()
+    public static void RemoveLegacyExtensionsForBrowsers(
+        InstallScope installScope)
     {
         foreach ((
             string _,
@@ -141,7 +152,8 @@ public static class BrowserExtensionInstallerService
             {
                 RemoveLegacyChromiumExtension(
                     extensionRoot,
-                    policyRoot);
+                    policyRoot,
+                    installScope);
             }
             catch
             {
@@ -150,10 +162,10 @@ public static class BrowserExtensionInstallerService
             }
         }
 
-        RemoveLegacyGeckoExtensionPolicies();
+        RemoveLegacyGeckoExtensionPolicies(installScope);
     }
 
-    public static void UninstallForAllBrowsers()
+    public static void UninstallForBrowsers(InstallScope installScope)
     {
         foreach ((
             string _,
@@ -166,15 +178,18 @@ public static class BrowserExtensionInstallerService
                 {
                     RemoveChromiumExternalExtension(
                         extensionRoot,
-                        ChromiumExtensionId);
+                        ChromiumExtensionId,
+                        installScope);
                     RemoveChromiumExtensionPolicy(
                         policyRoot,
-                        ChromiumExtensionId);
+                        ChromiumExtensionId,
+                        installScope);
                 }
 
                 RemoveLegacyChromiumExtension(
                     extensionRoot,
-                    policyRoot);
+                    policyRoot,
+                    installScope);
             }
             catch
             {
@@ -183,16 +198,17 @@ public static class BrowserExtensionInstallerService
             }
         }
 
-        RemoveLegacyGeckoExtensionPolicies();
+        RemoveLegacyGeckoExtensionPolicies(installScope);
     }
 
     private static ChromiumExternalRegistrationState GetChromiumExternalRegistrationState(
-        string extensionRoot)
+        string extensionRoot,
+        InstallScope installScope)
     {
-        using RegistryKey localMachine = RegistryKey.OpenBaseKey(
-            RegistryHive.LocalMachine,
-            RegistryView.Registry32);
-        using RegistryKey? extension = localMachine.OpenSubKey(
+        using RegistryKey registryBase = RegistryKey.OpenBaseKey(
+            GetRegistryHive(installScope),
+            GetExternalExtensionRegistryView(installScope));
+        using RegistryKey? extension = registryBase.OpenSubKey(
             extensionRoot + "\\" + ChromiumExtensionId);
 
         if (extension == null)
@@ -210,9 +226,13 @@ public static class BrowserExtensionInstallerService
     }
 
     private static bool IsChromiumExtensionPolicyRegistered(
-        string policyRoot)
+        string policyRoot,
+        InstallScope installScope)
     {
-        using RegistryKey? extension = Registry.LocalMachine.OpenSubKey(
+        using RegistryKey registryBase = RegistryKey.OpenBaseKey(
+            GetRegistryHive(installScope),
+            RegistryView.Registry64);
+        using RegistryKey? extension = registryBase.OpenSubKey(
             $"{policyRoot}\\{ExtensionSettingsSubKey}\\{ChromiumExtensionId}");
 
         return extension != null;
@@ -226,15 +246,17 @@ public static class BrowserExtensionInstallerService
 
     private static void RegisterChromiumExternalExtension(
         string extensionRoot,
-        string updateUrl)
+        string updateUrl,
+        InstallScope installScope)
     {
-        // Chrome and Edge document external extension registration in the
-        // 32-bit registry view. On 64-bit Windows this maps to Wow6432Node.
-        using RegistryKey localMachine = RegistryKey.OpenBaseKey(
-            RegistryHive.LocalMachine,
-            RegistryView.Registry32);
+        // Machine-wide Chromium registration uses the 32-bit view
+        // (Wow6432Node). Chromium reads a per-user registration from the
+        // current user's normal registry view.
+        using RegistryKey registryBase = RegistryKey.OpenBaseKey(
+            GetRegistryHive(installScope),
+            GetExternalExtensionRegistryView(installScope));
         using RegistryKey? extension =
-            localMachine.CreateSubKey(
+            registryBase.CreateSubKey(
                 extensionRoot + "\\" + ChromiumExtensionId,
                 writable: true);
 
@@ -251,12 +273,13 @@ public static class BrowserExtensionInstallerService
 
     private static void RemoveChromiumExternalExtension(
         string extensionRoot,
-        string extensionId)
+        string extensionId,
+        InstallScope installScope)
     {
-        using RegistryKey localMachine = RegistryKey.OpenBaseKey(
-            RegistryHive.LocalMachine,
-            RegistryView.Registry32);
-        using RegistryKey? extensions = localMachine.OpenSubKey(
+        using RegistryKey registryBase = RegistryKey.OpenBaseKey(
+            GetRegistryHive(installScope),
+            GetExternalExtensionRegistryView(installScope));
+        using RegistryKey? extensions = registryBase.OpenSubKey(
             extensionRoot,
             writable: true);
 
@@ -267,10 +290,14 @@ public static class BrowserExtensionInstallerService
 
     private static void RemoveChromiumExtensionPolicy(
         string policyRoot,
-        string extensionId)
+        string extensionId,
+        InstallScope installScope)
     {
+        using RegistryKey registryBase = RegistryKey.OpenBaseKey(
+            GetRegistryHive(installScope),
+            RegistryView.Registry64);
         using RegistryKey? extensionSettings =
-            Registry.LocalMachine.OpenSubKey(
+            registryBase.OpenSubKey(
                 $"{policyRoot}\\{ExtensionSettingsSubKey}",
                 writable: true);
 
@@ -286,17 +313,21 @@ public static class BrowserExtensionInstallerService
 
     private static void RemoveLegacyChromiumExtension(
         string extensionRoot,
-        string policyRoot)
+        string policyRoot,
+        InstallScope installScope)
     {
         RemoveChromiumExternalExtension(
             extensionRoot,
-            LegacySelfHostedChromiumExtensionId);
+            LegacySelfHostedChromiumExtensionId,
+            installScope);
         RemoveChromiumExtensionPolicy(
             policyRoot,
-            LegacySelfHostedChromiumExtensionId);
+            LegacySelfHostedChromiumExtensionId,
+            installScope);
     }
 
-    private static void RemoveLegacyGeckoExtensionPolicies()
+    private static void RemoveLegacyGeckoExtensionPolicies(
+        InstallScope installScope)
     {
         foreach (string policyRoot in LegacyGeckoPolicyRoots)
         {
@@ -304,7 +335,7 @@ public static class BrowserExtensionInstallerService
             {
                 // Cleanup only. Current installers never register, download, or
                 // launch extensions for Firefox and other Gecko-based browsers.
-                RemoveGeckoExtensionPolicy(policyRoot);
+                RemoveGeckoExtensionPolicy(policyRoot, installScope);
             }
             catch
             {
@@ -314,10 +345,15 @@ public static class BrowserExtensionInstallerService
         }
     }
 
-    private static void RemoveGeckoExtensionPolicy(string policyRoot)
+    private static void RemoveGeckoExtensionPolicy(
+        string policyRoot,
+        InstallScope installScope)
     {
+        using RegistryKey registryBase = RegistryKey.OpenBaseKey(
+            GetRegistryHive(installScope),
+            RegistryView.Registry64);
         using RegistryKey? browserPolicy =
-            Registry.LocalMachine.OpenSubKey(
+            registryBase.OpenSubKey(
                 policyRoot,
                 writable: true);
 
@@ -388,4 +424,15 @@ public static class BrowserExtensionInstallerService
             new[] { json },
             RegistryValueKind.MultiString);
     }
+
+    private static RegistryHive GetRegistryHive(InstallScope installScope) =>
+        installScope == InstallScope.AllUsers
+            ? RegistryHive.LocalMachine
+            : RegistryHive.CurrentUser;
+
+    private static RegistryView GetExternalExtensionRegistryView(
+        InstallScope installScope) =>
+        installScope == InstallScope.AllUsers
+            ? RegistryView.Registry32
+            : RegistryView.Registry64;
 }

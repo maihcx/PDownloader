@@ -20,6 +20,7 @@ public sealed record InstallerLaunchOptions(
     bool IsSilentMode,
     string? InstallDirectory,
     string? UpdateTempDirectory,
+    InstallScope? RequestedInstallScope,
     bool DesktopShortcut,
     bool StartMenuShortcut,
     bool InstallBrowserExtension,
@@ -35,11 +36,91 @@ public sealed record InstallerLaunchOptions(
             HasSwitch(args, "--silent", "--quiet", "-s", "/s", "/silent", "/quiet"),
             GetOptionValue(args, "--install-dir", "/dir"),
             GetOptionValue(args, "--update-temp-dir"),
+            GetInstallScope(args),
             !HasSwitch(args, "--no-desktop-shortcut"),
             !HasSwitch(args, "--no-start-menu-shortcut"),
             !HasSwitch(args, "--no-browser-extension"),
             GetOptionalSwitch(args, "--run-at-startup", "--no-run-at-startup"),
             HasSwitch(args, "--launch-after-install"));
+    }
+
+    public IReadOnlyList<string> ToArguments()
+    {
+        var arguments = new List<string>();
+
+        if (IsUninstallMode)
+        {
+            arguments.Add("--uninstall");
+        }
+
+        if (IsSilentMode)
+        {
+            arguments.Add("--silent");
+        }
+
+        arguments.Add(RequestedInstallScope switch
+        {
+            InstallScope.AllUsers => "--all-users",
+            _ => "--just-me",
+        });
+
+        AddOption(arguments, "--install-dir", InstallDirectory);
+        AddOption(arguments, "--update-temp-dir", UpdateTempDirectory);
+
+        if (!DesktopShortcut)
+        {
+            arguments.Add("--no-desktop-shortcut");
+        }
+
+        if (!StartMenuShortcut)
+        {
+            arguments.Add("--no-start-menu-shortcut");
+        }
+
+        if (!InstallBrowserExtension)
+        {
+            arguments.Add("--no-browser-extension");
+        }
+
+        if (RunAtStartup.HasValue)
+        {
+            arguments.Add(RunAtStartup.Value
+                ? "--run-at-startup"
+                : "--no-run-at-startup");
+        }
+
+        if (LaunchAfterInstall)
+        {
+            arguments.Add("--launch-after-install");
+        }
+
+        return arguments;
+    }
+
+    private static InstallScope? GetInstallScope(string[] args)
+    {
+        if (HasSwitch(args, "--all-users", "/all-users"))
+        {
+            return InstallScope.AllUsers;
+        }
+
+        return HasSwitch(args, "--just-me", "/just-me")
+            ? InstallScope.CurrentUser
+            : null;
+    }
+
+    private static void AddOption(
+        ICollection<string> arguments,
+        string optionName,
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        arguments.Add(optionName);
+        arguments.Add(value);
     }
 
     private static bool HasSwitch(string[] args, params string[] optionNames) =>

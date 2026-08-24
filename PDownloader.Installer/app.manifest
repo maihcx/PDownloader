@@ -4,8 +4,8 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- requireAdministrator để ghi vào Program Files và registry -->
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+        <!-- Per-user installation is the default and does not require UAC. -->
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>
