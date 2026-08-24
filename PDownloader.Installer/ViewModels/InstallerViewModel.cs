@@ -41,6 +41,7 @@ public partial class InstallerViewModel : ObservableObject
     private readonly InstallerLaunchOptions _launchOptions;
     private readonly string _uninstallDirectory;
     private readonly InstallScope _uninstallScope;
+    private readonly InstallScope? _existingInstallScope;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StepIndex))]
@@ -102,20 +103,41 @@ public partial class InstallerViewModel : ObservableObject
         _applicationService = applicationService;
         _launchOptions = launchOptions;
 
+        InstallerPreferences preferences = InstallerPreferencesStore.Load();
+
         IsUninstallMode = launchOptions.IsUninstallMode;
-        _selectedInstallScope = launchOptions.RequestedInstallScope
-            ?? installService.GetInstalledScope()
-            ?? InstallScope.CurrentUser;
-        _installPath = GetPreferredInstallPath(_selectedInstallScope);
+        _existingInstallScope = GetExistingInstallScope(
+            installService,
+            launchOptions.RequestedInstallScope);
+        _selectedInstallScope = _existingInstallScope
+            ?? launchOptions.RequestedInstallScope
+            ?? preferences.InstallScope;
+        _installPath = _existingInstallScope.HasValue
+            ? installService.GetInstalledDir(_existingInstallScope.Value)
+                ?? installService.GetDefaultInstallPath(_existingInstallScope.Value)
+            : GetPreferredInstallPath(_selectedInstallScope);
         _uninstallScope = launchOptions.RequestedInstallScope
             ?? installService.GetInstalledScope()
-            ?? InstallScope.CurrentUser;
+            ?? preferences.InstallScope;
         _uninstallDirectory = installService.GetInstalledDir(_uninstallScope)
             ?? installService.GetDefaultInstallPath(_uninstallScope);
-        _installBrowserExtension = launchOptions.InstallBrowserExtension;
-        _runAtStartup = UserDataStore.GetValue<bool>("IsStartAtBoot");
-        _selectedLanguage = Languages.FirstOrDefault(language => language.Code == "en")
+        _desktopShortcut = launchOptions.DesktopShortcut
+            ?? preferences.DesktopShortcut;
+        _startMenuShortcut = launchOptions.StartMenuShortcut
+            ?? preferences.StartMenuShortcut;
+        _installBrowserExtension = launchOptions.InstallBrowserExtension
+            ?? preferences.InstallBrowserExtension;
+        _runAtStartup = launchOptions.RunAtStartup
+            ?? preferences.RunAtStartup;
+
+        string languageCode = InstallerPreferencesStore.NormalizeLanguage(
+            launchOptions.RequestedLanguage ?? preferences.Language);
+        _selectedLanguage = Languages.FirstOrDefault(language =>
+                language.Code.Equals(
+                    languageCode,
+                    StringComparison.OrdinalIgnoreCase))
             ?? Languages.First();
+        LanguageBase.SetLanguage(_selectedLanguage.Code);
         _licenseText = licenseService.Load(_selectedLanguage.Code);
     }
 
@@ -123,6 +145,8 @@ public partial class InstallerViewModel : ObservableObject
         LanguageBase.GetLanguageItems();
 
     public bool IsUninstallMode { get; }
+
+    public bool CanChangeInstallLocation => !_existingInstallScope.HasValue;
 
     public bool IsCurrentUserInstall
     {
@@ -176,6 +200,7 @@ public partial class InstallerViewModel : ObservableObject
 
         LanguageBase.SetLanguage(SelectedLanguage.Code);
         LicenseText = _licenseService.Load(SelectedLanguage.Code);
+        SavePreferences();
         Step = IsUninstallMode
             ? InstallerStep.UninstallConfirm
             : InstallerStep.Welcome;
@@ -243,6 +268,7 @@ public partial class InstallerViewModel : ObservableObject
 
             if (elevatedExitCode == 0)
             {
+                SavePreferences();
                 Step = InstallerStep.Finish;
             }
             else
@@ -271,6 +297,7 @@ public partial class InstallerViewModel : ObservableObject
                 RunAtStartup,
                 progress,
                 CancellationToken.None);
+            SavePreferences();
             Step = InstallerStep.Finish;
         }
         catch (Exception exception)
@@ -369,7 +396,28 @@ public partial class InstallerViewModel : ObservableObject
 
     partial void OnSelectedInstallScopeChanged(InstallScope value)
     {
+        if (_existingInstallScope.HasValue
+            && value != _existingInstallScope.Value)
+        {
+            SelectedInstallScope = _existingInstallScope.Value;
+            return;
+        }
+
         InstallPath = GetPreferredInstallPath(value);
+    }
+
+    private static InstallScope? GetExistingInstallScope(
+        IInstallService installService,
+        InstallScope? preferredScope)
+    {
+        if (preferredScope.HasValue
+            && !string.IsNullOrWhiteSpace(
+                installService.GetInstalledDir(preferredScope.Value)))
+        {
+            return preferredScope.Value;
+        }
+
+        return installService.GetInstalledScope();
     }
 
     private string GetPreferredInstallPath(InstallScope installScope) =>
@@ -381,12 +429,26 @@ public partial class InstallerViewModel : ObservableObject
         {
             IsUninstallMode = false,
             RequestedInstallScope = SelectedInstallScope,
+            RequestedLanguage = SelectedLanguage?.Code,
             InstallDirectory = InstallPath,
             DesktopShortcut = DesktopShortcut,
             StartMenuShortcut = StartMenuShortcut,
             InstallBrowserExtension = InstallBrowserExtension,
             RunAtStartup = RunAtStartup,
         };
+
+    private void SavePreferences()
+    {
+        InstallerPreferencesStore.Save(new InstallerPreferences
+        {
+            InstallScope = SelectedInstallScope,
+            Language = SelectedLanguage?.Code ?? "en",
+            DesktopShortcut = DesktopShortcut,
+            StartMenuShortcut = StartMenuShortcut,
+            InstallBrowserExtension = InstallBrowserExtension,
+            RunAtStartup = RunAtStartup,
+        });
+    }
 
     private static string GetApplicationVersion()
     {

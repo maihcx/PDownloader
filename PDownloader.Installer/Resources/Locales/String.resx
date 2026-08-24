@@ -168,6 +168,9 @@
   <data name="path_scope_all_users_description" xml:space="preserve">
     <value>path_scope_all_users_description</value>
   </data>
+  <data name="path_locked_description" xml:space="preserve">
+    <value>path_locked_description</value>
+  </data>
   <data name="path_label" xml:space="preserve">
     <value>path_label</value>
   </data>
