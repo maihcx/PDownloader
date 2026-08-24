@@ -84,7 +84,7 @@ If a server doesn't support ranged requests at all, the engine transparently fal
 The extension lives in `BrowserExtension/` and is built as a Manifest V3 extension. It is officially supported on **Google Chrome**, **Microsoft Edge**, **Brave**, **Cốc Cốc**, **Mozilla Firefox**, and **Zen Browser**.
 
 **Installation**
-When PDownloader is installed correctly, the extension is installed and enabled automatically for all supported browsers (via Windows registry policy) — no manual setup is required.
+When the browser-extension option is selected, the installer registers the extension for the selected install scope. A Just me installation uses the current user's registry; an All users installation uses the machine registry.
 
 **Manual/development install** (for contributors or debugging)
 For Chromium browsers:
@@ -164,21 +164,47 @@ installer window or asking for input:
 PDownloader.Installer.exe --silent
 ```
 
+On the first run, silent installation uses the current account by default and installs to
+`%LocalAppData%\Programs\PDownloader` without requesting administrator
+permission. Use `--all-users` to install to `C:\Program Files\PDownloader`;
+that mode requests UAC elevation only when installation begins.
+
+After a successful installation, the installer remembers the selected install
+scope, language, Desktop and Start menu shortcuts, browser extension option,
+and Windows startup option. Interactive, uninstall, and silent runs load the
+same saved preferences. Explicit command-line parameters always override saved
+values.
+
+When an existing PDownloader installation is detected, update and repair runs
+lock its install scope and folder to the registered values. The corresponding
+controls are disabled in the interactive installer, and silent runs ignore
+scope or folder changes. Uninstall PDownloader first before selecting a
+different scope or install directory.
+
 The silent mode supports these optional parameters:
 
 | Parameter | Effect |
 | --- | --- |
+| `--just-me` | Installs only for the current account without UAC. This is the default. |
+| `--all-users` | Installs for every user and requests administrator permission. |
+| `--language en` / `--language vi` | Overrides the remembered installer language. |
 | `--install-dir "C:\Apps\PDownloader"` | Sets a custom installation directory. `/DIR=...` is also accepted. |
-| `--no-desktop-shortcut` | Does not create the desktop shortcut. |
-| `--no-start-menu-shortcut` | Does not create the Start menu shortcut. |
-| `--no-browser-extension` | Does not install the PDownloader extension for supported browsers. |
+| `--desktop-shortcut` / `--no-desktop-shortcut` | Enables or disables the Desktop shortcut. |
+| `--start-menu-shortcut` / `--no-start-menu-shortcut` | Enables or disables the Start menu shortcut. |
+| `--browser-extension` / `--no-browser-extension` | Enables or disables automatic extension installation for supported browsers. |
 | `--run-at-startup` / `--no-run-at-startup` | Enables or disables starting PDownloader with Windows. The existing setting is preserved when neither is supplied. |
 | `--launch-after-install` | Launches PDownloader after installation. Silent mode does not launch it by default. |
 | `--uninstall --silent` | Uninstalls PDownloader without displaying the installer window. |
 
-The process exits with code `0` on success and `1` on failure. Windows may
-still display a UAC elevation prompt because installation requires administrator
-privileges.
+The process exits with code `0` on success and `1` on failure. UAC is required
+only for an all-users installation or uninstallation.
+
+The in-app updater launches the downloaded installer with `--silent` and
+`--launch-after-install`, then closes the running application. PDownloader is
+opened again automatically after a successful update. If the installer has
+finished downloading but the user closes PDownloader without installing it, a
+pending-update marker causes the same silent update to run automatically on
+the next application startup.
 
 ---
 

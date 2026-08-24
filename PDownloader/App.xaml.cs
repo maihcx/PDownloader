@@ -18,6 +18,7 @@ namespace PDownloader;
 public partial class App
 {
     private readonly bool _isViewAtBoot;
+    private bool _hostStarted;
 
     public App()
     {
@@ -91,9 +92,17 @@ public partial class App
 
     private void OnStartup(object sender, StartupEventArgs e)
     {
+        UpdateService updateService =
+            _host.Services.GetRequiredService<UpdateService>();
+        if (updateService.TryLaunchPendingInstaller())
+        {
+            return;
+        }
+
         if (_isViewAtBoot)
         {
             _host.StartAsync(CancellationToken.None).GetAwaiter().GetResult();
+            _hostStarted = true;
         }
 
         Bootstrap.OnStartup();
@@ -101,14 +110,14 @@ public partial class App
 
     private void OnExit(object sender, ExitEventArgs e)
     {
-        if (_isViewAtBoot)
+        if (_hostStarted)
         {
             _host.StopAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
         }
 
         Bootstrap.OnExit();
 
-        if (_isViewAtBoot)
+        if (_hostStarted)
         {
             _host.Dispose();
         }

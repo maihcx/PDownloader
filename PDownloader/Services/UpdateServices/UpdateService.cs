@@ -23,6 +23,7 @@ public class UpdateService
     private const string GitHubOwner = "maihcx";
     private const string GitHubRepo = "PDownloader";
     private const string UpdateTempDirectoryName = "PDownloaderUpdate";
+    private const string PendingUpdateMarkerName = "pending-update.json";
 
     private static readonly HttpClient _http = new()
     {
@@ -85,7 +86,7 @@ public class UpdateService
         ErrorMessage = null;
         DownloadedInstallerPath = null;
 
-        string tempDir = Path.Combine(Path.GetTempPath(), UpdateTempDirectoryName);
+        string tempDir = GetUpdateDirectory();
         PrepareUpdateDirectory(tempDir);
 
         string fileName = Path.GetFileName(new Uri(InstallerDownloadUrl).LocalPath);
@@ -130,6 +131,7 @@ public class UpdateService
             }
 
             File.Move(partialPath, destPath, overwrite: true);
+            SavePendingUpdate(tempDir, fileName);
             DownloadedInstallerPath = destPath;
         }
         catch (Exception ex)
@@ -162,31 +164,196 @@ public class UpdateService
         }
     }
 
+    public bool TryLaunchPendingInstaller()
+    {
+        ErrorMessage = null;
+
+        if (!TryRestorePendingInstaller())
+        {
+            return false;
+        }
+
+        try
+        {
+            LaunchInstaller();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            DownloadedInstallerPath = null;
+            return false;
+        }
+    }
+
     public void LaunchInstaller()
     {
-        if (string.IsNullOrEmpty(DownloadedInstallerPath) || !File.Exists(DownloadedInstallerPath))
+        if (DownloadedInstallerPath is not string installerPath
+            || !File.Exists(installerPath))
         {
             throw new FileNotFoundException("Installer not found.", DownloadedInstallerPath);
         }
 
-        string updateDirectory = Path.GetDirectoryName(DownloadedInstallerPath)
+        string updateDirectory = Path.GetDirectoryName(installerPath)
             ?? throw new InvalidOperationException("Update directory not found.");
 
         var startInfo = new ProcessStartInfo
         {
-            FileName = DownloadedInstallerPath,
+            FileName = installerPath,
             UseShellExecute = true,
         };
+
+        // Application updates run without installer UI and reopen PDownloader
+        // after the update has completed successfully.
+        startInfo.ArgumentList.Add("--silent");
+        startInfo.ArgumentList.Add("--launch-after-install");
 
         // Pass the exact directory to the elevated installer. Inferring it later
         // from Environment.ProcessPath is not reliable for every publish mode.
         startInfo.ArgumentList.Add("--update-temp-dir");
         startInfo.ArgumentList.Add(updateDirectory);
 
-        Process.Start(startInfo);
+        bool consumedPendingUpdate = ConsumePendingUpdate(updateDirectory);
+
+        try
+        {
+            using Process installerProcess = Process.Start(startInfo)
+                ?? throw new InvalidOperationException("Failed to launch the installer.");
+        }
+        catch
+        {
+            if (consumedPendingUpdate)
+            {
+                try
+                {
+                    SavePendingUpdate(
+                        updateDirectory,
+                        Path.GetFileName(installerPath));
+                }
+                catch
+                {
+                    // Preserve the original launch failure.
+                }
+            }
+
+            throw;
+        }
 
         System.Windows.Application.Current.Dispatcher.Invoke(() => System.Windows.Application.Current.Shutdown());
     }
+
+    private bool TryRestorePendingInstaller()
+    {
+        string updateDirectory = GetUpdateDirectory();
+        string markerPath = Path.Combine(
+            updateDirectory,
+            PendingUpdateMarkerName);
+
+        if (!File.Exists(markerPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            PendingUpdateInfo? pendingUpdate = JsonSerializer.Deserialize<PendingUpdateInfo>(
+                File.ReadAllText(markerPath));
+
+            if (pendingUpdate is null
+                || !IsSafeInstallerFileName(pendingUpdate.InstallerFileName))
+            {
+                ClearPendingUpdate(updateDirectory);
+                return false;
+            }
+
+            string installerPath = Path.Combine(
+                updateDirectory,
+                pendingUpdate.InstallerFileName);
+            if (!File.Exists(installerPath))
+            {
+                ClearPendingUpdate(updateDirectory);
+                return false;
+            }
+
+            DownloadedInstallerPath = installerPath;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            ClearPendingUpdate(updateDirectory);
+            return false;
+        }
+    }
+
+    private static void SavePendingUpdate(
+        string updateDirectory,
+        string installerFileName)
+    {
+        if (!IsSafeInstallerFileName(installerFileName))
+        {
+            throw new InvalidDataException("Invalid installer file name.");
+        }
+
+        string markerPath = Path.Combine(
+            updateDirectory,
+            PendingUpdateMarkerName);
+        string temporaryMarkerPath = markerPath + ".tmp";
+        string json = JsonSerializer.Serialize(
+            new PendingUpdateInfo(installerFileName));
+
+        File.WriteAllText(temporaryMarkerPath, json);
+        File.Move(temporaryMarkerPath, markerPath, overwrite: true);
+    }
+
+    private static void ClearPendingUpdate(string updateDirectory)
+    {
+        try
+        {
+            string markerPath = Path.Combine(
+                updateDirectory,
+                PendingUpdateMarkerName);
+            File.Delete(markerPath);
+            File.Delete(markerPath + ".tmp");
+        }
+        catch
+        {
+            // The installer also removes the complete update directory after
+            // it exits, so marker cleanup here is best-effort.
+        }
+    }
+
+    private static bool ConsumePendingUpdate(string updateDirectory)
+    {
+        string markerPath = Path.Combine(
+            updateDirectory,
+            PendingUpdateMarkerName);
+        if (!File.Exists(markerPath))
+        {
+            return false;
+        }
+
+        // Remove the marker before starting the installer so the relaunched
+        // application cannot start the same update a second time.
+        File.Delete(markerPath);
+        File.Delete(markerPath + ".tmp");
+        return true;
+    }
+
+    private static bool IsSafeInstallerFileName(string fileName) =>
+        !string.IsNullOrWhiteSpace(fileName)
+        && fileName.Equals(
+            Path.GetFileName(fileName),
+            StringComparison.Ordinal)
+        && fileName.StartsWith(
+            "PDownloader.Installer",
+            StringComparison.OrdinalIgnoreCase)
+        && fileName.EndsWith(
+            ".exe",
+            StringComparison.OrdinalIgnoreCase);
+
+    private static string GetUpdateDirectory() =>
+        Path.Combine(Path.GetTempPath(), UpdateTempDirectoryName);
 
     public static Version GetCurrentVersion()
     {
@@ -204,4 +371,6 @@ public class UpdateService
         Version current = GetCurrentVersion();
         return remote > current;
     }
+
+    private sealed record PendingUpdateInfo(string InstallerFileName);
 }
