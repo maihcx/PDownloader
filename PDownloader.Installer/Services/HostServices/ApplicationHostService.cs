@@ -17,19 +17,93 @@ namespace PDownloader.Installer.Services.HostServices;
 
 public sealed class ApplicationHostService : IHostedService
 {
-    private readonly IWindow _mainWindow;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly InstallerLaunchOptions _launchOptions;
+    private readonly IInstallService _installService;
+    private readonly IInstallerApplicationService _applicationService;
 
-    public ApplicationHostService(IWindow mainWindow)
+    public ApplicationHostService(
+        IServiceProvider serviceProvider,
+        InstallerLaunchOptions launchOptions,
+        IInstallService installService,
+        IInstallerApplicationService applicationService)
     {
-        _mainWindow = mainWindow;
+        _serviceProvider = serviceProvider;
+        _launchOptions = launchOptions;
+        _installService = installService;
+        _applicationService = applicationService;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _mainWindow.Show();
+        if (_launchOptions.IsSilentMode)
+        {
+            // A silent run has no window, so keep WPF alive until the operation
+            // explicitly shuts down with a success or failure exit code.
+            System.Windows.Application.Current.ShutdownMode =
+                System.Windows.ShutdownMode.OnExplicitShutdown;
+
+            _ = RunSilentAsync(cancellationToken);
+            return Task.CompletedTask;
+        }
+
+        _serviceProvider.GetRequiredService<IWindow>().Show();
         return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken) =>
         Task.CompletedTask;
+
+    private async Task RunSilentAsync(CancellationToken cancellationToken)
+    {
+        int exitCode = 0;
+
+        try
+        {
+            var progress = new Progress<(double Percent, string Status)>(_ => { });
+
+            if (_launchOptions.IsUninstallMode)
+            {
+                string uninstallDirectory = _launchOptions.InstallDirectory
+                    ?? _installService.GetInstalledDir()
+                    ?? _installService.DefaultInstallPath;
+
+                await _installService.UninstallAsync(
+                    Path.GetFullPath(uninstallDirectory),
+                    progress,
+                    cancellationToken);
+            }
+            else
+            {
+                string installDirectory = Path.GetFullPath(
+                    _launchOptions.InstallDirectory
+                    ?? _installService.GetInstalledDir()
+                    ?? _installService.DefaultInstallPath);
+
+                bool runAtStartup = _launchOptions.RunAtStartup
+                    ?? UserDataStore.GetValue<bool>("IsStartAtBoot");
+
+                await _installService.InstallAsync(
+                    installDirectory,
+                    _launchOptions.DesktopShortcut,
+                    _launchOptions.StartMenuShortcut,
+                    runAtStartup,
+                    progress,
+                    cancellationToken);
+
+                if (_launchOptions.LaunchAfterInstall)
+                {
+                    _applicationService.TryLaunch(
+                        Path.Combine(installDirectory, "PDownloader.exe"),
+                        installDirectory);
+                }
+            }
+        }
+        catch
+        {
+            exitCode = 1;
+        }
+
+        _applicationService.Shutdown(exitCode);
+    }
 }

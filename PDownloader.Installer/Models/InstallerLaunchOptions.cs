@@ -17,27 +17,72 @@ namespace PDownloader.Installer.Models;
 
 public sealed record InstallerLaunchOptions(
     bool IsUninstallMode,
-    string? UpdateTempDirectory)
+    bool IsSilentMode,
+    string? InstallDirectory,
+    string? UpdateTempDirectory,
+    bool DesktopShortcut,
+    bool StartMenuShortcut,
+    bool? RunAtStartup,
+    bool LaunchAfterInstall)
 {
     public static InstallerLaunchOptions Parse(IEnumerable<string> arguments)
     {
         string[] args = arguments.ToArray();
 
         return new InstallerLaunchOptions(
-            args.Contains("--uninstall", StringComparer.OrdinalIgnoreCase),
-            GetOptionValue(args, "--update-temp-dir"));
+            HasSwitch(args, "--uninstall", "/uninstall"),
+            HasSwitch(args, "--silent", "--quiet", "-s", "/s", "/silent", "/quiet"),
+            GetOptionValue(args, "--install-dir", "/dir"),
+            GetOptionValue(args, "--update-temp-dir"),
+            !HasSwitch(args, "--no-desktop-shortcut"),
+            !HasSwitch(args, "--no-start-menu-shortcut"),
+            GetOptionalSwitch(args, "--run-at-startup", "--no-run-at-startup"),
+            HasSwitch(args, "--launch-after-install"));
     }
 
-    private static string? GetOptionValue(string[] args, string optionName)
+    private static bool HasSwitch(string[] args, params string[] optionNames) =>
+        args.Any(argument => optionNames.Any(optionName =>
+            argument.Equals(optionName, StringComparison.OrdinalIgnoreCase)));
+
+    private static bool? GetOptionalSwitch(
+        string[] args,
+        string enabledOption,
+        string disabledOption)
     {
-        for (int index = 0; index < args.Length - 1; index++)
+        if (HasSwitch(args, disabledOption))
         {
-            if (args[index].Equals(optionName, StringComparison.OrdinalIgnoreCase))
+            return false;
+        }
+
+        return HasSwitch(args, enabledOption) ? true : null;
+    }
+
+    private static string? GetOptionValue(string[] args, params string[] optionNames)
+    {
+        for (int index = 0; index < args.Length; index++)
+        {
+            foreach (string optionName in optionNames)
             {
-                return args[index + 1];
+                if (args[index].Equals(optionName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return index + 1 < args.Length
+                        ? NullIfWhiteSpace(args[index + 1])
+                        : null;
+                }
+
+                string assignmentPrefix = optionName + "=";
+                if (args[index].StartsWith(
+                        assignmentPrefix,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return NullIfWhiteSpace(args[index][assignmentPrefix.Length..]);
+                }
             }
         }
 
         return null;
     }
+
+    private static string? NullIfWhiteSpace(string value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value;
 }

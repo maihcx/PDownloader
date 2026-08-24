@@ -17,9 +17,9 @@ namespace PDownloader.Installer.Services;
 
 public sealed class InstallerApplicationService : IInstallerApplicationService
 {
-    public void Shutdown()
+    public void Shutdown(int exitCode = 0)
     {
-        System.Windows.Application.Current.Shutdown();
+        System.Windows.Application.Current.Shutdown(exitCode);
     }
 
     public bool TryLaunch(string executablePath, string workingDirectory)

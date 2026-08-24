@@ -17,7 +17,7 @@ namespace PDownloader.Installer.Services.Contracts;
 
 public interface IInstallerApplicationService
 {
-    void Shutdown();
+    void Shutdown(int exitCode = 0);
 
     bool TryLaunch(string executablePath, string workingDirectory);
 }
