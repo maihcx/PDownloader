@@ -1,3 +1,24 @@
+## v0.12.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- [core] Add core auto-update subsystem (#173) — @maihcx
+- [cfs-ipc] Add SendAsync and update protocol types (#172) — @maihcx
+- [installer] Support pending updates and silent installer launch (#171) — @maihcx
+- [installer] Persist installer settings and locked install path (#170) — @maihcx
+- [installer] Add per-user/all-users install scope with elevation (#169) — @maihcx
+- [installer] Add browser extension install option (#168) — @maihcx
+- [installer] Add silent installer support (#167) — @maihcx
+
+## 🧹 Maintenance
+
+- [ui] Refactor updater to Core-hosted UpdateHostService (#175) — @maihcx
+- [tray] Refactor tray update handling & async calls (#174) — @maihcx
+
+
+---
+
 ## v0.11.2
 
 ## 🚀 Changelog
