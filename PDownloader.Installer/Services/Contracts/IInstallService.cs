@@ -25,6 +25,7 @@ public interface IInstallService
         string installDir,
         bool desktopShortcut,
         bool startMenuShortcut,
+        bool installBrowserExtension,
         bool runAtStartup,
         IProgress<(double Percent, string Status)> progress,
         CancellationToken cancellationToken);

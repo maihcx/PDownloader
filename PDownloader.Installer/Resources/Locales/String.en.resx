@@ -177,6 +177,9 @@
   <data name="options_shortcut_startmenu" xml:space="preserve">
     <value>Create Start Menu shortcut</value>
   </data>
+  <data name="options_browser_extension" xml:space="preserve">
+    <value>Install the PDownloader extension for supported browsers</value>
+  </data>
   <data name="options_startup" xml:space="preserve">
     <value>Launch PDownloader automatically at Windows startup</value>
   </data>

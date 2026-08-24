@@ -177,6 +177,9 @@
   <data name="options_shortcut_startmenu" xml:space="preserve">
     <value>Tạo shortcut trong Start Menu</value>
   </data>
+  <data name="options_browser_extension" xml:space="preserve">
+    <value>Cài extension PDownloader cho các trình duyệt được hỗ trợ</value>
+  </data>
   <data name="options_startup" xml:space="preserve">
     <value>Tự động khởi động PDownloader cùng Windows</value>
   </data>

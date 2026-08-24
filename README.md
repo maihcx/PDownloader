@@ -171,6 +171,7 @@ The silent mode supports these optional parameters:
 | `--install-dir "C:\Apps\PDownloader"` | Sets a custom installation directory. `/DIR=...` is also accepted. |
 | `--no-desktop-shortcut` | Does not create the desktop shortcut. |
 | `--no-start-menu-shortcut` | Does not create the Start menu shortcut. |
+| `--no-browser-extension` | Does not install the PDownloader extension for supported browsers. |
 | `--run-at-startup` / `--no-run-at-startup` | Enables or disables starting PDownloader with Windows. The existing setting is preserved when neither is supplied. |
 | `--launch-after-install` | Launches PDownloader after installation. Silent mode does not launch it by default. |
 | `--uninstall --silent` | Uninstalls PDownloader without displaying the installer window. |

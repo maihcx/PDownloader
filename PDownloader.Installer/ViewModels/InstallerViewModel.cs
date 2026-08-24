@@ -65,6 +65,9 @@ public partial class InstallerViewModel : ObservableObject
     private bool _startMenuShortcut = true;
 
     [ObservableProperty]
+    private bool _installBrowserExtension = true;
+
+    [ObservableProperty]
     private bool _runAtStartup;
 
     [ObservableProperty]
@@ -95,6 +98,7 @@ public partial class InstallerViewModel : ObservableObject
         _installPath = installService.DefaultInstallPath;
         _uninstallDirectory = installService.GetInstalledDir()
             ?? installService.DefaultInstallPath;
+        _installBrowserExtension = launchOptions.InstallBrowserExtension;
         _runAtStartup = UserDataStore.GetValue<bool>("IsStartAtBoot");
         _selectedLanguage = Languages.FirstOrDefault(language => language.Code == "en")
             ?? Languages.First();
@@ -196,6 +200,7 @@ public partial class InstallerViewModel : ObservableObject
                 InstallPath,
                 DesktopShortcut,
                 StartMenuShortcut,
+                InstallBrowserExtension,
                 RunAtStartup,
                 progress,
                 CancellationToken.None);

@@ -177,6 +177,9 @@
   <data name="options_shortcut_startmenu" xml:space="preserve">
     <value>options_shortcut_startmenu</value>
   </data>
+  <data name="options_browser_extension" xml:space="preserve">
+    <value>options_browser_extension</value>
+  </data>
   <data name="options_startup" xml:space="preserve">
     <value>options_startup</value>
   </data>

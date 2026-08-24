@@ -22,6 +22,7 @@ public sealed record InstallerLaunchOptions(
     string? UpdateTempDirectory,
     bool DesktopShortcut,
     bool StartMenuShortcut,
+    bool InstallBrowserExtension,
     bool? RunAtStartup,
     bool LaunchAfterInstall)
 {
@@ -36,6 +37,7 @@ public sealed record InstallerLaunchOptions(
             GetOptionValue(args, "--update-temp-dir"),
             !HasSwitch(args, "--no-desktop-shortcut"),
             !HasSwitch(args, "--no-start-menu-shortcut"),
+            !HasSwitch(args, "--no-browser-extension"),
             GetOptionalSwitch(args, "--run-at-startup", "--no-run-at-startup"),
             HasSwitch(args, "--launch-after-install"));
     }
