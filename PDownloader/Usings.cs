@@ -27,7 +27,6 @@ global using PDownloader.Services;
 global using PDownloader.Services.Contracts;
 global using PDownloader.Services.DownloadServices;
 global using PDownloader.Services.HostServices;
-global using PDownloader.Services.UpdateServices;
 global using PDownloader.Utils;
 global using PDownloader.ViewModels.Pages;
 global using PDownloader.ViewModels.PagesBottom;

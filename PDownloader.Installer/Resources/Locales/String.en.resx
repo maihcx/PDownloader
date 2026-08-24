@@ -153,6 +153,24 @@
   <data name="path_title" xml:space="preserve">
     <value>Choose Install Location</value>
   </data>
+  <data name="path_scope_label" xml:space="preserve">
+    <value>Install scope</value>
+  </data>
+  <data name="path_scope_current_user" xml:space="preserve">
+    <value>Just me</value>
+  </data>
+  <data name="path_scope_current_user_description" xml:space="preserve">
+    <value>Installs for the current account without administrator permission.</value>
+  </data>
+  <data name="path_scope_all_users" xml:space="preserve">
+    <value>All users</value>
+  </data>
+  <data name="path_scope_all_users_description" xml:space="preserve">
+    <value>Installs in Program Files and requires administrator permission.</value>
+  </data>
+  <data name="path_locked_description" xml:space="preserve">
+    <value>The install scope and folder cannot be changed while PDownloader is installed. Uninstall it first to choose different values.</value>
+  </data>
   <data name="path_label" xml:space="preserve">
     <value>Install PDownloader to the following folder:</value>
   </data>
@@ -177,6 +195,9 @@
   <data name="options_shortcut_startmenu" xml:space="preserve">
     <value>Create Start Menu shortcut</value>
   </data>
+  <data name="options_browser_extension" xml:space="preserve">
+    <value>Install the PDownloader extension for supported browsers</value>
+  </data>
   <data name="options_startup" xml:space="preserve">
     <value>Launch PDownloader automatically at Windows startup</value>
   </data>
@@ -197,6 +218,9 @@
   </data>
   <data name="installing_browser_extension" xml:space="preserve">
     <value>Configuring browser extension...</value>
+  </data>
+  <data name="installing_waiting_for_admin" xml:space="preserve">
+    <value>Waiting for the administrator installation to complete...</value>
   </data>
   <data name="installing_registry" xml:space="preserve">
     <value>Registering uninstaller...</value>
@@ -224,6 +248,9 @@
   </data>
   <data name="error_close" xml:space="preserve">
     <value>Close</value>
+  </data>
+  <data name="elevation_failed" xml:space="preserve">
+    <value>Administrator permission was declined or the elevated installer could not be started.</value>
   </data>
   <data name="uninstall_title" xml:space="preserve">
     <value>Uninstall PDownloader</value>

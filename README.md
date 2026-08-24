@@ -84,7 +84,7 @@ If a server doesn't support ranged requests at all, the engine transparently fal
 The extension lives in `BrowserExtension/` and is built as a Manifest V3 extension. It is officially supported on **Google Chrome**, **Microsoft Edge**, **Brave**, **Cốc Cốc**, **Mozilla Firefox**, and **Zen Browser**.
 
 **Installation**
-When PDownloader is installed correctly, the extension is installed and enabled automatically for all supported browsers (via Windows registry policy) — no manual setup is required.
+When the browser-extension option is selected, the installer registers the extension for the selected install scope. A Just me installation uses the current user's registry; an All users installation uses the machine registry.
 
 **Manual/development install** (for contributors or debugging)
 For Chromium browsers:
@@ -154,6 +154,65 @@ pnpm run build:firefox   # dist/firefox, signs with AMO, publishes PDownloader.x
 ```
 
 `build:firefox` submits to Mozilla AMO for unlisted signing and requires `WEB_EXT_API_KEY`/`WEB_EXT_API_SECRET` environment variables (never commit these).
+
+### Silent installer
+
+Use `--silent` (or `--quiet`, `-s`, `/S`) to install without displaying the
+installer window or asking for input:
+
+```powershell
+PDownloader.Installer.exe --silent
+```
+
+On the first run, silent installation uses the current account by default and installs to
+`%LocalAppData%\Programs\PDownloader` without requesting administrator
+permission. Use `--all-users` to install to `C:\Program Files\PDownloader`;
+that mode requests UAC elevation only when installation begins.
+
+After a successful installation, the installer remembers the selected install
+scope, language, Desktop and Start menu shortcuts, browser extension option,
+and Windows startup option. Interactive, uninstall, and silent runs load the
+same saved preferences. Explicit command-line parameters always override saved
+values.
+
+When an existing PDownloader installation is detected, update and repair runs
+lock its install scope and folder to the registered values. The corresponding
+controls are disabled in the interactive installer, and silent runs ignore
+scope or folder changes. Uninstall PDownloader first before selecting a
+different scope or install directory.
+
+The silent mode supports these optional parameters:
+
+| Parameter | Effect |
+| --- | --- |
+| `--just-me` | Installs only for the current account without UAC. This is the default. |
+| `--all-users` | Installs for every user and requests administrator permission. |
+| `--language en` / `--language vi` | Overrides the remembered installer language. |
+| `--install-dir "C:\Apps\PDownloader"` | Sets a custom installation directory. `/DIR=...` is also accepted. |
+| `--desktop-shortcut` / `--no-desktop-shortcut` | Enables or disables the Desktop shortcut. |
+| `--start-menu-shortcut` / `--no-start-menu-shortcut` | Enables or disables the Start menu shortcut. |
+| `--browser-extension` / `--no-browser-extension` | Enables or disables automatic extension installation for supported browsers. |
+| `--run-at-startup` / `--no-run-at-startup` | Enables or disables starting PDownloader with Windows. The existing setting is preserved when neither is supplied. |
+| `--launch-after-install` | Launches PDownloader after installation. Silent mode does not launch it by default. |
+| `--uninstall --silent` | Uninstalls PDownloader without displaying the installer window. |
+
+The process exits with code `0` on success and `1` on failure. UAC is required
+only for an all-users installation or uninstallation.
+
+The updater is owned by the continuously running PDownloader Core process.
+The Main App and Tray only send commands and display update state received
+from Core, so checking and downloading continue even when the Main App is
+closed. Core launches a downloaded installer with `--silent` and
+`--launch-after-install`, and PDownloader is opened again automatically after
+a successful update.
+
+The “Automatically download and install updates” setting is disabled by
+default and is saved in the shared user settings. When enabled, Core checks
+every 15 minutes, downloads an available installer, and starts the silent
+installation automatically. If an installer was downloaded but not installed,
+its pending-update marker is consumed only the next time PDownloader Core
+starts. The Main App no longer contains pending-install startup logic; when it
+starts Core, Core is the component that decides whether to run the installer.
 
 ---
 

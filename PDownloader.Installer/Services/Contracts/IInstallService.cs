@@ -19,23 +19,32 @@ public interface IInstallService
 {
     string DefaultInstallPath { get; }
 
+    string AllUsersDefaultInstallPath { get; }
+
     int EstimatedSize { get; }
+
+    string GetDefaultInstallPath(InstallScope installScope);
 
     Task InstallAsync(
         string installDir,
+        InstallScope installScope,
         bool desktopShortcut,
         bool startMenuShortcut,
+        bool installBrowserExtension,
         bool runAtStartup,
         IProgress<(double Percent, string Status)> progress,
         CancellationToken cancellationToken);
 
     Task UninstallAsync(
         string installDir,
+        InstallScope installScope,
         IProgress<(double Percent, string Status)>? progress,
         CancellationToken cancellationToken,
         bool isCleanup = true);
 
-    string? GetInstalledDir();
+    string? GetInstalledDir(InstallScope installScope);
+
+    InstallScope? GetInstalledScope();
 
     void ScheduleTemporaryFilesCleanup(
         string? requestedUpdateTempDirectory = null);

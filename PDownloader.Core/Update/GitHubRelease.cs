@@ -4,7 +4,7 @@
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY without even the implied warranty of
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
@@ -13,11 +13,27 @@
 //
 // Copyright (C) Song Mai Software.
 
-using System.Text.Json.Serialization;
+namespace PDownloader.Core.Update;
 
-namespace PDownloader.Services.UpdateServices;
+internal sealed class GitHubRelease
+{
+    [JsonPropertyName("tag_name")]
+    public string TagName { get; set; } = string.Empty;
 
-public class ReleaseAsset
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("body")]
+    public string Body { get; set; } = string.Empty;
+
+    [JsonPropertyName("html_url")]
+    public string HtmlUrl { get; set; } = string.Empty;
+
+    [JsonPropertyName("assets")]
+    public List<ReleaseAsset> Assets { get; set; } = [];
+}
+
+internal sealed class ReleaseAsset
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;

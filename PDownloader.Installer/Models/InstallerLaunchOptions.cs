@@ -17,27 +17,178 @@ namespace PDownloader.Installer.Models;
 
 public sealed record InstallerLaunchOptions(
     bool IsUninstallMode,
-    string? UpdateTempDirectory)
+    bool IsSilentMode,
+    string? InstallDirectory,
+    string? UpdateTempDirectory,
+    InstallScope? RequestedInstallScope,
+    string? RequestedLanguage,
+    bool? DesktopShortcut,
+    bool? StartMenuShortcut,
+    bool? InstallBrowserExtension,
+    bool? RunAtStartup,
+    bool LaunchAfterInstall)
 {
     public static InstallerLaunchOptions Parse(IEnumerable<string> arguments)
     {
         string[] args = arguments.ToArray();
 
         return new InstallerLaunchOptions(
-            args.Contains("--uninstall", StringComparer.OrdinalIgnoreCase),
-            GetOptionValue(args, "--update-temp-dir"));
+            HasSwitch(args, "--uninstall", "/uninstall"),
+            HasSwitch(args, "--silent", "--quiet", "-s", "/s", "/silent", "/quiet"),
+            GetOptionValue(args, "--install-dir", "/dir"),
+            GetOptionValue(args, "--update-temp-dir"),
+            GetInstallScope(args),
+            GetOptionValue(args, "--language", "/language"),
+            GetOptionalSwitch(
+                args,
+                "--desktop-shortcut",
+                "--no-desktop-shortcut"),
+            GetOptionalSwitch(
+                args,
+                "--start-menu-shortcut",
+                "--no-start-menu-shortcut"),
+            GetOptionalSwitch(
+                args,
+                "--browser-extension",
+                "--no-browser-extension"),
+            GetOptionalSwitch(args, "--run-at-startup", "--no-run-at-startup"),
+            HasSwitch(args, "--launch-after-install"));
     }
 
-    private static string? GetOptionValue(string[] args, string optionName)
+    public IReadOnlyList<string> ToArguments()
     {
-        for (int index = 0; index < args.Length - 1; index++)
+        var arguments = new List<string>();
+
+        if (IsUninstallMode)
         {
-            if (args[index].Equals(optionName, StringComparison.OrdinalIgnoreCase))
+            arguments.Add("--uninstall");
+        }
+
+        if (IsSilentMode)
+        {
+            arguments.Add("--silent");
+        }
+
+        arguments.Add(RequestedInstallScope switch
+        {
+            InstallScope.AllUsers => "--all-users",
+            _ => "--just-me",
+        });
+
+        AddOption(arguments, "--language", RequestedLanguage);
+        AddOption(arguments, "--install-dir", InstallDirectory);
+        AddOption(arguments, "--update-temp-dir", UpdateTempDirectory);
+
+        AddOptionalSwitch(
+            arguments,
+            DesktopShortcut,
+            "--desktop-shortcut",
+            "--no-desktop-shortcut");
+        AddOptionalSwitch(
+            arguments,
+            StartMenuShortcut,
+            "--start-menu-shortcut",
+            "--no-start-menu-shortcut");
+        AddOptionalSwitch(
+            arguments,
+            InstallBrowserExtension,
+            "--browser-extension",
+            "--no-browser-extension");
+        AddOptionalSwitch(
+            arguments,
+            RunAtStartup,
+            "--run-at-startup",
+            "--no-run-at-startup");
+
+        if (LaunchAfterInstall)
+        {
+            arguments.Add("--launch-after-install");
+        }
+
+        return arguments;
+    }
+
+    private static InstallScope? GetInstallScope(string[] args)
+    {
+        if (HasSwitch(args, "--all-users", "/all-users"))
+        {
+            return InstallScope.AllUsers;
+        }
+
+        return HasSwitch(args, "--just-me", "/just-me")
+            ? InstallScope.CurrentUser
+            : null;
+    }
+
+    private static void AddOption(
+        ICollection<string> arguments,
+        string optionName,
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        arguments.Add(optionName);
+        arguments.Add(value);
+    }
+
+    private static void AddOptionalSwitch(
+        ICollection<string> arguments,
+        bool? value,
+        string enabledOption,
+        string disabledOption)
+    {
+        if (value.HasValue)
+        {
+            arguments.Add(value.Value ? enabledOption : disabledOption);
+        }
+    }
+
+    private static bool HasSwitch(string[] args, params string[] optionNames) =>
+        args.Any(argument => optionNames.Any(optionName =>
+            argument.Equals(optionName, StringComparison.OrdinalIgnoreCase)));
+
+    private static bool? GetOptionalSwitch(
+        string[] args,
+        string enabledOption,
+        string disabledOption)
+    {
+        if (HasSwitch(args, disabledOption))
+        {
+            return false;
+        }
+
+        return HasSwitch(args, enabledOption) ? true : null;
+    }
+
+    private static string? GetOptionValue(string[] args, params string[] optionNames)
+    {
+        for (int index = 0; index < args.Length; index++)
+        {
+            foreach (string optionName in optionNames)
             {
-                return args[index + 1];
+                if (args[index].Equals(optionName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return index + 1 < args.Length
+                        ? NullIfWhiteSpace(args[index + 1])
+                        : null;
+                }
+
+                string assignmentPrefix = optionName + "=";
+                if (args[index].StartsWith(
+                        assignmentPrefix,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return NullIfWhiteSpace(args[index][assignmentPrefix.Length..]);
+                }
             }
         }
 
         return null;
     }
+
+    private static string? NullIfWhiteSpace(string value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value;
 }

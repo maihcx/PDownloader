@@ -13,11 +13,10 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Tray.Models;
+namespace PDownloader.Installer.Models;
 
-public class TrayReleaseInfo
+public enum InstallScope
 {
-    public string TagName { get; init; } = string.Empty;
-    public string HtmlUrl { get; init; } = string.Empty;
-    public string ReleaseName { get; init; } = string.Empty;
+    CurrentUser,
+    AllUsers,
 }

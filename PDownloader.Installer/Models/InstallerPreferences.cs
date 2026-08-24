@@ -13,15 +13,19 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Services.UpdateServices;
+namespace PDownloader.Installer.Models;
 
-public enum UpdateStatus
+public sealed record InstallerPreferences
 {
-    Idle,
-    Checking,
-    UpdateAvailable,
-    Downloading,
-    ReadyToInstall,
-    UpToDate,
-    Error,
+    public InstallScope InstallScope { get; init; } = InstallScope.CurrentUser;
+
+    public string Language { get; init; } = "en";
+
+    public bool DesktopShortcut { get; init; } = true;
+
+    public bool StartMenuShortcut { get; init; } = true;
+
+    public bool InstallBrowserExtension { get; init; } = true;
+
+    public bool RunAtStartup { get; init; }
 }

@@ -219,6 +219,12 @@
   <data name="page_settings_update_title" xml:space="preserve">
     <value>Application Update</value>
   </data>
+  <data name="page_settings_auto_update_title" xml:space="preserve">
+    <value>Automatically download and install updates</value>
+  </data>
+  <data name="page_settings_auto_update_summary" xml:space="preserve">
+    <value>PDownloader Core checks every 15 minutes, even when the main window is closed. Available updates are downloaded and installed silently, then PDownloader restarts automatically.</value>
+  </data>
   <data name="page_settings_update_current_version_title" xml:space="preserve">
     <value>Current version</value>
   </data>

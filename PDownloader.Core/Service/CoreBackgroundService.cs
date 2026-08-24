@@ -19,18 +19,32 @@ namespace PDownloader.Core.Service;
 
 public class CoreBackgroundService : BackgroundService
 {
-    private readonly Bootstrap _bootstrap;
-    private readonly HttpBridgeService _httpBridge = new();
+    private static readonly TimeSpan UpdateCheckInterval = TimeSpan.FromMinutes(15);
 
-    public CoreBackgroundService(Bootstrap bootstrap)
+    private readonly Bootstrap _bootstrap;
+    private readonly CoreUpdateCoordinator _updateCoordinator;
+    private readonly HttpBridgeService _httpBridge = new();
+    private bool _bootstrapStarted;
+
+    public CoreBackgroundService(
+        Bootstrap bootstrap,
+        CoreUpdateCoordinator updateCoordinator)
     {
         _bootstrap = bootstrap;
+        _updateCoordinator = updateCoordinator;
         AppRuntime.bootstrap = bootstrap;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // A downloaded update is consumed only when the long-running Core starts.
+        if (_updateCoordinator.TryInstallPendingUpdateAtCoreStartup())
+        {
+            return;
+        }
+
         _bootstrap.OnStarted();
+        _bootstrapStarted = true;
 
         // Start HTTP bridge for browser extension (localhost:6287)
         try { _httpBridge.Start(); }
@@ -39,17 +53,30 @@ public class CoreBackgroundService : BackgroundService
             Debug.WriteLine($"[Core] HttpBridge failed: {ex.Message}");
         }
 
+        using var updateTimer = new PeriodicTimer(UpdateCheckInterval);
+
         try
         {
-            await Task.Delay(Timeout.Infinite, stoppingToken);
+            while (await updateTimer.WaitForNextTickAsync(stoppingToken))
+            {
+                await _updateCoordinator.RunAutomaticUpdateAsync(stoppingToken);
+            }
         }
-        catch (TaskCanceledException) { }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // Normal host shutdown.
+        }
     }
 
     public override Task StopAsync(CancellationToken cancellationToken)
     {
         _httpBridge.Stop();
-        _bootstrap.OnStopped();
+        if (_bootstrapStarted)
+        {
+            _bootstrap.OnStopped();
+            _bootstrapStarted = false;
+        }
+
         return base.StopAsync(cancellationToken);
     }
 

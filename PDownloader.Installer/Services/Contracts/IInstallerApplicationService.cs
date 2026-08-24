@@ -17,7 +17,13 @@ namespace PDownloader.Installer.Services.Contracts;
 
 public interface IInstallerApplicationService
 {
-    void Shutdown();
+    bool IsAdministrator { get; }
+
+    void Shutdown(int exitCode = 0);
 
     bool TryLaunch(string executablePath, string workingDirectory);
+
+    Task<int?> RunElevatedAsync(
+        IReadOnlyCollection<string> arguments,
+        CancellationToken cancellationToken);
 }

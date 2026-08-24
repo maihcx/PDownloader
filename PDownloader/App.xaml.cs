@@ -18,6 +18,7 @@ namespace PDownloader;
 public partial class App
 {
     private readonly bool _isViewAtBoot;
+    private bool _hostStarted;
 
     public App()
     {
@@ -80,7 +81,6 @@ public partial class App
             services.AddSingleton<ISnackbarService, SnackbarService>();
             services.AddSingleton<IContentDialogService, ContentDialogService>();
 
-            services.AddSingleton<UpdateService>();
             services.AddSingleton<UpdateHostService>();
 
             NavigationHandle.SetupPageViewModelPairs(services, "PDownloader.Views.Pages", "PDownloader.ViewModels.Pages");
@@ -94,6 +94,7 @@ public partial class App
         if (_isViewAtBoot)
         {
             _host.StartAsync(CancellationToken.None).GetAwaiter().GetResult();
+            _hostStarted = true;
         }
 
         Bootstrap.OnStartup();
@@ -101,14 +102,14 @@ public partial class App
 
     private void OnExit(object sender, ExitEventArgs e)
     {
-        if (_isViewAtBoot)
+        if (_hostStarted)
         {
             _host.StopAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
         }
 
         Bootstrap.OnExit();
 
-        if (_isViewAtBoot)
+        if (_hostStarted)
         {
             _host.Dispose();
         }

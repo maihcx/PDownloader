@@ -30,7 +30,8 @@ public partial class AboutViewModel : ObservableObject
 
     private void InitializeViewModel()
     {
-        Version v = UpdateService.GetCurrentVersion();
+        Version v = Assembly.GetExecutingAssembly().GetName().Version
+            ?? new Version(1, 0, 0);
         AppVersion = $"{v.Major}.{v.Minor}.{v.Build}";
     }
 }

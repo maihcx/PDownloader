@@ -38,7 +38,10 @@ public partial class InstallerViewModel : ObservableObject
     private readonly ILicenseService _licenseService;
     private readonly IFolderPickerService _folderPickerService;
     private readonly IInstallerApplicationService _applicationService;
+    private readonly InstallerLaunchOptions _launchOptions;
     private readonly string _uninstallDirectory;
+    private readonly InstallScope _uninstallScope;
+    private readonly InstallScope? _existingInstallScope;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StepIndex))]
@@ -46,6 +49,11 @@ public partial class InstallerViewModel : ObservableObject
 
     [ObservableProperty]
     private string _installPath;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCurrentUserInstall))]
+    [NotifyPropertyChangedFor(nameof(IsAllUsersInstall))]
+    private InstallScope _selectedInstallScope;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SelectLanguageCommand))]
@@ -63,6 +71,9 @@ public partial class InstallerViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _startMenuShortcut = true;
+
+    [ObservableProperty]
+    private bool _installBrowserExtension = true;
 
     [ObservableProperty]
     private bool _runAtStartup;
@@ -90,14 +101,43 @@ public partial class InstallerViewModel : ObservableObject
         _licenseService = licenseService;
         _folderPickerService = folderPickerService;
         _applicationService = applicationService;
+        _launchOptions = launchOptions;
+
+        InstallerPreferences preferences = InstallerPreferencesStore.Load();
 
         IsUninstallMode = launchOptions.IsUninstallMode;
-        _installPath = installService.DefaultInstallPath;
-        _uninstallDirectory = installService.GetInstalledDir()
-            ?? installService.DefaultInstallPath;
-        _runAtStartup = UserDataStore.GetValue<bool>("IsStartAtBoot");
-        _selectedLanguage = Languages.FirstOrDefault(language => language.Code == "en")
+        _existingInstallScope = GetExistingInstallScope(
+            installService,
+            launchOptions.RequestedInstallScope);
+        _selectedInstallScope = _existingInstallScope
+            ?? launchOptions.RequestedInstallScope
+            ?? preferences.InstallScope;
+        _installPath = _existingInstallScope.HasValue
+            ? installService.GetInstalledDir(_existingInstallScope.Value)
+                ?? installService.GetDefaultInstallPath(_existingInstallScope.Value)
+            : GetPreferredInstallPath(_selectedInstallScope);
+        _uninstallScope = launchOptions.RequestedInstallScope
+            ?? installService.GetInstalledScope()
+            ?? preferences.InstallScope;
+        _uninstallDirectory = installService.GetInstalledDir(_uninstallScope)
+            ?? installService.GetDefaultInstallPath(_uninstallScope);
+        _desktopShortcut = launchOptions.DesktopShortcut
+            ?? preferences.DesktopShortcut;
+        _startMenuShortcut = launchOptions.StartMenuShortcut
+            ?? preferences.StartMenuShortcut;
+        _installBrowserExtension = launchOptions.InstallBrowserExtension
+            ?? preferences.InstallBrowserExtension;
+        _runAtStartup = launchOptions.RunAtStartup
+            ?? preferences.RunAtStartup;
+
+        string languageCode = InstallerPreferencesStore.NormalizeLanguage(
+            launchOptions.RequestedLanguage ?? preferences.Language);
+        _selectedLanguage = Languages.FirstOrDefault(language =>
+                language.Code.Equals(
+                    languageCode,
+                    StringComparison.OrdinalIgnoreCase))
             ?? Languages.First();
+        LanguageBase.SetLanguage(_selectedLanguage.Code);
         _licenseText = licenseService.Load(_selectedLanguage.Code);
     }
 
@@ -105,6 +145,32 @@ public partial class InstallerViewModel : ObservableObject
         LanguageBase.GetLanguageItems();
 
     public bool IsUninstallMode { get; }
+
+    public bool CanChangeInstallLocation => !_existingInstallScope.HasValue;
+
+    public bool IsCurrentUserInstall
+    {
+        get => SelectedInstallScope == InstallScope.CurrentUser;
+        set
+        {
+            if (value)
+            {
+                SelectedInstallScope = InstallScope.CurrentUser;
+            }
+        }
+    }
+
+    public bool IsAllUsersInstall
+    {
+        get => SelectedInstallScope == InstallScope.AllUsers;
+        set
+        {
+            if (value)
+            {
+                SelectedInstallScope = InstallScope.AllUsers;
+            }
+        }
+    }
 
     public int EstimatedSize => _installService.EstimatedSize / 1024;
 
@@ -134,6 +200,7 @@ public partial class InstallerViewModel : ObservableObject
 
         LanguageBase.SetLanguage(SelectedLanguage.Code);
         LicenseText = _licenseService.Load(SelectedLanguage.Code);
+        SavePreferences();
         Step = IsUninstallMode
             ? InstallerStep.UninstallConfirm
             : InstallerStep.Welcome;
@@ -184,6 +251,35 @@ public partial class InstallerViewModel : ObservableObject
         Step = InstallerStep.Installing;
         ResetOperationState();
 
+        if (SelectedInstallScope == InstallScope.AllUsers
+            && !_applicationService.IsAdministrator)
+        {
+            StatusText = LocalizationHelper.Get("installing_waiting_for_admin");
+
+            InstallerLaunchOptions elevatedOptions = CreateInstallOptions() with
+            {
+                IsSilentMode = true,
+                LaunchAfterInstall = false,
+            };
+
+            int? elevatedExitCode = await _applicationService.RunElevatedAsync(
+                elevatedOptions.ToArguments(),
+                CancellationToken.None);
+
+            if (elevatedExitCode == 0)
+            {
+                SavePreferences();
+                Step = InstallerStep.Finish;
+            }
+            else
+            {
+                ShowError(new InvalidOperationException(
+                    LocalizationHelper.Get("elevation_failed")));
+            }
+
+            return;
+        }
+
         var progress = new Progress<(double Percent, string Status)>(result =>
         {
             Progress = result.Percent * 100;
@@ -194,11 +290,14 @@ public partial class InstallerViewModel : ObservableObject
         {
             await _installService.InstallAsync(
                 InstallPath,
+                SelectedInstallScope,
                 DesktopShortcut,
                 StartMenuShortcut,
+                InstallBrowserExtension,
                 RunAtStartup,
                 progress,
                 CancellationToken.None);
+            SavePreferences();
             Step = InstallerStep.Finish;
         }
         catch (Exception exception)
@@ -213,6 +312,37 @@ public partial class InstallerViewModel : ObservableObject
         Step = InstallerStep.Uninstalling;
         ResetOperationState();
 
+        if (_uninstallScope == InstallScope.AllUsers
+            && !_applicationService.IsAdministrator)
+        {
+            StatusText = LocalizationHelper.Get("installing_waiting_for_admin");
+
+            InstallerLaunchOptions elevatedOptions = _launchOptions with
+            {
+                IsUninstallMode = true,
+                IsSilentMode = true,
+                RequestedInstallScope = InstallScope.AllUsers,
+                InstallDirectory = _uninstallDirectory,
+                LaunchAfterInstall = false,
+            };
+
+            int? elevatedExitCode = await _applicationService.RunElevatedAsync(
+                elevatedOptions.ToArguments(),
+                CancellationToken.None);
+
+            if (elevatedExitCode == 0)
+            {
+                Step = InstallerStep.UninstallDone;
+            }
+            else
+            {
+                ShowError(new InvalidOperationException(
+                    LocalizationHelper.Get("elevation_failed")));
+            }
+
+            return;
+        }
+
         var progress = new Progress<(double Percent, string Status)>(result =>
         {
             Progress = result.Percent * 100;
@@ -223,6 +353,7 @@ public partial class InstallerViewModel : ObservableObject
         {
             await _installService.UninstallAsync(
                 _uninstallDirectory,
+                _uninstallScope,
                 progress,
                 CancellationToken.None);
             Step = InstallerStep.UninstallDone;
@@ -261,6 +392,62 @@ public partial class InstallerViewModel : ObservableObject
     {
         ErrorDetail = exception.Message;
         Step = InstallerStep.Error;
+    }
+
+    partial void OnSelectedInstallScopeChanged(InstallScope value)
+    {
+        if (_existingInstallScope.HasValue
+            && value != _existingInstallScope.Value)
+        {
+            SelectedInstallScope = _existingInstallScope.Value;
+            return;
+        }
+
+        InstallPath = GetPreferredInstallPath(value);
+    }
+
+    private static InstallScope? GetExistingInstallScope(
+        IInstallService installService,
+        InstallScope? preferredScope)
+    {
+        if (preferredScope.HasValue
+            && !string.IsNullOrWhiteSpace(
+                installService.GetInstalledDir(preferredScope.Value)))
+        {
+            return preferredScope.Value;
+        }
+
+        return installService.GetInstalledScope();
+    }
+
+    private string GetPreferredInstallPath(InstallScope installScope) =>
+        _installService.GetInstalledDir(installScope)
+        ?? _installService.GetDefaultInstallPath(installScope);
+
+    private InstallerLaunchOptions CreateInstallOptions() =>
+        _launchOptions with
+        {
+            IsUninstallMode = false,
+            RequestedInstallScope = SelectedInstallScope,
+            RequestedLanguage = SelectedLanguage?.Code,
+            InstallDirectory = InstallPath,
+            DesktopShortcut = DesktopShortcut,
+            StartMenuShortcut = StartMenuShortcut,
+            InstallBrowserExtension = InstallBrowserExtension,
+            RunAtStartup = RunAtStartup,
+        };
+
+    private void SavePreferences()
+    {
+        InstallerPreferencesStore.Save(new InstallerPreferences
+        {
+            InstallScope = SelectedInstallScope,
+            Language = SelectedLanguage?.Code ?? "en",
+            DesktopShortcut = DesktopShortcut,
+            StartMenuShortcut = StartMenuShortcut,
+            InstallBrowserExtension = InstallBrowserExtension,
+            RunAtStartup = RunAtStartup,
+        });
     }
 
     private static string GetApplicationVersion()

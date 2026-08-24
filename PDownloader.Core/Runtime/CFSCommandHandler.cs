@@ -27,7 +27,7 @@ public static class CFSCommandHandler
 
     public static DownloadConfigService DownloadConfigService { get; set; } = Program.GetRequiredService<DownloadConfigService>();
 
-    private static Action? mainAppAction { get; set; } = null;
+    private static Action? mainAppAction { get; set; }
 
     public static void Handle(string name, string value)
     {
@@ -53,6 +53,11 @@ public static class CFSCommandHandler
 
             case "core-event":
                 HandleCoreEvent(value);
+                break;
+
+            case UpdateProtocol.CommandMessage:
+                Program.GetRequiredService<CoreUpdateCoordinator>()
+                    .HandleCommand(value);
                 break;
 
             case "downloader-svc-getlist":
@@ -107,15 +112,26 @@ public static class CFSCommandHandler
         {
             mainAppAction = () =>
             {
-                AppRuntime.cfsMain.Send(name, value);
-                mainAppAction = null;
+                _ = SendPendingMainEventAsync(name, value);
             };
 
             AppRuntime.cfsMain.StartApp();
         }
         else
         {
-            AppRuntime.cfsMain.Send(name, value);
+            _ = AppRuntime.cfsMain.SendAsync(name, value);
+        }
+    }
+
+    private static async Task SendPendingMainEventAsync(
+        string name,
+        string value)
+    {
+        ConfluxService? mainService = AppRuntime.cfsMain;
+        if (mainService is not null
+            && await mainService.SendAsync(name, value))
+        {
+            mainAppAction = null;
         }
     }
 

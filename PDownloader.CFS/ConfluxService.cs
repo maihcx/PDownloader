@@ -304,6 +304,78 @@ public class ConfluxService : IDisposable
         return false;
     }
 
+    public async Task<bool> SendAsync(
+        string paramName,
+        string paramValue,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+    {
+        timeout ??= TimeSpan.FromSeconds(5);
+
+        if (!IsAppStarted())
+        {
+            return false;
+        }
+
+        byte[] buffer = Encoding.UTF8.GetBytes($"{paramName}|{paramValue}");
+        if (buffer.Length > MaxMessageBytes)
+        {
+            Debug.WriteLine("[SendAsync] Message exceeds the allowed size.");
+            return false;
+        }
+
+        using var timeoutCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCancellation.CancelAfter(timeout.Value);
+        CancellationToken operationToken = timeoutCancellation.Token;
+
+        try
+        {
+            using var client = new NamedPipeClientStream(
+                ".",
+                PipeSend,
+                PipeDirection.Out,
+                PipeOptions.Asynchronous);
+            await client.ConnectAsync(operationToken).ConfigureAwait(false);
+            await client.WriteAsync(buffer.AsMemory(), operationToken)
+                .ConfigureAwait(false);
+            await client.FlushAsync(operationToken).ConfigureAwait(false);
+
+            using var responseClient = new NamedPipeClientStream(
+                ".",
+                PipeSendReceive,
+                PipeDirection.In,
+                PipeOptions.Asynchronous);
+            await responseClient.ConnectAsync(operationToken).ConfigureAwait(false);
+
+            byte[] responseBuffer = new byte[256];
+            int bytesRead = await responseClient.ReadAsync(
+                    responseBuffer.AsMemory(),
+                    operationToken)
+                .ConfigureAwait(false);
+            string response = Encoding.UTF8.GetString(
+                responseBuffer,
+                0,
+                bytesRead);
+
+            return response.Trim() == "OK";
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            Debug.WriteLine($"[SendAsync] Timed out sending '{paramName}'.");
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[SendAsync] Failed to send '{paramName}': {ex.Message}");
+            return false;
+        }
+    }
+
     protected virtual void Dispose(bool disposing)
     {
         if (_disposed)

@@ -124,6 +124,16 @@
             FontTypography="BodyStrong"
             Text="{utils:Localization page_settings_update_title}" />
 
+        <controls:FormFieldCard
+            Margin="0,0,0,4"
+            Icon="{ui:SymbolIcon ArrowClockwise24}"
+            PrimaryText="{utils:Localization page_settings_auto_update_title}"
+            DescriptionText="{utils:Localization page_settings_auto_update_summary}">
+
+            <ui:ToggleSwitch
+                IsChecked="{Binding ViewModel.IsAutoUpdateEnabled, Mode=TwoWay}" />
+        </controls:FormFieldCard>
+
         <ui:Card Margin="0,0,0,4" Padding="16" x:Name="UpdateCard">
             <Grid>
                 <Grid.RowDefinitions>

@@ -37,6 +37,8 @@ internal class Program
                 {
                     services.AddSingleton<Bootstrap>();
                     services.AddSingleton<DownloadConfigService>();
+                    services.AddSingleton<CoreUpdateService>();
+                    services.AddSingleton<CoreUpdateCoordinator>();
 
                     services.AddHostedService<CoreBackgroundService>();
                 })

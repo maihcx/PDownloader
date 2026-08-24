@@ -44,7 +44,9 @@ public partial class MainWindow : INavigableView<MainWindowViewModels>, IDisposa
 
     private void TrayIcon_BalloonTipClicked([System.Diagnostics.CodeAnalysis.NotNull] Wpf.Ui.Tray.Controls.NotifyIcon sender, RoutedEventArgs e)
     {
-        AppRuntime.CoreService?.Send("tray-event", "OnGoSettings--UPDATE");
+        _ = AppRuntime.CoreService?.SendAsync(
+            "tray-event",
+            "OnGoSettings--UPDATE");
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -62,7 +64,7 @@ public partial class MainWindow : INavigableView<MainWindowViewModels>, IDisposa
     private void NotifyIcon_LeftClick(Wpf.Ui.Tray.Controls.NotifyIcon sender, RoutedEventArgs e)
     {
         AppRuntime.CoreService?.StartApp();
-        AppRuntime.CoreService?.Send("state", "start");
+        _ = AppRuntime.CoreService?.SendAsync("state", "start");
     }
 
     public void ShowUpdateBalloon(string version)
