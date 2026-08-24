@@ -53,8 +53,8 @@ public class Bootstrap
         cfsTray.OnMessageReceiving += CFSIncomingHandler.Handle;
         cfsTray.OnMessageReceived += CFSCommandHandler.Handle;
         cfsTray.CreateNoWindow = true;
-        cfsTray.StartApp();
         _ = cfsTray.StartServiceAsync();
+        cfsTray.StartApp();
         #endregion
 
         // Runner is started on-demand when first download request arrives
