@@ -4,7 +4,7 @@
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY without even the implied warranty of
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
@@ -15,10 +15,12 @@
 
 namespace PDownloader.Services.HostServices;
 
-public sealed class UpdateHostService : INotifyPropertyChanged, IDisposable
+/// <summary>
+/// Main-App proxy for the updater owned and executed by PDownloader Core.
+/// </summary>
+public sealed class UpdateHostService : INotifyPropertyChanged
 {
-    private readonly UpdateService _update;
-    private CancellationTokenSource? _cts;
+    private Action<UpdateReleaseInfo>? _onUpdateFound;
 
     private UpdateStatus _status = UpdateStatus.Idle;
     public UpdateStatus Status
@@ -34,114 +36,154 @@ public sealed class UpdateHostService : INotifyPropertyChanged, IDisposable
         private set => SetField(ref _downloadProgress, value);
     }
 
-    public GitHubRelease? LatestRelease => _update.LatestRelease;
-    public string? ErrorMessage => _update.ErrorMessage;
-    public long InstallerSize => _update.InstallerSize;
+    private UpdateReleaseInfo? _latestRelease;
+    public UpdateReleaseInfo? LatestRelease
+    {
+        get => _latestRelease;
+        private set => SetField(ref _latestRelease, value);
+    }
+
+    private string? _errorMessage;
+    public string? ErrorMessage
+    {
+        get => _errorMessage;
+        private set => SetField(ref _errorMessage, value);
+    }
+
+    private long _installerSize;
+    public long InstallerSize
+    {
+        get => _installerSize;
+        private set => SetField(ref _installerSize, value);
+    }
+
+    private bool _isAutoUpdateEnabled;
+    public bool IsAutoUpdateEnabled
+    {
+        get => _isAutoUpdateEnabled;
+        private set => SetField(ref _isAutoUpdateEnabled, value);
+    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public UpdateHostService(UpdateService update)
+    public void Handle(string name, string value)
     {
-        _update = update;
-    }
-
-    public async Task CheckAsync(Action<GitHubRelease>? onUpdateFound = null)
-    {
-        if (Status is UpdateStatus.Checking or UpdateStatus.Downloading)
+        if (name != UpdateProtocol.StateMessage)
         {
             return;
         }
-
-        Cancel();
-        _cts = new CancellationTokenSource();
-
-        Status = UpdateStatus.Checking;
 
         try
         {
-            bool hasUpdate = await _update.CheckForUpdateAsync(_cts.Token);
-
-            OnPropertyChanged(nameof(LatestRelease));
-            OnPropertyChanged(nameof(InstallerSize));
-
-            if (hasUpdate)
+            UpdateStateSnapshot? snapshot =
+                JsonSerializer.Deserialize<UpdateStateSnapshot>(value);
+            if (snapshot is null)
             {
-                Status = UpdateStatus.UpdateAvailable;
-                onUpdateFound?.Invoke(_update.LatestRelease!);
+                return;
             }
-            else
+
+            LatestRelease = snapshot.LatestRelease;
+            ErrorMessage = snapshot.ErrorMessage;
+            InstallerSize = snapshot.InstallerSize;
+            DownloadProgress = snapshot.DownloadProgress;
+            IsAutoUpdateEnabled = snapshot.IsAutoUpdateEnabled;
+            Status = snapshot.Status;
+
+            if (snapshot.Status == UpdateStatus.UpdateAvailable
+                && snapshot.LatestRelease is { } release
+                && Interlocked.Exchange(ref _onUpdateFound, null) is { } callback)
             {
-                Status = UpdateStatus.UpToDate;
+                callback(release);
             }
         }
-        catch (OperationCanceledException)
+        catch (JsonException ex)
         {
-            Status = UpdateStatus.Idle;
-        }
-        catch
-        {
-            OnPropertyChanged(nameof(ErrorMessage));
-            Status = UpdateStatus.Error;
+            Debug.WriteLine($"Invalid update state from Core: {ex.Message}");
         }
     }
 
-    public async Task DownloadAsync()
+    public async Task CheckAsync(
+        Action<UpdateReleaseInfo>? onUpdateFound = null,
+        CancellationToken cancellationToken = default)
     {
-        if (Status is not UpdateStatus.UpdateAvailable)
+        cancellationToken.ThrowIfCancellationRequested();
+        _onUpdateFound = onUpdateFound;
+        if (!await TrySendCommandAsync(
+                UpdateProtocol.CheckWithoutTrayNotificationCommand,
+                cancellationToken))
         {
-            return;
-        }
-
-        Cancel();
-        _cts = new CancellationTokenSource();
-
-        DownloadProgress = 0;
-        Status = UpdateStatus.Downloading;
-
-        var progress = new Progress<double>(p =>
-        {
-            DownloadProgress = p;
-        });
-
-        try
-        {
-            await _update.DownloadInstallerAsync(progress, _cts.Token);
-            DownloadProgress = 1.0;
-            Status = UpdateStatus.ReadyToInstall;
-        }
-        catch (OperationCanceledException)
-        {
-            DownloadProgress = 0;
-            Status = UpdateStatus.UpdateAvailable;
-        }
-        catch
-        {
-            OnPropertyChanged(nameof(ErrorMessage));
-            Status = UpdateStatus.Error;
+            _onUpdateFound = null;
+            SetCoreUnavailable();
         }
     }
 
-    public void LaunchInstaller()
+    public async Task DownloadAsync(CancellationToken cancellationToken = default)
     {
-        if (Status is not UpdateStatus.ReadyToInstall)
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!await TrySendCommandAsync(
+                UpdateProtocol.DownloadCommand,
+                cancellationToken))
         {
-            return;
+            SetCoreUnavailable();
         }
-
-        _update.LaunchInstaller();
     }
 
-    public void Cancel()
+    public async Task LaunchInstallerAsync(
+        CancellationToken cancellationToken = default)
     {
-        _cts?.Cancel();
-        _cts?.Dispose();
-        _cts = null;
+        if (!await TrySendCommandAsync(
+                UpdateProtocol.InstallCommand,
+                cancellationToken))
+        {
+            throw new InvalidOperationException(
+                "PDownloader Core is not available.");
+        }
     }
 
-    private void OnPropertyChanged([CallerMemberName] string? name = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    public Task CancelAsync(CancellationToken cancellationToken = default) =>
+        TrySendCommandAsync(UpdateProtocol.CancelCommand, cancellationToken);
 
-    private bool SetField<T>(ref T field, T value, [CallerMemberName] string? name = null)
+    public Task RequestStateAsync(CancellationToken cancellationToken = default) =>
+        TrySendCommandAsync(UpdateProtocol.GetStateCommand, cancellationToken);
+
+    public async Task SetAutoUpdateEnabledAsync(
+        bool enabled,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await TrySendCommandAsync(
+                UpdateProtocol.SetAutoUpdatePrefix
+                + enabled.ToString().ToLowerInvariant(),
+                cancellationToken))
+        {
+            SetCoreUnavailable();
+        }
+    }
+
+    private static async Task<bool> TrySendCommandAsync(
+        string command,
+        CancellationToken cancellationToken)
+    {
+        ConfluxService? coreService = ConfluxManager.cfsPDownloaderCore;
+        return coreService is not null
+            && await coreService.SendAsync(
+                UpdateProtocol.CommandMessage,
+                command,
+                cancellationToken: cancellationToken);
+    }
+
+    private void SetCoreUnavailable()
+    {
+        ErrorMessage = "PDownloader Core is not available.";
+        Status = UpdateStatus.Error;
+    }
+
+    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    private bool SetField<T>(
+        ref T field,
+        T value,
+        [CallerMemberName] string? name = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value))
         {
@@ -151,11 +193,5 @@ public sealed class UpdateHostService : INotifyPropertyChanged, IDisposable
         field = value;
         OnPropertyChanged(name);
         return true;
-    }
-
-    public void Dispose()
-    {
-        Cancel();
-        PropertyChanged = null;
     }
 }

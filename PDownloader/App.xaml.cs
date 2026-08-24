@@ -81,7 +81,6 @@ public partial class App
             services.AddSingleton<ISnackbarService, SnackbarService>();
             services.AddSingleton<IContentDialogService, ContentDialogService>();
 
-            services.AddSingleton<UpdateService>();
             services.AddSingleton<UpdateHostService>();
 
             NavigationHandle.SetupPageViewModelPairs(services, "PDownloader.Views.Pages", "PDownloader.ViewModels.Pages");
@@ -92,13 +91,6 @@ public partial class App
 
     private void OnStartup(object sender, StartupEventArgs e)
     {
-        UpdateService updateService =
-            _host.Services.GetRequiredService<UpdateService>();
-        if (updateService.TryLaunchPendingInstaller())
-        {
-            return;
-        }
-
         if (_isViewAtBoot)
         {
             _host.StartAsync(CancellationToken.None).GetAwaiter().GetResult();

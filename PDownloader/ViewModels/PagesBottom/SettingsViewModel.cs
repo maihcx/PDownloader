@@ -49,9 +49,19 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
         _selectedMaterial = ThemeManagerService.GetMaterialCBBSelected();
         _materialList = ThemeManagerService.GetMaterialCBBs();
         _sliderCornerRadius = ThemeManagerService.GlobalCornerRadius;
+        _isAutoUpdateEnabled = updateHostService.IsAutoUpdateEnabled;
     }
 
     #region Update handling
+    [ObservableProperty]
+    private bool _isAutoUpdateEnabled;
+
+    partial void OnIsAutoUpdateEnabledChanged(bool value)
+    {
+        UserDataStore.SetValue("IsAutoUpdateEnabled", value);
+        _ = updateHostService.SetAutoUpdateEnabledAsync(value);
+    }
+
     [ObservableProperty]
     private UpdateStatus _updateStatus = UpdateStatus.Idle;
 
@@ -117,6 +127,10 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
                         ReleaseNotes = release.Body;
                     }
 
+                    break;
+
+                case nameof(UpdateHostService.IsAutoUpdateEnabled):
+                    IsAutoUpdateEnabled = updateHostService.IsAutoUpdateEnabled;
                     break;
             }
         });
@@ -243,6 +257,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
         ScrollToUpdateRequested?.Invoke();
 
         updateHostService.PropertyChanged += OnHostPropertyChanged;
+        _ = updateHostService.RequestStateAsync();
 
         return Task.CompletedTask;
     }
@@ -256,7 +271,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
 
     private void InitializeViewModel()
     {
-        Version v = UpdateService.GetCurrentVersion();
+        Version v = Assembly.GetExecutingAssembly().GetName().Version
+            ?? new Version(1, 0, 0);
         AppVersion = $"PDownloader - {v.Major}.{v.Minor}.{v.Build}";
         UpdateStatusText = LanguageBase.GetLangValue("page_settings_update_idle");
         _isInitialized = true;
@@ -285,9 +301,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
     }
 
     [RelayCommand]
-    private void InstallUpdate()
+    private async Task InstallUpdateAsync()
     {
-        try { updateHostService.LaunchInstaller(); }
+        try { await updateHostService.LaunchInstallerAsync(); }
         catch (Exception ex)
         {
             UpdateStatus = UpdateStatus.Error;
@@ -296,9 +312,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
     }
 
     [RelayCommand]
-    private void CancelUpdate()
+    private async Task CancelUpdateAsync()
     {
-        updateHostService.Cancel();
+        await updateHostService.CancelAsync();
         DownloadProgress = 0;
     }
 }

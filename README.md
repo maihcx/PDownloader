@@ -199,12 +199,20 @@ The silent mode supports these optional parameters:
 The process exits with code `0` on success and `1` on failure. UAC is required
 only for an all-users installation or uninstallation.
 
-The in-app updater launches the downloaded installer with `--silent` and
-`--launch-after-install`, then closes the running application. PDownloader is
-opened again automatically after a successful update. If the installer has
-finished downloading but the user closes PDownloader without installing it, a
-pending-update marker causes the same silent update to run automatically on
-the next application startup.
+The updater is owned by the continuously running PDownloader Core process.
+The Main App and Tray only send commands and display update state received
+from Core, so checking and downloading continue even when the Main App is
+closed. Core launches a downloaded installer with `--silent` and
+`--launch-after-install`, and PDownloader is opened again automatically after
+a successful update.
+
+The “Automatically download and install updates” setting is disabled by
+default and is saved in the shared user settings. When enabled, Core checks
+every 15 minutes, downloads an available installer, and starts the silent
+installation automatically. If an installer was downloaded but not installed,
+its pending-update marker is consumed only the next time PDownloader Core
+starts. The Main App no longer contains pending-install startup logic; when it
+starts Core, Core is the component that decides whether to run the installer.
 
 ---
 

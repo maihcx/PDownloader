@@ -84,6 +84,7 @@ public static class Bootstrap
         ConfluxManager.cfsPDownloaderCore = cfsPDownloaderCore;
 
         cfsPDownloaderCore.OnMessageReceived += App.GetRequiredService<DownloadsChannelService>().Handle;
+        cfsPDownloaderCore.OnMessageReceived += App.GetRequiredService<UpdateHostService>().Handle;
         cfsPDownloaderCore.OnMessageReceived += (name, value) =>
         {
             App.Current.Dispatcher.Invoke(() =>
@@ -172,7 +173,8 @@ public static class Bootstrap
         StartupManager.RefreshStartWithWin();
         SplashScreen?.Close(new TimeSpan(0));
 
-        ConfluxManager.cfsPDownloaderCore?.Send("core-event", "ping");
+        _ = ConfluxManager.cfsPDownloaderCore?.SendAsync("core-event", "ping");
+        _ = App.GetRequiredService<UpdateHostService>().RequestStateAsync();
 
         if (!IsViewAtBoot)
         {

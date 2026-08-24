@@ -49,12 +49,15 @@ public partial class MainWindowViewModel : ObservableObject
 
         LanguageBase.LanguageChanged += (lang) =>
         {
-            ConfluxManager.cfsPDownloaderCore?.Send("main-event", "OnLanguageChanged");
+            _ = ConfluxManager.cfsPDownloaderCore?.SendAsync(
+                "main-event",
+                "OnLanguageChanged");
         };
 
         _ = updateHostService.CheckAsync(release =>
         {
-            MessengerService.ShowSnackbar("sys_notification_title", LanguageBase.GetLangValue("update_available_summary", release.TagName), ControlAppearance.Caution, new SymbolIcon(SymbolRegular.ArrowDownload24), TimeSpan.FromSeconds(15));
+            Application.Current.Dispatcher.Invoke(() =>
+                MessengerService.ShowSnackbar("sys_notification_title", LanguageBase.GetLangValue("update_available_summary", release.TagName), ControlAppearance.Caution, new SymbolIcon(SymbolRegular.ArrowDownload24), TimeSpan.FromSeconds(15)));
         });
     }
 }
