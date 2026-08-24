@@ -18,6 +18,10 @@
                       FontSize="14"
                       Content="{local:LocalizationExtension options_shortcut_startmenu}"
                       IsChecked="{Binding StartMenuShortcut}" />
+            <CheckBox Margin="0,0,0,12"
+                      FontSize="14"
+                      Content="{local:LocalizationExtension options_browser_extension}"
+                      IsChecked="{Binding InstallBrowserExtension}" />
             <CheckBox FontSize="14"
                       Content="{local:LocalizationExtension options_startup}"
                       IsChecked="{Binding RunAtStartup}" />

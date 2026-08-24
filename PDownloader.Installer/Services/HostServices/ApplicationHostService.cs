@@ -87,6 +87,7 @@ public sealed class ApplicationHostService : IHostedService
                     installDirectory,
                     _launchOptions.DesktopShortcut,
                     _launchOptions.StartMenuShortcut,
+                    _launchOptions.InstallBrowserExtension,
                     runAtStartup,
                     progress,
                     cancellationToken);

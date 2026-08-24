@@ -37,6 +37,7 @@ public sealed class InstallService : IInstallService
         string installDir,
         bool desktopShortcut,
         bool startMenuShortcut,
+        bool installBrowserExtension,
         bool runAtStartup,
         IProgress<(double Percent, string Status)> progress,
         CancellationToken ct)
@@ -89,9 +90,14 @@ public sealed class InstallService : IInstallService
             }
         }, ct);
 
-        ct.ThrowIfCancellationRequested();
-        progress.Report((0.88, Utils.LocalizationHelper.Get("installing_browser_extension")));
-        await Task.Run(() => BrowserExtensionInstallerService.InstallForAllBrowsers(installDir), ct);
+        if (installBrowserExtension)
+        {
+            ct.ThrowIfCancellationRequested();
+            progress.Report((0.88, Utils.LocalizationHelper.Get("installing_browser_extension")));
+            await Task.Run(
+                () => BrowserExtensionInstallerService.InstallForAllBrowsers(installDir),
+                ct);
+        }
 
         ct.ThrowIfCancellationRequested();
         progress.Report((0.92, Utils.LocalizationHelper.Get("installing_registry")));
