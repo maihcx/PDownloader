@@ -240,7 +240,7 @@ public sealed class CoreUpdateCoordinator : IDisposable
         _lastBroadcastProgress = 0;
         SetStatus(UpdateStatus.Downloading);
 
-        var progress = new Progress<double>(value =>
+        var progress = new InlineProgress<double>(value =>
         {
             _downloadProgress = value;
             if (value >= 1 || value - _lastBroadcastProgress >= 0.01)
@@ -378,6 +378,18 @@ public sealed class CoreUpdateCoordinator : IDisposable
     private void Cancel()
     {
         _operationCancellation?.Cancel();
+    }
+
+    private sealed class InlineProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> _handler;
+
+        public InlineProgress(Action<T> handler)
+        {
+            _handler = handler;
+        }
+
+        public void Report(T value) => _handler(value);
     }
 
     public void Dispose()
