@@ -1,19 +1,3 @@
-## v0.12.1
-
-## 🚀 Changelog
-## 🐛 Bug Fixes
-
-- [installer] Stabilize CFS messaging and refresh flow (#180) — @maihcx
-- [installer] Run automatic updates on startup (#178) — @maihcx
-- [installer] Adjust install path warning copy (#177) — @maihcx
-
-## 🧹 Maintenance
-
-- [docs] Add PDownloader installer artifact (#181) — @maihcx
-
-
----
-
 ## v0.12.0
 
 ## 🚀 Changelog
