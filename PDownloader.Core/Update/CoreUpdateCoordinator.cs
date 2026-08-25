@@ -41,7 +41,7 @@ public sealed class CoreUpdateCoordinator : IDisposable
     }
 
     public bool IsAutoUpdateEnabled { get; private set; } =
-        UserDataStore.GetValue<bool>(AutoUpdateSettingKey);
+        UserDataStore.GetValue<bool>(AutoUpdateSettingKey, true);
 
     public void HandleCommand(string command)
     {
