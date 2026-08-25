@@ -1,14 +1,3 @@
-## v0.12.1
-
-## 🚀 Changelog
-## 🐛 Bug Fixes
-
-- [installer] Run automatic updates on startup (#178) — @maihcx
-- [installer] Adjust install path warning copy (#177) — @maihcx
-
-
----
-
 ## v0.12.0
 
 ## 🚀 Changelog
