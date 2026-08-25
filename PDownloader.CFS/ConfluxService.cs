@@ -23,6 +23,9 @@ namespace PDownloader.CFS;
 
 public class ConfluxService : IDisposable
 {
+    private static readonly TimeSpan ResponseHandshakeTimeout =
+        TimeSpan.FromSeconds(5);
+
     public delegate void MessageReceive(string type, string message);
     public MessageReceive? OnMessageReceived;
     public MessageReceive? OnMessageReceiving;
@@ -42,6 +45,7 @@ public class ConfluxService : IDisposable
 
     private CancellationTokenSource? _cts;
     private Task? _serviceTask;
+    private readonly SemaphoreSlim _sendGate = new(1, 1);
     private bool _disposed;
 
     public void Register(string processPackage, string pipeSend, string? pipeReceive = null)
@@ -233,6 +237,11 @@ public class ConfluxService : IDisposable
 
     private async Task SendBitOKAsync(CancellationToken token)
     {
+        using var responseCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(token);
+        responseCancellation.CancelAfter(ResponseHandshakeTimeout);
+        CancellationToken responseToken = responseCancellation.Token;
+
         try
         {
             PipeSecurity pipeSecurity = CreateRestrictedPipeSecurity();
@@ -247,11 +256,15 @@ public class ConfluxService : IDisposable
                 outBufferSize: 0,
                 pipeSecurity: pipeSecurity);
 
-            await responsePipe.WaitForConnectionAsync(token);
+            await responsePipe.WaitForConnectionAsync(responseToken);
 
             byte[] response = Encoding.UTF8.GetBytes("OK");
-            await responsePipe.WriteAsync(response, token);
-            await responsePipe.FlushAsync(token);
+            await responsePipe.WriteAsync(response, responseToken);
+            await responsePipe.FlushAsync(responseToken);
+        }
+        catch (OperationCanceledException) when (!token.IsCancellationRequested)
+        {
+            Debug.WriteLine("[PipeServer] Timed out waiting for response client.");
         }
         catch (OperationCanceledException)
         {
@@ -268,8 +281,17 @@ public class ConfluxService : IDisposable
             timeout = TimeSpan.FromSeconds(5);
         }
 
+        bool gateEntered = false;
+
         try
         {
+            gateEntered = _sendGate.Wait(timeout.Value);
+            if (!gateEntered)
+            {
+                Debug.WriteLine($"[Send] Timed out queueing '{paramName}'.");
+                return false;
+            }
+
             if (IsAppStarted())
             {
                 using var client = new NamedPipeClientStream(".", PipeSend, PipeDirection.Out);
@@ -300,6 +322,13 @@ public class ConfluxService : IDisposable
             }
         }
         catch { }
+        finally
+        {
+            if (gateEntered)
+            {
+                _sendGate.Release();
+            }
+        }
 
         return false;
     }
@@ -312,11 +341,6 @@ public class ConfluxService : IDisposable
     {
         timeout ??= TimeSpan.FromSeconds(5);
 
-        if (!IsAppStarted())
-        {
-            return false;
-        }
-
         byte[] buffer = Encoding.UTF8.GetBytes($"{paramName}|{paramValue}");
         if (buffer.Length > MaxMessageBytes)
         {
@@ -328,9 +352,18 @@ public class ConfluxService : IDisposable
             CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCancellation.CancelAfter(timeout.Value);
         CancellationToken operationToken = timeoutCancellation.Token;
+        bool gateEntered = false;
 
         try
         {
+            await _sendGate.WaitAsync(operationToken).ConfigureAwait(false);
+            gateEntered = true;
+
+            if (!IsAppStarted())
+            {
+                return false;
+            }
+
             using var client = new NamedPipeClientStream(
                 ".",
                 PipeSend,
@@ -374,6 +407,13 @@ public class ConfluxService : IDisposable
             Debug.WriteLine($"[SendAsync] Failed to send '{paramName}': {ex.Message}");
             return false;
         }
+        finally
+        {
+            if (gateEntered)
+            {
+                _sendGate.Release();
+            }
+        }
     }
 
     protected virtual void Dispose(bool disposing)
@@ -386,6 +426,7 @@ public class ConfluxService : IDisposable
         if (disposing)
         {
             _cts?.Dispose();
+            _sendGate.Dispose();
 
             GC.SuppressFinalize(this);
         }
