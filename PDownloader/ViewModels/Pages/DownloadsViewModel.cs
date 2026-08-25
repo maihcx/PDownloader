@@ -104,12 +104,23 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         if (!_isInitialized)
         {
             IsLoading = true;
+            _isInitialized = true;
+            _ = RequestRefreshAsync();
+        }
+    }
 
-            ConfluxManager.cfsPDownloaderCore?.Send(
+    private async Task RequestRefreshAsync()
+    {
+        ConfluxService? coreService = ConfluxManager.cfsPDownloaderCore;
+        bool sent = coreService is not null
+            && await coreService.SendAsync(
                 "downloader-svc-getlist",
                 string.Empty);
 
-            _isInitialized = true;
+        if (!sent)
+        {
+            IsLoading = false;
+            _isInitialized = false;
         }
     }
 
