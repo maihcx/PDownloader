@@ -169,7 +169,7 @@
     <value>Installs in Program Files and requires administrator permission.</value>
   </data>
   <data name="path_locked_description" xml:space="preserve">
-    <value>The install scope and folder cannot be changed while PDownloader is installed. Uninstall it first to choose different values.</value>
+    <value>The location cannot be changed once the application is installed. Please uninstall it first to select a different location.</value>
   </data>
   <data name="path_label" xml:space="preserve">
     <value>Install PDownloader to the following folder:</value>
