@@ -57,6 +57,10 @@ public class CoreBackgroundService : BackgroundService
 
         try
         {
+            // Check immediately at Core startup. The timer below is only the
+            // recurring fallback for updates released while Core is running.
+            await _updateCoordinator.RunAutomaticUpdateAsync(stoppingToken);
+
             while (await updateTimer.WaitForNextTickAsync(stoppingToken))
             {
                 await _updateCoordinator.RunAutomaticUpdateAsync(stoppingToken);
