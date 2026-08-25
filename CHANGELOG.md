@@ -1,3 +1,23 @@
+## v0.12.1
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- [docs] Fix GPL license header punctuation (#185) — @maihcx
+- [installer] Stabilize CFS messaging and refresh flow (#180) — @maihcx
+- [installer] Run automatic updates on startup (#178) — @maihcx
+- [installer] Adjust install path warning copy (#177) — @maihcx
+
+## 🧹 Maintenance
+
+- [ui] Add auto-update setting support (#187) — @maihcx
+- [core] Default auto-update to true; add GetValue overload (#186) — @maihcx
+- [docs] Clarify browser extension split (#183) — @maihcx
+- [docs] Add PDownloader installer artifact (#181) — @maihcx
+
+
+---
+
 ## v0.12.0
 
 ## 🚀 Changelog
