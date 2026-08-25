@@ -1,6 +1,6 @@
 # PDownloader
 
-A multi-threaded download manager for Windows, built with .NET 10, WPF, and MVVM. PDownloader pairs a native desktop application with a browser extension (Chrome, Edge, Brave, Cốc Cốc) to capture, queue, and accelerate downloads — including YouTube video/audio via `yt-dlp` and HLS/DASH streaming media.
+A multi-threaded download manager for Windows, built with .NET 10, WPF, and MVVM. PDownloader can integrate with its separately maintained browser extension to capture, queue, and accelerate downloads — including YouTube video/audio via `yt-dlp` and HLS/DASH streaming media.
 
 ---
 
@@ -8,11 +8,11 @@ A multi-threaded download manager for Windows, built with .NET 10, WPF, and MVVM
 
 PDownloader is developed across the following repositories:
 
-| Component | Repository | Purpose |
-| --- | --- | --- |
-| **Main App** | **[maihcx/PDownloader](https://github.com/maihcx/PDownloader) ← You are here** | Windows application, download engine, and releases. |
-| Browser Extension | [maihcx/PDownloader-browser-ext](https://github.com/maihcx/PDownloader-browser-ext) | Browser integration, download interception, and media capture. |
-| Website | [maihcx/PDownloader-site](https://github.com/maihcx/PDownloader-site) | Website interface, translations, documentation reader, and Markdown articles. |
+| Repository | Purpose |
+| --- | --- |
+| **[Main App](https://github.com/maihcx/PDownloader) ← You are here** | Windows application, download engine, installer, and releases. |
+| [Browser Extension](https://github.com/maihcx/PDownloader-browser-ext) | Browser integration, download interception, and media capture. |
+| [Website](https://github.com/maihcx/PDownloader-site) | Website, translations, documentation reader, and Markdown articles. |
 
 ---
 
@@ -22,7 +22,7 @@ PDownloader is developed across the following repositories:
 - **Resume & retry** — persists segment state to disk so interrupted downloads resume where they left off, with exponential back-off retries per segment.
 - **HLS/DASH streaming support** — detects `.m3u8` playlists and downloads fragments concurrently (via `SemaphoreSlim`-bounded parallelism), then merges them into a single output file.
 - **YouTube & site downloads via yt-dlp** — resolves formats and stream URLs through `yt-dlp` (including cookie-based authentication to bypass bot checks), while the actual transfer is handled by PDownloader's own download engine.
-- **Browser extension (MV3)** — context-menu capture, a popup for manual URL entry, and automatic detection of downloadable links, all communicating with the desktop app over a local HTTP bridge.
+- **Browser integration** — works with the separately maintained [PDownloader browser extension](https://github.com/maihcx/PDownloader-browser-ext) over a local HTTP bridge.
 - **System tray & background service** — a lightweight background service coordinates the main UI, the download engine window, and the tray icon over local IPC.
 
 ---
@@ -32,8 +32,8 @@ PDownloader is developed across the following repositories:
 PDownloader is split into several cooperating processes that communicate over a custom local IPC layer (**CFS**, `PDownloader.CFS`) and a local HTTP bridge used by the browser extension.
 
 ```
-Browser (Chrome / Edge / Brave / Cốc Cốc)
-  Extension: context menu / popup / auto-capture
+Browser
+  Companion extension (separate repository)
         │  HTTP POST http://localhost:6287
         ▼
 PDownloader.Core  (background service)
@@ -58,7 +58,6 @@ PDownloader.Core  (background service)
 | `PDownloader.CFS` | Shared library implementing the inter-process communication layer used by all components. |
 | `PDownloader.Installer` | Windows installer/setup application. |
 | `PDownloader.BugTracker` | Companion crash-reporting window launched on unhandled exceptions. |
-| `BrowserExtension` | Cross-browser Manifest V3 extension (Chrome, Edge, Brave, Cốc Cốc, Firefox, Zen Browser) that captures links and posts them to Core's HTTP bridge. |
 | `WPF-UI.LIB` | Forked/customized WPF-UI controls used across the desktop apps. |
 
 ---
@@ -76,42 +75,6 @@ Located in `PDownloader.Core/Download/DownloadEngine.cs`, the engine works rough
 7. **Merge & cleanup** — completed segments/fragments are concatenated into the final file and the temp folder is removed.
 
 If a server doesn't support ranged requests at all, the engine transparently falls back to a single-stream download.
-
----
-
-## Browser Extension
-
-The extension lives in `BrowserExtension/` and is built as a Manifest V3 extension. It is officially supported on **Google Chrome**, **Microsoft Edge**, **Brave**, **Cốc Cốc**, **Mozilla Firefox**, and **Zen Browser**.
-
-**Installation**
-When the browser-extension option is selected, the installer registers the extension for the selected install scope. A Just me installation uses the current user's registry; an All users installation uses the machine registry.
-
-**Manual/development install** (for contributors or debugging)
-For Chromium browsers:
-1. Open `chrome://extensions` (`edge://extensions`, `brave://extensions`, or the Cốc Cốc equivalent).
-2. Enable Developer Mode.
-3. Click **Load unpacked** and select `BrowserExtension/dist/chromium/`.
-
-For Firefox/Zen Browser:
-1. Open `about:debugging#/runtime/this-firefox`.
-2. Click **Load Temporary Add-on**.
-3. Select `BrowserExtension/dist/firefox/manifest.json`.
-
-**How a link reaches the download engine**
-```
-User clicks "Download with PDownloader" (context menu or popup)
-  → background.js: POST http://localhost:6287/download { url, saveTo, fileName }
-  → PDownloader.Core (HttpBridgeService) parses the request
-  → forwarded to PDownloader.Runner over CFS
-  → RunnerWindow enqueues the download → DownloadEngine starts
-```
-
-**Features**
-- Context menu entries on links, videos, and pages.
-- Popup for manually entering a URL, choosing a save folder, and listing downloadable links found on the current page.
-- Automatic capture of clicks on common downloadable file types.
-- Desktop notifications for successful queuing or connection errors.
-- Localized UI (English/Vietnamese via `_locales`).
 
 ---
 
@@ -143,17 +106,8 @@ dotnet build PDownloader.sln -c Release
 dotnet run --project PDownloader
 ```
 
-For the browser extension, see the "Manual/development install" steps above. `build.bat` is provided at the repository root for producing the installer release artifact. The extension itself is built with Vite from `BrowserExtension/` (Node.js required):
-
-```bash
-cd BrowserExtension
-pnpm install
-
-pnpm run build:chrome    # dist/chromium, dist/store, PDownloader-store.zip
-pnpm run build:firefox   # dist/firefox, signs with AMO, publishes PDownloader.xpi + updates.json
-```
-
-`build:firefox` submits to Mozilla AMO for unlisted signing and requires `WEB_EXT_API_KEY`/`WEB_EXT_API_SECRET` environment variables (never commit these).
+Run `build.bat` from the repository root to publish the Windows projects and
+produce the release installer at `installer-output/PDownloader.Installer.exe`.
 
 ### Silent installer
 
