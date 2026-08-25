@@ -169,7 +169,7 @@
     <value>Cài vào Program Files và yêu cầu quyền Administrator.</value>
   </data>
   <data name="path_locked_description" xml:space="preserve">
-    <value>Không thể thay đổi phạm vi hoặc thư mục khi PDownloader đã được cài đặt. Hãy gỡ cài đặt trước để chọn lại.</value>
+    <value>Không thể thay đổi vị trí khi ứng dụng đã được cài đặt. Hãy gỡ cài đặt trước để chọn lại.</value>
   </data>
   <data name="path_label" xml:space="preserve">
     <value>Cài đặt PDownloader vào thư mục sau:</value>
