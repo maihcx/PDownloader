@@ -1,32 +1,43 @@
----
 name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
-assignees: ''
-
----
-
-**Describe the bug**
-A clear and concise description of what the bug is.
-
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
-
-**Expected behavior**
-A clear and concise description of what you expected to happen.
-
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
-
-**Desktop (please complete the following information):**
- - Windows Verion: [e.g. Windows 11 OS Build 26340.9233]
- - Browser [e.g. chrome, firefox]
- - Version [e.g. 22]
-
-**Additional context**
-Add any other context about the problem here.
+description: Create a report to help us improve
+title: "Bug title"
+labels: [bug]
+body:
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: To Reproduce
+      description: Steps to reproduce the behavior
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen
+  - type: textarea
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain your problem
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: OS version
+      description: Which OS versions did you see the issue on?
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: PDownloader version
+      description: Which PDownloader versions did you see the issue on?
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here
