@@ -178,5 +178,17 @@ namespace PDownloader.Properties {
                 this["IsNavPaneOpen"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool IsAutoUpdateEnabled {
+            get {
+                return ((bool)(this["IsAutoUpdateEnabled"]));
+            }
+            set {
+                this["IsAutoUpdateEnabled"] = value;
+            }
+        }
     }
 }

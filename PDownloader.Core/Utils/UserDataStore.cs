@@ -75,6 +75,25 @@ public static class UserDataStore
         return default!;
     }
 
+    public static T GetValue<T>(string key, T defautVal)
+    {
+        if (_data.TryGetValue(key, out var value))
+        {
+            try
+            {
+                if (value is JsonElement elem)
+                {
+                    return elem.Deserialize<T>()!;
+                }
+
+                return (T)Convert.ChangeType(value, typeof(T));
+            }
+            catch { }
+        }
+
+        return defautVal!;
+    }
+
     public static bool SetValue<T>(string key, T value)
     {
         _data[key] = value!;
