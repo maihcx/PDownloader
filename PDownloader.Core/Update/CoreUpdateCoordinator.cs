@@ -128,22 +128,7 @@ public sealed class CoreUpdateCoordinator : IDisposable
                     shouldNotifyTray: true);
             }
 
-            if (_status == UpdateStatus.UpdateAvailable)
-            {
-                await DownloadCoreAsync(cancellationToken);
-            }
-
-            if (_status == UpdateStatus.ReadyToInstall)
-            {
-                try
-                {
-                    InstallCore();
-                }
-                catch
-                {
-                    SetStatus(UpdateStatus.Error);
-                }
-            }
+            await CompleteAutomaticUpdateIfEnabledAsync(cancellationToken);
         }
         finally
         {
@@ -177,6 +162,8 @@ public sealed class CoreUpdateCoordinator : IDisposable
             await CheckCoreAsync(
                 CancellationToken.None,
                 shouldNotifyTray);
+            await CompleteAutomaticUpdateIfEnabledAsync(
+                CancellationToken.None);
         }
         finally
         {
@@ -310,6 +297,32 @@ public sealed class CoreUpdateCoordinator : IDisposable
         _lifetime.StopApplication();
     }
 
+    private async Task CompleteAutomaticUpdateIfEnabledAsync(
+        CancellationToken cancellationToken)
+    {
+        if (!IsAutoUpdateEnabled)
+        {
+            return;
+        }
+
+        if (_status == UpdateStatus.UpdateAvailable)
+        {
+            await DownloadCoreAsync(cancellationToken);
+        }
+
+        if (_status == UpdateStatus.ReadyToInstall)
+        {
+            try
+            {
+                InstallCore();
+            }
+            catch
+            {
+                SetStatus(UpdateStatus.Error);
+            }
+        }
+    }
+
     private void SetAutoUpdateEnabled(bool enabled)
     {
         IsAutoUpdateEnabled = enabled;
@@ -317,6 +330,11 @@ public sealed class CoreUpdateCoordinator : IDisposable
         UserDataStore.Reload();
         UserDataStore.SetValue(AutoUpdateSettingKey, enabled);
         BroadcastState();
+
+        if (enabled)
+        {
+            _ = RunAutomaticUpdateAsync();
+        }
     }
 
     private void SetStatus(

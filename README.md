@@ -202,17 +202,25 @@ only for an all-users installation or uninstallation.
 The updater is owned by the continuously running PDownloader Core process.
 The Main App and Tray only send commands and display update state received
 from Core, so checking and downloading continue even when the Main App is
-closed. Core launches a downloaded installer with `--silent` and
+closed. Startup, state, and update commands use asynchronous CFS pipe calls so
+a busy or not-yet-ready Core cannot block the Main App UI until a pipe timeout.
+Checks explicitly requested by the Main App update its UI without showing a
+Tray balloon. Background checks may notify through Tray, but the same version
+is shown at most once per Tray session.
+Core launches a downloaded installer with `--silent` and
 `--launch-after-install`, and PDownloader is opened again automatically after
 a successful update.
 
 The “Automatically download and install updates” setting is disabled by
 default and is saved in the shared user settings. When enabled, Core checks
-every 15 minutes, downloads an available installer, and starts the silent
-installation automatically. If an installer was downloaded but not installed,
-its pending-update marker is consumed only the next time PDownloader Core
-starts. The Main App no longer contains pending-install startup logic; when it
-starts Core, Core is the component that decides whether to run the installer.
+immediately at startup and every 15 minutes thereafter. Any check—background
+or explicitly requested by the Main App—that detects an update immediately
+downloads it and starts the silent installation; the 15-minute timer is only
+the recurring fallback interval. If an installer was downloaded but not
+installed, its pending-update marker is consumed only the next time PDownloader
+Core starts. The Main App no longer contains pending-install startup logic;
+when it starts Core, Core is the component that decides whether to run the
+installer.
 
 ---
 
