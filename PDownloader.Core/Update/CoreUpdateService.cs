@@ -4,7 +4,7 @@
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY without even the implied warranty of
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
@@ -15,6 +15,7 @@
 
 using System.Net.Http.Json;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace PDownloader.Core.Update;
 
@@ -24,6 +25,9 @@ public sealed class CoreUpdateService
     private const string GitHubRepo = "PDownloader";
     private const string UpdateTempDirectoryName = "PDownloaderUpdate";
     private const string PendingUpdateMarkerName = "pending-update.json";
+    private const string LegacyX64InstallerFileName = "PDownloader.Installer.exe";
+    private const string X64InstallerFileName = "PDownloader.Installer-win-x64.exe";
+    private const string Arm64InstallerFileName = "PDownloader.Installer-win-arm64.exe";
 
     private static readonly HttpClient Http = new()
     {
@@ -33,6 +37,7 @@ public sealed class CoreUpdateService
 
     internal GitHubRelease? LatestRelease { get; private set; }
     public string? InstallerDownloadUrl { get; private set; }
+    private string? InstallerFileName { get; set; }
     public long InstallerSize { get; private set; }
     public string? DownloadedInstallerPath { get; private set; }
     public string? ErrorMessage { get; private set; }
@@ -42,6 +47,7 @@ public sealed class CoreUpdateService
         ErrorMessage = null;
         LatestRelease = null;
         InstallerDownloadUrl = null;
+        InstallerFileName = null;
         InstallerSize = 0;
 
         try
@@ -56,21 +62,27 @@ public sealed class CoreUpdateService
 
             LatestRelease = release;
 
-            ReleaseAsset? asset = release.Assets.FirstOrDefault(candidate =>
-                candidate.Name.StartsWith(
-                    "PDownloader.Installer",
-                    StringComparison.OrdinalIgnoreCase)
-                && candidate.Name.EndsWith(
-                    ".exe",
-                    StringComparison.OrdinalIgnoreCase));
-
-            if (asset is not null)
+            if (!IsNewerVersion(release.TagName))
             {
-                InstallerDownloadUrl = asset.DownloadUrl;
-                InstallerSize = asset.Size;
+                return false;
             }
 
-            return IsNewerVersion(release.TagName);
+            string expectedInstallerFileName = GetExpectedInstallerFileName();
+            ReleaseAsset? asset = FindCompatibleInstallerAsset(
+                release.Assets,
+                expectedInstallerFileName);
+
+            if (asset is null)
+            {
+                throw new InvalidOperationException(
+                    $"The release does not contain the compatible installer " +
+                    $"'{expectedInstallerFileName}'.");
+            }
+
+            InstallerDownloadUrl = asset.DownloadUrl;
+            InstallerFileName = asset.Name;
+            InstallerSize = asset.Size;
+            return true;
         }
         catch (Exception ex)
         {
@@ -83,7 +95,11 @@ public sealed class CoreUpdateService
         IProgress<double> progress,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(InstallerDownloadUrl))
+        string? installerDownloadUrl = InstallerDownloadUrl;
+        string? installerFileName = InstallerFileName;
+
+        if (string.IsNullOrEmpty(installerDownloadUrl)
+            || string.IsNullOrEmpty(installerFileName))
         {
             throw new InvalidOperationException("No installer URL available.");
         }
@@ -94,14 +110,14 @@ public sealed class CoreUpdateService
         string tempDirectory = GetUpdateDirectory();
         PrepareUpdateDirectory(tempDirectory);
 
-        string fileName = Path.GetFileName(new Uri(InstallerDownloadUrl).LocalPath);
+        string fileName = installerFileName;
         string destinationPath = Path.Combine(tempDirectory, fileName);
         string partialPath = destinationPath + ".download";
 
         try
         {
             using HttpResponseMessage response = await Http.GetAsync(
-                InstallerDownloadUrl,
+                installerDownloadUrl,
                 HttpCompletionOption.ResponseHeadersRead,
                 ct);
             response.EnsureSuccessStatusCode();
@@ -346,13 +362,60 @@ public sealed class CoreUpdateService
         return true;
     }
 
-    private static bool IsSafeInstallerFileName(string fileName) =>
-        !string.IsNullOrWhiteSpace(fileName)
-        && fileName.Equals(Path.GetFileName(fileName), StringComparison.Ordinal)
-        && fileName.StartsWith(
-            "PDownloader.Installer",
-            StringComparison.OrdinalIgnoreCase)
-        && fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+    private static ReleaseAsset? FindCompatibleInstallerAsset(
+        IEnumerable<ReleaseAsset> assets,
+        string expectedInstallerFileName)
+    {
+        ReleaseAsset? asset = assets.FirstOrDefault(candidate =>
+            candidate.Name.Equals(
+                expectedInstallerFileName,
+                StringComparison.OrdinalIgnoreCase));
+
+        // Older releases used the generic name for the x64 installer. Keep
+        // that fallback only on x64; its architecture is ambiguous on ARM64.
+        if (asset is null
+            && RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            asset = assets.FirstOrDefault(candidate =>
+                candidate.Name.Equals(
+                    LegacyX64InstallerFileName,
+                    StringComparison.OrdinalIgnoreCase));
+        }
+
+        return asset;
+    }
+
+    private static bool IsSafeInstallerFileName(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName)
+            || !fileName.Equals(
+                Path.GetFileName(fileName),
+                StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (fileName.Equals(
+                GetExpectedInstallerFileName(),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return RuntimeInformation.ProcessArchitecture == Architecture.X64
+            && fileName.Equals(
+                LegacyX64InstallerFileName,
+                StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetExpectedInstallerFileName() =>
+        RuntimeInformation.ProcessArchitecture switch
+        {
+            Architecture.X64 => X64InstallerFileName,
+            Architecture.Arm64 => Arm64InstallerFileName,
+            Architecture architecture => throw new PlatformNotSupportedException(
+                $"PDownloader updates are not available for {architecture}.")
+        };
 
     private static string GetUpdateDirectory() =>
         Path.Combine(Path.GetTempPath(), UpdateTempDirectoryName);
