@@ -100,7 +100,7 @@ jobs:
             exit $LASTEXITCODE
           }
 
-      - name: Verify installers and create legacy x64 alias
+      - name: Verify installers
         shell: pwsh
         run: |
           $installers = @(
@@ -122,10 +122,6 @@ jobs:
             }
           }
 
-          # Keep the old asset name for x64 clients that do not know the
-          # architecture-specific release filenames yet.
-          Copy-Item -LiteralPath "installer-output\PDownloader.Installer-win-x64.exe" -Destination "installer-output\PDownloader.Installer.exe" -Force
-
       # ── Commit version bump + CHANGELOG ─────────────────────────────────
       - name: Commit version bump
         shell: bash
@@ -146,13 +142,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload installer to release
+      # Upload x64 first for compatibility with older updaters that select
+      # the first PDownloader.Installer*.exe asset returned by GitHub.
+      - name: Upload x64 installer to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.drafter.outputs.tag_name }}
-          files: |
-            installer-output/PDownloader.Installer.exe
-            installer-output/PDownloader.Installer-win-x64.exe
-            installer-output/PDownloader.Installer-win-arm64.exe
+          files: installer-output/PDownloader.Installer-win-x64.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload ARM64 installer to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.drafter.outputs.tag_name }}
+          files: installer-output/PDownloader.Installer-win-arm64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
