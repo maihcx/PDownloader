@@ -103,8 +103,14 @@ jobs:
       - name: Verify installers
         shell: pwsh
         run: |
+          $x64Installer = "installer-output\PDownloader.Installer-win-x64.exe"
+          $versionedX64Installer = "installer-output\PDownloader.Installer-v$env:VERSION.exe"
+
+          Copy-Item -LiteralPath $x64Installer -Destination $versionedX64Installer -Force
+
           $installers = @(
-            "installer-output\PDownloader.Installer-win-x64.exe",
+            $versionedX64Installer,
+            $x64Installer,
             "installer-output\PDownloader.Installer-win-arm64.exe"
           )
 
@@ -120,6 +126,13 @@ jobs:
               Write-Error "Installer is too small ($size bytes): $installer"
               exit 1
             }
+          }
+
+          $x64Hash = (Get-FileHash -LiteralPath $x64Installer).Hash
+          $versionedX64Hash = (Get-FileHash -LiteralPath $versionedX64Installer).Hash
+          if ($x64Hash -ne $versionedX64Hash) {
+            Write-Error "Versioned x64 installer does not match the native x64 installer."
+            exit 1
           }
 
       # ── Commit version bump + CHANGELOG ─────────────────────────────────
@@ -142,8 +155,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Upload x64 first for compatibility with older updaters that select
-      # the first PDownloader.Installer*.exe asset returned by GitHub.
+      # This versioned x64 alias sorts before the architecture-specific assets.
+      # Older updaters that select the first PDownloader.Installer*.exe will
+      # therefore still receive a compatible x64 installer.
+      - name: Upload versioned x64 compatibility installer
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.drafter.outputs.tag_name }}
+          files: installer-output/PDownloader.Installer-v${{ env.VERSION }}.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload x64 installer to release
         uses: softprops/action-gh-release@v2
         with:
