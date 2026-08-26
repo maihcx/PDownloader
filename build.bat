@@ -117,6 +117,8 @@ for %%P in (%APP_PROJECTS%) do (
 
     dotnet publish .\%%P\%%P.csproj -c Release -r !TARGET_RID! ^
         /p:PlatformTarget=!PLATFORM_TARGET! ^
+        /p:PublishReadyToRun=true ^
+        /p:PublishReadyToRunShowWarnings=true ^
         /p:DebugType=None ^
         /p:DebugSymbols=false ^
         -o "!PAYLOAD_DIR!"
@@ -147,6 +149,8 @@ REM Step 3: Build the installer once with the placeholder payload.
 echo [PDownloader.Installer] Building pass 1 for %TARGET_RID%...
 dotnet publish "%INSTALLER_PROJECT%" -c Release -r %TARGET_RID% ^
     /p:PlatformTarget=%PLATFORM_TARGET% ^
+    /p:PublishReadyToRun=true ^
+    /p:PublishReadyToRunShowWarnings=true ^
     /p:DebugType=None ^
     /p:DebugSymbols=false ^
     -o "%ARCH_OUTPUT_DIR%"
@@ -201,6 +205,8 @@ REM Step 6: Rebuild the final installer with the real payload.
 echo [PDownloader.Installer] Building pass 2 for %TARGET_RID%...
 dotnet publish "%INSTALLER_PROJECT%" -c Release -r %TARGET_RID% ^
     /p:PlatformTarget=%PLATFORM_TARGET% ^
+    /p:PublishReadyToRun=true ^
+    /p:PublishReadyToRunShowWarnings=true ^
     /p:DebugType=None ^
     /p:DebugSymbols=false ^
     -o "%ARCH_OUTPUT_DIR%"
