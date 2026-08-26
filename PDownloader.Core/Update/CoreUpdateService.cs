@@ -26,8 +26,10 @@ public sealed class CoreUpdateService
     private const string UpdateTempDirectoryName = "PDownloaderUpdate";
     private const string PendingUpdateMarkerName = "pending-update.json";
     private const string LegacyX64InstallerFileName = "PDownloader.Installer.exe";
+    private const string VersionedX64InstallerFileNamePrefix = "PDownloader.Installer-v";
     private const string X64InstallerFileName = "PDownloader.Installer-win-x64.exe";
     private const string Arm64InstallerFileName = "PDownloader.Installer-win-arm64.exe";
+    private const string InstallerFileNameExtension = ".exe";
 
     private static readonly HttpClient Http = new()
     {
@@ -70,7 +72,8 @@ public sealed class CoreUpdateService
             string expectedInstallerFileName = GetExpectedInstallerFileName();
             ReleaseAsset? asset = FindCompatibleInstallerAsset(
                 release.Assets,
-                expectedInstallerFileName);
+                expectedInstallerFileName,
+                release.TagName);
 
             if (asset is null)
             {
@@ -364,12 +367,31 @@ public sealed class CoreUpdateService
 
     private static ReleaseAsset? FindCompatibleInstallerAsset(
         IEnumerable<ReleaseAsset> assets,
-        string expectedInstallerFileName)
+        string expectedInstallerFileName,
+        string releaseTagName)
     {
         ReleaseAsset? asset = assets.FirstOrDefault(candidate =>
             candidate.Name.Equals(
                 expectedInstallerFileName,
                 StringComparison.OrdinalIgnoreCase));
+
+        // The versioned installer is an x64 compatibility alias for clients
+        // that predate architecture-specific release assets. Never use it on
+        // ARM64 because the file name itself does not identify architecture.
+        if (asset is null
+            && RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            string? versionedInstallerFileName =
+                GetVersionedX64InstallerFileName(releaseTagName);
+
+            if (versionedInstallerFileName is not null)
+            {
+                asset = assets.FirstOrDefault(candidate =>
+                    candidate.Name.Equals(
+                        versionedInstallerFileName,
+                        StringComparison.OrdinalIgnoreCase));
+            }
+        }
 
         // Older releases used the generic name for the x64 installer. Keep
         // that fallback only on x64; its architecture is ambiguous on ARM64.
@@ -403,9 +425,44 @@ public sealed class CoreUpdateService
         }
 
         return RuntimeInformation.ProcessArchitecture == Architecture.X64
-            && fileName.Equals(
-                LegacyX64InstallerFileName,
-                StringComparison.OrdinalIgnoreCase);
+            && (fileName.Equals(
+                    LegacyX64InstallerFileName,
+                    StringComparison.OrdinalIgnoreCase)
+                || IsVersionedX64InstallerFileName(fileName));
+    }
+
+    private static string? GetVersionedX64InstallerFileName(string tagName)
+    {
+        string versionText = tagName.TrimStart('v', 'V').Split('-')[0];
+        return Version.TryParse(versionText, out _)
+            ? $"{VersionedX64InstallerFileNamePrefix}{versionText}{InstallerFileNameExtension}"
+            : null;
+    }
+
+    private static bool IsVersionedX64InstallerFileName(string fileName)
+    {
+        if (!fileName.StartsWith(
+                VersionedX64InstallerFileNamePrefix,
+                StringComparison.OrdinalIgnoreCase)
+            || !fileName.EndsWith(
+                InstallerFileNameExtension,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        int versionLength = fileName.Length
+            - VersionedX64InstallerFileNamePrefix.Length
+            - InstallerFileNameExtension.Length;
+        if (versionLength <= 0)
+        {
+            return false;
+        }
+
+        string versionText = fileName.Substring(
+            VersionedX64InstallerFileNamePrefix.Length,
+            versionLength);
+        return Version.TryParse(versionText, out _);
     }
 
     private static string GetExpectedInstallerFileName() =>
