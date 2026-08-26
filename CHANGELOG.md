@@ -1,29 +1,3 @@
-## v0.13.0
-
-## 🚀 Changelog
-## 🚀 Features
-
-- [platform] Add multi-arch Windows installers (x64 + ARM64) (#194) — @maihcx
-
-## 🐛 Bug Fixes
-
-- [builder] Prioritize x64 installer release asset (#197) — @maihcx
-
-## ⚡ Performance
-
-- [platform] Enable ReadyToRun publishing in build script (#195) — @maihcx
-
-## 🧹 Maintenance
-
-- [rule] Migrate issue templates to GitHub forms (#193) — @maihcx
-- [rule] Convert issue templates to GitHub forms (#192) — @maihcx
-- [rule] Update bug report template for Windows (#191) — @maihcx
-- [rule] Add pull request template (#190) — @maihcx
-- [deps] Bump Microsoft.Extensions.Hosting to 10.0.11 (#189) — @maihcx
-
-
----
-
 ## v0.12.1
 
 ## 🚀 Changelog
