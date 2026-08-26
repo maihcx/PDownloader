@@ -11,6 +11,10 @@
     <Platforms>AnyCPU;x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
 
+    <!-- Select native extension files for the current build architecture. -->
+    <ExtPlatformFolder Condition="'$(RuntimeIdentifier)' == 'win-arm64' Or '$(PlatformTarget)' == 'ARM64'">winarm64</ExtPlatformFolder>
+    <ExtPlatformFolder Condition="'$(ExtPlatformFolder)' == ''">win64</ExtPlatformFolder>
+
     <!-- Publish config -->
     <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>false</SelfContained>
@@ -38,7 +42,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
   </ItemGroup>
 
   <ItemGroup>
@@ -50,14 +54,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ExtFiles Include="Ext\**\*" />
+    <ExtFiles Include="Ext\$(ExtPlatformFolder)\**\*" />
   </ItemGroup>
 
-  <Target Name="CopyExtFiles" AfterTargets="Build">
+  <Target Name="CopyExtFilesAfterBuild" AfterTargets="Build">
     <Copy SourceFiles="@(ExtFiles)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
   </Target>
 
-  <Target Name="CopyExtFiles" AfterTargets="Publish">
+  <Target Name="CopyExtFilesAfterPublish" AfterTargets="Publish">
     <Copy SourceFiles="@(ExtFiles)" DestinationFiles="@(ExtFiles->'$(PublishDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 </Project>
