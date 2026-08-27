@@ -4,12 +4,14 @@ setlocal enabledelayedexpansion
 REM Always build from the directory that contains this script.
 cd /d "%~dp0"
 
+set "SOURCE_ROOT=.\src"
+
 set "APP_PROJECTS=PDownloader PDownloader.BugTracker PDownloader.Core PDownloader.Runner PDownloader.Tray"
-set "INSTALLER_PROJECT=PDownloader.Installer\PDownloader.Installer.csproj"
+set "INSTALLER_PROJECT=%SOURCE_ROOT%\PDownloader.Installer\PDownloader.Installer.csproj"
 set "OUTPUT_ROOT=.\installer-output"
-set "PAYLOAD_ZIP=.\PDownloader.Installer\Resources\payload.zip"
-set "INSTALLER_BIN=.\PDownloader.Installer\bin"
-set "INSTALLER_OBJ=.\PDownloader.Installer\obj"
+set "PAYLOAD_ZIP=%SOURCE_ROOT%\PDownloader.Installer\Resources\payload.zip"
+set "INSTALLER_BIN=%SOURCE_ROOT%\PDownloader.Installer\bin"
+set "INSTALLER_OBJ=%SOURCE_ROOT%\PDownloader.Installer\obj"
 
 set "REQUESTED_ARCH=%~1"
 if not defined REQUESTED_ARCH set "REQUESTED_ARCH=all"
@@ -115,7 +117,7 @@ REM Step 1: Publish every application for the selected architecture.
 for %%P in (%APP_PROJECTS%) do (
     echo [%%P] Building for !TARGET_RID!...
 
-    dotnet publish .\%%P\%%P.csproj -c Release -r !TARGET_RID! ^
+    dotnet publish "%SOURCE_ROOT%\%%P\%%P.csproj" -c Release -r !TARGET_RID! ^
         /p:PlatformTarget=!PLATFORM_TARGET! ^
         /p:PublishReadyToRun=true ^
         /p:PublishReadyToRunShowWarnings=true ^
