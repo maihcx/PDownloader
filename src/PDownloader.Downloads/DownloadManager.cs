@@ -215,14 +215,14 @@ public class DownloadManager : IDisposable
         {
             DownloadRuntime.RequestRunner(item.Id, new()
             {
-                id = item.Id,
-                fileName = item.FileName,
-                formatId = item.FormatId ?? string.Empty,
-                filesize = item.TotalBytes,
-                saveTo = item.SavePath,
-                url = item.Url,
-                downloadRunner = "runner",
-                threads = item.Threads
+                Id = item.Id,
+                FileName = item.FileName,
+                FormatId = item.FormatId ?? string.Empty,
+                FileSize = item.TotalBytes,
+                SaveTo = item.SavePath,
+                Url = item.Url,
+                RunnerMode = RunnerLaunchProtocol.RunnerModeValue,
+                Threads = item.Threads
             });
         }
 
@@ -280,7 +280,7 @@ public class DownloadManager : IDisposable
 
     public async Task ClearAllAsync(string state)
     {
-        if (state.Equals("completed"))
+        if (state.Equals(DownloadProtocol.ClearCompletedValue, StringComparison.Ordinal))
         {
             for (int i = _downloads.Count - 1; i >= 0; i--)
             {
@@ -291,7 +291,7 @@ public class DownloadManager : IDisposable
                 }
             }
         }
-        else if (state.Equals("all"))
+        else if (state.Equals(DownloadProtocol.ClearAllValue, StringComparison.Ordinal))
         {
             for (int i = _downloads.Count - 1; i >= 0; i--)
             {

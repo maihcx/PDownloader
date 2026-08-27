@@ -143,7 +143,7 @@ public partial class DownloaderProgressViewModel : ObservableObject
 
             UpdateProgressVisualization(obj);
 
-            Enum.TryParse(obj.Status, ignoreCase: true, out DownloadStatus status);
+            DownloadStatus status = obj.Status;
             CurrentDownloadStatus = status;
 
             IsRetryButtonEnabled = false;
@@ -239,14 +239,12 @@ public partial class DownloaderProgressViewModel : ObservableObject
 
     private void UpdateProgressVisualization(DownloadItemDto item)
     {
-        string mode = string.IsNullOrWhiteSpace(item.ProgressVisualizationMode)
-            ? "None"
-            : item.ProgressVisualizationMode;
+        DownloadProgressVisualizationMode mode = item.ProgressVisualizationMode;
         string stage = item.ProgressVisualizationStage ?? string.Empty;
         List<DownloadThreadProgressDto> threadProgress =
             item.ThreadProgress ?? new List<DownloadThreadProgressDto>();
 
-        if (mode.Equals("Unsupported", StringComparison.OrdinalIgnoreCase))
+        if (mode == DownloadProgressVisualizationMode.Unsupported)
         {
             IsThreadVisualizationLayoutExpanded = false;
             IsThreadProgressVisible = false;
@@ -256,7 +254,7 @@ public partial class DownloaderProgressViewModel : ObservableObject
             return;
         }
 
-        if (!mode.Equals("Threads", StringComparison.OrdinalIgnoreCase))
+        if (mode != DownloadProgressVisualizationMode.Threads)
         {
             IsThreadVisualizationLayoutExpanded = false;
             IsThreadProgressVisible = false;
@@ -310,9 +308,7 @@ public partial class DownloaderProgressViewModel : ObservableObject
 
         IsCompactStatusVisible = true;
 
-        string mode = string.IsNullOrWhiteSpace(item.ProgressVisualizationMode)
-            ? "None"
-            : item.ProgressVisualizationMode;
+        DownloadProgressVisualizationMode mode = item.ProgressVisualizationMode;
         string stage = item.ProgressVisualizationStage ?? string.Empty;
         int threadCount = item.ThreadProgress?.Count ?? 0;
 
@@ -385,7 +381,7 @@ public partial class DownloaderProgressViewModel : ObservableObject
             return;
         }
 
-        if (mode.Equals("Unsupported", StringComparison.OrdinalIgnoreCase))
+        if (mode == DownloadProgressVisualizationMode.Unsupported)
         {
             CompactStatusTitle = LanguageBase.GetLangValue(
                 "download_compact_status_unsupported_title");
@@ -393,7 +389,7 @@ public partial class DownloaderProgressViewModel : ObservableObject
             return;
         }
 
-        if (mode.Equals("Threads", StringComparison.OrdinalIgnoreCase)
+        if (mode == DownloadProgressVisualizationMode.Threads
             && threadCount == 1)
         {
             CompactStatusTitle = LanguageBase.GetLangValue(
@@ -416,7 +412,7 @@ public partial class DownloaderProgressViewModel : ObservableObject
         long totalBytes = Math.Max(0, source.TotalBytes);
         double speedBps = Math.Max(0, source.SpeedBps);
         double progress = Math.Clamp(source.Progress, 0, 100);
-        string state = source.State ?? string.Empty;
+        DownloadThreadState state = source.State;
         int currentUnit = Math.Max(0, source.CurrentUnit);
         int totalUnits = Math.Max(0, source.TotalUnits);
 
@@ -431,11 +427,11 @@ public partial class DownloaderProgressViewModel : ObservableObject
             TotalBytes = totalBytes,
             SpeedBps = speedBps,
             Progress = progress,
-            State = state,
+            State = state.ToString(),
             CurrentUnit = currentUnit,
             TotalUnits = totalUnits,
             IsIndeterminate = totalBytes <= 0
-                && state.Equals("Downloading", StringComparison.OrdinalIgnoreCase),
+                && state == DownloadThreadState.Downloading,
             StateText = GetThreadStateText(state),
             DetailText = currentUnit > 0 && totalUnits > 0
                 ? LanguageBase.GetLangValue(
@@ -455,16 +451,16 @@ public partial class DownloaderProgressViewModel : ObservableObject
         };
     }
 
-    private static string GetThreadStateText(string state)
+    private static string GetThreadStateText(DownloadThreadState state)
     {
-        return state.ToLowerInvariant() switch
+        return state switch
         {
-            "waiting" => LanguageBase.GetLangValue("download_thread_state_waiting"),
-            "downloading" => LanguageBase.GetLangValue("download_thread_state_downloading"),
-            "retrying" => LanguageBase.GetLangValue("download_thread_state_retrying"),
-            "completed" => LanguageBase.GetLangValue("download_thread_state_completed"),
-            "failed" => LanguageBase.GetLangValue("download_thread_state_failed"),
-            _ => state
+            DownloadThreadState.Waiting => LanguageBase.GetLangValue("download_thread_state_waiting"),
+            DownloadThreadState.Downloading => LanguageBase.GetLangValue("download_thread_state_downloading"),
+            DownloadThreadState.Retrying => LanguageBase.GetLangValue("download_thread_state_retrying"),
+            DownloadThreadState.Completed => LanguageBase.GetLangValue("download_thread_state_completed"),
+            DownloadThreadState.Failed => LanguageBase.GetLangValue("download_thread_state_failed"),
+            _ => state.ToString()
         };
     }
 

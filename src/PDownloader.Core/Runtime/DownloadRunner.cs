@@ -19,7 +19,7 @@ public class DownloadRunner
 {
     public static Dictionary<string, ConfluxService> DownloaderCFSRest = new();
 
-    public static ConfluxService? EnsureRunnerStarted(string token, FileTask fileTask)
+    public static ConfluxService? EnsureRunnerStarted(string token, RunnerDownloadTask task)
     {
         DownloaderCFSRest.TryGetValue(token, out ConfluxService? service);
         if (service != null)
@@ -30,20 +30,20 @@ public class DownloadRunner
         var svc = new ConfluxService();
         svc.CanMultiple = true;
         svc.Register(
-            "PDownloader Runner.exe",
-            $"PDownloader.CoreToRunner-{token}",
-            $"PDownloader.RunnerToCore-{token}");
+            IpcTopology.RunnerProcessName,
+            IpcTopology.CoreToRunnerPipeName(token),
+            IpcTopology.RunnerToCorePipeName(token));
         svc.OnMessageReceiving += CFSIncomingHandler.Handle;
         svc.OnMessageReceiving += (name, value) =>
         {
-            if (name == "runner-cancel-exp")
+            if (name == DownloadProtocol.RunnerCancelExperienceMessage)
             {
                 _ = svc.StopServiceAsync();
                 CFSCommandHandler.ClearRunnerPendingContext(token);
                 DownloaderCFSRest.Remove(token);
                 svc.GetProcess().Kill();
             }
-            else if (name == "runner-ui-closed")
+            else if (name == DownloadProtocol.RunnerUiClosedMessage)
             {
                 _ = svc.StopServiceAsync();
                 CFSCommandHandler.ClearRunnerPendingContext(token);
@@ -54,19 +54,25 @@ public class DownloadRunner
         svc.OnMessageReceived += CFSCommandHandler.Handle;
         _ = svc.StartServiceAsync();
 
-        CFSCommandHandler.RegisterRunnerPendingHeaders(token, fileTask.headers);
+        CFSCommandHandler.RegisterRunnerPendingHeaders(token, task.Headers);
 
-        if (fileTask.threads == 0)
+        if (task.Threads == 0)
         {
-            fileTask.threads = CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultThreadCount ?? 8;
+            task.Threads = CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultThreadCount ?? 8;
         }
 
-        if (fileTask.threads == 0)
+        if (task.Threads == 0)
         {
-            fileTask.threads = 8;
+            task.Threads = 8;
         }
 
-        svc.StartApp($"--token {token} --url {Helpers.Base64Encode(fileTask.url)} --threads {Helpers.Base64Encode(fileTask.threads.ToString())} --save-to {Helpers.Base64Encode(fileTask.saveTo)} --filename {Helpers.Base64Encode(fileTask.fileName)} --download-runner {Helpers.Base64Encode(fileTask.downloadRunner)}");
+        svc.StartApp(
+            $"{RunnerLaunchProtocol.TokenArgument} {token} " +
+            $"{RunnerLaunchProtocol.UrlArgument} {Helpers.Base64Encode(task.Url)} " +
+            $"{RunnerLaunchProtocol.ThreadsArgument} {Helpers.Base64Encode(task.Threads.ToString())} " +
+            $"{RunnerLaunchProtocol.SaveToArgument} {Helpers.Base64Encode(task.SaveTo)} " +
+            $"{RunnerLaunchProtocol.FileNameArgument} {Helpers.Base64Encode(task.FileName)} " +
+            $"{RunnerLaunchProtocol.DownloadRunnerArgument} {Helpers.Base64Encode(task.RunnerMode)}");
 
         DownloaderCFSRest.Add(token, svc);
 
@@ -80,7 +86,9 @@ public class DownloadRunner
             string key = item.Key;
             using (ConfluxService service = item.Value)
             {
-                service.Send("state", "shutdown");
+                service.Send(
+                    AppProtocol.StateMessage,
+                    AppProtocol.State.Shutdown);
             }
         }
     }

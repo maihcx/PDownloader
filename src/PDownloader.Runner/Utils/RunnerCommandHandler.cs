@@ -33,46 +33,46 @@ public static class RunnerCommandHandler
         {
             switch (name)
             {
-                case "cancel":
+                case DownloadProtocol.RunnerCancelMessage:
                     break;
 
                 //case "download":
                 //    HandleDownloadRequest(value);
                 //    break;
 
-                case "main-event":
+                case AppProtocol.MainEventMessage:
                     switch (value)
                     {
-                        case "state":
-                            if (value == "shutdown")
+                        case AppProtocol.StateMessage:
+                            if (value == AppProtocol.State.Shutdown)
                             {
                                 System.Windows.Application.Current?.Shutdown();
                             }
 
                             break;
 
-                        case "OnLanguageChanged":
+                        case AppProtocol.MainEvent.LanguageChanged:
                             UserDataStore.Reload();
                             TranslationSource.Instance.CurrentCulture = LanguageBase.GetSetupLanguage();
                             break;
 
-                        case "OnRadiusChanged":
+                        case AppProtocol.MainEvent.RadiusChanged:
                             UserDataStore.Reload();
                             Application.Current.Resources["ControlCornerRadius"] = new CornerRadius(UserDataStore.GetValue<int>("ObjectCornerRadius"));
                             break;
 
-                        case "OnMaterialChanged":
+                        case AppProtocol.MainEvent.MaterialChanged:
                             UserDataStore.Reload();
                             AppRuntime.ThemeManagerService?.SetBackdropType(Enum.Parse<WindowBackdropType>(AppRuntime.ThemeManagerService.GetMaterialCBBSelected()?.Value ?? "Mica"));
                             AppRuntime.ThemeManagerService?.SetApplicationTheme(Enum.Parse<ThemeConfigs.IThemeType>(AppRuntime.ThemeManagerService.GetThemeCBBSelected()?.Value ?? "Auto"));
                             break;
 
-                        case "OnThemeChanged":
+                        case AppProtocol.MainEvent.ThemeChanged:
                             UserDataStore.Reload();
                             AppRuntime.ThemeManagerService?.SetApplicationTheme(Enum.Parse<ThemeConfigs.IThemeType>(AppRuntime.ThemeManagerService.GetThemeCBBSelected()?.Value ?? "Auto"));
                             break;
 
-                        case "OnAppExit":
+                        case AppProtocol.MainEvent.AppExit:
                             Application.Current.Shutdown();
                             break;
                     }

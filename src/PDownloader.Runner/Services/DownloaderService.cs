@@ -55,11 +55,11 @@ public class DownloaderService : IHostedService, IDisposable
 
         if (DownloaderStatus.State == RunnerState.Form)
         {
-            CfsContact?.Send("runner-cancel-exp", "0");
+            CfsContact?.Send(DownloadProtocol.RunnerCancelExperienceMessage, "0");
         }
         else
         {
-            CfsContact?.Send("runner-ui-closed", "0");
+            CfsContact?.Send(DownloadProtocol.RunnerUiClosedMessage, "0");
         }
 
         await Task.CompletedTask;
@@ -168,9 +168,9 @@ public class DownloaderService : IHostedService, IDisposable
     {
         CfsContact = new ConfluxService();
         CfsContact.Register(
-            "PDownloader Core.exe",
-            $"PDownloader.RunnerToCore-{_runnerConfig.Token}",
-            $"PDownloader.CoreToRunner-{_runnerConfig.Token}"
+            IpcTopology.CoreProcessName,
+            IpcTopology.RunnerToCorePipeName(_runnerConfig.Token),
+            IpcTopology.CoreToRunnerPipeName(_runnerConfig.Token)
         );
         CfsContact.OnMessageReceiving += RunnerCommandHandler.Handle;
 
@@ -181,31 +181,28 @@ public class DownloaderService : IHostedService, IDisposable
                 //case "cancel":
                 //    break;
 
-                case "download":
+                case DownloadProtocol.RunnerDownloadMessage:
                     try
                     {
-                        using var doc = JsonDocument.Parse(value);
-                        JsonElement root = doc.RootElement;
+                        StartDownloadRequest? request = JsonSerializer.Deserialize<StartDownloadRequest>(
+                            value,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                        string url = root.TryGetProperty("url", out JsonElement u) ? u.GetString() ?? "" : "";
-                        string saveTo = root.TryGetProperty("saveTo", out JsonElement s) ? s.GetString() ?? "" : "";
-                        string fileName = root.TryGetProperty("fileName", out JsonElement f) ? f.GetString() ?? "" : "";
-
-                        if (string.IsNullOrWhiteSpace(url))
+                        if (request == null || string.IsNullOrWhiteSpace(request.Url))
                         {
                             return;
                         }
 
-                        _runnerConfig.InitialUrl = url;
-                        _runnerConfig.SaveTo = saveTo;
-                        _runnerConfig.FileName = fileName;
+                        _runnerConfig.InitialUrl = request.Url;
+                        _runnerConfig.SaveTo = request.SaveTo ?? string.Empty;
+                        _runnerConfig.FileName = request.FileName ?? string.Empty;
                     }
                     catch { }
 
                     break;
 
-                case "state":
-                    if (value == "shutdown")
+                case AppProtocol.StateMessage:
+                    if (value == AppProtocol.State.Shutdown)
                     {
                         System.Windows.Application.Current?.Shutdown();
                     }
@@ -222,9 +219,9 @@ public class DownloaderService : IHostedService, IDisposable
                     try
                     {
                         DownloadItemDto? dto = JsonSerializer.Deserialize<DownloadItemDto>(value, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                        if (dto != null
-                            && Enum.TryParse(dto.Status, ignoreCase: true, out DownloadStatus status))
+                        if (dto != null)
                         {
+                            DownloadStatus status = dto.Status;
                             if (_lastReceivedProgressStatus is DownloadStatus.Completed
                                 or DownloadStatus.Cancelled)
                             {

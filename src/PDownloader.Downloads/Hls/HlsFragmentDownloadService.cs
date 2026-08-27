@@ -340,7 +340,7 @@ internal sealed class HlsFragmentDownloadService
                     worker.CurrentDownloadedBytes,
                     worker.CurrentTotalBytes,
                     speedBps,
-                    state.ToString(),
+                    state,
                     fragmentIndex >= 0 ? fragmentIndex + 1 : 0,
                     _fragmentCount);
 

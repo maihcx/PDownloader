@@ -54,13 +54,13 @@ public partial class RunnerConfig : ObservableObject
             {
                 switch (args[i])
                 {
-                    case "--token": cfg.Token = Helpers.Base64Decode(args[i + 1].Trim()); break;
-                    case "--url": cfg.InitialUrl = Helpers.Base64Decode(args[i + 1].Trim()); break;
-                    case "--save-to": cfg.SaveTo = Helpers.Base64Decode(args[i + 1].Trim()); break;
-                    case "--filename": cfg.FileName = Helpers.Base64Decode(args[i + 1].Trim()); break;
-                    case "--threads": if (int.TryParse(Helpers.Base64Decode(args[i + 1].Trim()), out var t)) { cfg.Threads = t; } break;
-                    case "--download-runner": cfg.IsRunner = Helpers.Base64Decode(args[i + 1].Trim()) == "runner"; break;
-                    case "--headers":
+                    case RunnerLaunchProtocol.TokenArgument: cfg.Token = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case RunnerLaunchProtocol.UrlArgument: cfg.InitialUrl = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case RunnerLaunchProtocol.SaveToArgument: cfg.SaveTo = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case RunnerLaunchProtocol.FileNameArgument: cfg.FileName = Helpers.Base64Decode(args[i + 1].Trim()); break;
+                    case RunnerLaunchProtocol.ThreadsArgument: if (int.TryParse(Helpers.Base64Decode(args[i + 1].Trim()), out var t)) { cfg.Threads = t; } break;
+                    case RunnerLaunchProtocol.DownloadRunnerArgument: cfg.IsRunner = Helpers.Base64Decode(args[i + 1].Trim()) == RunnerLaunchProtocol.RunnerModeValue; break;
+                    case RunnerLaunchProtocol.HeadersArgument:
                         try
                         {
                             string json = Helpers.Base64Decode(args[i + 1].Trim());

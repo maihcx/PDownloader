@@ -17,7 +17,6 @@ namespace PDownloader.Services.DownloadServices;
 
 public class DownloadConfigService
 {
-    private const string StoreKey = "pd-app-settings-v1";
     private const string TempProbePrefix = ".pdownloader-write-test-";
 
     public DownloadConfigs? DownloadConfigs { get; private set; } = new DownloadConfigs();
@@ -38,16 +37,16 @@ public class DownloadConfigService
     {
         try
         {
-            string? raw = UserDataStore.GetValue<string>(StoreKey);
+            string? raw = UserDataStore.GetValue<string>(DownloadSettingsProtocol.StoreKey);
             if (string.IsNullOrWhiteSpace(raw))
             {
                 return;
             }
 
-            DownloadConfigs? loaded = JsonSerializer.Deserialize<DownloadConfigs>(raw);
+            DownloadSettingsDto? loaded = JsonSerializer.Deserialize<DownloadSettingsDto>(raw);
             if (loaded != null)
             {
-                CopyProperties(loaded, configs!);
+                configs!.ApplyContract(loaded);
             }
         }
         catch
@@ -76,19 +75,6 @@ public class DownloadConfigService
         configs.FileMergeMode = NormalizeFileMergeMode(configs.FileMergeMode);
     }
 
-    private static void CopyProperties(DownloadConfigs source, DownloadConfigs target)
-    {
-        foreach (PropertyInfo property in typeof(DownloadConfigs).GetProperties())
-        {
-            if (!property.CanRead || !property.CanWrite)
-            {
-                continue;
-            }
-
-            property.SetValue(target, property.GetValue(source));
-        }
-    }
-
     public void Reload()
     {
         LoadSettings(DownloadConfigs);
@@ -109,8 +95,8 @@ public class DownloadConfigService
             configs.DefaultThreadCount = Math.Clamp(configs.DefaultThreadCount, 1, 32);
             configs.FileMergeMode = NormalizeFileMergeMode(configs.FileMergeMode);
 
-            string raw = JsonSerializer.Serialize(configs);
-            UserDataStore.SetValue(StoreKey, raw);
+            string raw = JsonSerializer.Serialize(configs.ToContract());
+            UserDataStore.SetValue(DownloadSettingsProtocol.StoreKey, raw);
             return true;
         }
         catch (Exception ex)

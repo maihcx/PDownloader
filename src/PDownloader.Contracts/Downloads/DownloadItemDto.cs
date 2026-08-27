@@ -32,7 +32,9 @@ public sealed class DownloadItemDto
     [JsonPropertyName("downloadedBytes")] public long DownloadedBytes { get; set; }
     [JsonPropertyName("speedBps")] public double SpeedBps { get; set; }
     [JsonPropertyName("progress")] public double Progress { get; set; }
-    [JsonPropertyName("status")] public string Status { get; set; } = string.Empty;
+    [JsonPropertyName("status")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public DownloadStatus Status { get; set; } = DownloadStatus.Queued;
     [JsonPropertyName("statusText")] public string StatusText { get; set; } = string.Empty;
     [JsonPropertyName("speedFormatted")] public string SpeedFormatted { get; set; } = string.Empty;
     [JsonPropertyName("etaFormatted")] public string EtaFormatted { get; set; } = string.Empty;
@@ -40,14 +42,18 @@ public sealed class DownloadItemDto
     [JsonPropertyName("downloadedFormatted")] public string DownloadedFormatted { get; set; } = string.Empty;
     [JsonPropertyName("errorMessage")] public string ErrorMessage { get; set; } = string.Empty;
     [JsonPropertyName("isActive")] public bool IsActive { get; set; }
-    [JsonPropertyName("progressVisualizationMode")] public string ProgressVisualizationMode { get; set; } = "None";
+    [JsonPropertyName("progressVisualizationMode")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public DownloadProgressVisualizationMode ProgressVisualizationMode { get; set; } = DownloadProgressVisualizationMode.None;
     [JsonPropertyName("progressVisualizationStage")] public string ProgressVisualizationStage { get; set; } = string.Empty;
     [JsonPropertyName("threadProgress")] public List<DownloadThreadProgress> ThreadProgress { get; set; } = new();
     [JsonPropertyName("isMergeProgressActive")] public bool IsMergeProgressActive { get; set; }
     [JsonPropertyName("md5Hash")] public string Md5Hash { get; set; } = string.Empty;
     [JsonPropertyName("sha1Hash")] public string Sha1Hash { get; set; } = string.Empty;
     [JsonPropertyName("sha256Hash")] public string Sha256Hash { get; set; } = string.Empty;
-    [JsonPropertyName("fileMergeMode")] public string FileMergeMode { get; set; } = "Balanced";
+    [JsonPropertyName("fileMergeMode")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public FileMergeMode FileMergeMode { get; set; } = FileMergeMode.Balanced;
     [JsonPropertyName("canPause")] public bool CanPause { get; set; }
     [JsonPropertyName("canResume")] public bool CanResume { get; set; }
 }

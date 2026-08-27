@@ -13,15 +13,11 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Core.Models;
+namespace PDownloader.Contracts.Downloads;
 
-public partial class DownloadConfigs
+public enum DownloadProgressVisualizationMode
 {
-    public string DefaultDownloadFolder { get; set; } = string.Empty;
-
-    public string DefaultTempFolder { get; set; } = string.Empty;
-
-    public int DefaultThreadCount { get; set; }
-
-    public string FileMergeMode { get; set; } = "Balanced";
+    None,
+    Threads,
+    Unsupported
 }

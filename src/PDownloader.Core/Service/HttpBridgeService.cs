@@ -226,16 +226,16 @@ public sealed class HttpBridgeService : IDisposable
         Dictionary<string, string>? customHeaders = SanitizeForwardedHeaders(payload.Headers);
 
         string id = Guid.NewGuid().ToString();
-        var data = new FileTask
+        var data = new RunnerDownloadTask
         {
-            id = id,
-            url = url,
+            Id = id,
+            Url = url,
 
             // Browser requests are never allowed to choose an arbitrary local folder.
             // Use the application's configured/default download folder instead.
-            saveTo = GetBridgeDownloadFolder(),
-            fileName = fileName,
-            headers = customHeaders,
+            SaveTo = GetBridgeDownloadFolder(),
+            FileName = fileName,
+            Headers = customHeaders,
         };
 
         DownloadRunner.EnsureRunnerStarted(id, data);
@@ -292,16 +292,16 @@ public sealed class HttpBridgeService : IDisposable
         string id = Guid.NewGuid().ToString();
         CFSCommandHandler.RegisterYoutubePending(id, formatId);
 
-        var data = new FileTask
+        var data = new RunnerDownloadTask
         {
-            id = id,
-            url = url,
-            formatId = formatId,
-            saveTo = GetBridgeDownloadFolder(),
-            fileName = fileName,
-            title = SanitizeText(payload.Title, 500),
-            filesize = Math.Max(0, payload.Filesize),
-            headers = headers,
+            Id = id,
+            Url = url,
+            FormatId = formatId,
+            SaveTo = GetBridgeDownloadFolder(),
+            FileName = fileName,
+            Title = SanitizeText(payload.Title, 500),
+            FileSize = Math.Max(0, payload.Filesize),
+            Headers = headers,
         };
 
         DownloadRunner.EnsureRunnerStarted(id, data);

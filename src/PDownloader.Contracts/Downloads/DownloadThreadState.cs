@@ -13,7 +13,7 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Downloads.Models;
+namespace PDownloader.Contracts.Downloads;
 
 public enum DownloadThreadState
 {

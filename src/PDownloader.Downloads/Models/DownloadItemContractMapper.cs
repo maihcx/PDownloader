@@ -29,7 +29,7 @@ internal static class DownloadItemContractMapper
         DownloadedBytes = item.DownloadedBytes,
         SpeedBps = item.SpeedBps,
         Progress = item.Progress,
-        Status = item.Status.ToString(),
+        Status = item.Status,
         SpeedFormatted = item.SpeedFormatted,
         EtaFormatted = item.EtaFormatted,
         TotalFormatted = item.TotalFormatted,
@@ -43,7 +43,7 @@ internal static class DownloadItemContractMapper
         Md5Hash = item.Md5Hash,
         Sha1Hash = item.Sha1Hash,
         Sha256Hash = item.Sha256Hash,
-        FileMergeMode = item.MergeMode.ToString(),
+        FileMergeMode = item.MergeMode,
         CanPause = item.CanPause,
         CanResume = item.CanResume
     };

@@ -13,56 +13,34 @@
 //
 // Copyright (C) Song Mai Software.
 
-using System.Text.Json.Serialization;
-
 namespace PDownloader.Models;
 
-public partial class DownloadItemDto : ObservableObject
+/// <summary>
+/// UI projection of the download wire contract. Serialization stays in
+/// PDownloader.Contracts.Downloads.DownloadItemDto.
+/// </summary>
+public partial class DownloadItemViewModel : ObservableObject
 {
-    public DownloadItemDto()
+    public DownloadItemViewModel()
     {
         LanguageBase.LanguageChanged += LanguageBase_LanguageChanged;
     }
 
-    private void LanguageBase_LanguageChanged(string language)
-    {
-        RefreshStatusText();
-    }
-
-    [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
-
-    [JsonPropertyName("url")]
     public string Url { get; set; } = string.Empty;
-
-    [JsonPropertyName("fileName")]
     public string FileName { get; set; } = string.Empty;
-
-    [JsonPropertyName("startTime")]
     public DateTime StartTime { get; set; }
-
-    [JsonPropertyName("endTime")]
     public DateTime EndTime { get; set; }
-
-    [JsonPropertyName("savePath")]
     public string SavePath { get; set; } = string.Empty;
-
-    [JsonPropertyName("totalBytes")]
     public long TotalBytes { get; set; }
-
-    [JsonPropertyName("downloadedBytes")]
     public long DownloadedBytes { get; set; }
-
-    [JsonPropertyName("speedBps")]
     public double SpeedBps { get; set; }
-
-    [JsonPropertyName("progress")]
     public double Progress { get; set; }
 
-    [JsonPropertyName("status")]
     public string Status
     {
-        get; set
+        get;
+        set
         {
             field = value;
 
@@ -79,50 +57,66 @@ public partial class DownloadItemDto : ObservableObject
     [ObservableProperty]
     private string _statusText = string.Empty;
 
-    [JsonPropertyName("speedFormatted")]
     public string SpeedFormatted { get; set; } = string.Empty;
-
-    [JsonPropertyName("etaFormatted")]
     public string EtaFormatted { get; set; } = string.Empty;
-
-    [JsonPropertyName("totalFormatted")]
     public string TotalFormatted { get; set; } = string.Empty;
-
-    [JsonPropertyName("downloadedFormatted")]
     public string DownloadedFormatted { get; set; } = string.Empty;
 
-    [JsonPropertyName("errorMessage")]
     public string ErrorMessage
     {
-        get; set
+        get;
+        set
         {
             field = value;
             RefreshStatusText();
         }
     } = string.Empty;
 
-    [JsonPropertyName("isActive")]
     public bool IsActive { get; set; }
-
-    [JsonPropertyName("fileMergeMode")]
     public string FileMergeMode { get; set; } = "Balanced";
-
-    [JsonPropertyName("canPause")]
     public bool CanPause { get; set; }
-
-    [JsonPropertyName("canResume")]
     public bool CanResume { get; set; }
-
     public bool CanResumeOrOpenFile => CanResume || StatusState == DownloadStatus.Completed;
-
-    [JsonPropertyName("md5Hash")]
     public string Md5Hash { get; set; } = string.Empty;
-
-    [JsonPropertyName("sha1Hash")]
     public string Sha1Hash { get; set; } = string.Empty;
-
-    [JsonPropertyName("sha256Hash")]
     public string Sha256Hash { get; set; } = string.Empty;
+
+    public static DownloadItemViewModel FromContract(DownloadItemDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        return new DownloadItemViewModel
+        {
+            Id = dto.Id,
+            Url = dto.Url,
+            FileName = dto.FileName,
+            StartTime = dto.StartTime,
+            EndTime = dto.EndTime,
+            SavePath = dto.SavePath,
+            TotalBytes = dto.TotalBytes,
+            DownloadedBytes = dto.DownloadedBytes,
+            SpeedBps = dto.SpeedBps,
+            Progress = dto.Progress,
+            SpeedFormatted = dto.SpeedFormatted,
+            EtaFormatted = dto.EtaFormatted,
+            TotalFormatted = dto.TotalFormatted,
+            DownloadedFormatted = dto.DownloadedFormatted,
+            ErrorMessage = dto.ErrorMessage,
+            IsActive = dto.IsActive,
+            FileMergeMode = dto.FileMergeMode.ToString(),
+            CanPause = dto.CanPause,
+            CanResume = dto.CanResume,
+            Md5Hash = dto.Md5Hash,
+            Sha1Hash = dto.Sha1Hash,
+            Sha256Hash = dto.Sha256Hash,
+            Status = dto.Status.ToString()
+        };
+    }
+
+    private void LanguageBase_LanguageChanged(string language)
+    {
+        RefreshStatusText();
+    }
 
     private void RefreshStatusText()
     {
@@ -146,40 +140,7 @@ public partial class DownloadItemDto : ObservableObject
                     DownloadStatus.Merging => "download_status_merging_title",
                     DownloadStatus.Completed => "download_status_completed_title",
                     _ => "?"
-                }
-            );
+                });
         }
     }
-    public static DownloadItemDto FromContract(PDownloader.Contracts.Downloads.DownloadItemDto dto)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-
-        return new DownloadItemDto
-        {
-            Id = dto.Id,
-            Url = dto.Url,
-            FileName = dto.FileName,
-            StartTime = dto.StartTime,
-            EndTime = dto.EndTime,
-            SavePath = dto.SavePath,
-            TotalBytes = dto.TotalBytes,
-            DownloadedBytes = dto.DownloadedBytes,
-            SpeedBps = dto.SpeedBps,
-            Progress = dto.Progress,
-            SpeedFormatted = dto.SpeedFormatted,
-            EtaFormatted = dto.EtaFormatted,
-            TotalFormatted = dto.TotalFormatted,
-            DownloadedFormatted = dto.DownloadedFormatted,
-            ErrorMessage = dto.ErrorMessage,
-            IsActive = dto.IsActive,
-            FileMergeMode = dto.FileMergeMode,
-            CanPause = dto.CanPause,
-            CanResume = dto.CanResume,
-            Md5Hash = dto.Md5Hash,
-            Sha1Hash = dto.Sha1Hash,
-            Sha256Hash = dto.Sha256Hash,
-            Status = dto.Status
-        };
-    }
-
 }
