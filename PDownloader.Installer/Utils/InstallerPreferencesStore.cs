@@ -88,6 +88,6 @@ public static class InstallerPreferencesStore
 
     private static InstallerPreferences CreateDefaults() => new()
     {
-        RunAtStartup = UserDataStore.GetValue<bool>("IsStartAtBoot"),
+        RunAtStartup = UserDataStore.GetValue<bool>("IsStartAtBoot", true),
     };
 }
