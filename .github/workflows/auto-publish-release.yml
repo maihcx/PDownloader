@@ -57,10 +57,9 @@ jobs:
         shell: pwsh
         run: |
           $version = "$env:VERSION"
-          # AssemblyVersion cần 4 phần (x.y.z.0), FileVersion và Version dùng 3 phần
           $version4 = "$version.0"
 
-          $csprojFiles = Get-ChildItem -Recurse -Filter "*.csproj" | Where-Object {
+          $csprojFiles = Get-ChildItem -Path ".\src" -Recurse -Filter "*.csproj" | Where-Object {
             $_.FullName -notmatch "\\obj\\" -and $_.FullName -notmatch "\\bin\\"
           }
 
@@ -143,9 +142,14 @@ jobs:
           git config user.email github-actions@github.com
 
           git add CHANGELOG.md
-          git add "**/*.csproj"
-          git commit -m "chore(release): v$VERSION" || exit 0
-          git push origin HEAD:${{ github.event.repository.default_branch }}
+          git add src
+
+          if git diff --cached --quiet; then
+            echo "No version changes to commit."
+          else
+            git commit -m "chore(release): v$VERSION"
+            git push origin HEAD:${{ github.event.repository.default_branch }}
+          fi
 
       # ── Publish release kèm file installer ──────────────────────────────
       - name: Publish release with installer
