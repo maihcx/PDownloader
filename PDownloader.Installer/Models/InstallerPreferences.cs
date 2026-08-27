@@ -27,5 +27,5 @@ public sealed record InstallerPreferences
 
     public bool InstallBrowserExtension { get; init; } = true;
 
-    public bool RunAtStartup { get; init; }
+    public bool RunAtStartup { get; init; } = true;
 }

@@ -1,4 +1,4 @@
-﻿// This program is free software: you can redistribute it and/or modify
+// This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
@@ -61,6 +61,11 @@ public static class UserDataStore
 
     public static T GetValue<T>(string key)
     {
+        return GetValue<T>(key, default!);
+    }
+
+    public static T GetValue<T>(string key, T defaultVal)
+    {
         if (_data.TryGetValue(key, out var value))
         {
             try
@@ -87,6 +92,11 @@ public static class UserDataStore
         }
         catch
         {
+            if (defaultVal != null)
+            {
+                return defaultVal;
+            }
+
             return default!;
         }
     }
