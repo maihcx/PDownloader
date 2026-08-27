@@ -76,7 +76,7 @@ public partial class InstallerViewModel : ObservableObject
     private bool _installBrowserExtension = true;
 
     [ObservableProperty]
-    private bool _runAtStartup;
+    private bool _runAtStartup = true;
 
     [ObservableProperty]
     private double _progress;
@@ -89,6 +89,9 @@ public partial class InstallerViewModel : ObservableObject
 
     [ObservableProperty]
     private string _errorDetail = string.Empty;
+
+    [ObservableProperty]
+    private bool _isDeleteUserData = false;
 
     public InstallerViewModel(
         InstallerLaunchOptions launchOptions,
@@ -355,7 +358,9 @@ public partial class InstallerViewModel : ObservableObject
                 _uninstallDirectory,
                 _uninstallScope,
                 progress,
-                CancellationToken.None);
+                CancellationToken.None,
+                true,
+                IsDeleteUserData);
             Step = InstallerStep.UninstallDone;
         }
         catch (Exception exception)

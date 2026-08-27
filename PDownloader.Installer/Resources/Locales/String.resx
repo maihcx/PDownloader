@@ -291,4 +291,10 @@
   <data name="version_title" xml:space="preserve">
     <value>version_title</value>
   </data>
+  <data name="delete_user_data" xml:space="preserve">
+    <value>delete_user_data</value>
+  </data>
+  <data name="uninstall_description_delete_userdata" xml:space="preserve">
+    <value>uninstall_description_delete_userdata</value>
+  </data>
 </root>

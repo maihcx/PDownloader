@@ -8,20 +8,34 @@
         <StackPanel VerticalAlignment="Center">
             <ui:SymbolIcon Margin="0,0,0,20"
                            FontSize="56"
-                           Foreground="OrangeRed"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                            Symbol="Delete48" />
-            <TextBlock Margin="0,0,0,12"
+            <ui:TextBlock Margin="0,0,0,12"
                        HorizontalAlignment="Center"
                        FontSize="24"
                        FontWeight="Bold"
                        Text="{local:LocalizationExtension uninstall_title}" />
-            <TextBlock Margin="0,0,0,32"
-                       HorizontalAlignment="Center"
-                       FontSize="14"
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       Text="{local:LocalizationExtension uninstall_description}"
-                       TextAlignment="Center"
-                       TextWrapping="Wrap" />
+            <CheckBox Margin="0,8,0,0"
+                      HorizontalAlignment="Center"
+                      Content="{local:LocalizationExtension delete_user_data}"
+                      Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                      IsChecked="{Binding IsDeleteUserData, Mode=TwoWay}" />
+            <ui:TextBlock Margin="0,0,0,32"
+                          HorizontalAlignment="Center"
+                          FontSize="14"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                          Text="{local:LocalizationExtension uninstall_description}"
+                          TextAlignment="Center"
+                          TextWrapping="Wrap"
+                          Visibility="{Binding IsDeleteUserData, Converter={StaticResource BoolToVisibilityInverted}}" />
+            <ui:TextBlock Margin="0,0,0,32"
+                          HorizontalAlignment="Center"
+                          FontSize="14"
+                          Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                          Text="{local:LocalizationExtension uninstall_description_delete_userdata}"
+                          TextAlignment="Center"
+                          TextWrapping="Wrap"
+                          Visibility="{Binding IsDeleteUserData, Converter={StaticResource BoolToVisibility}}" />
             <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
                 <ui:Button Margin="0,0,12,0"
                            Command="{Binding CloseCommand}"
