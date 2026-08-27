@@ -40,7 +40,8 @@ public interface IInstallService
         InstallScope installScope,
         IProgress<(double Percent, string Status)>? progress,
         CancellationToken cancellationToken,
-        bool isCleanup = true);
+        bool isCleanupExtension = true,
+        bool isCleanupUserData = false);
 
     string? GetInstalledDir(InstallScope installScope);
 

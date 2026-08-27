@@ -185,7 +185,8 @@ public sealed class InstallService : IInstallService
         InstallScope installScope,
         IProgress<(double Percent, string Status)>? progress,
         CancellationToken ct,
-        bool isCleanup = true)
+        bool isCleanupExtension = true,
+        bool isCleanupUserData = false)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -284,7 +285,7 @@ public sealed class InstallService : IInstallService
 
         progress?.Report((0.75, Utils.LocalizationHelper.Get("uninstall_removing")));
 
-        if (isCleanup)
+        if (isCleanupExtension)
         {
             await Task.Run(
                 () => BrowserExtensionInstallerService.UninstallForBrowsers(
@@ -313,12 +314,25 @@ public sealed class InstallService : IInstallService
                 throwOnMissingSubKey: false);
         }, ct);
 
-        if (isCleanup)
+        if (isCleanupUserData)
+        {
+            progress?.Report((0.95, Utils.LocalizationHelper.Get("uninstall_removing")));
+            DeleteUserData();
+        }
+
+        if (isCleanupExtension)
         {
             ScheduleCleanup(installDir);
         }
 
         progress?.Report((1.0, Utils.LocalizationHelper.Get("uninstall_done_title")));
+    }
+
+    private static void DeleteUserData()
+    {
+        string path_stored = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SM SOFT", "PDownloader");
+
+        Directory.Delete(path_stored, true);
     }
 
     private static void ScheduleCleanup(string directory)

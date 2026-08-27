@@ -291,4 +291,10 @@
   <data name="version_title" xml:space="preserve">
     <value>Version</value>
   </data>
+  <data name="delete_user_data" xml:space="preserve">
+    <value>Delete user data</value>
+  </data>
+  <data name="uninstall_description_delete_userdata" xml:space="preserve">
+    <value>This will completely remove PDownloader from your computer. Your personal data and settings will be deleted!</value>
+  </data>
 </root>

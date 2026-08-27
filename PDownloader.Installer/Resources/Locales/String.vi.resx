@@ -291,4 +291,10 @@
   <data name="version_title" xml:space="preserve">
     <value>Phiên bản</value>
   </data>
+  <data name="delete_user_data" xml:space="preserve">
+    <value>Xóa bỏ dữ liệu người dùng</value>
+  </data>
+  <data name="uninstall_description_delete_userdata" xml:space="preserve">
+    <value>Thao tác này sẽ xóa hoàn toàn PDownloader khỏi máy tính của bạn. Dữ liệu cá nhân và cài đặt của bạn sẽ bị xóa!</value>
+  </data>
 </root>
