@@ -2,7 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-             xmlns:conv="clr-namespace:PDownloader.Installer.Utils"
+             xmlns:helper="clr-namespace:PDownloader.Installer.Helpers"
              Startup="OnStartup"
              Exit="OnExit">
     <Application.Resources>
@@ -13,10 +13,10 @@
             </ResourceDictionary.MergedDictionaries>
 
             <!-- Converters -->
-            <conv:StepDotStyleConverter    x:Key="StepDotConverter"/>
-            <conv:SideLabelStyleConverter  x:Key="SideLabelConverter"/>
-            <conv:BoolToVisibilityConverter         x:Key="BoolToVisibility"/>
-            <conv:BoolToVisibilityInvertedConverter x:Key="BoolToVisibilityInverted"/>
+            <helper:StepDotStyleConverter    x:Key="StepDotConverter"/>
+            <helper:SideLabelStyleConverter  x:Key="SideLabelConverter"/>
+            <helper:BoolToVisibilityConverter         x:Key="BoolToVisibility"/>
+            <helper:BoolToVisibilityInvertedConverter x:Key="BoolToVisibilityInverted"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
