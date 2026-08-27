@@ -51,6 +51,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PDownloader.CFS\PDownloader.CFS.csproj" />
+    <ProjectReference Include="..\PDownloader.Contracts\PDownloader.Contracts.csproj" />
+    <ProjectReference Include="..\PDownloader.Downloads\PDownloader.Downloads.csproj" />
+    <ProjectReference Include="..\PDownloader.Infrastructure\PDownloader.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

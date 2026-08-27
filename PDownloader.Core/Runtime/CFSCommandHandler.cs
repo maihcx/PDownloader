@@ -60,47 +60,47 @@ public static class CFSCommandHandler
                     .HandleCommand(value);
                 break;
 
-            case "downloader-svc-getlist":
+            case DownloadProtocol.GetListCommand:
                 SendListToMain();
                 return;
 
-            case "download-by-link":
+            case DownloadProtocol.DownloadByLinkCommand:
                 _ = HandleDownloadByLink(value);
                 break;
 
-            case "runner-start-download":
+            case DownloadProtocol.RunnerStartDownloadCommand:
                 HandleStartDownload(value);
                 return;
 
-            case "runner-resume":
+            case DownloadProtocol.RunnerResumeCommand:
                 DownloadManager.Instance.Resume(value);
                 return;
 
-            case "runner-retry":
+            case DownloadProtocol.RunnerRetryCommand:
                 DownloadManager.Instance.Retry(value);
                 return;
 
-            case "runner-cancel":
+            case DownloadProtocol.RunnerCancelCommand:
                 DownloadManager.Instance.Cancel(value);
                 return;
 
-            case "runner-pause":
+            case DownloadProtocol.RunnerPauseCommand:
                 DownloadManager.Instance.Pause(value);
                 return;
 
-            case "runner-clear":
+            case DownloadProtocol.RunnerClearCommand:
                 DownloadManager.Instance.ClearAll(value);
                 return;
 
-            case "runner-pause-all":
+            case DownloadProtocol.RunnerPauseAllCommand:
                 DownloadManager.Instance.PauseAll();
                 return;
 
-            case "runner-resume-all":
+            case DownloadProtocol.RunnerResumeAllCommand:
                 DownloadManager.Instance.ResumeAll();
                 return;
 
-            case "runner-retry-all":
+            case DownloadProtocol.RunnerRetryAllCommand:
                 DownloadManager.Instance.RetryAll();
                 return;
         }
@@ -167,7 +167,7 @@ public static class CFSCommandHandler
     private static void SendListToMain()
     {
         string json = DownloadManager.Instance.SerializeList();
-        AppRuntime.cfsMain?.Send("muxt-get-downloader-list", json);
+        AppRuntime.cfsMain?.Send(DownloadProtocol.ListMessage, json);
     }
 
     private static async Task HandleDownloadByLink(string value)
@@ -233,8 +233,8 @@ public static class CFSCommandHandler
                 item.Id,
                 out ConfluxService? cfsDowloaderUI);
 
-            AppRuntime.cfsMain?.Send("muxt-download-progress", json);
-            cfsDowloaderUI?.Send("muxt-download-progress", json);
+            AppRuntime.cfsMain?.Send(DownloadProtocol.ProgressMessage, json);
+            cfsDowloaderUI?.Send(DownloadProtocol.ProgressMessage, json);
         }
     }
 
@@ -306,11 +306,4 @@ public static class CFSCommandHandler
     public static void RegisterYoutubePending(string id, string formatId)
         => _youtubePending[id] = new YoutubePendingMeta(formatId);
 
-    private record StartDownloadRequest(
-        string Id,
-        string Url,
-        string? SaveTo,
-        string? FileName,
-        int Threads,
-        Dictionary<string, string>? Headers);
 }

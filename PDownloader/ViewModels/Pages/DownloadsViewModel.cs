@@ -114,7 +114,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         ConfluxService? coreService = ConfluxManager.cfsPDownloaderCore;
         bool sent = coreService is not null
             && await coreService.SendAsync(
-                "downloader-svc-getlist",
+                DownloadProtocol.GetListCommand,
                 string.Empty);
 
         if (!sent)
@@ -295,7 +295,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
             return;
         }
 
-        ConfluxManager.cfsPDownloaderCore?.Send("runner-pause", item.Id);
+        ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerPauseCommand, item.Id);
     }
 
     [RelayCommand]
@@ -312,7 +312,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         }
         else if (item.StatusState == DownloadStatus.Paused && item.CanResume)
         {
-            ConfluxManager.cfsPDownloaderCore?.Send("runner-resume", item.Id);
+            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerResumeCommand, item.Id);
         }
     }
 
@@ -324,7 +324,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
             return;
         }
 
-        ConfluxManager.cfsPDownloaderCore?.Send("runner-cancel", item.Id);
+        ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerCancelCommand, item.Id);
     }
 
     [RelayCommand]
@@ -335,7 +335,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
             return;
         }
 
-        ConfluxManager.cfsPDownloaderCore?.Send("runner-retry", item.Id);
+        ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerRetryCommand, item.Id);
     }
 
     [RelayCommand]
@@ -390,7 +390,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            ConfluxManager.cfsPDownloaderCore?.Send("runner-clear", "completed");
+            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerClearCommand, "completed");
         }
     }
 
@@ -409,7 +409,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            ConfluxManager.cfsPDownloaderCore?.Send("runner-clear", "all");
+            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerClearCommand, "all");
         }
     }
 
@@ -428,7 +428,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            ConfluxManager.cfsPDownloaderCore?.Send("runner-pause-all", string.Empty);
+            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerPauseAllCommand, string.Empty);
         }
     }
 
@@ -447,7 +447,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            ConfluxManager.cfsPDownloaderCore?.Send("runner-resume-all", string.Empty);
+            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerResumeAllCommand, string.Empty);
         }
     }
 
@@ -466,7 +466,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            ConfluxManager.cfsPDownloaderCore?.Send("runner-retry-all", string.Empty);
+            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerRetryAllCommand, string.Empty);
         }
     }
 

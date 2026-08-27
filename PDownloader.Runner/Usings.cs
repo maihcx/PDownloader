@@ -20,6 +20,8 @@ global using Microsoft.Extensions.DependencyInjection;
 global using Microsoft.Extensions.Hosting;
 global using Microsoft.Win32;
 global using PDownloader.CFS;
+global using PDownloader.Contracts.Downloads;
+global using DownloadThreadProgressDto = PDownloader.Contracts.Downloads.DownloadThreadProgress;
 //global using PDownloader.Runner.Views.Windows;
 //global using PDownloader.Runner.Views.Pages;
 //global using PDownloader.Runner.Views.PagesBottom;

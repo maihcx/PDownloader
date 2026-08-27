@@ -13,6 +13,23 @@
 //
 // Copyright (C) Song Mai Software.
 
+using ContractDownloadItemDto = PDownloader.Contracts.Downloads.DownloadItemDto;
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
+
 namespace PDownloader.Services.DownloadServices;
 
 /// <summary>
@@ -28,11 +45,11 @@ public class DownloadsChannelService
     {
         switch (name)
         {
-            case "muxt-get-downloader-list":
+            case DownloadProtocol.ListMessage:
                 HandleList(value);
                 break;
 
-            case "muxt-download-progress":
+            case DownloadProtocol.ProgressMessage:
                 HandleProgress(value);
                 break;
         }
@@ -42,11 +59,11 @@ public class DownloadsChannelService
     {
         try
         {
-            List<DownloadItemDto>? list = JsonSerializer.Deserialize<List<DownloadItemDto>>(value,
+            List<ContractDownloadItemDto>? list = JsonSerializer.Deserialize<List<ContractDownloadItemDto>>(value,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (list != null)
             {
-                OnList?.Invoke(list);
+                OnList?.Invoke(list.Select(DownloadItemDto.FromContract).ToList());
             }
         }
         catch { }
@@ -56,11 +73,11 @@ public class DownloadsChannelService
     {
         try
         {
-            DownloadItemDto? dto = JsonSerializer.Deserialize<DownloadItemDto>(value,
+            ContractDownloadItemDto? dto = JsonSerializer.Deserialize<ContractDownloadItemDto>(value,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (dto != null)
             {
-                OnProgress?.Invoke(dto);
+                OnProgress?.Invoke(DownloadItemDto.FromContract(dto));
             }
         }
         catch { }

@@ -13,7 +13,7 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Core;
+namespace PDownloader.Core.Models;
 
 public partial class DownloadConfigs
 {

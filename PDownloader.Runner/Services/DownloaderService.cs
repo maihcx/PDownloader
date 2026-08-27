@@ -92,14 +92,14 @@ public class DownloaderService : IHostedService, IDisposable
             //UserDataStore.SetValue("DefaultDownloadFolder", SaveTo);
             //UserDataStore.SetValue("DefaultThreads", Threads);
 
-            var payload = JsonSerializer.Serialize(new
+            string payload = JsonSerializer.Serialize(new StartDownloadRequest
             {
-                id = _runnerConfig.Token,
-                url = _runnerConfig.InitialUrl,
-                saveTo = _runnerConfig.SaveTo,
-                fileName = _runnerConfig.FileName,
-                threads = _runnerConfig.Threads,
-                headers = _runnerConfig.CustomHeaders
+                Id = _runnerConfig.Token,
+                Url = _runnerConfig.InitialUrl,
+                SaveTo = _runnerConfig.SaveTo,
+                FileName = _runnerConfig.FileName,
+                Threads = _runnerConfig.Threads,
+                Headers = _runnerConfig.CustomHeaders
             });
 
             bool ok = await Task.Run(() => SendWithRetry(payload, retries: 3));
@@ -128,7 +128,7 @@ public class DownloaderService : IHostedService, IDisposable
             return;
         }
 
-        CfsContact?.Send("runner-pause", _runnerConfig.Token, TimeSpan.FromSeconds(30));
+        CfsContact?.Send(DownloadProtocol.RunnerPauseCommand, _runnerConfig.Token, TimeSpan.FromSeconds(30));
         //DownloaderStatus.IsPaused = true;
     }
 
@@ -139,7 +139,7 @@ public class DownloaderService : IHostedService, IDisposable
             return;
         }
 
-        CfsContact?.Send("runner-resume", _runnerConfig.Token, TimeSpan.FromSeconds(30));
+        CfsContact?.Send(DownloadProtocol.RunnerResumeCommand, _runnerConfig.Token, TimeSpan.FromSeconds(30));
         //DownloaderStatus.IsPaused = false;
     }
 
@@ -150,13 +150,13 @@ public class DownloaderService : IHostedService, IDisposable
             return;
         }
 
-        CfsContact?.Send("runner-retry", _runnerConfig.Token, TimeSpan.FromSeconds(30));
+        CfsContact?.Send(DownloadProtocol.RunnerRetryCommand, _runnerConfig.Token, TimeSpan.FromSeconds(30));
         //DownloaderStatus.IsPaused = false;
     }
 
     public void CancelDownload()
     {
-        CfsContact?.Send("runner-cancel", _runnerConfig.Token, TimeSpan.FromSeconds(30));
+        CfsContact?.Send(DownloadProtocol.RunnerCancelCommand, _runnerConfig.Token, TimeSpan.FromSeconds(30));
         DownloaderStatus.State = RunnerState.Form;
         //DownloaderStatus.IsPaused = false;
     }
@@ -218,7 +218,7 @@ public class DownloaderService : IHostedService, IDisposable
         {
             switch (name)
             {
-                case "muxt-download-progress":
+                case DownloadProtocol.ProgressMessage:
                     try
                     {
                         DownloadItemDto? dto = JsonSerializer.Deserialize<DownloadItemDto>(value, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -258,7 +258,7 @@ public class DownloaderService : IHostedService, IDisposable
         {
             try
             {
-                bool ok = CfsContact?.Send("runner-start-download", payload) ?? false;
+                bool ok = CfsContact?.Send(DownloadProtocol.RunnerStartDownloadCommand, payload) ?? false;
                 if (ok)
                 {
                     return true;

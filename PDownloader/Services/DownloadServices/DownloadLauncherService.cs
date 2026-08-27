@@ -26,14 +26,14 @@ public class DownloadLauncherService
             return;
         }
 
-        var payload = JsonSerializer.Serialize(new
+        string payload = JsonSerializer.Serialize(new StartDownloadRequest
         {
-            url,
-            saveTo = saveTo.Trim(),
-            fileName = fileName.Trim()
+            Url = url,
+            SaveTo = saveTo.Trim(),
+            FileName = fileName.Trim()
         });
 
-        ConfluxManager.cfsPDownloaderCore?.Send("download-by-link", payload);
+        ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.DownloadByLinkCommand, payload);
     }
 
     public void RefreshConfigs()
