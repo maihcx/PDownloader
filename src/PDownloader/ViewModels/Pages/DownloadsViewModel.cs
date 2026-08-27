@@ -19,7 +19,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 {
     private bool _isInitialized = false;
 
-    public ObservableCollection<DownloadItemDto> Downloads { get; } = new();
+    public ObservableCollection<DownloadItemViewModel> Downloads { get; } = new();
 
     public ICollectionView DownloadsView { get; }
 
@@ -132,7 +132,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
     private bool FilterDownload(object item)
     {
-        if (item is not DownloadItemDto download)
+        if (item is not DownloadItemViewModel download)
         {
             return false;
         }
@@ -161,49 +161,49 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
             {
                 case DownloadSortMode.NameAscending:
                     AddSort(
-                        nameof(DownloadItemDto.FileName),
+                        nameof(DownloadItemViewModel.FileName),
                         ListSortDirection.Ascending);
                     break;
 
                 case DownloadSortMode.NameDescending:
                     AddSort(
-                        nameof(DownloadItemDto.FileName),
+                        nameof(DownloadItemViewModel.FileName),
                         ListSortDirection.Descending);
                     break;
 
                 case DownloadSortMode.TimeStartAscending:
                     AddSort(
-                        nameof(DownloadItemDto.StartTime),
+                        nameof(DownloadItemViewModel.StartTime),
                         ListSortDirection.Ascending);
                     break;
 
                 case DownloadSortMode.TimeStartDescending:
                     AddSort(
-                        nameof(DownloadItemDto.StartTime),
+                        nameof(DownloadItemViewModel.StartTime),
                         ListSortDirection.Descending);
                     break;
 
                 case DownloadSortMode.TimeEndAscending:
                     AddSort(
-                        nameof(DownloadItemDto.EndTime),
+                        nameof(DownloadItemViewModel.EndTime),
                         ListSortDirection.Ascending);
                     break;
 
                 case DownloadSortMode.TimeEndDescending:
                     AddSort(
-                        nameof(DownloadItemDto.EndTime),
+                        nameof(DownloadItemViewModel.EndTime),
                         ListSortDirection.Descending);
                     break;
 
                 case DownloadSortMode.SizeAscending:
                     AddSort(
-                        nameof(DownloadItemDto.TotalBytes),
+                        nameof(DownloadItemViewModel.TotalBytes),
                         ListSortDirection.Ascending);
                     break;
 
                 case DownloadSortMode.SizeDescending:
                     AddSort(
-                        nameof(DownloadItemDto.TotalBytes),
+                        nameof(DownloadItemViewModel.TotalBytes),
                         ListSortDirection.Descending);
                     break;
             }
@@ -244,13 +244,13 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         UpdateViewState();
     }
 
-    private void OnList(List<DownloadItemDto> items)
+    private void OnList(List<DownloadItemViewModel> items)
     {
         App.Current.Dispatcher.Invoke(() =>
         {
             Downloads.Clear();
 
-            foreach (DownloadItemDto item in items)
+            foreach (DownloadItemViewModel item in items)
             {
                 Downloads.Add(item);
             }
@@ -261,11 +261,11 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         });
     }
 
-    private void OnProgress(DownloadItemDto dto)
+    private void OnProgress(DownloadItemViewModel dto)
     {
         App.Current.Dispatcher.Invoke(() =>
         {
-            DownloadItemDto? existing = Downloads.FirstOrDefault(d => d.Id == dto.Id);
+            DownloadItemViewModel? existing = Downloads.FirstOrDefault(d => d.Id == dto.Id);
             if (existing != null)
             {
                 if (dto.StatusState == DownloadStatus.Cancelled)
@@ -288,7 +288,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     }
 
     [RelayCommand]
-    private void Pause(DownloadItemDto? item)
+    private void Pause(DownloadItemViewModel? item)
     {
         if (item == null || !item.CanPause)
         {
@@ -299,7 +299,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     }
 
     [RelayCommand]
-    private void Resume(DownloadItemDto? item)
+    private void Resume(DownloadItemViewModel? item)
     {
         if (item == null)
         {
@@ -317,7 +317,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     }
 
     [RelayCommand]
-    private void Cancel(DownloadItemDto? item)
+    private void Cancel(DownloadItemViewModel? item)
     {
         if (item == null)
         {
@@ -328,7 +328,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     }
 
     [RelayCommand]
-    private void Retry(DownloadItemDto? item)
+    private void Retry(DownloadItemViewModel? item)
     {
         if (item == null)
         {
@@ -339,7 +339,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     }
 
     [RelayCommand]
-    private void OpenFile(DownloadItemDto? item)
+    private void OpenFile(DownloadItemViewModel? item)
     {
         if (item == null || !File.Exists(item.SavePath))
         {
@@ -350,7 +350,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     }
 
     [RelayCommand]
-    private void OpenFolder(DownloadItemDto? item)
+    private void OpenFolder(DownloadItemViewModel? item)
     {
         if (item == null)
         {
@@ -390,7 +390,9 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerClearCommand, "completed");
+            ConfluxManager.cfsPDownloaderCore?.Send(
+                DownloadProtocol.RunnerClearCommand,
+                DownloadProtocol.ClearCompletedValue);
         }
     }
 
@@ -409,7 +411,9 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerClearCommand, "all");
+            ConfluxManager.cfsPDownloaderCore?.Send(
+                DownloadProtocol.RunnerClearCommand,
+                DownloadProtocol.ClearAllValue);
         }
     }
 

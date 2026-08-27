@@ -4,7 +4,7 @@
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY without even the implied warranty of
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
@@ -13,15 +13,11 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Core.Models;
+namespace PDownloader.Contracts.Downloads;
 
-public partial class DownloadConfigs
+public enum DownloadProgressVisualizationMode
 {
-    public string DefaultDownloadFolder { get; set; } = string.Empty;
-
-    public string DefaultTempFolder { get; set; } = string.Empty;
-
-    public int DefaultThreadCount { get; set; }
-
-    public string FileMergeMode { get; set; } = "Balanced";
+    None,
+    Threads,
+    Unsupported
 }

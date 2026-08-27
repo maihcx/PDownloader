@@ -42,9 +42,9 @@ public class Bootstrap
         #region ConfluxService — PDownloader.exe (Main UI)
         ConfluxService cfsMain = new();
         cfsMain.Register(
-            "PDownloader.exe",
-            "PDownloader.CoreToMain",
-            "PDownloader.MainToCore");
+            IpcTopology.MainProcessName,
+            IpcTopology.CoreToMainPipeName,
+            IpcTopology.MainToCorePipeName);
         AppRuntime.cfsMain = cfsMain;
         cfsMain.OnMessageReceiving += CFSIncomingHandler.Handle;
         cfsMain.OnMessageReceived += CFSCommandHandler.Handle;
@@ -54,9 +54,9 @@ public class Bootstrap
         #region ConfluxService — PDownloader Tray.exe
         ConfluxService cfsTray = new();
         cfsTray.Register(
-            "PDownloader Tray.exe",
-            "PDownloader.CoreToTray",
-            "PDownloader.TrayToCore");
+            IpcTopology.TrayProcessName,
+            IpcTopology.CoreToTrayPipeName,
+            IpcTopology.TrayToCorePipeName);
         AppRuntime.cfsTray = cfsTray;
         cfsTray.OnMessageReceiving += CFSIncomingHandler.Handle;
         cfsTray.OnMessageReceived += CFSCommandHandler.Handle;

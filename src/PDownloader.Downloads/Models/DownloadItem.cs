@@ -22,7 +22,7 @@ public class DownloadItem : INotifyPropertyChanged
 {
     private DownloadThreadProgress[] _threadProgress = Array.Empty<DownloadThreadProgress>();
 
-    public string ProgressVisualizationMode { get; private set; } = "None";
+    public DownloadProgressVisualizationMode ProgressVisualizationMode { get; private set; } = DownloadProgressVisualizationMode.None;
 
     public string ProgressVisualizationStage { get; private set; } = string.Empty;
 
@@ -34,21 +34,21 @@ public class DownloadItem : INotifyPropertyChanged
         IReadOnlyCollection<DownloadThreadProgress> progress)
     {
         ProgressVisualizationStage = stage;
-        ProgressVisualizationMode = "Threads";
+        ProgressVisualizationMode = DownloadProgressVisualizationMode.Threads;
         Volatile.Write(ref _threadProgress, progress.ToArray());
     }
 
     public void SetProgressVisualizationUnsupported(string stage)
     {
         ProgressVisualizationStage = stage;
-        ProgressVisualizationMode = "Unsupported";
+        ProgressVisualizationMode = DownloadProgressVisualizationMode.Unsupported;
         Volatile.Write(ref _threadProgress, Array.Empty<DownloadThreadProgress>());
     }
 
     public void ClearProgressVisualization()
     {
         ProgressVisualizationStage = string.Empty;
-        ProgressVisualizationMode = "None";
+        ProgressVisualizationMode = DownloadProgressVisualizationMode.None;
         Volatile.Write(ref _threadProgress, Array.Empty<DownloadThreadProgress>());
     }
 

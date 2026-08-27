@@ -33,7 +33,7 @@ public static class CFSCommandHandler
     {
         switch (name)
         {
-            case "main-event":
+            case AppProtocol.MainEventMessage:
                 AppRuntime.cfsTray?.Send(name, value);
                 foreach ((_, ConfluxService? CFSvalue) in DownloadRunner.DownloaderCFSRest)
                 {
@@ -42,16 +42,16 @@ public static class CFSCommandHandler
 
                 break;
 
-            case "tray-event":
-            case "state":
+            case AppProtocol.TrayEventMessage:
+            case AppProtocol.StateMessage:
                 HandleMainEvent(name, value);
                 break;
 
-            case "core-svc-state":
+            case AppProtocol.CoreServiceStateMessage:
                 HandleCoreState(value);
                 break;
 
-            case "core-event":
+            case AppProtocol.CoreEventMessage:
                 HandleCoreEvent(value);
                 break;
 
@@ -137,11 +137,11 @@ public static class CFSCommandHandler
 
     private static void HandleCoreState(string value)
     {
-        if (value == "shutdown")
+        if (value == AppProtocol.State.Shutdown)
         {
             if (AppRuntime.cfsMain!.IsAppStarted())
             {
-                AppRuntime.cfsMain.Send("state", value);
+                AppRuntime.cfsMain.Send(AppProtocol.StateMessage, value);
             }
 
             DownloadRunner.EnsureCloseAllRunnerStarted();
@@ -154,11 +154,11 @@ public static class CFSCommandHandler
     {
         switch (value)
         {
-            case "refresh-downloader-configs":
+            case AppProtocol.CoreEvent.RefreshDownloaderConfigs:
                 DownloadConfigService.Reload();
                 break;
 
-            case "ping":
+            case AppProtocol.CoreEvent.Ping:
                 mainAppAction?.Invoke();
                 break;
         }
@@ -182,10 +182,10 @@ public static class CFSCommandHandler
         string fileName = await DownloadEngine.GetRemoteFileNameAsync(req.Url) ?? "Unknown";
         DownloadRunner.EnsureRunnerStarted(id, new()
         {
-            id = id,
-            fileName = fileName,
-            url = req.Url,
-            saveTo = Helpers.GetDefaultFolder()
+            Id = id,
+            FileName = fileName,
+            Url = req.Url,
+            SaveTo = Helpers.GetDefaultFolder()
         });
     }
 
@@ -254,7 +254,7 @@ public static class CFSCommandHandler
             return;
         }
 
-        // Store an independent copy because the original FileTask may be reused or
+        // Store an independent copy because the original RunnerDownloadTask may be reused or
         // mutated after the Runner has been launched.
         _runnerPendingHeaders[id] = normalized;
     }

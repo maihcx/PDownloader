@@ -37,4 +37,28 @@ public partial class DownloadConfigs : ObservableObject
 
     [ObservableProperty]
     public bool _closeProgressWindowAfterOpeningFolder = false;
+
+    public void ApplyContract(DownloadSettingsDto settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        DefaultDownloadFolder = settings.DefaultDownloadFolder;
+        DefaultTempFolder = settings.DefaultTempFolder;
+        DefaultThreadCount = settings.DefaultThreadCount;
+        FileMergeMode = settings.FileMergeMode;
+        CloseProgressWindowWhenDownloadCompletes = settings.CloseProgressWindowWhenDownloadCompletes;
+        CloseProgressWindowAfterOpeningFile = settings.CloseProgressWindowAfterOpeningFile;
+        CloseProgressWindowAfterOpeningFolder = settings.CloseProgressWindowAfterOpeningFolder;
+    }
+
+    public DownloadSettingsDto ToContract() => new()
+    {
+        DefaultDownloadFolder = DefaultDownloadFolder,
+        DefaultTempFolder = DefaultTempFolder,
+        DefaultThreadCount = DefaultThreadCount,
+        FileMergeMode = FileMergeMode,
+        CloseProgressWindowWhenDownloadCompletes = CloseProgressWindowWhenDownloadCompletes,
+        CloseProgressWindowAfterOpeningFile = CloseProgressWindowAfterOpeningFile,
+        CloseProgressWindowAfterOpeningFolder = CloseProgressWindowAfterOpeningFolder
+    };
 }

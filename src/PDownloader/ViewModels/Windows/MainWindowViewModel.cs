@@ -50,8 +50,8 @@ public partial class MainWindowViewModel : ObservableObject
         LanguageBase.LanguageChanged += (lang) =>
         {
             _ = ConfluxManager.cfsPDownloaderCore?.SendAsync(
-                "main-event",
-                "OnLanguageChanged");
+                AppProtocol.MainEventMessage,
+                AppProtocol.MainEvent.LanguageChanged);
         };
 
         _ = updateHostService.CheckAsync(release =>

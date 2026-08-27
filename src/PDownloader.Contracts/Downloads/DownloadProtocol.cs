@@ -31,4 +31,16 @@ public static class DownloadProtocol
     public const string RunnerPauseAllCommand = "runner-pause-all";
     public const string RunnerResumeAllCommand = "runner-resume-all";
     public const string RunnerRetryAllCommand = "runner-retry-all";
+
+    // Runner lifecycle messages.
+    public const string RunnerCancelExperienceMessage = "runner-cancel-exp";
+    public const string RunnerUiClosedMessage = "runner-ui-closed";
+
+    // Legacy Core -> Runner messages kept centralized until the CFS envelope is upgraded.
+    public const string RunnerDownloadMessage = "download";
+    public const string RunnerCancelMessage = "cancel";
+
+    // Wire values for RunnerClearCommand.
+    public const string ClearCompletedValue = "completed";
+    public const string ClearAllValue = "all";
 }

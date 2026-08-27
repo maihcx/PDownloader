@@ -1,4 +1,4 @@
-﻿// This program is free software: you can redistribute it and/or modify
+// This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
@@ -13,20 +13,15 @@
 //
 // Copyright (C) Song Mai Software.
 
-using System.Reflection;
-
 namespace PDownloader.Core.Services.DownloadServices;
 
 public class DownloadConfigService
 {
-    private const string StoreKey = "pd-app-settings-v1";
-
-    public DownloadConfigs? DownloadConfigs { get; private set; } = new DownloadConfigs();
+    public DownloadSettingsDto DownloadConfigs { get; private set; } = new();
 
     public DownloadConfigService()
     {
-        LoadSettings(DownloadConfigs);
-        EnsureDefaults(DownloadConfigs);
+        Reload();
     }
 
     public static string GetDefaultTempFolder() => Path.Combine(
@@ -35,36 +30,31 @@ public class DownloadConfigService
         "PDownloader",
         "Temp");
 
-    private void LoadSettings(DownloadConfigs? configs)
+    private static DownloadSettingsDto LoadSettings()
     {
         try
         {
             UserDataStore.Reload();
-            string? raw = UserDataStore.GetValue<string>(StoreKey);
-            if (string.IsNullOrWhiteSpace(raw))
+            string? raw = UserDataStore.GetValue<string>(DownloadSettingsProtocol.StoreKey);
+            if (!string.IsNullOrWhiteSpace(raw))
             {
-                return;
-            }
-
-            DownloadConfigs? loaded = JsonSerializer.Deserialize<DownloadConfigs>(raw);
-            if (loaded != null)
-            {
-                CopyProperties(loaded, configs!);
+                DownloadSettingsDto? loaded = JsonSerializer.Deserialize<DownloadSettingsDto>(raw);
+                if (loaded != null)
+                {
+                    return loaded;
+                }
             }
         }
         catch
         {
             // Keep defaults when an old or malformed settings payload cannot be read.
         }
+
+        return new DownloadSettingsDto();
     }
 
-    private static void EnsureDefaults(DownloadConfigs? configs)
+    private static void EnsureDefaults(DownloadSettingsDto configs)
     {
-        if (configs == null)
-        {
-            return;
-        }
-
         if (string.IsNullOrWhiteSpace(configs.DefaultTempFolder))
         {
             configs.DefaultTempFolder = GetDefaultTempFolder();
@@ -80,25 +70,13 @@ public class DownloadConfigService
             .ToConfigValue();
     }
 
-    private static void CopyProperties(DownloadConfigs source, DownloadConfigs target)
-    {
-        foreach (PropertyInfo property in typeof(DownloadConfigs).GetProperties())
-        {
-            if (!property.CanRead || !property.CanWrite)
-            {
-                continue;
-            }
-
-            property.SetValue(target, property.GetValue(source));
-        }
-    }
-
     public void Reload()
     {
-        LoadSettings(DownloadConfigs);
-        EnsureDefaults(DownloadConfigs);
+        DownloadSettingsDto configs = LoadSettings();
+        EnsureDefaults(configs);
+        DownloadConfigs = configs;
     }
 
     public FileMergeMode GetFileMergeMode() =>
-        FileMergeModeParser.Parse(DownloadConfigs?.FileMergeMode);
+        FileMergeModeParser.Parse(DownloadConfigs.FileMergeMode);
 }

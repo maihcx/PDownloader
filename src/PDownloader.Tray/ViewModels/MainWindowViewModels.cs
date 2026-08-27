@@ -48,7 +48,10 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
 
         CoreService = new ConfluxService();
         CoreService.CreateNoWindow = true;
-        CoreService.Register("PDownloader Core.exe", "PDownloader.TrayToCore", "PDownloader.CoreToTray");
+        CoreService.Register(
+            IpcTopology.CoreProcessName,
+            IpcTopology.TrayToCorePipeName,
+            IpcTopology.CoreToTrayPipeName);
 
         CoreService.OnMessageReceived += (name, value) =>
         {
@@ -58,11 +61,11 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
                 {
                     ApplyUpdateState(value);
                 }
-                else if (name == "main-event")
+                else if (name == AppProtocol.MainEventMessage)
                 {
                     switch (value)
                     {
-                        case "OnLanguageChanged":
+                        case AppProtocol.MainEvent.LanguageChanged:
                             UserDataStore.Reload();
                             TranslationSource.Instance.CurrentCulture = LanguageBase.GetSetupLanguage();
                             createTrayIcons(
@@ -70,23 +73,23 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
                                 updateVersion: _updateVersion);
                             break;
 
-                        case "OnRadiusChanged":
+                        case AppProtocol.MainEvent.RadiusChanged:
                             UserDataStore.Reload();
                             Application.Current.Resources["ControlCornerRadius"] = new CornerRadius(UserDataStore.GetValue<int>("ObjectCornerRadius"));
                             break;
 
-                        case "OnMaterialChanged":
+                        case AppProtocol.MainEvent.MaterialChanged:
                             UserDataStore.Reload();
                             AppRuntime.ThemeManagerService?.SetBackdropType(Enum.Parse<WindowBackdropType>(AppRuntime.ThemeManagerService.GetMaterialCBBSelected()?.Value ?? "Mica"));
                             AppRuntime.ThemeManagerService?.SetApplicationTheme(Enum.Parse<ThemeConfigs.IThemeType>(AppRuntime.ThemeManagerService.GetThemeCBBSelected()?.Value ?? "Auto"));
                             break;
 
-                        case "OnThemeChanged":
+                        case AppProtocol.MainEvent.ThemeChanged:
                             UserDataStore.Reload();
                             AppRuntime.ThemeManagerService?.SetApplicationTheme(Enum.Parse<ThemeConfigs.IThemeType>(AppRuntime.ThemeManagerService.GetThemeCBBSelected()?.Value ?? "Auto"));
                             break;
 
-                        case "OnAppExit":
+                        case AppProtocol.MainEvent.AppExit:
                             Application.Current.Shutdown();
                             break;
                     }
@@ -169,31 +172,45 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
         {
             case "tray_open":
                 CoreService?.StartApp();
-                _ = CoreService?.SendAsync("state", "start");
+                _ = CoreService?.SendAsync(
+                    AppProtocol.StateMessage,
+                    AppProtocol.State.Start);
                 break;
             case "tray_home":
                 CoreService?.StartApp();
-                _ = CoreService?.SendAsync("tray-event", "OnGoHome");
+                _ = CoreService?.SendAsync(
+                    AppProtocol.TrayEventMessage,
+                    AppProtocol.TrayEvent.GoHome);
                 break;
             case "tray_config":
                 CoreService?.StartApp();
-                _ = CoreService?.SendAsync("tray-event", "OnGoConfig");
+                _ = CoreService?.SendAsync(
+                    AppProtocol.TrayEventMessage,
+                    AppProtocol.TrayEvent.GoConfig);
                 break;
             case "tray_download":
                 CoreService?.StartApp();
-                _ = CoreService?.SendAsync("tray-event", "OnGoDownload");
+                _ = CoreService?.SendAsync(
+                    AppProtocol.TrayEventMessage,
+                    AppProtocol.TrayEvent.GoDownload);
                 break;
             case "tray_settings":
                 CoreService?.StartApp();
-                _ = CoreService?.SendAsync("tray-event", "OnGoSettings");
+                _ = CoreService?.SendAsync(
+                    AppProtocol.TrayEventMessage,
+                    AppProtocol.TrayEvent.GoSettings);
                 break;
             case "tray_update":
                 CoreService?.StartApp();
-                _ = CoreService?.SendAsync("tray-event", "OnGoSettings--UPDATE");
+                _ = CoreService?.SendAsync(
+                    AppProtocol.TrayEventMessage,
+                    AppProtocol.TrayEvent.GoSettingsUpdate);
                 break;
             case "tray_about":
                 CoreService?.StartApp();
-                _ = CoreService?.SendAsync("tray-event", "OnGoAbout");
+                _ = CoreService?.SendAsync(
+                    AppProtocol.TrayEventMessage,
+                    AppProtocol.TrayEvent.GoAbout);
                 break;
             case "tray_close":
                 Application.Current.Shutdown();

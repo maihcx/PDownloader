@@ -67,9 +67,9 @@ public static class Bootstrap
         ConfluxService cfsPDownloaderCore = new();
         cfsPDownloaderCore.CreateNoWindow = true;
         cfsPDownloaderCore.Register(
-            "PDownloader Core.exe",
-            "PDownloader.MainToCore",
-            "PDownloader.CoreToMain");
+            IpcTopology.CoreProcessName,
+            IpcTopology.MainToCorePipeName,
+            IpcTopology.CoreToMainPipeName);
 
         IsViewAtBoot = cfsPDownloaderCore.IsAppStarted();
 
@@ -89,43 +89,43 @@ public static class Bootstrap
         {
             App.Current.Dispatcher.Invoke(() =>
             {
-                if (name == "state")
+                if (name == AppProtocol.StateMessage)
                 {
                     switch (value)
                     {
-                        case "start":
+                        case AppProtocol.State.Start:
                             WindowHelper.FocusMainWindow();
                             break;
-                        case "shutdown":
+                        case AppProtocol.State.Shutdown:
                             IsEndService = true;
                             System.Windows.Application.Current.Shutdown();
                             break;
                     }
                 }
-                else if (name == "tray-event")
+                else if (name == AppProtocol.TrayEventMessage)
                 {
                     WindowHelper.FocusMainWindow();
                     switch (value)
                     {
-                        case "OnGoHome":
+                        case AppProtocol.TrayEvent.GoHome:
                             NavigationHandle.NavigationService?.Navigate(typeof(HomePage));
                             break;
-                        case "OnGoConfig":
+                        case AppProtocol.TrayEvent.GoConfig:
                             NavigationHandle.NavigationService?.Navigate(typeof(ConfigPage));
                             break;
-                        case "OnGoDownload":
+                        case AppProtocol.TrayEvent.GoDownload:
                             NavigationHandle.NavigationService?.Navigate(typeof(DownloadsPage));
                             break;
-                        case "OnGoSettings":
-                        case "OnGoSettings--UPDATE":
-                            if (value == "OnGoSettings--UPDATE")
+                        case AppProtocol.TrayEvent.GoSettings:
+                        case AppProtocol.TrayEvent.GoSettingsUpdate:
+                            if (value == AppProtocol.TrayEvent.GoSettingsUpdate)
                             {
                                 SharedMem.IsScrollToUpdateCard = true;
                             }
 
                             NavigationHandle.NavigationService?.Navigate(typeof(SettingsPage));
                             break;
-                        case "OnGoAbout":
+                        case AppProtocol.TrayEvent.GoAbout:
                             NavigationHandle.NavigationService?.Navigate(typeof(AboutPage));
                             break;
                     }
@@ -173,7 +173,9 @@ public static class Bootstrap
         StartupManager.RefreshStartWithWin();
         SplashScreen?.Close(new TimeSpan(0));
 
-        _ = ConfluxManager.cfsPDownloaderCore?.SendAsync("core-event", "ping");
+        _ = ConfluxManager.cfsPDownloaderCore?.SendAsync(
+            AppProtocol.CoreEventMessage,
+            AppProtocol.CoreEvent.Ping);
         _ = App.GetRequiredService<UpdateHostService>().RequestStateAsync();
 
         if (!IsViewAtBoot)

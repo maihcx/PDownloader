@@ -22,7 +22,8 @@ public sealed record DownloadThreadProgress(
     [property: JsonPropertyName("downloadedBytes")] long DownloadedBytes,
     [property: JsonPropertyName("totalBytes")] long TotalBytes,
     [property: JsonPropertyName("speedBps")] double SpeedBps,
-    [property: JsonPropertyName("state")] string State,
+    [property: JsonPropertyName("state")]
+    [property: JsonConverter(typeof(JsonStringEnumConverter))] DownloadThreadState State,
     [property: JsonPropertyName("currentUnit")] int CurrentUnit = 0,
     [property: JsonPropertyName("totalUnits")] int TotalUnits = 0)
 {

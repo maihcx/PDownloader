@@ -197,7 +197,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
     partial void OnSelectedThemeChanged(Models.ComboBoxItem? value)
     {
         ThemeManagerService?.SetApplicationTheme(Enum.Parse<IThemeType>(value?.Value ?? "Mica"));
-        ConfluxManager.cfsPDownloaderCore?.Send("main-event", "OnThemeChanged");
+        ConfluxManager.cfsPDownloaderCore?.Send(
+            AppProtocol.MainEventMessage,
+            AppProtocol.MainEvent.ThemeChanged);
     }
     #endregion
 
@@ -212,7 +214,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
     {
         ThemeManagerService?.SetBackdropType(Enum.Parse<WindowBackdropType>(value?.Value ?? "Mica"));
         ThemeManagerService?.SetApplicationTheme(Enum.Parse<IThemeType>(SelectedTheme?.Value ?? "Auto"));
-        ConfluxManager.cfsPDownloaderCore?.Send("main-event", "OnMaterialChanged");
+        ConfluxManager.cfsPDownloaderCore?.Send(
+            AppProtocol.MainEventMessage,
+            AppProtocol.MainEvent.MaterialChanged);
     }
     #endregion
 
@@ -223,7 +227,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
     partial void OnSliderCornerRadiusChanged(int oldValue, int newValue)
     {
         ThemeManagerService?.GlobalCornerRadius = newValue;
-        ConfluxManager.cfsPDownloaderCore?.Send("main-event", "OnRadiusChanged");
+        ConfluxManager.cfsPDownloaderCore?.Send(
+            AppProtocol.MainEventMessage,
+            AppProtocol.MainEvent.RadiusChanged);
     }
     #endregion
 

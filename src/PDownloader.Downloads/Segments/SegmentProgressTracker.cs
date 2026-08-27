@@ -71,7 +71,7 @@ internal sealed class SegmentProgressTracker
                 downloadedBytes,
                 totalBytes,
                 speedBps,
-                state.ToString());
+                state);
 
             if (index < _lastBytes.Length)
             {

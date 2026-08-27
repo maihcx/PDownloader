@@ -38,8 +38,8 @@ namespace PDownloader.Services.DownloadServices;
 /// </summary>
 public class DownloadsChannelService
 {
-    public event Action<List<DownloadItemDto>>? OnList;
-    public event Action<DownloadItemDto>? OnProgress;
+    public event Action<List<DownloadItemViewModel>>? OnList;
+    public event Action<DownloadItemViewModel>? OnProgress;
 
     public void Handle(string name, string value)
     {
@@ -63,7 +63,7 @@ public class DownloadsChannelService
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (list != null)
             {
-                OnList?.Invoke(list.Select(DownloadItemDto.FromContract).ToList());
+                OnList?.Invoke(list.Select(DownloadItemViewModel.FromContract).ToList());
             }
         }
         catch { }
@@ -77,7 +77,7 @@ public class DownloadsChannelService
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (dto != null)
             {
-                OnProgress?.Invoke(DownloadItemDto.FromContract(dto));
+                OnProgress?.Invoke(DownloadItemViewModel.FromContract(dto));
             }
         }
         catch { }

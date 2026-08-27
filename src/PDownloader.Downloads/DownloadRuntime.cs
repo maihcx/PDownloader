@@ -25,7 +25,7 @@ public sealed class DownloadRuntimeOptions
     public Func<string?> GetDefaultTempFolder { get; init; } = static () => null;
     public Func<string> GetFallbackDownloadFolder { get; init; } = static () =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-    public Action<string, FileTask>? ShowRunner { get; init; }
+    public Action<string, RunnerDownloadTask>? ShowRunner { get; init; }
 }
 
 public static class DownloadRuntime
@@ -47,6 +47,6 @@ public static class DownloadRuntime
     internal static string FallbackDownloadFolder =>
         Volatile.Read(ref _options).GetFallbackDownloadFolder();
 
-    internal static void RequestRunner(string id, FileTask task) =>
+    internal static void RequestRunner(string id, RunnerDownloadTask task) =>
         Volatile.Read(ref _options).ShowRunner?.Invoke(id, task);
 }
