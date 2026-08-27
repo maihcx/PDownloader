@@ -2,32 +2,30 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.5.11716.220
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader", "src\PDownloader\PDownloader.csproj", "{7B07DA7F-507B-4C5F-A727-5ECF775C62E3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader", "PDownloader\PDownloader.csproj", "{7B07DA7F-507B-4C5F-A727-5ECF775C62E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.CFS", "src\PDownloader.CFS\PDownloader.CFS.csproj", "{E76531E2-47A3-4FC4-B5C6-30E2F28D0207}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.CFS", "PDownloader.CFS\PDownloader.CFS.csproj", "{E76531E2-47A3-4FC4-B5C6-30E2F28D0207}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Tray", "src\PDownloader.Tray\PDownloader.Tray.csproj", "{F960DFC4-2934-40EF-93A6-CA229CD5B3DD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Tray", "PDownloader.Tray\PDownloader.Tray.csproj", "{F960DFC4-2934-40EF-93A6-CA229CD5B3DD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Core", "src\PDownloader.Core\PDownloader.Core.csproj", "{215E38A5-C1E2-4C8A-91BF-002A65409656}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Core", "PDownloader.Core\PDownloader.Core.csproj", "{215E38A5-C1E2-4C8A-91BF-002A65409656}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Installer", "src\PDownloader.Installer\PDownloader.Installer.csproj", "{818F3B27-359C-5D89-1D3B-8F85165FAE09}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Installer", "PDownloader.Installer\PDownloader.Installer.csproj", "{818F3B27-359C-5D89-1D3B-8F85165FAE09}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Runner", "src\PDownloader.Runner\PDownloader.Runner.csproj", "{D8A75511-64C4-42EB-9B46-8C09F37CDC10}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Runner", "PDownloader.Runner\PDownloader.Runner.csproj", "{D8A75511-64C4-42EB-9B46-8C09F37CDC10}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Contracts", "src\PDownloader.Contracts\PDownloader.Contracts.csproj", "{8F5E3B65-743C-4E2A-9E6B-A59C6E9DE301}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Contracts", "PDownloader.Contracts\PDownloader.Contracts.csproj", "{8F5E3B65-743C-4E2A-9E6B-A59C6E9DE301}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Infrastructure", "src\PDownloader.Infrastructure\PDownloader.Infrastructure.csproj", "{D49B2FA1-B0C2-4D60-B30B-1F8C81A134B2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Infrastructure", "PDownloader.Infrastructure\PDownloader.Infrastructure.csproj", "{D49B2FA1-B0C2-4D60-B30B-1F8C81A134B2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Downloads", "src\PDownloader.Downloads\PDownloader.Downloads.csproj", "{C11A0A1B-8ED7-4502-B63D-4EABFCD665A8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Downloads", "PDownloader.Downloads\PDownloader.Downloads.csproj", "{C11A0A1B-8ED7-4502-B63D-4EABFCD665A8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2F50D77D-3478-4F1D-A886-316646F0188D}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.BugTracker", "src\PDownloader.BugTracker\PDownloader.BugTracker.csproj", "{B3A1D805-281C-7C0C-D47E-6BF31814B49D}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{902C5C8D-E273-4DAF-993E-806186FE7EA1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.BugTracker", "PDownloader.BugTracker\PDownloader.BugTracker.csproj", "{B3A1D805-281C-7C0C-D47E-6BF31814B49D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,6 +33,18 @@ Global
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8F5E3B65-743C-4E2A-9E6B-A59C6E9DE301}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8F5E3B65-743C-4E2A-9E6B-A59C6E9DE301}.Debug|x64.Build.0 = Debug|Any CPU
+		{8F5E3B65-743C-4E2A-9E6B-A59C6E9DE301}.Release|x64.ActiveCfg = Release|Any CPU
+		{8F5E3B65-743C-4E2A-9E6B-A59C6E9DE301}.Release|x64.Build.0 = Release|Any CPU
+		{D49B2FA1-B0C2-4D60-B30B-1F8C81A134B2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D49B2FA1-B0C2-4D60-B30B-1F8C81A134B2}.Debug|x64.Build.0 = Debug|Any CPU
+		{D49B2FA1-B0C2-4D60-B30B-1F8C81A134B2}.Release|x64.ActiveCfg = Release|Any CPU
+		{D49B2FA1-B0C2-4D60-B30B-1F8C81A134B2}.Release|x64.Build.0 = Release|Any CPU
+		{C11A0A1B-8ED7-4502-B63D-4EABFCD665A8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C11A0A1B-8ED7-4502-B63D-4EABFCD665A8}.Debug|x64.Build.0 = Debug|Any CPU
+		{C11A0A1B-8ED7-4502-B63D-4EABFCD665A8}.Release|x64.ActiveCfg = Release|Any CPU
+		{C11A0A1B-8ED7-4502-B63D-4EABFCD665A8}.Release|x64.Build.0 = Release|Any CPU
 		{7B07DA7F-507B-4C5F-A727-5ECF775C62E3}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{7B07DA7F-507B-4C5F-A727-5ECF775C62E3}.Debug|x64.Build.0 = Debug|Any CPU
 		{7B07DA7F-507B-4C5F-A727-5ECF775C62E3}.Release|x64.ActiveCfg = Release|Any CPU
@@ -59,18 +69,6 @@ Global
 		{D8A75511-64C4-42EB-9B46-8C09F37CDC10}.Debug|x64.Build.0 = Debug|Any CPU
 		{D8A75511-64C4-42EB-9B46-8C09F37CDC10}.Release|x64.ActiveCfg = Release|Any CPU
 		{D8A75511-64C4-42EB-9B46-8C09F37CDC10}.Release|x64.Build.0 = Release|Any CPU
-		{8F5E3B65-743C-4E2A-9E6B-A59C6E9DE301}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{8F5E3B65-743C-4E2A-9E6B-A59C6E9DE301}.Debug|x64.Build.0 = Debug|Any CPU
-		{8F5E3B65-743C-4E2A-9E6B-A59C6E9DE301}.Release|x64.ActiveCfg = Release|Any CPU
-		{8F5E3B65-743C-4E2A-9E6B-A59C6E9DE301}.Release|x64.Build.0 = Release|Any CPU
-		{D49B2FA1-B0C2-4D60-B30B-1F8C81A134B2}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{D49B2FA1-B0C2-4D60-B30B-1F8C81A134B2}.Debug|x64.Build.0 = Debug|Any CPU
-		{D49B2FA1-B0C2-4D60-B30B-1F8C81A134B2}.Release|x64.ActiveCfg = Release|Any CPU
-		{D49B2FA1-B0C2-4D60-B30B-1F8C81A134B2}.Release|x64.Build.0 = Release|Any CPU
-		{C11A0A1B-8ED7-4502-B63D-4EABFCD665A8}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{C11A0A1B-8ED7-4502-B63D-4EABFCD665A8}.Debug|x64.Build.0 = Debug|Any CPU
-		{C11A0A1B-8ED7-4502-B63D-4EABFCD665A8}.Release|x64.ActiveCfg = Release|Any CPU
-		{C11A0A1B-8ED7-4502-B63D-4EABFCD665A8}.Release|x64.Build.0 = Release|Any CPU
 		{B3A1D805-281C-7C0C-D47E-6BF31814B49D}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{B3A1D805-281C-7C0C-D47E-6BF31814B49D}.Debug|x64.Build.0 = Debug|Any CPU
 		{B3A1D805-281C-7C0C-D47E-6BF31814B49D}.Release|x64.ActiveCfg = Release|Any CPU
@@ -78,18 +76,6 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{7B07DA7F-507B-4C5F-A727-5ECF775C62E3} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}
-		{E76531E2-47A3-4FC4-B5C6-30E2F28D0207} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}
-		{F960DFC4-2934-40EF-93A6-CA229CD5B3DD} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}
-		{215E38A5-C1E2-4C8A-91BF-002A65409656} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}
-		{818F3B27-359C-5D89-1D3B-8F85165FAE09} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}
-		{D8A75511-64C4-42EB-9B46-8C09F37CDC10} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}
-		{8F5E3B65-743C-4E2A-9E6B-A59C6E9DE301} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}
-		{D49B2FA1-B0C2-4D60-B30B-1F8C81A134B2} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}
-		{C11A0A1B-8ED7-4502-B63D-4EABFCD665A8} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}
-		{B3A1D805-281C-7C0C-D47E-6BF31814B49D} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {20C17AC4-68BA-428B-871A-582051B7E275}
