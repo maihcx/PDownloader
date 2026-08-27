@@ -28,6 +28,14 @@ public class Bootstrap
 
     public void OnStarted()
     {
+        DownloadRuntime.Configure(new DownloadRuntimeOptions
+        {
+            GetDefaultDownloadFolder = () => CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultDownloadFolder,
+            GetDefaultTempFolder = () => CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultTempFolder,
+            GetFallbackDownloadFolder = Helpers.GetDefaultFolder,
+            ShowRunner = (id, task) => _ = DownloadRunner.EnsureRunnerStarted(id, task)
+        });
+
         // Wire up download manager broadcasts
         DownloadManagerBootstrap.InitDownloadManager();
 

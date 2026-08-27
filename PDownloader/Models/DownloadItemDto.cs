@@ -150,4 +150,36 @@ public partial class DownloadItemDto : ObservableObject
             );
         }
     }
+    public static DownloadItemDto FromContract(PDownloader.Contracts.Downloads.DownloadItemDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        return new DownloadItemDto
+        {
+            Id = dto.Id,
+            Url = dto.Url,
+            FileName = dto.FileName,
+            StartTime = dto.StartTime,
+            EndTime = dto.EndTime,
+            SavePath = dto.SavePath,
+            TotalBytes = dto.TotalBytes,
+            DownloadedBytes = dto.DownloadedBytes,
+            SpeedBps = dto.SpeedBps,
+            Progress = dto.Progress,
+            SpeedFormatted = dto.SpeedFormatted,
+            EtaFormatted = dto.EtaFormatted,
+            TotalFormatted = dto.TotalFormatted,
+            DownloadedFormatted = dto.DownloadedFormatted,
+            ErrorMessage = dto.ErrorMessage,
+            IsActive = dto.IsActive,
+            FileMergeMode = dto.FileMergeMode,
+            CanPause = dto.CanPause,
+            CanResume = dto.CanResume,
+            Md5Hash = dto.Md5Hash,
+            Sha1Hash = dto.Sha1Hash,
+            Sha256Hash = dto.Sha256Hash,
+            Status = dto.Status
+        };
+    }
+
 }

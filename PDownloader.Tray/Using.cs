@@ -16,6 +16,7 @@
 global using CommunityToolkit.Mvvm.ComponentModel;
 global using CommunityToolkit.Mvvm.Input;
 global using PDownloader.CFS;
+global using PDownloader.Contracts.Updates;
 global using PDownloader.Tray.Models;
 global using PDownloader.Tray.Resources;
 global using PDownloader.Tray.Services;

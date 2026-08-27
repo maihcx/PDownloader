@@ -14,17 +14,13 @@
 // Copyright (C) Song Mai Software.
 
 global using PDownloader.CFS;
-global using PDownloader.Core.Download;
-global using PDownloader.Core.Download.Exceptions;
-global using PDownloader.Core.Download.ExternalTools.Ffmpeg;
-global using PDownloader.Core.Download.ExternalTools.YtDlp;
-global using PDownloader.Core.Download.Handlers;
-global using PDownloader.Core.Download.Hls;
-global using PDownloader.Core.Download.Http;
-global using PDownloader.Core.Download.Infrastructure;
-global using PDownloader.Core.Download.Media;
-global using PDownloader.Core.Download.Models;
-global using PDownloader.Core.Download.Segments;
+global using PDownloader.Contracts.Downloads;
+global using PDownloader.Contracts.Media;
+global using PDownloader.Contracts.Updates;
+global using PDownloader.Downloads;
+global using PDownloader.Downloads.Models;
+global using PDownloader.Infrastructure.ExternalTools.YtDlp;
+global using PDownloader.Infrastructure.Downloads;
 global using PDownloader.Core.Models;
 global using PDownloader.Core.Runtime;
 global using PDownloader.Core.Service;

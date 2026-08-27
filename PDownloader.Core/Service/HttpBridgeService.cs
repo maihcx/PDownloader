@@ -252,11 +252,11 @@ public sealed class HttpBridgeService : IDisposable
 
         string url = ValidateHttpUrl(payload.Url);
         Dictionary<string, string>? headers = SanitizeForwardedHeaders(payload.Headers);
-        string? cookieHeader = DownloadPathService.GetHeader(headers, "Cookie");
-        string? cookieJarJson = DownloadPathService.GetHeader(
+        string? cookieHeader = DownloadPathUtilities.GetHeader(headers, "Cookie");
+        string? cookieJarJson = DownloadPathUtilities.GetHeader(
             headers,
             "X-PDownloader-Cookie-Jar");
-        string? userAgent = DownloadPathService.GetHeader(headers, "User-Agent");
+        string? userAgent = DownloadPathUtilities.GetHeader(headers, "User-Agent");
 
         YtAnalyzeResult result = await YtDlpService.Instance.AnalyzeAsync(
             url,
@@ -594,7 +594,7 @@ public sealed class HttpBridgeService : IDisposable
             return string.Empty;
         }
 
-        string safeName = DownloadPathService.SanitizeFileName(leafName);
+        string safeName = DownloadPathUtilities.SanitizeFileName(leafName);
         if (safeName.Length <= MaxFileNameLength)
         {
             return safeName;
