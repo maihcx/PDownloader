@@ -1,3 +1,162 @@
+## v0.13.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- [platform] Add multi-arch Windows installers (x64 + ARM64) (#194) — @maihcx
+
+## 🐛 Bug Fixes
+
+- [builder] Add versioned x64 installer fallback (#199) — @maihcx
+- [builder] Prioritize x64 installer release asset (#197) — @maihcx
+
+## ⚡ Performance
+
+- [platform] Enable ReadyToRun publishing in build script (#195) — @maihcx
+
+## 🧹 Maintenance
+
+- [rule] Migrate issue templates to GitHub forms (#193) — @maihcx
+- [rule] Convert issue templates to GitHub forms (#192) — @maihcx
+- [rule] Update bug report template for Windows (#191) — @maihcx
+- [rule] Add pull request template (#190) — @maihcx
+- [deps] Bump Microsoft.Extensions.Hosting to 10.0.11 (#189) — @maihcx
+
+
+---
+
+## v0.12.1
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- [docs] Fix GPL license header punctuation (#185) — @maihcx
+- [installer] Stabilize CFS messaging and refresh flow (#180) — @maihcx
+- [installer] Run automatic updates on startup (#178) — @maihcx
+- [installer] Adjust install path warning copy (#177) — @maihcx
+
+## 🧹 Maintenance
+
+- [ui] Add auto-update setting support (#187) — @maihcx
+- [core] Default auto-update to true; add GetValue overload (#186) — @maihcx
+- [docs] Clarify browser extension split (#183) — @maihcx
+- [docs] Add PDownloader installer artifact (#181) — @maihcx
+
+
+---
+
+## v0.12.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- [core] Add core auto-update subsystem (#173) — @maihcx
+- [cfs-ipc] Add SendAsync and update protocol types (#172) — @maihcx
+- [installer] Support pending updates and silent installer launch (#171) — @maihcx
+- [installer] Persist installer settings and locked install path (#170) — @maihcx
+- [installer] Add per-user/all-users install scope with elevation (#169) — @maihcx
+- [installer] Add browser extension install option (#168) — @maihcx
+- [installer] Add silent installer support (#167) — @maihcx
+
+## 🧹 Maintenance
+
+- [ui] Refactor updater to Core-hosted UpdateHostService (#175) — @maihcx
+- [tray] Refactor tray update handling & async calls (#174) — @maihcx
+
+
+---
+
+## v0.11.2
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- [core] Revert remove yt-dlp YouTube workaround | see #155 (#165) — @maihcx
+- [ui] Add retry status label mapping (#162) — @maihcx
+- [installer] Use explicit Chromium registration state (#161) — @maihcx
+- [installer] Preserve Chromium extension registrations on update (#160) — @maihcx
+
+## 🧹 Maintenance
+
+- [runner] Add retry flow to downloader UI (#164) — @maihcx
+- [runner] Add combined visibility converters (#163) — @maihcx
+
+
+---
+
+## v0.11.1
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- [core] Remove yt-dlp YouTube workaround | see #138 (#155) — @maihcx
+
+## 🧹 Maintenance
+
+- [installer] Remove Gecko (Firefox) extension registration (#158) — @maihcx
+- [extension] Move BrowserExtension to https://github.com/maihcx/PDownloader-browser-ext (#157) — @maihcx
+
+
+---
+
+## v0.11.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- [installer] Register Chromium extensions externally (#150) — @maihcx
+- [extension] Add media analyze/download and quality UI (#147) — @maihcx
+
+## 🐛 Bug Fixes
+
+- [ui] Replace locale strings with resource keys (#140) — @maihcx
+
+## 🧹 Maintenance
+
+- [webpage] Revamp docs UI: theme, runner preview, i18n & a11y (#152) — @maihcx
+- [webpage] Add browser extension dialog and assets (#151) — @maihcx
+- [extension] improve media detection & add checks (#149) — @maihcx
+- [extension] Add Spotify detection and protected-preview handling (#148) — @maihcx
+- [installer] Refactor installer: DI host & services (#146) — @maihcx
+- [extension] Support Firefox listed/unlisted builds (#145) — @maihcx
+- [extension] Use Vite for BrowserExtension builds (#144) — @maihcx
+- [installer-core] Update browser extension install/update handling (#143) — @maihcx
+
+
+---
+
+## v0.10.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- Add automatic retry & Retrying status (#136) — @maihcx
+- Add bulk download actions and CFS commands, the final patch for #130 (#133) — @maihcx
+- Add downloads actions flyout and batch commands (#130) — @maihcx
+- Add Or/And visibility converters; improve converters (#128) — @maihcx
+- Add Messages dialog and extend messenger service (#127) — @maihcx
+
+## 🐛 Bug Fixes
+
+- Update YouTube player_client workaround | #122 (#138) — @maihcx
+- Use DownloadRunner.DownloaderCFSRest in CFS handler | #133 (#134) — @maihcx
+- Use DownloadStatus enum for status handling (#129) — @maihcx
+
+## ⚡ Performance
+
+- Update bundled FFmpeg binaries (#124) — @maihcx
+
+## 🧹 Maintenance
+
+- Refactor YouTube handler error handling and flow (#135) — @maihcx
+- Add DownloadRunner; move runner logic from AppRuntime (#132) — @maihcx
+- Set explicit x64 Release build settings (#131) — @maihcx
+- Unify build/publish settings across csproj files (#126) — @maihcx
+- Update yt-dlp executable (#125) — @maihcx
+
+
+---
+
 ## v0.9.1
 
 ## 🚀 Changelog
