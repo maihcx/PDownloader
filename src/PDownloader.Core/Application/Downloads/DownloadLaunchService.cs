@@ -24,13 +24,19 @@ public sealed class DownloadLaunchService
 {
     private readonly DownloadConfigService _downloadConfig;
     private readonly RunnerSessionManager _runnerSessions;
+    private readonly DownloadManager _downloads;
+    private readonly UserDataStore _userDataStore;
 
     public DownloadLaunchService(
         DownloadConfigService downloadConfig,
-        RunnerSessionManager runnerSessions)
+        RunnerSessionManager runnerSessions,
+        DownloadManager downloads,
+        UserDataStore userDataStore)
     {
         _downloadConfig = downloadConfig;
         _runnerSessions = runnerSessions;
+        _downloads = downloads;
+        _userDataStore = userDataStore;
     }
 
     public async Task LaunchFromUrlAsync(
@@ -57,7 +63,7 @@ public sealed class DownloadLaunchService
             Id = id,
             FileName = fileName,
             Url = request.Url,
-            SaveTo = Helpers.GetDefaultFolder(),
+            SaveTo = Helpers.GetDefaultFolder(_userDataStore),
             Threads = request.Threads,
             Headers = request.Headers
         });
@@ -105,7 +111,7 @@ public sealed class DownloadLaunchService
             ? null
             : context.FormatId;
 
-        DownloadManager.Instance.Enqueue(
+        _downloads.Enqueue(
             id: session.Id,
             url: context.Url,
             saveTo: saveTo ?? string.Empty,

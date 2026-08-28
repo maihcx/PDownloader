@@ -15,113 +15,122 @@
 
 namespace PDownloader.Core.Utils;
 
-public static class UserDataStore
+/// <summary>
+/// Process-scoped user-data store. The instance is owned by Core DI rather than
+/// a static mutable dictionary, making persistence dependencies explicit.
+/// </summary>
+public sealed class UserDataStore
 {
-    private static readonly string DataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SM SOFT", "PDownloader");
+    private readonly object _sync = new();
+    private readonly string _dataDir;
+    private readonly string _dataFile;
+    private Dictionary<string, object> _data = new();
 
-    private static readonly string DataFile = Path.Combine(DataDir, "userdata.json");
-
-    private static Dictionary<string, object> _data = new();
-
-    static UserDataStore()
+    public UserDataStore()
     {
-        try
+        _dataDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "SM SOFT",
+            "PDownloader");
+        _dataFile = Path.Combine(_dataDir, "userdata.json");
+        Reload();
+    }
+
+    public T GetValue<T>(string key) => GetValue(key, default(T)!);
+
+    public T GetValue<T>(string key, T defaultValue)
+    {
+        lock (_sync)
         {
-            if (File.Exists(DataFile))
+            if (!_data.TryGetValue(key, out object? value))
             {
-                var json = File.ReadAllText(DataFile);
-                _data = JsonSerializer.Deserialize<Dictionary<string, object>>(json)
-                        ?? new Dictionary<string, object>();
+                return defaultValue;
             }
-        }
-        catch
-        {
-            _data = new Dictionary<string, object>();
-        }
-    }
 
-    private static void SaveData()
-    {
-        try
-        {
-            Directory.CreateDirectory(DataDir);
-            var json = JsonSerializer.Serialize(_data, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
-            File.WriteAllText(DataFile, json);
-        }
-        catch { }
-    }
-
-    public static T GetValue<T>(string key)
-    {
-        if (_data.TryGetValue(key, out var value))
-        {
             try
             {
-                if (value is JsonElement elem)
+                if (value is JsonElement element)
                 {
-                    return elem.Deserialize<T>()!;
+                    T? deserialized = element.Deserialize<T>();
+                    return deserialized is null ? defaultValue : deserialized;
+                }
+
+                if (value is T typed)
+                {
+                    return typed;
                 }
 
                 return (T)Convert.ChangeType(value, typeof(T));
-            }
-            catch { }
-        }
-
-        return default!;
-    }
-
-    public static T GetValue<T>(string key, T defautVal)
-    {
-        if (_data.TryGetValue(key, out var value))
-        {
-            try
-            {
-                if (value is JsonElement elem)
-                {
-                    return elem.Deserialize<T>()!;
-                }
-
-                return (T)Convert.ChangeType(value, typeof(T));
-            }
-            catch { }
-        }
-
-        return defautVal!;
-    }
-
-    public static bool SetValue<T>(string key, T value)
-    {
-        _data[key] = value!;
-        SaveData();
-        return true;
-    }
-
-    public static void Reset()
-    {
-        _data.Clear();
-        SaveData();
-    }
-
-    public static void Reload()
-    {
-        _data.Clear();
-        if (File.Exists(DataFile))
-        {
-            try
-            {
-                var json = File.ReadAllText(DataFile);
-                _data = JsonSerializer.Deserialize<Dictionary<string, object>>(json)
-                        ?? new Dictionary<string, object>();
             }
             catch
             {
-                _data = new Dictionary<string, object>();
+                return defaultValue;
             }
+        }
+    }
+
+    public bool SetValue<T>(string key, T value)
+    {
+        lock (_sync)
+        {
+            _data[key] = value!;
+            SaveDataLocked();
+            return true;
+        }
+    }
+
+    public void Reset()
+    {
+        lock (_sync)
+        {
+            _data.Clear();
+            SaveDataLocked();
+        }
+    }
+
+    public void Reload()
+    {
+        lock (_sync)
+        {
+            _data = LoadData();
+        }
+    }
+
+    private Dictionary<string, object> LoadData()
+    {
+        if (!File.Exists(_dataFile))
+        {
+            return new Dictionary<string, object>();
+        }
+
+        try
+        {
+            string json = File.ReadAllText(_dataFile);
+            return JsonSerializer.Deserialize<Dictionary<string, object>>(json)
+                ?? new Dictionary<string, object>();
+        }
+        catch
+        {
+            return new Dictionary<string, object>();
+        }
+    }
+
+    private void SaveDataLocked()
+    {
+        try
+        {
+            Directory.CreateDirectory(_dataDir);
+            string json = JsonSerializer.Serialize(
+                _data,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+            File.WriteAllText(_dataFile, json);
+        }
+        catch
+        {
+            // Keep in-memory state even if persistence temporarily fails.
         }
     }
 }

@@ -13,24 +13,18 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Infrastructure.ExternalTools.Ffmpeg;
+namespace PDownloader.Downloads.Runtime;
 
-internal sealed class FfmpegExecutableLocator
+/// <summary>
+/// Process-owned capabilities required by the download module. The Downloads
+/// assembly depends on this boundary instead of storing Core callbacks/config
+/// in static mutable state.
+/// </summary>
+public interface IDownloadRuntime
 {
+    string? DefaultDownloadFolder { get; }
+    string? DefaultTempFolder { get; }
+    string FallbackDownloadFolder { get; }
 
-    private string? _resolvedPath;
-
-    internal FfmpegExecutableLocator()
-    {
-    }
-
-    public string? Find()
-    {
-        if (_resolvedPath != null && File.Exists(_resolvedPath))
-        {
-            return _resolvedPath;
-        }
-
-        return _resolvedPath = ExecutablePathResolver.Find("ffmpeg");
-    }
+    void ShowRunner(string id, RunnerDownloadTask task);
 }

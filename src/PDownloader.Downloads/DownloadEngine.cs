@@ -25,29 +25,37 @@ public class DownloadEngine
     private readonly MultiSegmentDownloadService _multiSegmentDownloader;
     private readonly HlsDownloadHandler _hlsHandler;
     private readonly YoutubeDownloadHandler _youtubeHandler;
+    private readonly FfmpegMuxer _ffmpegMuxer;
 
-    public DownloadEngine(
+    internal DownloadEngine(
         DownloadItem item,
         IProgress<DownloadProgress> progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        DownloadPathService pathService,
+        YtDlpService ytDlpService,
+        FfmpegMuxer ffmpegMuxer)
     {
         _item = item;
         _progress = progress;
         _cancellationToken = cancellationToken;
 
         _httpClientLease = DownloadHttpClientFactory.Create(item.CustomHeaders);
-        _pathService = new DownloadPathService();
+        _pathService = pathService ?? throw new ArgumentNullException(nameof(pathService));
+        _ffmpegMuxer = ffmpegMuxer ?? throw new ArgumentNullException(nameof(ffmpegMuxer));
         _multiSegmentDownloader = new MultiSegmentDownloadService(_httpClientLease.Client);
         _hlsHandler = new HlsDownloadHandler(
             item,
             _httpClientLease.Client,
             _pathService,
+            ytDlpService,
             ReportProgress,
             ReportMergeProgress,
             ReportThreadProgress);
         _youtubeHandler = new YoutubeDownloadHandler(
             item,
             _pathService,
+            ytDlpService,
+            _ffmpegMuxer,
             ReportProgress,
             ReportMergeProgress,
             ReportThreadProgress);
@@ -91,24 +99,6 @@ public class DownloadEngine
         }
     }
 
-    public static void DeleteTempFiles(DownloadItem item) =>
-        DownloadPathService.DeleteTempFiles(item);
-
-    public static bool HasPendingMerge(DownloadItem item)
-    {
-        var pathService = new DownloadPathService();
-        return MergeRecoveryStore.HasPendingInTree(pathService.GetTempDirectory(item));
-    }
-
-    public static bool TryGetPendingMergeProgress(
-        DownloadItem item,
-        out double progress)
-    {
-        var pathService = new DownloadPathService();
-        return MergeRecoveryStore.TryGetPendingProgressInTree(
-            pathService.GetTempDirectory(item),
-            out progress);
-    }
 
     public static Task<string?> GetRemoteFileNameAsync(string url) =>
         HttpDownloadProbe.GetRemoteFileNameAsync(url);
@@ -134,7 +124,7 @@ public class DownloadEngine
                 ReportMergeProgress,
                 ApplyFileHashes,
                 _cancellationToken),
-            MergeRecoveryKind.FfmpegMux => await new FfmpegMuxer().RetryAsync(
+            MergeRecoveryKind.FfmpegMux => await _ffmpegMuxer.RetryAsync(
                 manifest,
                 ReportMergeProgress,
                 _cancellationToken),

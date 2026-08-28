@@ -17,16 +17,14 @@ namespace PDownloader.Infrastructure.ExternalTools.YtDlp;
 
 public sealed class YtDlpService
 {
-    public static YtDlpService Instance { get; } = new();
-
     private readonly YtDlpExecutableLocator _executableLocator;
     private readonly YtDlpCookieFileService _cookieFileService;
     private readonly ExternalProcessRunner _processRunner;
 
-    private YtDlpService()
+    public YtDlpService()
         : this(
-            YtDlpExecutableLocator.Instance,
-            YtDlpCookieFileService.Instance,
+            new YtDlpExecutableLocator(),
+            new YtDlpCookieFileService(),
             new ExternalProcessRunner())
     {
     }
@@ -44,6 +42,15 @@ public sealed class YtDlpService
     public string? FindYtDlp() => _executableLocator.FindYtDlp();
 
     public string? FindQJS() => _executableLocator.FindQuickJs();
+
+    internal string? CreateCookieFile(
+        string? cookieHeader,
+        string sourceUrl,
+        string? cookieJarJson = null) =>
+        _cookieFileService.Create(cookieHeader, sourceUrl, cookieJarJson);
+
+    internal void DeleteCookieFile(string? path) =>
+        _cookieFileService.DeleteSafe(path);
 
     public async Task<List<ResolvedStream>> ResolveDirectUrlsAsync(
         string pageUrl,

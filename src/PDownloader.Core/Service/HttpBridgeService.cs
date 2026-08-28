@@ -55,14 +55,20 @@ public sealed class HttpBridgeService : IDisposable
     private readonly string _sessionToken = CreateSessionToken();
     private readonly RunnerSessionManager _runnerSessions;
     private readonly DownloadConfigService _downloadConfig;
+    private readonly YtDlpService _ytDlpService;
+    private readonly UserDataStore _userDataStore;
     private CancellationTokenSource? _cts;
 
     public HttpBridgeService(
         RunnerSessionManager runnerSessions,
-        DownloadConfigService downloadConfig)
+        DownloadConfigService downloadConfig,
+        YtDlpService ytDlpService,
+        UserDataStore userDataStore)
     {
         _runnerSessions = runnerSessions;
         _downloadConfig = downloadConfig;
+        _ytDlpService = ytDlpService;
+        _userDataStore = userDataStore;
     }
 
     public void Start()
@@ -253,7 +259,7 @@ public sealed class HttpBridgeService : IDisposable
         await Json(response, new { ok = true });
     }
 
-    private static async Task HandleMediaAnalyze(
+    private async Task HandleMediaAnalyze(
         HttpListenerRequest request,
         HttpListenerResponse response,
         CancellationToken ct)
@@ -269,7 +275,7 @@ public sealed class HttpBridgeService : IDisposable
             "X-PDownloader-Cookie-Jar");
         string? userAgent = DownloadPathUtilities.GetHeader(headers, "User-Agent");
 
-        YtAnalyzeResult result = await YtDlpService.Instance.AnalyzeAsync(
+        YtAnalyzeResult result = await _ytDlpService.AnalyzeAsync(
             url,
             cookieHeader,
             cookieJarJson,
@@ -558,7 +564,7 @@ public sealed class HttpBridgeService : IDisposable
             return configuredFolder;
         }
 
-        string fallbackFolder = Helpers.GetDefaultFolder();
+        string fallbackFolder = Helpers.GetDefaultFolder(_userDataStore);
         if (!string.IsNullOrWhiteSpace(fallbackFolder))
         {
             Directory.CreateDirectory(fallbackFolder);

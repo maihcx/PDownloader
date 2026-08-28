@@ -20,6 +20,13 @@ internal sealed class DownloadPathService
     private const int CleanupAttempts = 5;
     private const int CleanupDelayMilliseconds = 100;
 
+    private readonly IDownloadRuntime _runtime;
+
+    public DownloadPathService(IDownloadRuntime runtime)
+    {
+        _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+    }
+
     public string GetTempDirectory(DownloadItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -40,10 +47,10 @@ internal sealed class DownloadPathService
             return item.SavePath;
         }
 
-        string? configuredFolder = DownloadRuntime.DefaultDownloadFolder;
+        string? configuredFolder = _runtime.DefaultDownloadFolder;
 
         return string.IsNullOrWhiteSpace(configuredFolder)
-            ? DownloadRuntime.FallbackDownloadFolder
+            ? _runtime.FallbackDownloadFolder
             : configuredFolder;
     }
 
@@ -97,10 +104,9 @@ internal sealed class DownloadPathService
         }
     }
 
-    public static void DeleteTempFiles(DownloadItem item)
+    public void DeleteTempFiles(DownloadItem item)
     {
-        var pathService = new DownloadPathService();
-        string tempDirectory = pathService.GetTempDirectory(item);
+        string tempDirectory = GetTempDirectory(item);
         MergeRecoveryManifest? pendingMerge = MergeRecoveryStore.TryLoad(tempDirectory);
 
         if (pendingMerge != null)
@@ -112,11 +118,11 @@ internal sealed class DownloadPathService
 
         try
         {
-            string? configuredFolder = DownloadRuntime.DefaultDownloadFolder;
+            string? configuredFolder = _runtime.DefaultDownloadFolder;
             string folder = !string.IsNullOrWhiteSpace(item.SavePath)
                 ? item.SavePath
                 : string.IsNullOrWhiteSpace(configuredFolder)
-                    ? DownloadRuntime.FallbackDownloadFolder
+                    ? _runtime.FallbackDownloadFolder
                     : configuredFolder;
             string name = SanitizeFileName(
                 string.IsNullOrWhiteSpace(item.FileName) ? "download" : item.FileName);
@@ -130,7 +136,7 @@ internal sealed class DownloadPathService
         }
     }
 
-    private static string ResolveTempRoot(DownloadItem item)
+    private string ResolveTempRoot(DownloadItem item)
     {
         if (!string.IsNullOrWhiteSpace(item.TempRootPath))
         {
@@ -167,9 +173,9 @@ internal sealed class DownloadPathService
         return configuredRoot;
     }
 
-    private static string GetConfiguredTempRoot()
+    private string GetConfiguredTempRoot()
     {
-        string? configured = DownloadRuntime.DefaultTempFolder;
+        string? configured = _runtime.DefaultTempFolder;
 
         return NormalizeTempRoot(configured);
     }

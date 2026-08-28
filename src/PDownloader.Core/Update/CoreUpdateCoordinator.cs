@@ -26,6 +26,7 @@ public sealed class CoreUpdateCoordinator : IDisposable
     private readonly CoreUpdateService _updateService;
     private readonly IHostApplicationLifetime _lifetime;
     private readonly CoreIpcHost _ipcHost;
+    private readonly UserDataStore _userDataStore;
     private int _operationActive;
     private int _disposed;
     private CancellationTokenSource? _operationCancellation;
@@ -36,15 +37,19 @@ public sealed class CoreUpdateCoordinator : IDisposable
     public CoreUpdateCoordinator(
         CoreUpdateService updateService,
         IHostApplicationLifetime lifetime,
-        CoreIpcHost ipcHost)
+        CoreIpcHost ipcHost,
+        UserDataStore userDataStore)
     {
         _updateService = updateService;
         _lifetime = lifetime;
         _ipcHost = ipcHost;
+        _userDataStore = userDataStore;
+        IsAutoUpdateEnabled = _userDataStore.GetValue<bool>(
+            AutoUpdateSettingKey,
+            true);
     }
 
-    public bool IsAutoUpdateEnabled { get; private set; } =
-        UserDataStore.GetValue<bool>(AutoUpdateSettingKey, true);
+    public bool IsAutoUpdateEnabled { get; private set; }
 
     public void HandleCommand(UpdateCommandRequest request)
     {
@@ -321,8 +326,8 @@ public sealed class CoreUpdateCoordinator : IDisposable
     {
         IsAutoUpdateEnabled = enabled;
         // Merge settings written by Main/Tray before Core persists its value.
-        UserDataStore.Reload();
-        UserDataStore.SetValue(AutoUpdateSettingKey, enabled);
+        _userDataStore.Reload();
+        _userDataStore.SetValue(AutoUpdateSettingKey, enabled);
         BroadcastState();
 
         if (enabled)
@@ -398,4 +403,5 @@ public sealed class CoreUpdateCoordinator : IDisposable
         _operationCancellation = null;
         GC.SuppressFinalize(this);
     }
+
 }

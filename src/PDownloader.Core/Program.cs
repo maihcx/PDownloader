@@ -22,20 +22,24 @@ namespace PDownloader.Core;
 
 internal class Program
 {
-    private static IHost? _host;
-
     static async Task Main(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
         TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
 
+        IHost? host = null;
+
         try
         {
-            _host = Host
+            host = Host
                 .CreateDefaultBuilder(args)
                 .ConfigureServices(services =>
                 {
+                    services.AddSingleton<UserDataStore>();
                     services.AddSingleton<DownloadConfigService>();
+                    services.AddSingleton<YtDlpService>();
+                    services.AddSingleton<IDownloadRuntime, CoreDownloadRuntime>();
+                    services.AddSingleton<DownloadManager>();
 
                     services.AddSingleton<CoreIpcHost>();
                     services.AddSingleton<MainAppGateway>();
@@ -58,7 +62,7 @@ internal class Program
                 })
                 .Build();
 
-            await _host.RunAsync();
+            await host.RunAsync();
         }
         catch (Exception ex)
         {
@@ -66,13 +70,13 @@ internal class Program
         }
         finally
         {
-            if (_host is IAsyncDisposable asyncDisposable)
+            if (host is IAsyncDisposable asyncDisposable)
             {
                 await asyncDisposable.DisposeAsync();
             }
             else
             {
-                _host?.Dispose();
+                host?.Dispose();
             }
         }
     }
@@ -90,4 +94,5 @@ internal class Program
         CrashHandler.WriteOnly(e.Exception, "TaskScheduler");
         e.SetObserved();
     }
+
 }

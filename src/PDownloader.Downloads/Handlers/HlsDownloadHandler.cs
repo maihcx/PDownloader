@@ -21,6 +21,7 @@ internal sealed class HlsDownloadHandler
     private readonly HlsPlaylistDetector _detector;
     private readonly HlsFragmentDownloadService _fragmentDownloader;
     private readonly YtDlpHlsDownloadService _ytDlpDownloader;
+    private readonly YtDlpService _ytDlpService;
     private readonly DownloadPathService _pathService;
     private readonly Action<long, double> _reportProgress;
     private readonly Action<double> _reportMergeProgress;
@@ -30,6 +31,7 @@ internal sealed class HlsDownloadHandler
         DownloadItem item,
         HttpClient httpClient,
         DownloadPathService pathService,
+        YtDlpService ytDlpService,
         Action<long, double> reportProgress,
         Action<double> reportMergeProgress,
         Action<string, IReadOnlyList<DownloadThreadProgress>> reportThreadProgress)
@@ -37,7 +39,8 @@ internal sealed class HlsDownloadHandler
         _item = item;
         _detector = new HlsPlaylistDetector(httpClient);
         _fragmentDownloader = new HlsFragmentDownloadService(httpClient);
-        _ytDlpDownloader = new YtDlpHlsDownloadService();
+        _ytDlpService = ytDlpService ?? throw new ArgumentNullException(nameof(ytDlpService));
+        _ytDlpDownloader = new YtDlpHlsDownloadService(_ytDlpService);
         _pathService = pathService;
         _reportProgress = reportProgress;
         _reportMergeProgress = reportMergeProgress;
@@ -53,7 +56,7 @@ internal sealed class HlsDownloadHandler
             return false;
         }
 
-        if (YtDlpService.Instance.FindYtDlp() == null)
+        if (_ytDlpService.FindYtDlp() == null)
         {
             SetError(
                 "Detected an HLS (m3u8) playlist, but yt-dlp is required to download/merge it. " +
@@ -137,7 +140,7 @@ internal sealed class HlsDownloadHandler
     {
         try
         {
-            return await YtDlpService.Instance.ResolveHlsFragmentsAsync(
+            return await _ytDlpService.ResolveHlsFragmentsAsync(
                 _item.Url,
                 _item.FormatId,
                 referer,

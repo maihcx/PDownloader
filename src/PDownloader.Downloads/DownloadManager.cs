@@ -17,8 +17,10 @@ namespace PDownloader.Downloads;
 
 public class DownloadManager : IDisposable
 {
-    public static readonly DownloadManager Instance = new();
-
+    private readonly IDownloadRuntime _runtime;
+    private readonly DownloadPathService _pathService;
+    private readonly YtDlpService _ytDlpService;
+    private readonly FfmpegMuxer _ffmpegMuxer;
     private readonly List<DownloadItem> _downloads = new();
     private readonly object _lock = new();
     private const int MaxConcurrent = 3;
@@ -31,6 +33,16 @@ public class DownloadManager : IDisposable
     private readonly SemaphoreSlim _hashSemaphore = new(1, 1);
 
     public event Action<DownloadItem>? OnItemChanged;
+
+    public DownloadManager(
+        IDownloadRuntime runtime,
+        YtDlpService ytDlpService)
+    {
+        _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+        _ytDlpService = ytDlpService ?? throw new ArgumentNullException(nameof(ytDlpService));
+        _pathService = new DownloadPathService(_runtime);
+        _ffmpegMuxer = new FfmpegMuxer();
+    }
 
     public DownloadItem Enqueue(
         string id,
@@ -57,7 +69,7 @@ public class DownloadManager : IDisposable
             MergeMode = mergeMode
         };
 
-        _ = new DownloadPathService().GetTempDirectory(item);
+        _ = _pathService.GetTempDirectory(item);
 
         lock (_lock) { _downloads.Add(item); }
 
@@ -104,7 +116,13 @@ public class DownloadManager : IDisposable
 
             while (true)
             {
-                var engine = new DownloadEngine(item, progress, cts.Token);
+                var engine = new DownloadEngine(
+                    item,
+                    progress,
+                    cts.Token,
+                    _pathService,
+                    _ytDlpService,
+                    _ffmpegMuxer);
                 try
                 {
                     await engine.RunAsync();
@@ -213,7 +231,7 @@ public class DownloadManager : IDisposable
 
         if (isShowRunner)
         {
-            DownloadRuntime.RequestRunner(item.Id, new()
+            _runtime.ShowRunner(item.Id, new()
             {
                 Id = item.Id,
                 FileName = item.FileName,
@@ -344,7 +362,7 @@ public class DownloadManager : IDisposable
             await runningTask;
         }
 
-        DownloadEngine.DeleteTempFiles(item);
+        _pathService.DeleteTempFiles(item);
 
         _runningTaskByItem.TryRemove(item.Id, out _);
     }
@@ -367,7 +385,7 @@ public class DownloadManager : IDisposable
             return;
         }
 
-        bool hasPendingMerge = DownloadEngine.HasPendingMerge(item);
+        bool hasPendingMerge = HasPendingMerge(item);
 
         item.Status = DownloadStatus.Queued;
         item.ErrorMessage = string.Empty;
@@ -427,7 +445,7 @@ public class DownloadManager : IDisposable
         }
 
         if ((item.Status is DownloadStatus.Paused or DownloadStatus.Error)
-            && DownloadEngine.TryGetPendingMergeProgress(
+            && TryGetPendingMergeProgress(
                 item,
                 out double pendingMergeProgress))
         {
@@ -451,6 +469,16 @@ public class DownloadManager : IDisposable
 
         return item;
     }
+
+    private bool HasPendingMerge(DownloadItem item) =>
+        MergeRecoveryStore.HasPendingInTree(_pathService.GetTempDirectory(item));
+
+    private bool TryGetPendingMergeProgress(
+        DownloadItem item,
+        out double progress) =>
+        MergeRecoveryStore.TryGetPendingProgressInTree(
+            _pathService.GetTempDirectory(item),
+            out progress);
 
     private void QueueHashCalculation(DownloadItem item)
     {

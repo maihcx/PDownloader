@@ -1,4 +1,4 @@
-﻿// This program is free software: you can redistribute it and/or modify
+// This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
@@ -26,9 +26,10 @@ public class Helpers
         return Convert.ToHexString(hashBytes);
     }
 
-    public static string GetDefaultFolder()
+    public static string GetDefaultFolder(UserDataStore userDataStore)
     {
-        string? saved = UserDataStore.GetValue<string>("DefaultDownloadFolder");
+        ArgumentNullException.ThrowIfNull(userDataStore);
+        string? saved = userDataStore.GetValue<string>("DefaultDownloadFolder");
         if (!string.IsNullOrWhiteSpace(saved) && Directory.Exists(saved))
         {
             return saved;

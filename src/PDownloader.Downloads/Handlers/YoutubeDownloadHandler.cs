@@ -20,6 +20,7 @@ internal sealed class YoutubeDownloadHandler
     private readonly DownloadItem _item;
     private readonly DownloadPathService _pathService;
     private readonly FfmpegMuxer _ffmpegMuxer;
+    private readonly YtDlpService _ytDlpService;
     private readonly YtDlpHlsDownloadService _ytDlpFragmentedDownloader;
     private readonly Action<long, double> _reportProgress;
     private readonly Action<double> _reportMergeProgress;
@@ -28,14 +29,17 @@ internal sealed class YoutubeDownloadHandler
     public YoutubeDownloadHandler(
         DownloadItem item,
         DownloadPathService pathService,
+        YtDlpService ytDlpService,
+        FfmpegMuxer ffmpegMuxer,
         Action<long, double> reportProgress,
         Action<double> reportMergeProgress,
         Action<string, IReadOnlyList<DownloadThreadProgress>> reportThreadProgress)
     {
         _item = item;
         _pathService = pathService;
-        _ffmpegMuxer = new FfmpegMuxer();
-        _ytDlpFragmentedDownloader = new YtDlpHlsDownloadService();
+        _ytDlpService = ytDlpService ?? throw new ArgumentNullException(nameof(ytDlpService));
+        _ffmpegMuxer = ffmpegMuxer ?? throw new ArgumentNullException(nameof(ffmpegMuxer));
+        _ytDlpFragmentedDownloader = new YtDlpHlsDownloadService(_ytDlpService);
         _reportProgress = reportProgress;
         _reportMergeProgress = reportMergeProgress;
         _reportThreadProgress = reportThreadProgress;
@@ -45,7 +49,7 @@ internal sealed class YoutubeDownloadHandler
         string tempDirectory,
         CancellationToken cancellationToken)
     {
-        if (YtDlpService.Instance.FindYtDlp() == null)
+        if (_ytDlpService.FindYtDlp() == null)
         {
             throw new ArgumentNullException("yt-dlp not found.");
         }
@@ -70,7 +74,7 @@ internal sealed class YoutubeDownloadHandler
         List<ResolvedStream> streams;
         try
         {
-            streams = await YtDlpService.Instance.ResolveDirectUrlsAsync(
+            streams = await _ytDlpService.ResolveDirectUrlsAsync(
                 _item.Url,
                 _item.FormatId ?? "bestvideo+bestaudio/best",
                 referer,

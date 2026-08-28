@@ -29,10 +29,12 @@ internal sealed class YtDlpHlsDownloadService
         "%(progress.total_bytes_estimate)s|" +
         "%(progress.speed)s";
 
-    private readonly YtDlpExecutableLocator _executableLocator =
-        YtDlpExecutableLocator.Instance;
-    private readonly YtDlpCookieFileService _cookieFileService =
-        YtDlpCookieFileService.Instance;
+    private readonly YtDlpService _ytDlpService;
+
+    public YtDlpHlsDownloadService(YtDlpService ytDlpService)
+    {
+        _ytDlpService = ytDlpService ?? throw new ArgumentNullException(nameof(ytDlpService));
+    }
 
     public async Task<string> DownloadAsync(
         string url,
@@ -48,12 +50,12 @@ internal sealed class YtDlpHlsDownloadService
         Action<long, long, double>? reportProgress,
         CancellationToken cancellationToken)
     {
-        string ytDlpPath = _executableLocator.FindYtDlp()
+        string ytDlpPath = _ytDlpService.FindYtDlp()
             ?? throw new InvalidOperationException("yt-dlp không tìm thấy.");
 
         string fileStem = Path.GetFileName(outputPathWithoutExtension);
         string temporaryOutputWithoutExtension = Path.Combine(tempDirectory, fileStem);
-        string? cookieFile = _cookieFileService.Create(
+        string? cookieFile = _ytDlpService.CreateCookieFile(
             cookieHeader,
             url,
             cookieJarJson);
@@ -109,7 +111,7 @@ internal sealed class YtDlpHlsDownloadService
         }
         finally
         {
-            _cookieFileService.DeleteSafe(cookieFile);
+            _ytDlpService.DeleteCookieFile(cookieFile);
         }
     }
 

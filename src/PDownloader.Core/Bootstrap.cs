@@ -19,20 +19,17 @@ namespace PDownloader.Core;
 
 public sealed class Bootstrap
 {
-    private readonly DownloadConfigService _downloadConfig;
     private readonly RunnerSessionManager _runnerSessions;
     private readonly DownloadManagerBootstrap _downloadManagerBootstrap;
     private readonly CoreIpcHost _ipcHost;
     private readonly CoreIpcBindings _ipcBindings;
 
     public Bootstrap(
-        DownloadConfigService downloadConfig,
         RunnerSessionManager runnerSessions,
         DownloadManagerBootstrap downloadManagerBootstrap,
         CoreIpcHost ipcHost,
         CoreIpcBindings ipcBindings)
     {
-        _downloadConfig = downloadConfig;
         _runnerSessions = runnerSessions;
         _downloadManagerBootstrap = downloadManagerBootstrap;
         _ipcHost = ipcHost;
@@ -41,17 +38,6 @@ public sealed class Bootstrap
 
     public void OnStarted()
     {
-        DownloadRuntime.Configure(new DownloadRuntimeOptions
-        {
-            GetDefaultDownloadFolder = () =>
-                _downloadConfig.DownloadConfigs.DefaultDownloadFolder,
-            GetDefaultTempFolder = () =>
-                _downloadConfig.DownloadConfigs.DefaultTempFolder,
-            GetFallbackDownloadFolder = Helpers.GetDefaultFolder,
-            ShowRunner = (id, task) =>
-                _ = _runnerSessions.EnsureStarted(id, task)
-        });
-
         _downloadManagerBootstrap.Initialize();
 
         ConfluxService main = new();

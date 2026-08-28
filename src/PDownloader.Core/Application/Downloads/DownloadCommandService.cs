@@ -21,13 +21,20 @@ namespace PDownloader.Core.Application.Downloads;
 /// </summary>
 public sealed class DownloadCommandService
 {
-    public void Pause(string id) => DownloadManager.Instance.Pause(id);
-    public void Resume(string id) => DownloadManager.Instance.Resume(id);
-    public void Retry(string id) => DownloadManager.Instance.Retry(id);
-    public void Cancel(string id) => DownloadManager.Instance.Cancel(id);
-    public void Clear(DownloadClearScope scope) => DownloadManager.Instance.ClearAll(scope);
-    public void PauseAll() => DownloadManager.Instance.PauseAll();
-    public void ResumeAll() => DownloadManager.Instance.ResumeAll();
-    public void RetryAll() => DownloadManager.Instance.RetryAll();
-    public List<DownloadItemDto> GetList() => DownloadManager.Instance.GetContractList();
+    private readonly DownloadManager _downloads;
+
+    public DownloadCommandService(DownloadManager downloads)
+    {
+        _downloads = downloads;
+    }
+
+    public void Pause(string id) => _downloads.Pause(id);
+    public void Resume(string id) => _downloads.Resume(id);
+    public void Retry(string id) => _downloads.Retry(id);
+    public void Cancel(string id) => _downloads.Cancel(id);
+    public void Clear(DownloadClearScope scope) => _downloads.ClearAll(scope);
+    public void PauseAll() => _downloads.PauseAll();
+    public void ResumeAll() => _downloads.ResumeAll();
+    public void RetryAll() => _downloads.RetryAll();
+    public List<DownloadItemDto> GetList() => _downloads.GetContractList();
 }

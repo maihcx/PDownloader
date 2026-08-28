@@ -23,14 +23,18 @@ public sealed class DownloadManagerBootstrap : IDisposable
     private const int SaveDebounceMs = 1000;
 
     private readonly DownloadProgressPublisher _progressPublisher;
+    private readonly DownloadManager _downloads;
     private readonly object _saveLock = new();
     private Timer? _saveDebounceTimer;
     private bool _initialized;
     private bool _disposed;
 
-    public DownloadManagerBootstrap(DownloadProgressPublisher progressPublisher)
+    public DownloadManagerBootstrap(
+        DownloadProgressPublisher progressPublisher,
+        DownloadManager downloads)
     {
         _progressPublisher = progressPublisher;
+        _downloads = downloads;
     }
 
     public void Initialize()
@@ -41,7 +45,7 @@ public sealed class DownloadManagerBootstrap : IDisposable
             return;
         }
 
-        DownloadManager.Instance.OnItemChanged += OnItemChanged;
+        _downloads.OnItemChanged += OnItemChanged;
         RestoreHistoryOnStartup();
         _initialized = true;
     }
@@ -65,12 +69,12 @@ public sealed class DownloadManagerBootstrap : IDisposable
         }
     }
 
-    private static void SaveHistoryNow()
+    private void SaveHistoryNow()
     {
         try
         {
             Directory.CreateDirectory(StorageDataDir);
-            string json = DownloadManager.Instance.SerializeHistory();
+            string json = _downloads.SerializeHistory();
             File.WriteAllText(StorageDownloaderDataFile, json);
         }
         catch (Exception ex)
@@ -79,7 +83,7 @@ public sealed class DownloadManagerBootstrap : IDisposable
         }
     }
 
-    private static void RestoreHistoryOnStartup()
+    private void RestoreHistoryOnStartup()
     {
         try
         {
@@ -89,7 +93,7 @@ public sealed class DownloadManagerBootstrap : IDisposable
             }
 
             string json = File.ReadAllText(StorageDownloaderDataFile);
-            List<DownloadItem> restored = DownloadManager.Instance.RestoreHistory(json);
+            List<DownloadItem> restored = _downloads.RestoreHistory(json);
 
             Debug.WriteLine(
                 $"[Bootstrap] Đã khôi phục {restored.Count} item từ lịch sử.");
@@ -117,7 +121,7 @@ public sealed class DownloadManagerBootstrap : IDisposable
 
         if (_initialized)
         {
-            DownloadManager.Instance.OnItemChanged -= OnItemChanged;
+            _downloads.OnItemChanged -= OnItemChanged;
         }
 
         lock (_saveLock)
