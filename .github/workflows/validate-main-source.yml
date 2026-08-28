@@ -1,0 +1,34 @@
+name: Validate main source branch
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate-source:
+    name: Only dev can merge into main
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate source branch
+        shell: bash
+        run: |
+          echo "Source branch: ${{ github.event.pull_request.head.ref }}"
+          echo "Target branch: ${{ github.event.pull_request.base.ref }}"
+
+          if [[ "${{ github.event.pull_request.head.ref }}" != "dev" ]]; then
+            echo "::error::Only pull requests from 'dev' may be merged into 'main'."
+            exit 1
+          fi
+
+          echo "Valid pull request: dev -> main"
