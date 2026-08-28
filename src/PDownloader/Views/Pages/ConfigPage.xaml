@@ -44,7 +44,7 @@
                                           Text="{utils:Localization page_config_folder_title}"
                                           FontWeight="SemiBold"
                                           TextWrapping="Wrap" />
-                            <TextBlock Text="{utils:Localization page_config_folder_summary}"
+                            <ui:TextBlock Text="{utils:Localization page_config_folder_summary}"
                                        Opacity="0.6"
                                        FontSize="12" />
                         </StackPanel>
@@ -75,7 +75,7 @@
                                           Text="{utils:Localization page_config_temp_folder_title}"
                                           FontWeight="SemiBold"
                                           TextWrapping="Wrap" />
-                            <TextBlock Text="{utils:Localization page_config_temp_folder_summary}"
+                            <ui:TextBlock Text="{utils:Localization page_config_temp_folder_summary}"
                                        Opacity="0.6"
                                        FontSize="12"
                                        TextWrapping="Wrap" />
@@ -112,7 +112,7 @@
                                           Text="{utils:Localization page_config_threads_title}"
                                           FontWeight="SemiBold"
                                           TextWrapping="Wrap" />
-                            <TextBlock Text="{utils:Localization page_config_threads_summary}"
+                            <ui:TextBlock Text="{utils:Localization page_config_threads_summary}"
                                        Opacity="0.6"
                                        FontSize="12" />
                         </StackPanel>
@@ -123,12 +123,12 @@
                                 Value="{Binding ViewModel.DownloadConfigs.DefaultThreadCount, Mode=TwoWay}"
                                 Width="240"
                                 VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding ViewModel.DownloadConfigs.DefaultThreadCount, Mode=OneWay}"
+                        <ui:TextBlock Text="{Binding ViewModel.DownloadConfigs.DefaultThreadCount, Mode=OneWay}"
                                    VerticalAlignment="Center"
                                    Margin="12,0,6,0"
                                    FontSize="15"
                                    FontWeight="SemiBold" />
-                        <TextBlock Text="{utils:Localization page_config_threads_unit}"
+                        <ui:TextBlock Text="{utils:Localization page_config_threads_unit}"
                                    VerticalAlignment="Center"
                                    Opacity="0.6"
                                    FontSize="12" />
@@ -145,7 +145,7 @@
                                           Text="{utils:Localization page_config_merge_mode_title}"
                                           FontWeight="SemiBold"
                                           TextWrapping="Wrap" />
-                            <TextBlock Text="{utils:Localization page_config_merge_mode_summary}"
+                            <ui:TextBlock Text="{utils:Localization page_config_merge_mode_summary}"
                                        Opacity="0.6"
                                        FontSize="12"
                                        TextWrapping="Wrap" />
@@ -166,17 +166,17 @@
                             <DataTemplate>
                                 <StackPanel MaxWidth="560"
                                             HorizontalAlignment="Left">
-                                    <TextBlock Text="{Binding Title}"
+                                    <ui:TextBlock Text="{Binding Title}"
                                                FontWeight="SemiBold"
                                                TextTrimming="CharacterEllipsis" />
 
-                                    <TextBlock Text="{Binding Description}"
+                                    <ui:TextBlock Text="{Binding Description}"
                                                Margin="22,4,8,0"
                                                FontSize="12"
                                                Opacity="0.65"
                                                TextWrapping="Wrap">
 
-                                        <TextBlock.Style>
+                                        <ui:TextBlock.Style>
                                             <Style TargetType="{x:Type TextBlock}">
                                                 <Setter Property="Visibility"
                                                         Value="Visible" />
@@ -189,8 +189,8 @@
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                        </ui:TextBlock.Style>
+                                    </ui:TextBlock>
                                 </StackPanel>
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
@@ -222,7 +222,7 @@
                                           Text="{utils:Localization page_config_progress_window_title}"
                                           FontWeight="SemiBold"
                                           TextWrapping="Wrap" />
-                            <TextBlock Text="{utils:Localization page_config_progress_window_summary}"
+                            <ui:TextBlock Text="{utils:Localization page_config_progress_window_summary}"
                                        Opacity="0.6"
                                        FontSize="12"
                                        TextWrapping="Wrap" />
@@ -237,10 +237,10 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0"
                                         Margin="0,0,16,0">
-                                <TextBlock Text="{utils:Localization page_config_progress_window_close_completed_title}"
+                                <ui:TextBlock Text="{utils:Localization page_config_progress_window_close_completed_title}"
                                            FontWeight="SemiBold"
                                            TextWrapping="Wrap" />
-                                <TextBlock Text="{utils:Localization page_config_progress_window_close_completed_summary}"
+                                <ui:TextBlock Text="{utils:Localization page_config_progress_window_close_completed_summary}"
                                            Opacity="0.6"
                                            FontSize="12"
                                            TextWrapping="Wrap"
@@ -261,10 +261,10 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0"
                                         Margin="0,0,16,0">
-                                <TextBlock Text="{utils:Localization page_config_progress_window_close_open_file_title}"
+                                <ui:TextBlock Text="{utils:Localization page_config_progress_window_close_open_file_title}"
                                            FontWeight="SemiBold"
                                            TextWrapping="Wrap" />
-                                <TextBlock Text="{utils:Localization page_config_progress_window_close_open_file_summary}"
+                                <ui:TextBlock Text="{utils:Localization page_config_progress_window_close_open_file_summary}"
                                            Opacity="0.6"
                                            FontSize="12"
                                            TextWrapping="Wrap"
@@ -285,10 +285,10 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0"
                                         Margin="0,0,16,0">
-                                <TextBlock Text="{utils:Localization page_config_progress_window_close_open_folder_title}"
+                                <ui:TextBlock Text="{utils:Localization page_config_progress_window_close_open_folder_title}"
                                            FontWeight="SemiBold"
                                            TextWrapping="Wrap" />
-                                <TextBlock Text="{utils:Localization page_config_progress_window_close_open_folder_summary}"
+                                <ui:TextBlock Text="{utils:Localization page_config_progress_window_close_open_folder_summary}"
                                            Opacity="0.6"
                                            FontSize="12"
                                            TextWrapping="Wrap"
@@ -309,7 +309,7 @@
                             <ui:TextBlock FontTypography="Body"
                                          Text="{utils:Localization page_config_concurrent_title}"
                                          FontWeight="SemiBold" TextWrapping="Wrap"/>
-                            <TextBlock Text="{utils:Localization page_config_concurrent_summary}"
+                            <ui:TextBlock Text="{utils:Localization page_config_concurrent_summary}"
                                        Opacity="0.6" FontSize="12"/>
                         </StackPanel>
                     </ui:CardExpander.Header>
@@ -317,10 +317,10 @@
                         <Slider Minimum="1" Maximum="10"
                                 Value="{Binding ViewModel.MaxConcurrentDownloads}"
                                 Width="200" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding ViewModel.MaxConcurrentDownloads}"
+                        <ui:TextBlock Text="{Binding ViewModel.MaxConcurrentDownloads}"
                                    VerticalAlignment="Center" Margin="12,0,6,0"
                                    FontSize="15" FontWeight="SemiBold"/>
-                        <TextBlock Text="{utils:Localization page_config_concurrent_unit}"
+                        <ui:TextBlock Text="{utils:Localization page_config_concurrent_unit}"
                                    VerticalAlignment="Center" Opacity="0.6" FontSize="12"/>
                     </StackPanel>
                 </ui:CardExpander>-->
@@ -338,7 +338,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0"
+                <ui:TextBlock Grid.Column="0"
                            Text="{Binding ViewModel.StatusMessage}"
                            VerticalAlignment="Center"
                            Opacity="0.7"

@@ -72,18 +72,18 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0"
+                    <ui:TextBlock Grid.Column="0"
                                Text="📄"
                                FontSize="28"
                                VerticalAlignment="Center"
                                Margin="0,0,14,0" />
                     <StackPanel Grid.Column="1"
                                 VerticalAlignment="Center">
-                        <TextBlock Text="{Binding ViewModel.RunnerConfig.FileName}"
+                        <ui:TextBlock Text="{Binding ViewModel.RunnerConfig.FileName}"
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding ViewModel.RunnerConfig.InitialUrl}"
+                        <ui:TextBlock Text="{Binding ViewModel.RunnerConfig.InitialUrl}"
                                    FontSize="11"
                                    TextTrimming="CharacterEllipsis"
                                    Margin="0,3,0,0" />
@@ -93,7 +93,7 @@
 
             <StackPanel Grid.Row="1"
                         Margin="0 8 0 0">
-                <TextBlock Text="{Binding ViewModel.StatusText}"
+                <ui:TextBlock Text="{Binding ViewModel.StatusText}"
                            FontSize="11" />
 
                 <ProgressBar Style="{StaticResource DownloadProgressBar}"
@@ -108,17 +108,17 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0"
+                    <ui:TextBlock Grid.Column="0"
                                Text="{Binding ViewModel.ProgressText}"
                                FontSize="13"
                                FontWeight="Bold" />
                     <StackPanel Grid.Column="2"
                                 Orientation="Horizontal">
-                        <TextBlock Text="{Binding ViewModel.DownloadedText}"
+                        <ui:TextBlock Text="{Binding ViewModel.DownloadedText}"
                                    FontSize="11" />
-                        <TextBlock Text=" / "
+                        <ui:TextBlock Text=" / "
                                    FontSize="11" />
-                        <TextBlock Text="{Binding ViewModel.TotalText}"
+                        <ui:TextBlock Text="{Binding ViewModel.TotalText}"
                                    FontSize="11" />
                     </StackPanel>
                 </Grid>
@@ -130,17 +130,17 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0"
                                 Orientation="Horizontal">
-                        <TextBlock Text="↓ "
+                        <ui:TextBlock Text="↓ "
                                    FontSize="12" />
-                        <TextBlock Text="{Binding ViewModel.SpeedText}"
+                        <ui:TextBlock Text="{Binding ViewModel.SpeedText}"
                                    FontSize="12" />
                     </StackPanel>
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal"
                                 HorizontalAlignment="Right">
-                        <TextBlock Text="ETA: "
+                        <ui:TextBlock Text="ETA: "
                                    FontSize="12" />
-                        <TextBlock Text="{Binding ViewModel.EtaText}"
+                        <ui:TextBlock Text="{Binding ViewModel.EtaText}"
                                    FontSize="12" />
                     </StackPanel>
                 </Grid>
@@ -162,7 +162,7 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0"
+                        <ui:TextBlock Grid.Row="0"
                                    Text="{Binding ViewModel.ThreadProgressTitle}"
                                    FontSize="12"
                                    FontWeight="SemiBold"
@@ -263,14 +263,14 @@
                             VerticalAlignment="Center"
                             Visibility="{Binding ViewModel.IsCompactStatusVisible,
                                          Converter={StaticResource BoolToVisibilityConverter}}">
-                    <TextBlock Text="{Binding ViewModel.CompactStatusTitle}"
+                    <ui:TextBlock Text="{Binding ViewModel.CompactStatusTitle}"
                                FontSize="13"
                                FontWeight="SemiBold"
                                TextAlignment="Center"
                                TextWrapping="Wrap"
                                HorizontalAlignment="Center" />
 
-                    <TextBlock Text="{Binding ViewModel.CompactStatusDescription}"
+                    <ui:TextBlock Text="{Binding ViewModel.CompactStatusDescription}"
                                Margin="0,5,0,0"
                                MaxWidth="390"
                                FontSize="11"
@@ -292,7 +292,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     
-                    <TextBlock Grid.Column="0"
+                    <ui:TextBlock Grid.Column="0"
                                Text="{utils:Localization sending_command_title}"
                                FontSize="11"
                                VerticalAlignment="Center"
@@ -368,7 +368,7 @@
                                 VerticalAlignment="Center">
                         <ui:SymbolIcon Symbol="CheckboxChecked16"
                                        Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
-                        <TextBlock Text="{utils:Localization status_completed_title}"
+                        <ui:TextBlock Text="{utils:Localization status_completed_title}"
                                    Foreground="{DynamicResource SystemFillColorSuccessBrush}"
                                    FontSize="12"
                                    VerticalAlignment="Center"
