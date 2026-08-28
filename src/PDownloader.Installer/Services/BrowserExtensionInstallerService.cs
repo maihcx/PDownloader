@@ -14,7 +14,6 @@
 // Copyright (C) Song Mai Software.
 
 using Microsoft.Win32;
-using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 

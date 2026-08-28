@@ -38,42 +38,29 @@ public partial class RunnerConfig : ObservableObject
     [ObservableProperty]
     public bool _isRunner = false;
 
-    public Dictionary<string, string>? CustomHeaders { get; set; }
-
     public static RunnerConfig ParseArgs(string[] args)
     {
         var cfg = new RunnerConfig();
-        if (args.Length == 0)
+        for (int i = 0; i < args.Length - 1; i++)
         {
-            cfg.IsArgsSetup = false;
-        }
-        else
-        {
-            cfg.IsArgsSetup = true;
-            for (int i = 0; i < args.Length - 1; i++)
+            if (args[i] == RunnerLaunchProtocol.TokenArgument)
             {
-                switch (args[i])
-                {
-                    case RunnerLaunchProtocol.TokenArgument: cfg.Token = Helpers.Base64Decode(args[i + 1].Trim()); break;
-                    case RunnerLaunchProtocol.UrlArgument: cfg.InitialUrl = Helpers.Base64Decode(args[i + 1].Trim()); break;
-                    case RunnerLaunchProtocol.SaveToArgument: cfg.SaveTo = Helpers.Base64Decode(args[i + 1].Trim()); break;
-                    case RunnerLaunchProtocol.FileNameArgument: cfg.FileName = Helpers.Base64Decode(args[i + 1].Trim()); break;
-                    case RunnerLaunchProtocol.ThreadsArgument: if (int.TryParse(Helpers.Base64Decode(args[i + 1].Trim()), out var t)) { cfg.Threads = t; } break;
-                    case RunnerLaunchProtocol.DownloadRunnerArgument: cfg.IsRunner = Helpers.Base64Decode(args[i + 1].Trim()) == RunnerLaunchProtocol.RunnerModeValue; break;
-                    case RunnerLaunchProtocol.HeadersArgument:
-                        try
-                        {
-                            string json = Helpers.Base64Decode(args[i + 1].Trim());
-                            cfg.CustomHeaders = System.Text.Json.JsonSerializer
-                                .Deserialize<Dictionary<string, string>>(json);
-                        }
-                        catch { }
-
-                        break;
-                }
+                cfg.Token = Helpers.Base64Decode(args[i + 1].Trim());
+                break;
             }
         }
 
+        cfg.IsArgsSetup = !string.IsNullOrWhiteSpace(cfg.Token);
         return cfg;
+    }
+
+    public void ApplySession(RunnerSessionView session)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        InitialUrl = session.Url;
+        SaveTo = session.SaveTo;
+        FileName = session.FileName;
+        Threads = session.Threads > 0 ? session.Threads : 8;
+        IsRunner = session.IsRunner;
     }
 }

@@ -28,7 +28,10 @@ public static class DownloadProtocol
     public static readonly IpcMessageDefinition<StartDownloadRequest> DownloadByLink =
         new("download.create");
 
-    public static readonly IpcMessageDefinition<StartDownloadRequest> RunnerStartDownload =
+    public static readonly IpcRequestDefinition<IpcNoPayload, RunnerSessionView> RunnerGetSession =
+        new("runner.session.get");
+
+    public static readonly IpcMessageDefinition<RunnerStartDownloadRequest> RunnerStartDownload =
         new("download.runner.start");
 
     public static readonly IpcMessageDefinition<DownloadIdRequest> RunnerPause =
@@ -61,11 +64,6 @@ public static class DownloadProtocol
     public static readonly IpcMessageDefinition<IpcNoPayload> RunnerUiClosed =
         new("runner.ui-closed");
 
-    public static readonly IpcMessageDefinition<StartDownloadRequest> RunnerDownload =
-        new("runner.download");
-
-    public static readonly IpcMessageDefinition<IpcNoPayload> RunnerCancelMessage =
-        new("runner.cancel");
 }
 
 public sealed record DownloadIdRequest(string DownloadId);

@@ -25,6 +25,7 @@ public sealed class CoreUpdateCoordinator : IDisposable
 
     private readonly CoreUpdateService _updateService;
     private readonly IHostApplicationLifetime _lifetime;
+    private readonly CoreIpcHost _ipcHost;
     private int _operationActive;
     private int _disposed;
     private CancellationTokenSource? _operationCancellation;
@@ -34,10 +35,12 @@ public sealed class CoreUpdateCoordinator : IDisposable
 
     public CoreUpdateCoordinator(
         CoreUpdateService updateService,
-        IHostApplicationLifetime lifetime)
+        IHostApplicationLifetime lifetime,
+        CoreIpcHost ipcHost)
     {
         _updateService = updateService;
         _lifetime = lifetime;
+        _ipcHost = ipcHost;
     }
 
     public bool IsAutoUpdateEnabled { get; private set; } =
@@ -131,11 +134,11 @@ public sealed class CoreUpdateCoordinator : IDisposable
     public void BroadcastState(bool shouldNotifyTray = false)
     {
         UpdateStateSnapshot snapshot = CreateSnapshot(shouldNotifyTray);
-        AppRuntime.cfsMain?.Send(
+        _ipcHost.Main?.Send(
             UpdateProtocol.State,
             snapshot,
             BroadcastTimeout);
-        AppRuntime.cfsTray?.Send(
+        _ipcHost.Tray?.Send(
             UpdateProtocol.State,
             snapshot,
             BroadcastTimeout);
@@ -395,5 +398,4 @@ public sealed class CoreUpdateCoordinator : IDisposable
         _operationCancellation = null;
         GC.SuppressFinalize(this);
     }
-
 }

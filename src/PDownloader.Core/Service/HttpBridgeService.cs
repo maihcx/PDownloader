@@ -14,6 +14,7 @@
 // Copyright (C) Song Mai Software.
 
 using System.Security.Cryptography;
+using PDownloader.Core.Services.DownloadServices;
 
 namespace PDownloader.Core.Service;
 
@@ -52,7 +53,17 @@ public sealed class HttpBridgeService : IDisposable
 
     private readonly HttpListener _bridgeListener = new();
     private readonly string _sessionToken = CreateSessionToken();
+    private readonly RunnerSessionManager _runnerSessions;
+    private readonly DownloadConfigService _downloadConfig;
     private CancellationTokenSource? _cts;
+
+    public HttpBridgeService(
+        RunnerSessionManager runnerSessions,
+        DownloadConfigService downloadConfig)
+    {
+        _runnerSessions = runnerSessions;
+        _downloadConfig = downloadConfig;
+    }
 
     public void Start()
     {
@@ -238,7 +249,7 @@ public sealed class HttpBridgeService : IDisposable
             Headers = customHeaders,
         };
 
-        DownloadRunner.EnsureRunnerStarted(id, data);
+        _runnerSessions.EnsureStarted(id, data);
         await Json(response, new { ok = true });
     }
 
@@ -290,8 +301,6 @@ public sealed class HttpBridgeService : IDisposable
         }
 
         string id = Guid.NewGuid().ToString();
-        CFSCommandHandler.RegisterYoutubePending(id, formatId);
-
         var data = new RunnerDownloadTask
         {
             Id = id,
@@ -304,7 +313,7 @@ public sealed class HttpBridgeService : IDisposable
             Headers = headers,
         };
 
-        DownloadRunner.EnsureRunnerStarted(id, data);
+        _runnerSessions.EnsureStarted(id, data);
         await Json(response, new { success = true });
     }
 
@@ -538,10 +547,10 @@ public sealed class HttpBridgeService : IDisposable
         return path.TrimEnd('/').ToLowerInvariant();
     }
 
-    private static string GetBridgeDownloadFolder()
+    private string GetBridgeDownloadFolder()
     {
         string? configuredFolder =
-            CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultDownloadFolder;
+            _downloadConfig.DownloadConfigs.DefaultDownloadFolder;
 
         if (!string.IsNullOrWhiteSpace(configuredFolder)
             && Directory.Exists(configuredFolder))

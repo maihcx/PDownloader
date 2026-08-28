@@ -14,7 +14,6 @@
 // Copyright (C) Song Mai Software.
 
 using System.Buffers;
-using System.Security.Cryptography;
 
 namespace PDownloader.Infrastructure.Downloads;
 

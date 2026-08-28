@@ -23,16 +23,17 @@ public class CoreBackgroundService : BackgroundService
 
     private readonly Bootstrap _bootstrap;
     private readonly CoreUpdateCoordinator _updateCoordinator;
-    private readonly HttpBridgeService _httpBridge = new();
+    private readonly HttpBridgeService _httpBridge;
     private bool _bootstrapStarted;
 
     public CoreBackgroundService(
         Bootstrap bootstrap,
-        CoreUpdateCoordinator updateCoordinator)
+        CoreUpdateCoordinator updateCoordinator,
+        HttpBridgeService httpBridge)
     {
         _bootstrap = bootstrap;
         _updateCoordinator = updateCoordinator;
-        AppRuntime.bootstrap = bootstrap;
+        _httpBridge = httpBridge;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -72,21 +73,15 @@ public class CoreBackgroundService : BackgroundService
         }
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _httpBridge.Stop();
         if (_bootstrapStarted)
         {
-            _bootstrap.OnStopped();
+            await _bootstrap.OnStoppedAsync().ConfigureAwait(false);
             _bootstrapStarted = false;
         }
 
-        return base.StopAsync(cancellationToken);
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
-        _httpBridge.Dispose();
+        await base.StopAsync(cancellationToken).ConfigureAwait(false);
     }
 }

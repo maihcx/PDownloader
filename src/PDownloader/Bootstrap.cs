@@ -176,8 +176,7 @@ public static class Bootstrap
         SplashScreen?.Close(new TimeSpan(0));
 
         _ = ConfluxManager.cfsPDownloaderCore?.SendAsync(
-            AppProtocol.CoreEventMessage,
-            CoreEvent.Ping);
+            AppProtocol.MainReady);
         _ = App.GetRequiredService<UpdateHostService>().RequestStateAsync();
 
         if (!IsViewAtBoot)

@@ -66,5 +66,4 @@ public class ReferralCard : Control
         get => (string)GetValue(FooterTextProperty);
         set => SetValue(FooterTextProperty, value);
     }
-
 }

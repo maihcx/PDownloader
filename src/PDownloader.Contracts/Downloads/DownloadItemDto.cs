@@ -13,8 +13,6 @@
 //
 // Copyright (C) Song Mai Software.
 
-using System.Text.Json.Serialization;
-
 namespace PDownloader.Contracts.Downloads;
 
 /// <summary>

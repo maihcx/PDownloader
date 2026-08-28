@@ -17,8 +17,9 @@ namespace PDownloader.Contracts.Downloads;
 
 /// <summary>
 /// Cross-assembly request used when the download module asks Core to show/start a Runner.
-/// This is an in-process contract between PDownloader.Downloads and PDownloader.Core;
-/// the Runner process itself receives the values through RunnerLaunchProtocol arguments.
+/// This is an in-process contract between PDownloader.Downloads and PDownloader.Core.
+/// Core keeps the full context in a Runner session and launches the Runner with only
+/// an opaque session token.
 /// </summary>
 public sealed class RunnerDownloadTask
 {
@@ -29,7 +30,7 @@ public sealed class RunnerDownloadTask
     public string FileName { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public long FileSize { get; set; }
-    public string RunnerMode { get; set; } = string.Empty;
+    public bool IsRunner { get; set; }
     public int Threads { get; set; }
     public Dictionary<string, string>? Headers { get; set; }
 }

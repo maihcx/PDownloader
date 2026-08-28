@@ -20,13 +20,8 @@ namespace PDownloader.Contracts.Downloads;
 /// </summary>
 public static class RunnerLaunchProtocol
 {
+    // The Runner receives only its opaque session token on the command line.
+    // URL, file path, thread count and all sensitive headers are transferred
+    // through the authenticated local IPC session after startup.
     public const string TokenArgument = "--token";
-    public const string UrlArgument = "--url";
-    public const string SaveToArgument = "--save-to";
-    public const string FileNameArgument = "--filename";
-    public const string ThreadsArgument = "--threads";
-    public const string DownloadRunnerArgument = "--download-runner";
-    public const string HeadersArgument = "--headers";
-
-    public const string RunnerModeValue = "runner";
 }
