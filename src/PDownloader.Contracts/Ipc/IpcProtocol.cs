@@ -13,7 +13,17 @@
 //
 // Copyright (C) Song Mai Software.
 
-global using System;
-global using System.Collections.Generic;
-global using System.Text.Json;
-global using System.Text.Json.Serialization;
+namespace PDownloader.Contracts.Ipc;
+
+/// <summary>
+/// Version information for the inter-process protocol used by every PDownloader process.
+/// </summary>
+public static class IpcProtocol
+{
+    public const int CurrentVersion = 1;
+}
+
+/// <summary>
+/// Marker payload for messages that intentionally carry no application data.
+/// </summary>
+public readonly record struct IpcNoPayload;

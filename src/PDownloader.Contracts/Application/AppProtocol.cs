@@ -13,48 +13,55 @@
 //
 // Copyright (C) Song Mai Software.
 
+using PDownloader.Contracts.Ipc;
+
 namespace PDownloader.Contracts.Application;
 
-/// <summary>
-/// Stable application-level messages exchanged between Main, Core, Tray and Runner.
-/// These values intentionally preserve the legacy CFS wire format.
-/// </summary>
 public static class AppProtocol
 {
-    public const string MainEventMessage = "main-event";
-    public const string TrayEventMessage = "tray-event";
-    public const string StateMessage = "state";
-    public const string CoreServiceStateMessage = "core-svc-state";
-    public const string CoreEventMessage = "core-event";
+    public static readonly IpcMessageDefinition<MainAppEvent> MainEvent =
+        new("app.main-event");
 
-    public static class State
-    {
-        public const string Start = "start";
-        public const string Shutdown = "shutdown";
-    }
+    public static readonly IpcMessageDefinition<TrayNavigationEvent> TrayEvent =
+        new("app.tray-event");
 
-    public static class MainEvent
-    {
-        public const string LanguageChanged = "OnLanguageChanged";
-        public const string RadiusChanged = "OnRadiusChanged";
-        public const string MaterialChanged = "OnMaterialChanged";
-        public const string ThemeChanged = "OnThemeChanged";
-        public const string AppExit = "OnAppExit";
-    }
+    public static readonly IpcMessageDefinition<AppState> State =
+        new("app.state");
 
-    public static class TrayEvent
-    {
-        public const string GoHome = "OnGoHome";
-        public const string GoConfig = "OnGoConfig";
-        public const string GoDownload = "OnGoDownload";
-        public const string GoSettings = "OnGoSettings";
-        public const string GoSettingsUpdate = "OnGoSettings--UPDATE";
-        public const string GoAbout = "OnGoAbout";
-    }
+    public static readonly IpcMessageDefinition<AppState> CoreServiceState =
+        new("app.core-service-state");
 
-    public static class CoreEvent
-    {
-        public const string RefreshDownloaderConfigs = "refresh-downloader-configs";
-        public const string Ping = "ping";
-    }
+    public static readonly IpcMessageDefinition<CoreEvent> CoreEventMessage =
+        new("app.core-event");
+}
+
+public enum AppState
+{
+    Start,
+    Shutdown
+}
+
+public enum MainAppEvent
+{
+    LanguageChanged,
+    RadiusChanged,
+    MaterialChanged,
+    ThemeChanged,
+    AppExit
+}
+
+public enum TrayNavigationEvent
+{
+    GoHome,
+    GoConfig,
+    GoDownload,
+    GoSettings,
+    GoSettingsUpdate,
+    GoAbout
+}
+
+public enum CoreEvent
+{
+    RefreshDownloaderConfigs,
+    Ping
 }

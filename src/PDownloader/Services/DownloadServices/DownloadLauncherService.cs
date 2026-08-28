@@ -26,20 +26,20 @@ public class DownloadLauncherService
             return;
         }
 
-        string payload = JsonSerializer.Serialize(new StartDownloadRequest
+        var request = new StartDownloadRequest
         {
             Url = url,
             SaveTo = saveTo.Trim(),
             FileName = fileName.Trim()
-        });
+        };
 
-        ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.DownloadByLinkCommand, payload);
+        ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.DownloadByLink, request);
     }
 
     public void RefreshConfigs()
     {
         ConfluxManager.cfsPDownloaderCore?.Send(
             AppProtocol.CoreEventMessage,
-            AppProtocol.CoreEvent.RefreshDownloaderConfigs);
+            CoreEvent.RefreshDownloaderConfigs);
     }
 }

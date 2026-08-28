@@ -273,14 +273,14 @@ public class DownloadManager : IDisposable
         }
     }
 
-    public void ClearAll(string state)
+    public void ClearAll(DownloadClearScope scope)
     {
-        ClearAllAsync(state).Wait();
+        ClearAllAsync(scope).Wait();
     }
 
-    public async Task ClearAllAsync(string state)
+    public async Task ClearAllAsync(DownloadClearScope scope)
     {
-        if (state.Equals(DownloadProtocol.ClearCompletedValue, StringComparison.Ordinal))
+        if (scope == DownloadClearScope.Completed)
         {
             for (int i = _downloads.Count - 1; i >= 0; i--)
             {
@@ -291,7 +291,7 @@ public class DownloadManager : IDisposable
                 }
             }
         }
-        else if (state.Equals(DownloadProtocol.ClearAllValue, StringComparison.Ordinal))
+        else if (scope == DownloadClearScope.All)
         {
             for (int i = _downloads.Count - 1; i >= 0; i--)
             {
@@ -514,52 +514,11 @@ public class DownloadManager : IDisposable
         return restored;
     }
 
-    public string SerializeList()
-        => JsonSerializer.Serialize(GetAll().Select(DownloadItemContractMapper.From), new JsonSerializerOptions
-        {
-            WriteIndented = true
-        });
+    public List<DownloadItemDto> GetContractList()
+        => GetAll().Select(DownloadItemContractMapper.From).ToList();
 
-    public static string SerializeItem(DownloadItem item)
-        => JsonSerializer.Serialize(DownloadItemContractMapper.From(item), new JsonSerializerOptions
-        {
-            WriteIndented = true
-        });
-
-    public static List<DownloadItemDto> DeserializeList(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return new List<DownloadItemDto>();
-        }
-
-        try
-        {
-            List<DownloadItemDto>? result = JsonSerializer.Deserialize<List<DownloadItemDto>>(json);
-            return result ?? new List<DownloadItemDto>();
-        }
-        catch (JsonException)
-        {
-            return new List<DownloadItemDto>();
-        }
-    }
-
-    public static DownloadItemDto? DeserializeItem(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<DownloadItemDto>(json);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-    }
+    public static DownloadItemDto ToContract(DownloadItem item)
+        => DownloadItemContractMapper.From(item);
 
     protected virtual void Dispose(bool disposing)
     {

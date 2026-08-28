@@ -13,22 +13,35 @@
 //
 // Copyright (C) Song Mai Software.
 
+using PDownloader.Contracts.Ipc;
+
 namespace PDownloader.Contracts.Updates;
 
 public static class UpdateProtocol
 {
-    public const string CommandMessage = "update-command";
-    public const string StateMessage = "update-state";
+    public static readonly IpcRequestDefinition<IpcNoPayload, UpdateStateSnapshot> GetState =
+        new("update.state.get");
 
-    public const string GetStateCommand = "get-state";
-    public const string CheckCommand = "check";
-    public const string CheckWithoutTrayNotificationCommand =
-        "check-without-tray-notification";
-    public const string DownloadCommand = "download";
-    public const string InstallCommand = "install";
-    public const string CancelCommand = "cancel";
-    public const string SetAutoUpdatePrefix = "set-auto-update:";
+    public static readonly IpcMessageDefinition<UpdateCommandRequest> Command =
+        new("update.command");
+
+    public static readonly IpcMessageDefinition<UpdateStateSnapshot> State =
+        new("update.state");
 }
+
+public enum UpdateCommandKind
+{
+    Check,
+    CheckWithoutTrayNotification,
+    Download,
+    Install,
+    Cancel,
+    SetAutoUpdate
+}
+
+public sealed record UpdateCommandRequest(
+    UpdateCommandKind Command,
+    bool? Enabled = null);
 
 public enum UpdateStatus
 {

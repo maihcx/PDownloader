@@ -38,48 +38,15 @@ namespace PDownloader.Services.DownloadServices;
 /// </summary>
 public class DownloadsChannelService
 {
-    public event Action<List<DownloadItemViewModel>>? OnList;
     public event Action<DownloadItemViewModel>? OnProgress;
 
-    public void Handle(string name, string value)
+    public void Handle(IpcReceivedMessage message)
     {
-        switch (name)
+        if (message.TryGetPayload(
+                DownloadProtocol.Progress,
+                out ContractDownloadItemDto dto))
         {
-            case DownloadProtocol.ListMessage:
-                HandleList(value);
-                break;
-
-            case DownloadProtocol.ProgressMessage:
-                HandleProgress(value);
-                break;
+            OnProgress?.Invoke(DownloadItemViewModel.FromContract(dto));
         }
-    }
-
-    private void HandleList(string value)
-    {
-        try
-        {
-            List<ContractDownloadItemDto>? list = JsonSerializer.Deserialize<List<ContractDownloadItemDto>>(value,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (list != null)
-            {
-                OnList?.Invoke(list.Select(DownloadItemViewModel.FromContract).ToList());
-            }
-        }
-        catch { }
-    }
-
-    private void HandleProgress(string value)
-    {
-        try
-        {
-            ContractDownloadItemDto? dto = JsonSerializer.Deserialize<ContractDownloadItemDto>(value,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (dto != null)
-            {
-                OnProgress?.Invoke(DownloadItemViewModel.FromContract(dto));
-            }
-        }
-        catch { }
     }
 }

@@ -29,151 +29,172 @@ public static class CFSCommandHandler
 
     private static Action? mainAppAction { get; set; }
 
-    public static void Handle(string name, string value)
+    public static void Handle(IpcReceivedMessage message)
     {
-        switch (name)
+        if (message.TryGetPayload(AppProtocol.MainEvent, out MainAppEvent mainEvent))
         {
-            case AppProtocol.MainEventMessage:
-                AppRuntime.cfsTray?.Send(name, value);
-                foreach ((_, ConfluxService? CFSvalue) in DownloadRunner.DownloaderCFSRest)
-                {
-                    CFSvalue.Send(name, value);
-                }
+            AppRuntime.cfsTray?.Send(AppProtocol.MainEvent, mainEvent);
+            foreach ((_, ConfluxService? service) in DownloadRunner.DownloaderCFSRest)
+            {
+                service.Send(AppProtocol.MainEvent, mainEvent);
+            }
 
-                break;
+            return;
+        }
 
-            case AppProtocol.TrayEventMessage:
-            case AppProtocol.StateMessage:
-                HandleMainEvent(name, value);
-                break;
+        if (message.TryGetPayload(AppProtocol.TrayEvent, out TrayNavigationEvent trayEvent))
+        {
+            HandleMainEvent(AppProtocol.TrayEvent, trayEvent);
+            return;
+        }
 
-            case AppProtocol.CoreServiceStateMessage:
-                HandleCoreState(value);
-                break;
+        if (message.TryGetPayload(AppProtocol.State, out AppState state))
+        {
+            HandleMainEvent(AppProtocol.State, state);
+            return;
+        }
 
-            case AppProtocol.CoreEventMessage:
-                HandleCoreEvent(value);
-                break;
+        if (message.TryGetPayload(AppProtocol.CoreServiceState, out AppState coreState))
+        {
+            HandleCoreState(coreState);
+            return;
+        }
 
-            case UpdateProtocol.CommandMessage:
-                Program.GetRequiredService<CoreUpdateCoordinator>()
-                    .HandleCommand(value);
-                break;
+        if (message.TryGetPayload(AppProtocol.CoreEventMessage, out CoreEvent coreEvent))
+        {
+            HandleCoreEvent(coreEvent);
+            return;
+        }
 
-            case DownloadProtocol.GetListCommand:
-                SendListToMain();
-                return;
+        if (message.TryGetPayload(UpdateProtocol.Command, out UpdateCommandRequest updateCommand))
+        {
+            Program.GetRequiredService<CoreUpdateCoordinator>()
+                .HandleCommand(updateCommand);
+            return;
+        }
 
-            case DownloadProtocol.DownloadByLinkCommand:
-                _ = HandleDownloadByLink(value);
-                break;
+        if (message.TryGetPayload(DownloadProtocol.DownloadByLink, out StartDownloadRequest linkRequest))
+        {
+            _ = HandleDownloadByLink(linkRequest);
+            return;
+        }
 
-            case DownloadProtocol.RunnerStartDownloadCommand:
-                HandleStartDownload(value);
-                return;
+        if (message.TryGetPayload(DownloadProtocol.RunnerStartDownload, out StartDownloadRequest startRequest))
+        {
+            HandleStartDownload(startRequest);
+            return;
+        }
 
-            case DownloadProtocol.RunnerResumeCommand:
-                DownloadManager.Instance.Resume(value);
-                return;
+        if (message.TryGetPayload(DownloadProtocol.RunnerResume, out DownloadIdRequest resumeRequest))
+        {
+            DownloadManager.Instance.Resume(resumeRequest.DownloadId);
+            return;
+        }
 
-            case DownloadProtocol.RunnerRetryCommand:
-                DownloadManager.Instance.Retry(value);
-                return;
+        if (message.TryGetPayload(DownloadProtocol.RunnerRetry, out DownloadIdRequest retryRequest))
+        {
+            DownloadManager.Instance.Retry(retryRequest.DownloadId);
+            return;
+        }
 
-            case DownloadProtocol.RunnerCancelCommand:
-                DownloadManager.Instance.Cancel(value);
-                return;
+        if (message.TryGetPayload(DownloadProtocol.RunnerCancel, out DownloadIdRequest cancelRequest))
+        {
+            DownloadManager.Instance.Cancel(cancelRequest.DownloadId);
+            return;
+        }
 
-            case DownloadProtocol.RunnerPauseCommand:
-                DownloadManager.Instance.Pause(value);
-                return;
+        if (message.TryGetPayload(DownloadProtocol.RunnerPause, out DownloadIdRequest pauseRequest))
+        {
+            DownloadManager.Instance.Pause(pauseRequest.DownloadId);
+            return;
+        }
 
-            case DownloadProtocol.RunnerClearCommand:
-                DownloadManager.Instance.ClearAll(value);
-                return;
+        if (message.TryGetPayload(DownloadProtocol.RunnerClear, out DownloadClearScope clearScope))
+        {
+            DownloadManager.Instance.ClearAll(clearScope);
+            return;
+        }
 
-            case DownloadProtocol.RunnerPauseAllCommand:
-                DownloadManager.Instance.PauseAll();
-                return;
+        if (message.Is(DownloadProtocol.RunnerPauseAll))
+        {
+            DownloadManager.Instance.PauseAll();
+            return;
+        }
 
-            case DownloadProtocol.RunnerResumeAllCommand:
-                DownloadManager.Instance.ResumeAll();
-                return;
+        if (message.Is(DownloadProtocol.RunnerResumeAll))
+        {
+            DownloadManager.Instance.ResumeAll();
+            return;
+        }
 
-            case DownloadProtocol.RunnerRetryAllCommand:
-                DownloadManager.Instance.RetryAll();
-                return;
+        if (message.Is(DownloadProtocol.RunnerRetryAll))
+        {
+            DownloadManager.Instance.RetryAll();
         }
     }
 
-    private static void HandleMainEvent(string name, string value)
+    private static void HandleMainEvent<TPayload>(
+        IpcMessageDefinition<TPayload> definition,
+        TPayload payload)
     {
         if (!AppRuntime.cfsMain!.IsAppStarted())
         {
             mainAppAction = () =>
             {
-                _ = SendPendingMainEventAsync(name, value);
+                _ = SendPendingMainEventAsync(definition, payload);
             };
 
             AppRuntime.cfsMain.StartApp();
         }
         else
         {
-            _ = AppRuntime.cfsMain.SendAsync(name, value);
+            _ = AppRuntime.cfsMain.SendAsync(definition, payload);
         }
     }
 
-    private static async Task SendPendingMainEventAsync(
-        string name,
-        string value)
+    private static async Task SendPendingMainEventAsync<TPayload>(
+        IpcMessageDefinition<TPayload> definition,
+        TPayload payload)
     {
         ConfluxService? mainService = AppRuntime.cfsMain;
         if (mainService is not null
-            && await mainService.SendAsync(name, value))
+            && await mainService.SendAsync(definition, payload))
         {
             mainAppAction = null;
         }
     }
 
-    private static void HandleCoreState(string value)
+    private static void HandleCoreState(AppState state)
     {
-        if (value == AppProtocol.State.Shutdown)
+        if (state == AppState.Shutdown)
         {
             if (AppRuntime.cfsMain!.IsAppStarted())
             {
-                AppRuntime.cfsMain.Send(AppProtocol.StateMessage, value);
+                AppRuntime.cfsMain.Send(AppProtocol.State, state);
             }
 
             DownloadRunner.EnsureCloseAllRunnerStarted();
-
             AppRuntime.bootstrap?.Shutdown();
         }
     }
 
-    private static void HandleCoreEvent(string value)
+    private static void HandleCoreEvent(CoreEvent coreEvent)
     {
-        switch (value)
+        switch (coreEvent)
         {
-            case AppProtocol.CoreEvent.RefreshDownloaderConfigs:
+            case CoreEvent.RefreshDownloaderConfigs:
                 DownloadConfigService.Reload();
                 break;
 
-            case AppProtocol.CoreEvent.Ping:
+            case CoreEvent.Ping:
                 mainAppAction?.Invoke();
                 break;
         }
     }
 
-    private static void SendListToMain()
+    private static async Task HandleDownloadByLink(StartDownloadRequest req)
     {
-        string json = DownloadManager.Instance.SerializeList();
-        AppRuntime.cfsMain?.Send(DownloadProtocol.ListMessage, json);
-    }
-
-    private static async Task HandleDownloadByLink(string value)
-    {
-        StartDownloadRequest? req = JsonSerializer.Deserialize<StartDownloadRequest>(value, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        if (req == null || string.IsNullOrWhiteSpace(req.Url))
+        if (string.IsNullOrWhiteSpace(req.Url))
         {
             return;
         }
@@ -189,37 +210,31 @@ public static class CFSCommandHandler
         });
     }
 
-    private static void HandleStartDownload(string value)
+    private static void HandleStartDownload(StartDownloadRequest req)
     {
-        try
+        if (string.IsNullOrWhiteSpace(req.Url))
         {
-            StartDownloadRequest? req = JsonSerializer.Deserialize<StartDownloadRequest>(value,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (req == null || string.IsNullOrWhiteSpace(req.Url))
-            {
-                return;
-            }
-
-            _youtubePending.TryRemove(req.Id, out YoutubePendingMeta? ytMeta);
-
-            Dictionary<string, string>? customHeaders = TakeRunnerPendingHeaders(req.Id)
-                ?? NormalizeHeaders(req.Headers);
-
-            int defaultThreads = DownloadConfigService.DownloadConfigs?.DefaultThreadCount ?? 0;
-            FileMergeMode mergeMode = DownloadConfigService.GetFileMergeMode();
-
-            DownloadManager.Instance.Enqueue(
-                id: req.Id,
-                url: req.Url,
-                saveTo: req.SaveTo ?? string.Empty,
-                fileName: req.FileName ?? string.Empty,
-                threads: req.Threads > 0 ? req.Threads : defaultThreads,
-                isYoutube: ytMeta != null,
-                formatId: ytMeta?.FormatId,
-                customHeaders: customHeaders,
-                mergeMode: mergeMode);
+            return;
         }
-        catch { }
+
+        _youtubePending.TryRemove(req.Id, out YoutubePendingMeta? ytMeta);
+
+        Dictionary<string, string>? customHeaders = TakeRunnerPendingHeaders(req.Id)
+            ?? NormalizeHeaders(req.Headers);
+
+        int defaultThreads = DownloadConfigService.DownloadConfigs?.DefaultThreadCount ?? 0;
+        FileMergeMode mergeMode = DownloadConfigService.GetFileMergeMode();
+
+        DownloadManager.Instance.Enqueue(
+            id: req.Id,
+            url: req.Url,
+            saveTo: req.SaveTo ?? string.Empty,
+            fileName: req.FileName ?? string.Empty,
+            threads: req.Threads > 0 ? req.Threads : defaultThreads,
+            isYoutube: ytMeta != null,
+            formatId: ytMeta?.FormatId,
+            customHeaders: customHeaders,
+            mergeMode: mergeMode);
     }
 
     public static void BroadcastItemChanged(DownloadItem item)
@@ -228,13 +243,13 @@ public static class CFSCommandHandler
 
         lock (broadcastLock)
         {
-            string json = DownloadManager.SerializeItem(item);
+            DownloadItemDto dto = DownloadManager.ToContract(item);
             DownloadRunner.DownloaderCFSRest.TryGetValue(
                 item.Id,
                 out ConfluxService? cfsDowloaderUI);
 
-            AppRuntime.cfsMain?.Send(DownloadProtocol.ProgressMessage, json);
-            cfsDowloaderUI?.Send(DownloadProtocol.ProgressMessage, json);
+            AppRuntime.cfsMain?.Send(DownloadProtocol.Progress, dto);
+            cfsDowloaderUI?.Send(DownloadProtocol.Progress, dto);
         }
     }
 

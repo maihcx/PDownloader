@@ -198,8 +198,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
     {
         ThemeManagerService?.SetApplicationTheme(Enum.Parse<IThemeType>(value?.Value ?? "Mica"));
         ConfluxManager.cfsPDownloaderCore?.Send(
-            AppProtocol.MainEventMessage,
-            AppProtocol.MainEvent.ThemeChanged);
+            AppProtocol.MainEvent,
+            MainAppEvent.ThemeChanged);
     }
     #endregion
 
@@ -215,8 +215,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
         ThemeManagerService?.SetBackdropType(Enum.Parse<WindowBackdropType>(value?.Value ?? "Mica"));
         ThemeManagerService?.SetApplicationTheme(Enum.Parse<IThemeType>(SelectedTheme?.Value ?? "Auto"));
         ConfluxManager.cfsPDownloaderCore?.Send(
-            AppProtocol.MainEventMessage,
-            AppProtocol.MainEvent.MaterialChanged);
+            AppProtocol.MainEvent,
+            MainAppEvent.MaterialChanged);
     }
     #endregion
 
@@ -228,8 +228,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
     {
         ThemeManagerService?.GlobalCornerRadius = newValue;
         ConfluxManager.cfsPDownloaderCore?.Send(
-            AppProtocol.MainEventMessage,
-            AppProtocol.MainEvent.RadiusChanged);
+            AppProtocol.MainEvent,
+            MainAppEvent.RadiusChanged);
     }
     #endregion
 

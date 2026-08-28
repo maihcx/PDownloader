@@ -55,11 +55,11 @@ public class DownloaderService : IHostedService, IDisposable
 
         if (DownloaderStatus.State == RunnerState.Form)
         {
-            CfsContact?.Send(DownloadProtocol.RunnerCancelExperienceMessage, "0");
+            CfsContact?.Send(DownloadProtocol.RunnerCancelExperience);
         }
         else
         {
-            CfsContact?.Send(DownloadProtocol.RunnerUiClosedMessage, "0");
+            CfsContact?.Send(DownloadProtocol.RunnerUiClosed);
         }
 
         await Task.CompletedTask;
@@ -92,7 +92,7 @@ public class DownloaderService : IHostedService, IDisposable
             //UserDataStore.SetValue("DefaultDownloadFolder", SaveTo);
             //UserDataStore.SetValue("DefaultThreads", Threads);
 
-            string payload = JsonSerializer.Serialize(new StartDownloadRequest
+            var request = new StartDownloadRequest
             {
                 Id = _runnerConfig.Token,
                 Url = _runnerConfig.InitialUrl,
@@ -100,9 +100,9 @@ public class DownloaderService : IHostedService, IDisposable
                 FileName = _runnerConfig.FileName,
                 Threads = _runnerConfig.Threads,
                 Headers = _runnerConfig.CustomHeaders
-            });
+            };
 
-            bool ok = await Task.Run(() => SendWithRetry(payload, retries: 3));
+            bool ok = await Task.Run(() => SendWithRetry(request, retries: 3));
 
             DownloaderStatus.IsSending = false;
 
@@ -128,7 +128,7 @@ public class DownloaderService : IHostedService, IDisposable
             return;
         }
 
-        CfsContact?.Send(DownloadProtocol.RunnerPauseCommand, _runnerConfig.Token, TimeSpan.FromSeconds(30));
+        CfsContact?.Send(DownloadProtocol.RunnerPause, new DownloadIdRequest(_runnerConfig.Token), TimeSpan.FromSeconds(30));
         //DownloaderStatus.IsPaused = true;
     }
 
@@ -139,7 +139,7 @@ public class DownloaderService : IHostedService, IDisposable
             return;
         }
 
-        CfsContact?.Send(DownloadProtocol.RunnerResumeCommand, _runnerConfig.Token, TimeSpan.FromSeconds(30));
+        CfsContact?.Send(DownloadProtocol.RunnerResume, new DownloadIdRequest(_runnerConfig.Token), TimeSpan.FromSeconds(30));
         //DownloaderStatus.IsPaused = false;
     }
 
@@ -150,13 +150,13 @@ public class DownloaderService : IHostedService, IDisposable
             return;
         }
 
-        CfsContact?.Send(DownloadProtocol.RunnerRetryCommand, _runnerConfig.Token, TimeSpan.FromSeconds(30));
+        CfsContact?.Send(DownloadProtocol.RunnerRetry, new DownloadIdRequest(_runnerConfig.Token), TimeSpan.FromSeconds(30));
         //DownloaderStatus.IsPaused = false;
     }
 
     public void CancelDownload()
     {
-        CfsContact?.Send(DownloadProtocol.RunnerCancelCommand, _runnerConfig.Token, TimeSpan.FromSeconds(30));
+        CfsContact?.Send(DownloadProtocol.RunnerCancel, new DownloadIdRequest(_runnerConfig.Token), TimeSpan.FromSeconds(30));
         DownloaderStatus.State = RunnerState.Form;
         //DownloaderStatus.IsPaused = false;
     }
@@ -172,76 +172,56 @@ public class DownloaderService : IHostedService, IDisposable
             IpcTopology.RunnerToCorePipeName(_runnerConfig.Token),
             IpcTopology.CoreToRunnerPipeName(_runnerConfig.Token)
         );
-        CfsContact.OnMessageReceiving += RunnerCommandHandler.Handle;
+        CfsContact.OnMessageReceived += RunnerCommandHandler.Handle;
 
-        CfsContact.OnMessageReceiving += (name, value) =>
+        CfsContact.OnMessageReceived += message =>
         {
-            switch (name)
+            if (message.TryGetPayload(
+                    DownloadProtocol.RunnerDownload,
+                    out StartDownloadRequest request))
             {
-                //case "cancel":
-                //    break;
+                if (string.IsNullOrWhiteSpace(request.Url))
+                {
+                    return;
+                }
 
-                case DownloadProtocol.RunnerDownloadMessage:
-                    try
-                    {
-                        StartDownloadRequest? request = JsonSerializer.Deserialize<StartDownloadRequest>(
-                            value,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                _runnerConfig.InitialUrl = request.Url;
+                _runnerConfig.SaveTo = request.SaveTo ?? string.Empty;
+                _runnerConfig.FileName = request.FileName ?? string.Empty;
+                return;
+            }
 
-                        if (request == null || string.IsNullOrWhiteSpace(request.Url))
-                        {
-                            return;
-                        }
-
-                        _runnerConfig.InitialUrl = request.Url;
-                        _runnerConfig.SaveTo = request.SaveTo ?? string.Empty;
-                        _runnerConfig.FileName = request.FileName ?? string.Empty;
-                    }
-                    catch { }
-
-                    break;
-
-                case AppProtocol.StateMessage:
-                    if (value == AppProtocol.State.Shutdown)
-                    {
-                        System.Windows.Application.Current?.Shutdown();
-                    }
-
-                    break;
+            if (message.TryGetPayload(AppProtocol.State, out AppState state)
+                && state == AppState.Shutdown)
+            {
+                System.Windows.Application.Current?.Shutdown();
             }
         };
 
-        CfsContact.OnMessageReceived += (name, value) =>
+        CfsContact.OnMessageReceived += message =>
         {
-            switch (name)
+            if (!message.TryGetPayload(
+                    DownloadProtocol.Progress,
+                    out DownloadItemDto dto))
             {
-                case DownloadProtocol.ProgressMessage:
-                    try
-                    {
-                        DownloadItemDto? dto = JsonSerializer.Deserialize<DownloadItemDto>(value, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                        if (dto != null)
-                        {
-                            DownloadStatus status = dto.Status;
-                            if (_lastReceivedProgressStatus is DownloadStatus.Completed
-                                or DownloadStatus.Cancelled)
-                            {
-                                if (status != _lastReceivedProgressStatus.Value)
-                                {
-                                    break;
-                                }
-                            }
-
-                            _lastReceivedProgressStatus = status;
-                            DownloaderStatus.IsPaused = status == DownloadStatus.Paused;
-                            DownloaderStatus.IsSending = status is DownloadStatus.Queued
-                                or DownloadStatus.Connecting;
-                            OnProgress?.Invoke(dto);
-                        }
-                    }
-                    catch { }
-
-                    break;
+                return;
             }
+
+            DownloadStatus status = dto.Status;
+            if (_lastReceivedProgressStatus is DownloadStatus.Completed
+                or DownloadStatus.Cancelled)
+            {
+                if (status != _lastReceivedProgressStatus.Value)
+                {
+                    return;
+                }
+            }
+
+            _lastReceivedProgressStatus = status;
+            DownloaderStatus.IsPaused = status == DownloadStatus.Paused;
+            DownloaderStatus.IsSending = status is DownloadStatus.Queued
+                or DownloadStatus.Connecting;
+            OnProgress?.Invoke(dto);
         };
 
         _ = CfsContact.StartServiceAsync();
@@ -249,13 +229,13 @@ public class DownloaderService : IHostedService, IDisposable
         await Task.CompletedTask;
     }
 
-    private bool SendWithRetry(string payload, int retries)
+    private bool SendWithRetry(StartDownloadRequest request, int retries)
     {
         for (int i = 0; i < retries; i++)
         {
             try
             {
-                bool ok = CfsContact?.Send(DownloadProtocol.RunnerStartDownloadCommand, payload) ?? false;
+                bool ok = CfsContact?.Send(DownloadProtocol.RunnerStartDownload, request) ?? false;
                 if (ok)
                 {
                     return true;

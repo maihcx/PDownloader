@@ -66,39 +66,28 @@ public sealed class UpdateHostService : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public void Handle(string name, string value)
+    public void Handle(IpcReceivedMessage message)
     {
-        if (name != UpdateProtocol.StateMessage)
+        if (message.TryGetPayload(UpdateProtocol.State, out UpdateStateSnapshot snapshot))
         {
-            return;
+            ApplySnapshot(snapshot);
         }
+    }
 
-        try
+    private void ApplySnapshot(UpdateStateSnapshot snapshot)
+    {
+        LatestRelease = snapshot.LatestRelease;
+        ErrorMessage = snapshot.ErrorMessage;
+        InstallerSize = snapshot.InstallerSize;
+        DownloadProgress = snapshot.DownloadProgress;
+        IsAutoUpdateEnabled = snapshot.IsAutoUpdateEnabled;
+        Status = snapshot.Status;
+
+        if (snapshot.Status == UpdateStatus.UpdateAvailable
+            && snapshot.LatestRelease is { } release
+            && Interlocked.Exchange(ref _onUpdateFound, null) is { } callback)
         {
-            UpdateStateSnapshot? snapshot =
-                JsonSerializer.Deserialize<UpdateStateSnapshot>(value);
-            if (snapshot is null)
-            {
-                return;
-            }
-
-            LatestRelease = snapshot.LatestRelease;
-            ErrorMessage = snapshot.ErrorMessage;
-            InstallerSize = snapshot.InstallerSize;
-            DownloadProgress = snapshot.DownloadProgress;
-            IsAutoUpdateEnabled = snapshot.IsAutoUpdateEnabled;
-            Status = snapshot.Status;
-
-            if (snapshot.Status == UpdateStatus.UpdateAvailable
-                && snapshot.LatestRelease is { } release
-                && Interlocked.Exchange(ref _onUpdateFound, null) is { } callback)
-            {
-                callback(release);
-            }
-        }
-        catch (JsonException ex)
-        {
-            Debug.WriteLine($"Invalid update state from Core: {ex.Message}");
+            callback(release);
         }
     }
 
@@ -109,7 +98,7 @@ public sealed class UpdateHostService : INotifyPropertyChanged
         cancellationToken.ThrowIfCancellationRequested();
         _onUpdateFound = onUpdateFound;
         if (!await TrySendCommandAsync(
-                UpdateProtocol.CheckWithoutTrayNotificationCommand,
+                new UpdateCommandRequest(UpdateCommandKind.CheckWithoutTrayNotification),
                 cancellationToken))
         {
             _onUpdateFound = null;
@@ -121,7 +110,7 @@ public sealed class UpdateHostService : INotifyPropertyChanged
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!await TrySendCommandAsync(
-                UpdateProtocol.DownloadCommand,
+                new UpdateCommandRequest(UpdateCommandKind.Download),
                 cancellationToken))
         {
             SetCoreUnavailable();
@@ -132,7 +121,7 @@ public sealed class UpdateHostService : INotifyPropertyChanged
         CancellationToken cancellationToken = default)
     {
         if (!await TrySendCommandAsync(
-                UpdateProtocol.InstallCommand,
+                new UpdateCommandRequest(UpdateCommandKind.Install),
                 cancellationToken))
         {
             throw new InvalidOperationException(
@@ -141,18 +130,37 @@ public sealed class UpdateHostService : INotifyPropertyChanged
     }
 
     public Task CancelAsync(CancellationToken cancellationToken = default) =>
-        TrySendCommandAsync(UpdateProtocol.CancelCommand, cancellationToken);
+        TrySendCommandAsync(new UpdateCommandRequest(UpdateCommandKind.Cancel), cancellationToken);
 
-    public Task RequestStateAsync(CancellationToken cancellationToken = default) =>
-        TrySendCommandAsync(UpdateProtocol.GetStateCommand, cancellationToken);
+    public async Task RequestStateAsync(CancellationToken cancellationToken = default)
+    {
+        ConfluxService? coreService = ConfluxManager.cfsPDownloaderCore;
+        if (coreService is null)
+        {
+            SetCoreUnavailable();
+            return;
+        }
+
+        IpcRequestResult<UpdateStateSnapshot> result =
+            await coreService.RequestAsync(
+                UpdateProtocol.GetState,
+                cancellationToken: cancellationToken);
+
+        if (!result.Success || result.Value is null)
+        {
+            SetCoreUnavailable();
+            return;
+        }
+
+        ApplySnapshot(result.Value);
+    }
 
     public async Task SetAutoUpdateEnabledAsync(
         bool enabled,
         CancellationToken cancellationToken = default)
     {
         if (!await TrySendCommandAsync(
-                UpdateProtocol.SetAutoUpdatePrefix
-                + enabled.ToString().ToLowerInvariant(),
+                new UpdateCommandRequest(UpdateCommandKind.SetAutoUpdate, enabled),
                 cancellationToken))
         {
             SetCoreUnavailable();
@@ -160,13 +168,13 @@ public sealed class UpdateHostService : INotifyPropertyChanged
     }
 
     private static async Task<bool> TrySendCommandAsync(
-        string command,
+        UpdateCommandRequest command,
         CancellationToken cancellationToken)
     {
         ConfluxService? coreService = ConfluxManager.cfsPDownloaderCore;
         return coreService is not null
             && await coreService.SendAsync(
-                UpdateProtocol.CommandMessage,
+                UpdateProtocol.Command,
                 command,
                 cancellationToken: cancellationToken);
     }

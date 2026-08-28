@@ -13,34 +13,65 @@
 //
 // Copyright (C) Song Mai Software.
 
+using PDownloader.Contracts.Ipc;
+
 namespace PDownloader.Contracts.Downloads;
 
-/// <summary>Names used by the current CFS transport for the download protocol.</summary>
 public static class DownloadProtocol
 {
-    public const string GetListCommand = "downloader-svc-getlist";
-    public const string ListMessage = "muxt-get-downloader-list";
-    public const string ProgressMessage = "muxt-download-progress";
-    public const string DownloadByLinkCommand = "download-by-link";
-    public const string RunnerStartDownloadCommand = "runner-start-download";
-    public const string RunnerPauseCommand = "runner-pause";
-    public const string RunnerResumeCommand = "runner-resume";
-    public const string RunnerRetryCommand = "runner-retry";
-    public const string RunnerCancelCommand = "runner-cancel";
-    public const string RunnerClearCommand = "runner-clear";
-    public const string RunnerPauseAllCommand = "runner-pause-all";
-    public const string RunnerResumeAllCommand = "runner-resume-all";
-    public const string RunnerRetryAllCommand = "runner-retry-all";
+    public static readonly IpcRequestDefinition<IpcNoPayload, List<DownloadItemDto>> GetList =
+        new("download.list.get");
 
-    // Runner lifecycle messages.
-    public const string RunnerCancelExperienceMessage = "runner-cancel-exp";
-    public const string RunnerUiClosedMessage = "runner-ui-closed";
+    public static readonly IpcMessageDefinition<DownloadItemDto> Progress =
+        new("download.progress");
 
-    // Legacy Core -> Runner messages kept centralized until the CFS envelope is upgraded.
-    public const string RunnerDownloadMessage = "download";
-    public const string RunnerCancelMessage = "cancel";
+    public static readonly IpcMessageDefinition<StartDownloadRequest> DownloadByLink =
+        new("download.create");
 
-    // Wire values for RunnerClearCommand.
-    public const string ClearCompletedValue = "completed";
-    public const string ClearAllValue = "all";
+    public static readonly IpcMessageDefinition<StartDownloadRequest> RunnerStartDownload =
+        new("download.runner.start");
+
+    public static readonly IpcMessageDefinition<DownloadIdRequest> RunnerPause =
+        new("download.runner.pause");
+
+    public static readonly IpcMessageDefinition<DownloadIdRequest> RunnerResume =
+        new("download.runner.resume");
+
+    public static readonly IpcMessageDefinition<DownloadIdRequest> RunnerRetry =
+        new("download.runner.retry");
+
+    public static readonly IpcMessageDefinition<DownloadIdRequest> RunnerCancel =
+        new("download.runner.cancel");
+
+    public static readonly IpcMessageDefinition<DownloadClearScope> RunnerClear =
+        new("download.clear");
+
+    public static readonly IpcMessageDefinition<IpcNoPayload> RunnerPauseAll =
+        new("download.pause-all");
+
+    public static readonly IpcMessageDefinition<IpcNoPayload> RunnerResumeAll =
+        new("download.resume-all");
+
+    public static readonly IpcMessageDefinition<IpcNoPayload> RunnerRetryAll =
+        new("download.retry-all");
+
+    public static readonly IpcMessageDefinition<IpcNoPayload> RunnerCancelExperience =
+        new("runner.cancel-experience");
+
+    public static readonly IpcMessageDefinition<IpcNoPayload> RunnerUiClosed =
+        new("runner.ui-closed");
+
+    public static readonly IpcMessageDefinition<StartDownloadRequest> RunnerDownload =
+        new("runner.download");
+
+    public static readonly IpcMessageDefinition<IpcNoPayload> RunnerCancelMessage =
+        new("runner.cancel");
+}
+
+public sealed record DownloadIdRequest(string DownloadId);
+
+public enum DownloadClearScope
+{
+    Completed,
+    All
 }

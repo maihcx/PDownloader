@@ -13,7 +13,9 @@
 //
 // Copyright (C) Song Mai Software.
 
-global using System;
-global using System.Collections.Generic;
-global using System.Text.Json;
-global using System.Text.Json.Serialization;
+namespace PDownloader.CFS;
+
+public sealed record IpcRequestResult<TResponse>(
+    bool Success,
+    TResponse? Value,
+    string? Error = null);

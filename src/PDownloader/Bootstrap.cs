@@ -85,47 +85,49 @@ public static class Bootstrap
 
         cfsPDownloaderCore.OnMessageReceived += App.GetRequiredService<DownloadsChannelService>().Handle;
         cfsPDownloaderCore.OnMessageReceived += App.GetRequiredService<UpdateHostService>().Handle;
-        cfsPDownloaderCore.OnMessageReceived += (name, value) =>
+        cfsPDownloaderCore.OnMessageReceived += message =>
         {
             App.Current.Dispatcher.Invoke(() =>
             {
-                if (name == AppProtocol.StateMessage)
+                if (message.TryGetPayload(AppProtocol.State, out AppState state))
                 {
-                    switch (value)
+                    switch (state)
                     {
-                        case AppProtocol.State.Start:
+                        case AppState.Start:
                             WindowHelper.FocusMainWindow();
                             break;
-                        case AppProtocol.State.Shutdown:
+                        case AppState.Shutdown:
                             IsEndService = true;
                             System.Windows.Application.Current.Shutdown();
                             break;
                     }
                 }
-                else if (name == AppProtocol.TrayEventMessage)
+                else if (message.TryGetPayload(
+                             AppProtocol.TrayEvent,
+                             out TrayNavigationEvent trayEvent))
                 {
                     WindowHelper.FocusMainWindow();
-                    switch (value)
+                    switch (trayEvent)
                     {
-                        case AppProtocol.TrayEvent.GoHome:
+                        case TrayNavigationEvent.GoHome:
                             NavigationHandle.NavigationService?.Navigate(typeof(HomePage));
                             break;
-                        case AppProtocol.TrayEvent.GoConfig:
+                        case TrayNavigationEvent.GoConfig:
                             NavigationHandle.NavigationService?.Navigate(typeof(ConfigPage));
                             break;
-                        case AppProtocol.TrayEvent.GoDownload:
+                        case TrayNavigationEvent.GoDownload:
                             NavigationHandle.NavigationService?.Navigate(typeof(DownloadsPage));
                             break;
-                        case AppProtocol.TrayEvent.GoSettings:
-                        case AppProtocol.TrayEvent.GoSettingsUpdate:
-                            if (value == AppProtocol.TrayEvent.GoSettingsUpdate)
+                        case TrayNavigationEvent.GoSettings:
+                        case TrayNavigationEvent.GoSettingsUpdate:
+                            if (trayEvent == TrayNavigationEvent.GoSettingsUpdate)
                             {
                                 SharedMem.IsScrollToUpdateCard = true;
                             }
 
                             NavigationHandle.NavigationService?.Navigate(typeof(SettingsPage));
                             break;
-                        case AppProtocol.TrayEvent.GoAbout:
+                        case TrayNavigationEvent.GoAbout:
                             NavigationHandle.NavigationService?.Navigate(typeof(AboutPage));
                             break;
                     }
@@ -175,7 +177,7 @@ public static class Bootstrap
 
         _ = ConfluxManager.cfsPDownloaderCore?.SendAsync(
             AppProtocol.CoreEventMessage,
-            AppProtocol.CoreEvent.Ping);
+            CoreEvent.Ping);
         _ = App.GetRequiredService<UpdateHostService>().RequestStateAsync();
 
         if (!IsViewAtBoot)
