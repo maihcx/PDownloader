@@ -43,45 +43,35 @@ public sealed class CoreUpdateCoordinator : IDisposable
     public bool IsAutoUpdateEnabled { get; private set; } =
         UserDataStore.GetValue<bool>(AutoUpdateSettingKey, true);
 
-    public void HandleCommand(string command)
+    public void HandleCommand(UpdateCommandRequest request)
     {
-        switch (command)
+        switch (request.Command)
         {
-            case UpdateProtocol.GetStateCommand:
-                BroadcastState();
-                break;
-
-            case UpdateProtocol.CheckCommand:
+            case UpdateCommandKind.Check:
                 _ = CheckAsync(shouldNotifyTray: true);
                 break;
 
-            case UpdateProtocol.CheckWithoutTrayNotificationCommand:
+            case UpdateCommandKind.CheckWithoutTrayNotification:
                 _ = CheckAsync(shouldNotifyTray: false);
                 break;
 
-            case UpdateProtocol.DownloadCommand:
+            case UpdateCommandKind.Download:
                 _ = DownloadAsync();
                 break;
 
-            case UpdateProtocol.InstallCommand:
+            case UpdateCommandKind.Install:
                 TryInstallReadyUpdate();
                 break;
 
-            case UpdateProtocol.CancelCommand:
+            case UpdateCommandKind.Cancel:
                 Cancel();
                 break;
 
-            default:
-                if (command.StartsWith(
-                        UpdateProtocol.SetAutoUpdatePrefix,
-                        StringComparison.Ordinal)
-                    && bool.TryParse(
-                        command[UpdateProtocol.SetAutoUpdatePrefix.Length..],
-                        out bool enabled))
+            case UpdateCommandKind.SetAutoUpdate:
+                if (request.Enabled is bool enabled)
                 {
                     SetAutoUpdateEnabled(enabled);
                 }
-
                 break;
         }
     }
@@ -136,17 +126,18 @@ public sealed class CoreUpdateCoordinator : IDisposable
         }
     }
 
+    public UpdateStateSnapshot GetStateSnapshot() => CreateSnapshot(false);
+
     public void BroadcastState(bool shouldNotifyTray = false)
     {
-        string json = JsonSerializer.Serialize(
-            CreateSnapshot(shouldNotifyTray));
+        UpdateStateSnapshot snapshot = CreateSnapshot(shouldNotifyTray);
         AppRuntime.cfsMain?.Send(
-            UpdateProtocol.StateMessage,
-            json,
+            UpdateProtocol.State,
+            snapshot,
             BroadcastTimeout);
         AppRuntime.cfsTray?.Send(
-            UpdateProtocol.StateMessage,
-            json,
+            UpdateProtocol.State,
+            snapshot,
             BroadcastTimeout);
     }
 

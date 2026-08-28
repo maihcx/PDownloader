@@ -13,7 +13,20 @@
 //
 // Copyright (C) Song Mai Software.
 
-global using System;
-global using System.Collections.Generic;
-global using System.Text.Json;
-global using System.Text.Json.Serialization;
+namespace PDownloader.Contracts.Ipc;
+
+/// <summary>
+/// Associates a request wire name with both its request and response payload types.
+/// </summary>
+public sealed class IpcRequestDefinition<TRequest, TResponse>
+{
+    public IpcRequestDefinition(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        Name = name;
+    }
+
+    public string Name { get; }
+
+    public override string ToString() => Name;
+}

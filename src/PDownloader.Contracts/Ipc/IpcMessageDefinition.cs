@@ -13,16 +13,20 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Core.Runtime;
+namespace PDownloader.Contracts.Ipc;
 
-public static class CFSIncomingHandler
+/// <summary>
+/// Associates a stable wire message name with its expected payload type.
+/// </summary>
+public sealed class IpcMessageDefinition<TPayload>
 {
-    public static void Handle(string name, string value)
+    public IpcMessageDefinition(string name)
     {
-        // removed (conflict issue)
-        //switch (name)
-        //{
-
-        //}
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        Name = name;
     }
+
+    public string Name { get; }
+
+    public override string ToString() => Name;
 }

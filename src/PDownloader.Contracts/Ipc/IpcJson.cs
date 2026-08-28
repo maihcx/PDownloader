@@ -13,7 +13,25 @@
 //
 // Copyright (C) Song Mai Software.
 
-global using System;
-global using System.Collections.Generic;
-global using System.Text.Json;
-global using System.Text.Json.Serialization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace PDownloader.Contracts.Ipc;
+
+/// <summary>
+/// Canonical JSON settings for the IPC wire protocol.
+/// A new options instance is returned so callers cannot mutate shared global state.
+/// </summary>
+public static class IpcJson
+{
+    public static JsonSerializerOptions CreateSerializerOptions()
+    {
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true
+        };
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
+    }
+}

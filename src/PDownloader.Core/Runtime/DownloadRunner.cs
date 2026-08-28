@@ -33,17 +33,16 @@ public class DownloadRunner
             IpcTopology.RunnerProcessName,
             IpcTopology.CoreToRunnerPipeName(token),
             IpcTopology.RunnerToCorePipeName(token));
-        svc.OnMessageReceiving += CFSIncomingHandler.Handle;
-        svc.OnMessageReceiving += (name, value) =>
+        svc.OnMessageReceived += message =>
         {
-            if (name == DownloadProtocol.RunnerCancelExperienceMessage)
+            if (message.Is(DownloadProtocol.RunnerCancelExperience))
             {
                 _ = svc.StopServiceAsync();
                 CFSCommandHandler.ClearRunnerPendingContext(token);
                 DownloaderCFSRest.Remove(token);
                 svc.GetProcess().Kill();
             }
-            else if (name == DownloadProtocol.RunnerUiClosedMessage)
+            else if (message.Is(DownloadProtocol.RunnerUiClosed))
             {
                 _ = svc.StopServiceAsync();
                 CFSCommandHandler.ClearRunnerPendingContext(token);
@@ -87,8 +86,8 @@ public class DownloadRunner
             using (ConfluxService service = item.Value)
             {
                 service.Send(
-                    AppProtocol.StateMessage,
-                    AppProtocol.State.Shutdown);
+                    AppProtocol.State,
+                    AppState.Shutdown);
             }
         }
     }

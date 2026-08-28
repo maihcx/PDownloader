@@ -78,7 +78,6 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         DownloadLauncherService downloadLauncherService)
     {
         downloadsChannelService.OnProgress += OnProgress;
-        downloadsChannelService.OnList += OnList;
 
         _downloadLauncherService = downloadLauncherService;
 
@@ -112,16 +111,27 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     private async Task RequestRefreshAsync()
     {
         ConfluxService? coreService = ConfluxManager.cfsPDownloaderCore;
-        bool sent = coreService is not null
-            && await coreService.SendAsync(
-                DownloadProtocol.GetListCommand,
-                string.Empty);
-
-        if (!sent)
+        if (coreService is null)
         {
             IsLoading = false;
             _isInitialized = false;
+            return;
         }
+
+        IpcRequestResult<List<DownloadItemDto>> result =
+            await coreService.RequestAsync(DownloadProtocol.GetList);
+
+        if (!result.Success || result.Value is null)
+        {
+            IsLoading = false;
+            _isInitialized = false;
+            return;
+        }
+
+        OnList(
+            result.Value
+                .Select(DownloadItemViewModel.FromContract)
+                .ToList());
     }
 
     partial void OnSearchTextChanged(string value)
@@ -295,7 +305,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
             return;
         }
 
-        ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerPauseCommand, item.Id);
+        ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerPause, new DownloadIdRequest(item.Id));
     }
 
     [RelayCommand]
@@ -312,7 +322,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         }
         else if (item.StatusState == DownloadStatus.Paused && item.CanResume)
         {
-            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerResumeCommand, item.Id);
+            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerResume, new DownloadIdRequest(item.Id));
         }
     }
 
@@ -324,7 +334,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
             return;
         }
 
-        ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerCancelCommand, item.Id);
+        ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerCancel, new DownloadIdRequest(item.Id));
     }
 
     [RelayCommand]
@@ -335,7 +345,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
             return;
         }
 
-        ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerRetryCommand, item.Id);
+        ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerRetry, new DownloadIdRequest(item.Id));
     }
 
     [RelayCommand]
@@ -391,8 +401,8 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
             ConfluxManager.cfsPDownloaderCore?.Send(
-                DownloadProtocol.RunnerClearCommand,
-                DownloadProtocol.ClearCompletedValue);
+                DownloadProtocol.RunnerClear,
+                DownloadClearScope.Completed);
         }
     }
 
@@ -412,8 +422,8 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
             ConfluxManager.cfsPDownloaderCore?.Send(
-                DownloadProtocol.RunnerClearCommand,
-                DownloadProtocol.ClearAllValue);
+                DownloadProtocol.RunnerClear,
+                DownloadClearScope.All);
         }
     }
 
@@ -432,7 +442,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerPauseAllCommand, string.Empty);
+            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerPauseAll);
         }
     }
 
@@ -451,7 +461,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerResumeAllCommand, string.Empty);
+            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerResumeAll);
         }
     }
 
@@ -470,7 +480,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (result?.MessageResult == Dialogs.Models.Messages.MessageResult.Yes)
         {
-            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerRetryAllCommand, string.Empty);
+            ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerRetryAll);
         }
     }
 

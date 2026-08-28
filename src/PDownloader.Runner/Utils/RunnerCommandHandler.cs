@@ -18,89 +18,68 @@ using PDownloader.Runner.Resources;
 namespace PDownloader.Runner.Utils;
 
 /// <summary>
-/// Handles incoming CFS messages from PDownloader.Core → Runner.
-///
-/// Commands received:
-///   "download"              – Core forwards a new URL, show confirmation dialog
-///   "muxt-download-progress"– Core broadcasts progress of a running download (display only)
-///   "state"                 – lifecycle (shutdown)
+/// Handles application and lifecycle messages sent by Core to Runner.
 /// </summary>
 public static class RunnerCommandHandler
 {
-    public static void Handle(string name, string value)
+    public static void Handle(IpcReceivedMessage message)
     {
         System.Windows.Application.Current?.Dispatcher.Invoke(() =>
         {
-            switch (name)
+            if (message.Is(DownloadProtocol.RunnerCancelMessage))
             {
-                case DownloadProtocol.RunnerCancelMessage:
+                return;
+            }
+
+            if (message.TryGetPayload(AppProtocol.State, out AppState state))
+            {
+                if (state == AppState.Shutdown)
+                {
+                    System.Windows.Application.Current?.Shutdown();
+                }
+
+                return;
+            }
+
+            if (!message.TryGetPayload(AppProtocol.MainEvent, out MainAppEvent mainEvent))
+            {
+                return;
+            }
+
+            switch (mainEvent)
+            {
+                case MainAppEvent.LanguageChanged:
+                    UserDataStore.Reload();
+                    TranslationSource.Instance.CurrentCulture = LanguageBase.GetSetupLanguage();
                     break;
 
-                //case "download":
-                //    HandleDownloadRequest(value);
-                //    break;
+                case MainAppEvent.RadiusChanged:
+                    UserDataStore.Reload();
+                    Application.Current.Resources["ControlCornerRadius"] =
+                        new CornerRadius(UserDataStore.GetValue<int>("ObjectCornerRadius"));
+                    break;
 
-                case AppProtocol.MainEventMessage:
-                    switch (value)
-                    {
-                        case AppProtocol.StateMessage:
-                            if (value == AppProtocol.State.Shutdown)
-                            {
-                                System.Windows.Application.Current?.Shutdown();
-                            }
+                case MainAppEvent.MaterialChanged:
+                    UserDataStore.Reload();
+                    AppRuntime.ThemeManagerService?.SetBackdropType(
+                        Enum.Parse<WindowBackdropType>(
+                            AppRuntime.ThemeManagerService.GetMaterialCBBSelected()?.Value ?? "Mica"));
+                    AppRuntime.ThemeManagerService?.SetApplicationTheme(
+                        Enum.Parse<ThemeConfigs.IThemeType>(
+                            AppRuntime.ThemeManagerService.GetThemeCBBSelected()?.Value ?? "Auto"));
+                    break;
 
-                            break;
+                case MainAppEvent.ThemeChanged:
+                    UserDataStore.Reload();
+                    AppRuntime.ThemeManagerService?.SetApplicationTheme(
+                        Enum.Parse<ThemeConfigs.IThemeType>(
+                            AppRuntime.ThemeManagerService.GetThemeCBBSelected()?.Value ?? "Auto"));
+                    break;
 
-                        case AppProtocol.MainEvent.LanguageChanged:
-                            UserDataStore.Reload();
-                            TranslationSource.Instance.CurrentCulture = LanguageBase.GetSetupLanguage();
-                            break;
-
-                        case AppProtocol.MainEvent.RadiusChanged:
-                            UserDataStore.Reload();
-                            Application.Current.Resources["ControlCornerRadius"] = new CornerRadius(UserDataStore.GetValue<int>("ObjectCornerRadius"));
-                            break;
-
-                        case AppProtocol.MainEvent.MaterialChanged:
-                            UserDataStore.Reload();
-                            AppRuntime.ThemeManagerService?.SetBackdropType(Enum.Parse<WindowBackdropType>(AppRuntime.ThemeManagerService.GetMaterialCBBSelected()?.Value ?? "Mica"));
-                            AppRuntime.ThemeManagerService?.SetApplicationTheme(Enum.Parse<ThemeConfigs.IThemeType>(AppRuntime.ThemeManagerService.GetThemeCBBSelected()?.Value ?? "Auto"));
-                            break;
-
-                        case AppProtocol.MainEvent.ThemeChanged:
-                            UserDataStore.Reload();
-                            AppRuntime.ThemeManagerService?.SetApplicationTheme(Enum.Parse<ThemeConfigs.IThemeType>(AppRuntime.ThemeManagerService.GetThemeCBBSelected()?.Value ?? "Auto"));
-                            break;
-
-                        case AppProtocol.MainEvent.AppExit:
-                            Application.Current.Shutdown();
-                            break;
-                    }
-
+                case MainAppEvent.AppExit:
+                    Application.Current.Shutdown();
                     break;
             }
         });
     }
-
-    // value = JSON { url, saveTo?, fileName? }
-    //private static void HandleDownloadRequest(string value)
-    //{
-    //    try
-    //    {
-    //        using var doc = JsonDocument.Parse(value);
-    //        var root = doc.RootElement;
-
-    //        string url      = root.TryGetProperty("url",      out var u) ? u.GetString() ?? "" : "";
-    //        string saveTo   = root.TryGetProperty("saveTo",   out var s) ? s.GetString() ?? "" : "";
-    //        string fileName = root.TryGetProperty("fileName", out var f) ? f.GetString() ?? "" : "";
-
-    //        if (string.IsNullOrWhiteSpace(url)) return;
-
-    //        var win = AppRuntime.MainWindow;
-    //        if (win == null) return;
-
-    //        win.ShowForDownload(url, saveTo, fileName);
-    //    }
-    //    catch { }
-    //}
 }

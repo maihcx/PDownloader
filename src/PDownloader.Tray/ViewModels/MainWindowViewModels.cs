@@ -53,19 +53,19 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
             IpcTopology.TrayToCorePipeName,
             IpcTopology.CoreToTrayPipeName);
 
-        CoreService.OnMessageReceived += (name, value) =>
+        CoreService.OnMessageReceived += message =>
         {
             App.Current.Dispatcher.Invoke(() =>
             {
-                if (name == UpdateProtocol.StateMessage)
+                if (message.TryGetPayload(UpdateProtocol.State, out UpdateStateSnapshot snapshot))
                 {
-                    ApplyUpdateState(value);
+                    ApplyUpdateState(snapshot);
                 }
-                else if (name == AppProtocol.MainEventMessage)
+                else if (message.TryGetPayload(AppProtocol.MainEvent, out MainAppEvent mainEvent))
                 {
-                    switch (value)
+                    switch (mainEvent)
                     {
-                        case AppProtocol.MainEvent.LanguageChanged:
+                        case MainAppEvent.LanguageChanged:
                             UserDataStore.Reload();
                             TranslationSource.Instance.CurrentCulture = LanguageBase.GetSetupLanguage();
                             createTrayIcons(
@@ -73,23 +73,23 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
                                 updateVersion: _updateVersion);
                             break;
 
-                        case AppProtocol.MainEvent.RadiusChanged:
+                        case MainAppEvent.RadiusChanged:
                             UserDataStore.Reload();
                             Application.Current.Resources["ControlCornerRadius"] = new CornerRadius(UserDataStore.GetValue<int>("ObjectCornerRadius"));
                             break;
 
-                        case AppProtocol.MainEvent.MaterialChanged:
+                        case MainAppEvent.MaterialChanged:
                             UserDataStore.Reload();
                             AppRuntime.ThemeManagerService?.SetBackdropType(Enum.Parse<WindowBackdropType>(AppRuntime.ThemeManagerService.GetMaterialCBBSelected()?.Value ?? "Mica"));
                             AppRuntime.ThemeManagerService?.SetApplicationTheme(Enum.Parse<ThemeConfigs.IThemeType>(AppRuntime.ThemeManagerService.GetThemeCBBSelected()?.Value ?? "Auto"));
                             break;
 
-                        case AppProtocol.MainEvent.ThemeChanged:
+                        case MainAppEvent.ThemeChanged:
                             UserDataStore.Reload();
                             AppRuntime.ThemeManagerService?.SetApplicationTheme(Enum.Parse<ThemeConfigs.IThemeType>(AppRuntime.ThemeManagerService.GetThemeCBBSelected()?.Value ?? "Auto"));
                             break;
 
-                        case AppProtocol.MainEvent.AppExit:
+                        case MainAppEvent.AppExit:
                             Application.Current.Shutdown();
                             break;
                     }
@@ -100,10 +100,24 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
         _ = CoreService.StartServiceAsync();
         AppRuntime.CoreService = CoreService;
 
-        _ = CoreService.SendAsync(
-            UpdateProtocol.CommandMessage,
-            UpdateProtocol.GetStateCommand);
+        _ = RequestUpdateStateAsync();
         _ = RequestUpdateCheckAfterDelayAsync(TimeSpan.FromSeconds(5));
+    }
+
+    private async Task RequestUpdateStateAsync()
+    {
+        if (CoreService is not { } coreService)
+        {
+            return;
+        }
+
+        IpcRequestResult<UpdateStateSnapshot> result =
+            await coreService.RequestAsync(UpdateProtocol.GetState);
+
+        if (result.Success && result.Value is { } snapshot)
+        {
+            App.Current.Dispatcher.Invoke(() => ApplyUpdateState(snapshot));
+        }
     }
 
     private async Task RequestUpdateCheckAfterDelayAsync(TimeSpan delay)
@@ -112,48 +126,34 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
         if (CoreService is { } coreService)
         {
             await coreService.SendAsync(
-                UpdateProtocol.CommandMessage,
-                UpdateProtocol.CheckCommand);
+                UpdateProtocol.Command,
+                new UpdateCommandRequest(UpdateCommandKind.Check));
         }
     }
 
-    private void ApplyUpdateState(string value)
+    private void ApplyUpdateState(UpdateStateSnapshot snapshot)
     {
-        try
+        bool hasUpdate = snapshot.Status is UpdateStatus.UpdateAvailable
+            or UpdateStatus.Downloading
+            or UpdateStatus.ReadyToInstall;
+        string? newVersion = hasUpdate
+            ? snapshot.LatestRelease?.TagName
+            : null;
+        bool shouldNotify = snapshot.Status == UpdateStatus.UpdateAvailable
+            && snapshot.ShouldNotifyTray
+            && !string.IsNullOrWhiteSpace(newVersion)
+            && !string.Equals(
+                _lastNotifiedUpdateVersion,
+                newVersion,
+                StringComparison.OrdinalIgnoreCase);
+
+        _updateVersion = newVersion;
+        createTrayIcons(hasUpdate, newVersion);
+
+        if (shouldNotify)
         {
-            UpdateStateSnapshot? snapshot =
-                JsonSerializer.Deserialize<UpdateStateSnapshot>(value);
-            if (snapshot is null)
-            {
-                return;
-            }
-
-            bool hasUpdate = snapshot.Status is UpdateStatus.UpdateAvailable
-                or UpdateStatus.Downloading
-                or UpdateStatus.ReadyToInstall;
-            string? newVersion = hasUpdate
-                ? snapshot.LatestRelease?.TagName
-                : null;
-            bool shouldNotify = snapshot.Status == UpdateStatus.UpdateAvailable
-                && snapshot.ShouldNotifyTray
-                && !string.IsNullOrWhiteSpace(newVersion)
-                && !string.Equals(
-                    _lastNotifiedUpdateVersion,
-                    newVersion,
-                    StringComparison.OrdinalIgnoreCase);
-
-            _updateVersion = newVersion;
-            createTrayIcons(hasUpdate, newVersion);
-
-            if (shouldNotify)
-            {
-                _lastNotifiedUpdateVersion = newVersion;
-                ShowUpdateBalloon(newVersion!);
-            }
-        }
-        catch (JsonException)
-        {
-            // Ignore malformed state messages and keep the current tray menu.
+            _lastNotifiedUpdateVersion = newVersion;
+            ShowUpdateBalloon(newVersion!);
         }
     }
 
@@ -173,44 +173,44 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
             case "tray_open":
                 CoreService?.StartApp();
                 _ = CoreService?.SendAsync(
-                    AppProtocol.StateMessage,
-                    AppProtocol.State.Start);
+                    AppProtocol.State,
+                    AppState.Start);
                 break;
             case "tray_home":
                 CoreService?.StartApp();
                 _ = CoreService?.SendAsync(
-                    AppProtocol.TrayEventMessage,
-                    AppProtocol.TrayEvent.GoHome);
+                    AppProtocol.TrayEvent,
+                    TrayNavigationEvent.GoHome);
                 break;
             case "tray_config":
                 CoreService?.StartApp();
                 _ = CoreService?.SendAsync(
-                    AppProtocol.TrayEventMessage,
-                    AppProtocol.TrayEvent.GoConfig);
+                    AppProtocol.TrayEvent,
+                    TrayNavigationEvent.GoConfig);
                 break;
             case "tray_download":
                 CoreService?.StartApp();
                 _ = CoreService?.SendAsync(
-                    AppProtocol.TrayEventMessage,
-                    AppProtocol.TrayEvent.GoDownload);
+                    AppProtocol.TrayEvent,
+                    TrayNavigationEvent.GoDownload);
                 break;
             case "tray_settings":
                 CoreService?.StartApp();
                 _ = CoreService?.SendAsync(
-                    AppProtocol.TrayEventMessage,
-                    AppProtocol.TrayEvent.GoSettings);
+                    AppProtocol.TrayEvent,
+                    TrayNavigationEvent.GoSettings);
                 break;
             case "tray_update":
                 CoreService?.StartApp();
                 _ = CoreService?.SendAsync(
-                    AppProtocol.TrayEventMessage,
-                    AppProtocol.TrayEvent.GoSettingsUpdate);
+                    AppProtocol.TrayEvent,
+                    TrayNavigationEvent.GoSettingsUpdate);
                 break;
             case "tray_about":
                 CoreService?.StartApp();
                 _ = CoreService?.SendAsync(
-                    AppProtocol.TrayEventMessage,
-                    AppProtocol.TrayEvent.GoAbout);
+                    AppProtocol.TrayEvent,
+                    TrayNavigationEvent.GoAbout);
                 break;
             case "tray_close":
                 Application.Current.Shutdown();

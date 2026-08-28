@@ -46,8 +46,13 @@ public class Bootstrap
             IpcTopology.CoreToMainPipeName,
             IpcTopology.MainToCorePipeName);
         AppRuntime.cfsMain = cfsMain;
-        cfsMain.OnMessageReceiving += CFSIncomingHandler.Handle;
         cfsMain.OnMessageReceived += CFSCommandHandler.Handle;
+        cfsMain.RegisterRequestHandler(
+            DownloadProtocol.GetList,
+            () => DownloadManager.Instance.GetContractList());
+        cfsMain.RegisterRequestHandler(
+            UpdateProtocol.GetState,
+            () => Program.GetRequiredService<CoreUpdateCoordinator>().GetStateSnapshot());
         _ = cfsMain.StartServiceAsync();
         #endregion
 
@@ -58,8 +63,10 @@ public class Bootstrap
             IpcTopology.CoreToTrayPipeName,
             IpcTopology.TrayToCorePipeName);
         AppRuntime.cfsTray = cfsTray;
-        cfsTray.OnMessageReceiving += CFSIncomingHandler.Handle;
         cfsTray.OnMessageReceived += CFSCommandHandler.Handle;
+        cfsTray.RegisterRequestHandler(
+            UpdateProtocol.GetState,
+            () => Program.GetRequiredService<CoreUpdateCoordinator>().GetStateSnapshot());
         cfsTray.CreateNoWindow = true;
         _ = cfsTray.StartServiceAsync();
         cfsTray.StartApp();

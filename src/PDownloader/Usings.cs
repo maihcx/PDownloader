@@ -22,6 +22,7 @@ global using Microsoft.Win32;
 global using PDownloader.CFS;
 global using PDownloader.Contracts.Application;
 global using PDownloader.Contracts.Ipc;
+global using PDownloader.Contracts.Downloads;
 global using DownloadProtocol = PDownloader.Contracts.Downloads.DownloadProtocol;
 global using DownloadItemDto = PDownloader.Contracts.Downloads.DownloadItemDto;
 global using DownloadStatus = PDownloader.Contracts.Downloads.DownloadStatus;
