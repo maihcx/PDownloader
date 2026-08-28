@@ -16,17 +16,12 @@
 global using PDownloader.Contracts.Downloads;
 global using PDownloader.Contracts.Media;
 global using PDownloader.Infrastructure.Downloads;
-global using PDownloader.Infrastructure.ExternalTools;
 global using PDownloader.Infrastructure.ExternalTools.Ffmpeg;
 global using PDownloader.Infrastructure.ExternalTools.YtDlp;
-global using PDownloader.Infrastructure.Http;
 global using PDownloader.Infrastructure.Json;
-global using PDownloader.Infrastructure.Media;
-global using System.Collections.Concurrent;
 global using System.Diagnostics;
 global using System.Net;
 global using System.Net.Http;
 global using System.Security.Cryptography;
 global using System.Text;
 global using System.Text.Json;
-global using System.Text.Json.Serialization;

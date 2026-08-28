@@ -13,6 +13,8 @@
 //
 // Copyright (C) Song Mai Software.
 
+using PDownloader.Contracts.Ipc;
+
 namespace PDownloader.Contracts.Downloads;
 
 /// <summary>
@@ -33,4 +35,7 @@ public sealed class DownloadSettingsDto
 public static class DownloadSettingsProtocol
 {
     public const string StoreKey = "pd-app-settings-v1";
+
+    public static readonly IpcMessageDefinition<IpcNoPayload> Reload =
+        new("download.settings.reload");
 }

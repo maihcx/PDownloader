@@ -50,6 +50,10 @@ public sealed class ConfluxService : IDisposable
     private readonly SemaphoreSlim _sendGate = new(1, 1);
     private readonly ConcurrentDictionary<
         string,
+        Func<JsonElement, CancellationToken, Task>> _messageHandlers =
+        new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<
+        string,
         Func<JsonElement, CancellationToken, Task<JsonElement>>> _requestHandlers =
         new(StringComparer.Ordinal);
     private bool _disposed;
@@ -67,6 +71,50 @@ public sealed class ConfluxService : IDisposable
         ProcessName = Path.GetFileNameWithoutExtension(processPackage);
         SendPipeName = sendPipeName;
         ReceivePipeName = receivePipeName;
+    }
+
+    public void RegisterMessageHandler(
+        IpcMessageDefinition<IpcNoPayload> definition,
+        Action handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        RegisterMessageHandler(
+            definition,
+            _ => handler());
+    }
+
+    public void RegisterMessageHandler<TPayload>(
+        IpcMessageDefinition<TPayload> definition,
+        Action<TPayload> handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        RegisterMessageHandler(
+            definition,
+            (payload, _) =>
+            {
+                handler(payload);
+                return Task.CompletedTask;
+            });
+    }
+
+    public void RegisterMessageHandler<TPayload>(
+        IpcMessageDefinition<TPayload> definition,
+        Func<TPayload, CancellationToken, Task> handler)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(handler);
+
+        _messageHandlers[definition.Name] = async (payload, cancellationToken) =>
+        {
+            TPayload? messagePayload = payload.Deserialize<TPayload>(SerializerOptions);
+            if (messagePayload is null)
+            {
+                throw new JsonException(
+                    $"Message '{definition.Name}' contains a null payload.");
+            }
+
+            await handler(messagePayload, cancellationToken).ConfigureAwait(false);
+        };
     }
 
     public void RegisterRequestHandler<TResponse>(
@@ -132,34 +180,63 @@ public sealed class ConfluxService : IDisposable
         return security;
     }
 
-    public void StartApp(string argEnvironment = "")
+    public bool StartApp(string argEnvironment = "")
     {
         try
         {
             if (IsAppStarted() && !CanMultiple)
             {
-                return;
+                return true;
             }
+
+            string processPath = ResolveProcessPath();
+            string? workingDirectory = Path.GetDirectoryName(processPath);
 
             var psi = new ProcessStartInfo
             {
-                FileName = ProcessPackage,
+                FileName = processPath,
                 UseShellExecute = false,
                 Arguments = argEnvironment,
-                CreateNoWindow = CreateNoWindow
+                CreateNoWindow = CreateNoWindow,
+                WorkingDirectory = !string.IsNullOrWhiteSpace(workingDirectory)
+                    ? workingDirectory
+                    : AppContext.BaseDirectory
             };
 
             Process? startedProcess = Process.Start(psi);
+            if (startedProcess is null)
+            {
+                Debug.WriteLine(
+                    $"[ConfluxService] Process.Start returned null for '{processPath}'.");
+                return false;
+            }
+
             lock (_processSync)
             {
                 ReplaceCurrentProcess(startedProcess);
             }
+
+            return true;
         }
         catch (Exception exception)
         {
             Debug.WriteLine(
                 $"[ConfluxService] Failed to start '{ProcessPackage}': {exception}");
+            return false;
         }
+    }
+
+    private string ResolveProcessPath()
+    {
+        if (Path.IsPathFullyQualified(ProcessPackage))
+        {
+            return ProcessPackage;
+        }
+
+        string appLocalPath = Path.Combine(AppContext.BaseDirectory, ProcessPackage);
+        return File.Exists(appLocalPath)
+            ? appLocalPath
+            : ProcessPackage;
     }
 
     public Process GetProcess()
@@ -341,6 +418,21 @@ public sealed class ConfluxService : IDisposable
             return;
         }
 
+        if (!_messageHandlers.ContainsKey(envelope.Type)
+            && OnMessageReceived is null)
+        {
+            await WriteAcknowledgementAsync(
+                server,
+                new IpcAcknowledgement
+                {
+                    RequestId = envelope.RequestId,
+                    Success = false,
+                    Error = $"No IPC message handler is registered for '{envelope.Type}'."
+                },
+                token).ConfigureAwait(false);
+            return;
+        }
+
         try
         {
             await WriteAcknowledgementAsync(
@@ -363,6 +455,24 @@ public sealed class ConfluxService : IDisposable
 
     private void DispatchMessage(IpcReceivedMessage message)
     {
+        if (_messageHandlers.TryGetValue(message.Type, out Func<JsonElement, CancellationToken, Task>? typedHandler))
+        {
+            try
+            {
+                CancellationToken serviceToken = _cts?.Token ?? CancellationToken.None;
+                Task task = typedHandler(message.Envelope.Payload, serviceToken);
+                if (!task.IsCompletedSuccessfully)
+                {
+                    _ = ObserveMessageHandlerAsync(task, message.Type);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(
+                    $"[CFS] Typed message handler failed for '{message.Type}': {ex}");
+            }
+        }
+
         MessageReceive? handlers = OnMessageReceived;
         if (handlers is null)
         {
@@ -385,12 +495,28 @@ public sealed class ConfluxService : IDisposable
         }
     }
 
+    private static async Task ObserveMessageHandlerAsync(Task task, string messageType)
+    {
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(
+                $"[CFS] Async message handler failed for '{messageType}': {ex}");
+        }
+    }
+
     private async Task HandleRequestAsync(
         Stream stream,
         IpcEnvelope envelope,
         CancellationToken cancellationToken)
     {
-        if (!_requestHandlers.TryGetValue(envelope.Type, out var handler))
+        if (!_requestHandlers.TryGetValue(envelope.Type, out Func<JsonElement, CancellationToken, Task<JsonElement>>? handler))
         {
             await WriteResponseAsync(
                 stream,

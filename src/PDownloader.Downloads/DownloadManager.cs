@@ -221,8 +221,13 @@ public class DownloadManager : IDisposable
                 FileSize = item.TotalBytes,
                 SaveTo = item.SavePath,
                 Url = item.Url,
-                RunnerMode = RunnerLaunchProtocol.RunnerModeValue,
-                Threads = item.Threads
+                IsRunner = true,
+                Threads = item.Threads,
+                Headers = item.CustomHeaders is null
+                    ? null
+                    : new Dictionary<string, string>(
+                        item.CustomHeaders,
+                        StringComparer.OrdinalIgnoreCase)
             });
         }
 

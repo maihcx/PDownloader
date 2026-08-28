@@ -150,5 +150,4 @@ public static class NavigationHandle
                     })
         );
     }
-
 }

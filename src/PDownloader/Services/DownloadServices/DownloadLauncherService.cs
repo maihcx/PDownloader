@@ -39,7 +39,6 @@ public class DownloadLauncherService
     public void RefreshConfigs()
     {
         ConfluxManager.cfsPDownloaderCore?.Send(
-            AppProtocol.CoreEventMessage,
-            CoreEvent.RefreshDownloaderConfigs);
+            DownloadSettingsProtocol.Reload);
     }
 }

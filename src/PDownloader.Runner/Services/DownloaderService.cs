@@ -42,7 +42,7 @@ public class DownloaderService : IHostedService, IDisposable
     /// <param name="cancellationToken">Indicates that the start process has been aborted.</param>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await HandleActivationAsync();
+        await HandleActivationAsync(cancellationToken);
     }
 
     /// <summary>
@@ -92,14 +92,11 @@ public class DownloaderService : IHostedService, IDisposable
             //UserDataStore.SetValue("DefaultDownloadFolder", SaveTo);
             //UserDataStore.SetValue("DefaultThreads", Threads);
 
-            var request = new StartDownloadRequest
+            var request = new RunnerStartDownloadRequest
             {
-                Id = _runnerConfig.Token,
-                Url = _runnerConfig.InitialUrl,
                 SaveTo = _runnerConfig.SaveTo,
                 FileName = _runnerConfig.FileName,
-                Threads = _runnerConfig.Threads,
-                Headers = _runnerConfig.CustomHeaders
+                Threads = _runnerConfig.Threads
             };
 
             bool ok = await Task.Run(() => SendWithRetry(request, retries: 3));
@@ -164,7 +161,7 @@ public class DownloaderService : IHostedService, IDisposable
     /// <summary>
     /// Creates main window during activation.
     /// </summary>
-    private async Task HandleActivationAsync()
+    private async Task HandleActivationAsync(CancellationToken cancellationToken)
     {
         CfsContact = new ConfluxService();
         CfsContact.Register(
@@ -172,64 +169,71 @@ public class DownloaderService : IHostedService, IDisposable
             IpcTopology.RunnerToCorePipeName(_runnerConfig.Token),
             IpcTopology.CoreToRunnerPipeName(_runnerConfig.Token)
         );
-        CfsContact.OnMessageReceived += RunnerCommandHandler.Handle;
+        CfsContact.RegisterMessageHandler(
+            AppProtocol.State,
+            RunnerCommandHandler.HandleState);
+        CfsContact.RegisterMessageHandler(
+            AppProtocol.MainEvent,
+            RunnerCommandHandler.HandleMainEvent);
+        CfsContact.RegisterMessageHandler(
+            DownloadProtocol.Progress,
+            HandleProgress);
 
-        CfsContact.OnMessageReceived += message =>
-        {
-            if (message.TryGetPayload(
-                    DownloadProtocol.RunnerDownload,
-                    out StartDownloadRequest request))
-            {
-                if (string.IsNullOrWhiteSpace(request.Url))
-                {
-                    return;
-                }
-
-                _runnerConfig.InitialUrl = request.Url;
-                _runnerConfig.SaveTo = request.SaveTo ?? string.Empty;
-                _runnerConfig.FileName = request.FileName ?? string.Empty;
-                return;
-            }
-
-            if (message.TryGetPayload(AppProtocol.State, out AppState state)
-                && state == AppState.Shutdown)
-            {
-                System.Windows.Application.Current?.Shutdown();
-            }
-        };
-
-        CfsContact.OnMessageReceived += message =>
-        {
-            if (!message.TryGetPayload(
-                    DownloadProtocol.Progress,
-                    out DownloadItemDto dto))
-            {
-                return;
-            }
-
-            DownloadStatus status = dto.Status;
-            if (_lastReceivedProgressStatus is DownloadStatus.Completed
-                or DownloadStatus.Cancelled)
-            {
-                if (status != _lastReceivedProgressStatus.Value)
-                {
-                    return;
-                }
-            }
-
-            _lastReceivedProgressStatus = status;
-            DownloaderStatus.IsPaused = status == DownloadStatus.Paused;
-            DownloaderStatus.IsSending = status is DownloadStatus.Queued
-                or DownloadStatus.Connecting;
-            OnProgress?.Invoke(dto);
-        };
-
-        _ = CfsContact.StartServiceAsync();
-
-        await Task.CompletedTask;
+        await CfsContact.StartServiceAsync();
+        await LoadSessionAsync(cancellationToken);
     }
 
-    private bool SendWithRetry(StartDownloadRequest request, int retries)
+    private void HandleProgress(DownloadItemDto dto)
+    {
+        DownloadStatus status = dto.Status;
+        if (_lastReceivedProgressStatus is DownloadStatus.Completed
+            or DownloadStatus.Cancelled)
+        {
+            if (status != _lastReceivedProgressStatus.Value)
+            {
+                return;
+            }
+        }
+
+        _lastReceivedProgressStatus = status;
+        DownloaderStatus.IsPaused = status == DownloadStatus.Paused;
+        DownloaderStatus.IsSending = status is DownloadStatus.Queued
+            or DownloadStatus.Connecting;
+        OnProgress?.Invoke(dto);
+    }
+
+    private async Task LoadSessionAsync(CancellationToken cancellationToken)
+    {
+        if (CfsContact is null || string.IsNullOrWhiteSpace(_runnerConfig.Token))
+        {
+            return;
+        }
+
+        const int retries = 5;
+        for (int attempt = 1; attempt <= retries; attempt++)
+        {
+            IpcRequestResult<RunnerSessionView> result =
+                await CfsContact.RequestAsync(
+                    DownloadProtocol.RunnerGetSession,
+                    TimeSpan.FromSeconds(2),
+                    cancellationToken);
+
+            if (result.Success && result.Value is RunnerSessionView session)
+            {
+                _runnerConfig.ApplySession(session);
+                return;
+            }
+
+            if (attempt < retries)
+            {
+                await Task.Delay(100, cancellationToken);
+            }
+        }
+
+        Debug.WriteLine("[Runner] Failed to load Runner session from Core.");
+    }
+
+    private bool SendWithRetry(RunnerStartDownloadRequest request, int retries)
     {
         for (int i = 0; i < retries; i++)
         {

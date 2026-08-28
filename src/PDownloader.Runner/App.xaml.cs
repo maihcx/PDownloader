@@ -41,11 +41,17 @@ public partial class App
                 services.AddSingleton(RunnerConfig.ParseArgs(_args));
                 services.AddSingleton<PowerModeService>();
                 services.AddSingleton<ProgressWindowBehaviorSettingsService>();
-                services.AddHostedService<ApplicationHostService>();
                 services.AddSingleton<DownloaderService>();
 
+                // Establish the Core session and hydrate RunnerConfig before the
+                // window is created, so no download metadata is needed on the
+                // process command line.
                 services.AddHostedService(sp =>
                     sp.GetRequiredService<DownloaderService>());
+                // WPF window creation is dispatcher-owned and must not run as an
+                // IHostedService. The Generic Host is allowed to resume hosted
+                // service startup on a worker thread after asynchronous IPC work.
+                services.AddSingleton<ApplicationHostService>();
 
                 services.AddSingleton<Services.INavigationService, Services.NavigationService>();
 
@@ -76,6 +82,12 @@ public partial class App
         await _host.StartAsync();
 
         TranslationSource.Instance.CurrentCulture = LanguageBase.GetSetupLanguage();
+
+        // This continuation belongs to the WPF Dispatcher. Keep all window/page
+        // creation on that dispatcher instead of letting Generic Host own it.
+        ApplicationHostService applicationHost =
+            Services.GetRequiredService<ApplicationHostService>();
+        await applicationHost.ShowAsync();
     }
 
     /// <summary>

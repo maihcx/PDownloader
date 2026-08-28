@@ -35,10 +35,24 @@ internal class Program
                 .CreateDefaultBuilder(args)
                 .ConfigureServices(services =>
                 {
-                    services.AddSingleton<Bootstrap>();
                     services.AddSingleton<DownloadConfigService>();
+
+                    services.AddSingleton<CoreIpcHost>();
+                    services.AddSingleton<MainAppGateway>();
+                    services.AddSingleton<RunnerSessionManager>();
+                    services.AddSingleton<AppEventRelay>();
+                    services.AddSingleton<CoreLifecycleService>();
+
+                    services.AddSingleton<DownloadCommandService>();
+                    services.AddSingleton<DownloadLaunchService>();
+                    services.AddSingleton<DownloadProgressPublisher>();
+                    services.AddSingleton<DownloadManagerBootstrap>();
+
                     services.AddSingleton<CoreUpdateService>();
                     services.AddSingleton<CoreUpdateCoordinator>();
+                    services.AddSingleton<CoreIpcBindings>();
+                    services.AddSingleton<Bootstrap>();
+                    services.AddSingleton<HttpBridgeService>();
 
                     services.AddHostedService<CoreBackgroundService>();
                 })
@@ -75,11 +89,5 @@ internal class Program
     {
         CrashHandler.WriteOnly(e.Exception, "TaskScheduler");
         e.SetObserved();
-    }
-
-    public static T GetRequiredService<T>()
-        where T : class
-    {
-        return _host!.Services.GetRequiredService<T>();
     }
 }

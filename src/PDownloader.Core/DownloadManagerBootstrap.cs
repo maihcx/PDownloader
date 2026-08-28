@@ -15,30 +15,53 @@
 
 namespace PDownloader.Core;
 
-public static class DownloadManagerBootstrap
+/// <summary>
+/// Wires process-owned download persistence and publication to DownloadManager.
+/// </summary>
+public sealed class DownloadManagerBootstrap : IDisposable
 {
-    private static readonly object _saveLock = new();
-    private static Timer? _saveDebounceTimer;
     private const int SaveDebounceMs = 1000;
 
-    public static void InitDownloadManager()
+    private readonly DownloadProgressPublisher _progressPublisher;
+    private readonly object _saveLock = new();
+    private Timer? _saveDebounceTimer;
+    private bool _initialized;
+    private bool _disposed;
+
+    public DownloadManagerBootstrap(DownloadProgressPublisher progressPublisher)
     {
-        DownloadManager.Instance.OnItemChanged += item =>
-        {
-            CFSCommandHandler.BroadcastItemChanged(item);
-
-            ScheduleSaveHistory();
-        };
-
-        RestoreHistoryOnStartup();
+        _progressPublisher = progressPublisher;
     }
 
-    private static void ScheduleSaveHistory()
+    public void Initialize()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_initialized)
+        {
+            return;
+        }
+
+        DownloadManager.Instance.OnItemChanged += OnItemChanged;
+        RestoreHistoryOnStartup();
+        _initialized = true;
+    }
+
+    private void OnItemChanged(DownloadItem item)
+    {
+        _progressPublisher.Publish(item);
+        ScheduleSaveHistory();
+    }
+
+    private void ScheduleSaveHistory()
     {
         lock (_saveLock)
         {
             _saveDebounceTimer?.Dispose();
-            _saveDebounceTimer = new Timer(_ => SaveHistoryNow(), null, SaveDebounceMs, Timeout.Infinite);
+            _saveDebounceTimer = new Timer(
+                _ => SaveHistoryNow(),
+                null,
+                SaveDebounceMs,
+                Timeout.Infinite);
         }
     }
 
@@ -47,12 +70,12 @@ public static class DownloadManagerBootstrap
         try
         {
             Directory.CreateDirectory(StorageDataDir);
-            var json = DownloadManager.Instance.SerializeHistory();
+            string json = DownloadManager.Instance.SerializeHistory();
             File.WriteAllText(StorageDownloaderDataFile, json);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Bootstrap] Lưu lịch sử thất bại: {ex.Message}");
+            Debug.WriteLine($"[Bootstrap] Lưu lịch sử thất bại: {ex.Message}");
         }
     }
 
@@ -68,19 +91,42 @@ public static class DownloadManagerBootstrap
             string json = File.ReadAllText(StorageDownloaderDataFile);
             List<DownloadItem> restored = DownloadManager.Instance.RestoreHistory(json);
 
-            System.Diagnostics.Debug.WriteLine(
+            Debug.WriteLine(
                 $"[Bootstrap] Đã khôi phục {restored.Count} item từ lịch sử.");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Bootstrap] Khôi phục lịch sử thất bại: {ex.Message}");
+            Debug.WriteLine($"[Bootstrap] Khôi phục lịch sử thất bại: {ex.Message}");
         }
     }
 
     private static string StorageDataDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SM SOFT", "PDownloader");
+        "SM SOFT",
+        "PDownloader");
 
     private static string StorageDownloaderDataFile =>
         Path.Combine(StorageDataDir, "downloads_history.json");
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (_initialized)
+        {
+            DownloadManager.Instance.OnItemChanged -= OnItemChanged;
+        }
+
+        lock (_saveLock)
+        {
+            _saveDebounceTimer?.Dispose();
+            _saveDebounceTimer = null;
+        }
+
+        _disposed = true;
+        GC.SuppressFinalize(this);
+    }
 }

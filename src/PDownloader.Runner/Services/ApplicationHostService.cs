@@ -4,7 +4,7 @@
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY without even the implied warranty of
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
@@ -16,13 +16,15 @@
 namespace PDownloader.Runner.Services;
 
 /// <summary>
-/// Managed host of the application.
+/// Owns creation and presentation of the WPF shell. This service is deliberately
+/// not an IHostedService: Generic Host does not guarantee that hosted-service
+/// continuations run on the WPF Dispatcher/STA thread.
 /// </summary>
-public class ApplicationHostService : IHostedService
+public sealed class ApplicationHostService
 {
-    private readonly IServiceProvider? _serviceProvider;
-
+    private readonly IServiceProvider _serviceProvider;
     private IWindow? _mainWindow;
+    private bool _shown;
 
     public ApplicationHostService(IServiceProvider serviceProvider)
     {
@@ -30,48 +32,67 @@ public class ApplicationHostService : IHostedService
     }
 
     /// <summary>
-    /// Triggered when the application host is ready to start the service.
+    /// Creates, initializes and shows the main Runner window on the WPF Dispatcher.
     /// </summary>
-    /// <param name="cancellationToken">Indicates that the start process has been aborted.</param>
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public async Task ShowAsync(CancellationToken cancellationToken = default)
     {
-        await HandleActivationAsync();
+        if (_shown)
+        {
+            return;
+        }
+
+        Application application = Application.Current
+            ?? throw new InvalidOperationException(
+                "WPF Application is not available while starting Runner UI.");
+
+        if (!application.Dispatcher.CheckAccess())
+        {
+            await application.Dispatcher
+                .InvokeAsync(
+                    () => ShowCoreAsync(cancellationToken),
+                    System.Windows.Threading.DispatcherPriority.Normal,
+                    cancellationToken)
+                .Task
+                .Unwrap();
+            return;
+        }
+
+        await ShowCoreAsync(cancellationToken);
     }
 
-    /// <summary>
-    /// Triggered when the application host is performing a graceful shutdown.
-    /// </summary>
-    /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
-    public async Task StopAsync(CancellationToken cancellationToken)
+    private async Task ShowCoreAsync(CancellationToken cancellationToken)
     {
-        await Task.CompletedTask;
-    }
+        cancellationToken.ThrowIfCancellationRequested();
 
-    /// <summary>
-    /// Creates main window during activation.
-    /// </summary>
-    /// 
-    private async Task HandleActivationAsync()
-    {
-        _mainWindow = (
-            _serviceProvider?.GetService(typeof(IWindow)) as IWindow
-        )!;
+        if (_shown)
+        {
+            return;
+        }
 
-        if (_mainWindow is MainWindow window && window.ViewModel is INavigationAware navigationAware)
+        _mainWindow = _serviceProvider.GetRequiredService<IWindow>();
+
+        if (_mainWindow is MainWindow window
+            && window.ViewModel is INavigationAware navigationAware)
         {
             await navigationAware.OnNavigatedToAsync();
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         _mainWindow.Loaded += MainWindow_Loaded;
         _mainWindow.Show();
-
-        await Task.CompletedTask;
+        _shown = true;
     }
 
-    private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    private static void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        //WindowHelper.BringToFront(App.Current.MainWindow);
-        App.Current.MainWindow.Activate();
-        App.Current.MainWindow.Topmost = false;
+        Application? application = Application.Current;
+        if (application?.MainWindow is not Window mainWindow)
+        {
+            return;
+        }
+
+        mainWindow.Activate();
+        mainWindow.Topmost = false;
     }
 }

@@ -31,8 +31,8 @@ public static class AppProtocol
     public static readonly IpcMessageDefinition<AppState> CoreServiceState =
         new("app.core-service-state");
 
-    public static readonly IpcMessageDefinition<CoreEvent> CoreEventMessage =
-        new("app.core-event");
+    public static readonly IpcMessageDefinition<IpcNoPayload> MainReady =
+        new("app.main-ready");
 }
 
 public enum AppState
@@ -60,8 +60,3 @@ public enum TrayNavigationEvent
     GoAbout
 }
 
-public enum CoreEvent
-{
-    RefreshDownloaderConfigs,
-    Ping
-}

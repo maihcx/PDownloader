@@ -14,7 +14,6 @@
 // Copyright (C) Song Mai Software.
 
 global using PDownloader.Contracts.Downloads;
-global using PDownloader.Contracts.Media;
 global using PDownloader.Downloads.Exceptions;
 global using PDownloader.Downloads.Handlers;
 global using PDownloader.Downloads.Hls;
@@ -22,7 +21,6 @@ global using PDownloader.Downloads.Models;
 global using PDownloader.Downloads.Paths;
 global using PDownloader.Downloads.Segments;
 global using PDownloader.Infrastructure.Downloads;
-global using PDownloader.Infrastructure.ExternalTools.Ffmpeg;
 global using PDownloader.Infrastructure.ExternalTools.YtDlp;
 global using PDownloader.Infrastructure.Http;
 global using PDownloader.Infrastructure.Media;

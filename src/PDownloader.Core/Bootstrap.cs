@@ -13,75 +13,73 @@
 //
 // Copyright (C) Song Mai Software.
 
-using Microsoft.Extensions.Hosting;
+using PDownloader.Core.Services.DownloadServices;
 
 namespace PDownloader.Core;
 
-public class Bootstrap
+public sealed class Bootstrap
 {
-    private readonly IHostApplicationLifetime lifetime;
+    private readonly DownloadConfigService _downloadConfig;
+    private readonly RunnerSessionManager _runnerSessions;
+    private readonly DownloadManagerBootstrap _downloadManagerBootstrap;
+    private readonly CoreIpcHost _ipcHost;
+    private readonly CoreIpcBindings _ipcBindings;
 
-    public Bootstrap(IHostApplicationLifetime lifetime)
+    public Bootstrap(
+        DownloadConfigService downloadConfig,
+        RunnerSessionManager runnerSessions,
+        DownloadManagerBootstrap downloadManagerBootstrap,
+        CoreIpcHost ipcHost,
+        CoreIpcBindings ipcBindings)
     {
-        this.lifetime = lifetime;
+        _downloadConfig = downloadConfig;
+        _runnerSessions = runnerSessions;
+        _downloadManagerBootstrap = downloadManagerBootstrap;
+        _ipcHost = ipcHost;
+        _ipcBindings = ipcBindings;
     }
 
     public void OnStarted()
     {
         DownloadRuntime.Configure(new DownloadRuntimeOptions
         {
-            GetDefaultDownloadFolder = () => CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultDownloadFolder,
-            GetDefaultTempFolder = () => CFSCommandHandler.DownloadConfigService.DownloadConfigs?.DefaultTempFolder,
+            GetDefaultDownloadFolder = () =>
+                _downloadConfig.DownloadConfigs.DefaultDownloadFolder,
+            GetDefaultTempFolder = () =>
+                _downloadConfig.DownloadConfigs.DefaultTempFolder,
             GetFallbackDownloadFolder = Helpers.GetDefaultFolder,
-            ShowRunner = (id, task) => _ = DownloadRunner.EnsureRunnerStarted(id, task)
+            ShowRunner = (id, task) =>
+                _ = _runnerSessions.EnsureStarted(id, task)
         });
 
-        // Wire up download manager broadcasts
-        DownloadManagerBootstrap.InitDownloadManager();
+        _downloadManagerBootstrap.Initialize();
 
-        #region ConfluxService — PDownloader.exe (Main UI)
-        ConfluxService cfsMain = new();
-        cfsMain.Register(
+        ConfluxService main = new();
+        main.Register(
             IpcTopology.MainProcessName,
             IpcTopology.CoreToMainPipeName,
             IpcTopology.MainToCorePipeName);
-        AppRuntime.cfsMain = cfsMain;
-        cfsMain.OnMessageReceived += CFSCommandHandler.Handle;
-        cfsMain.RegisterRequestHandler(
-            DownloadProtocol.GetList,
-            () => DownloadManager.Instance.GetContractList());
-        cfsMain.RegisterRequestHandler(
-            UpdateProtocol.GetState,
-            () => Program.GetRequiredService<CoreUpdateCoordinator>().GetStateSnapshot());
-        _ = cfsMain.StartServiceAsync();
-        #endregion
+        _ipcHost.AttachMain(main);
+        _ipcBindings.BindMain(main);
+        _ = main.StartServiceAsync();
 
-        #region ConfluxService — PDownloader Tray.exe
-        ConfluxService cfsTray = new();
-        cfsTray.Register(
+        ConfluxService tray = new()
+        {
+            CreateNoWindow = true
+        };
+        tray.Register(
             IpcTopology.TrayProcessName,
             IpcTopology.CoreToTrayPipeName,
             IpcTopology.TrayToCorePipeName);
-        AppRuntime.cfsTray = cfsTray;
-        cfsTray.OnMessageReceived += CFSCommandHandler.Handle;
-        cfsTray.RegisterRequestHandler(
-            UpdateProtocol.GetState,
-            () => Program.GetRequiredService<CoreUpdateCoordinator>().GetStateSnapshot());
-        cfsTray.CreateNoWindow = true;
-        _ = cfsTray.StartServiceAsync();
-        cfsTray.StartApp();
-        #endregion
-
-        // Runner is started on-demand when first download request arrives
+        _ipcHost.AttachTray(tray);
+        _ipcBindings.BindTray(tray);
+        _ = tray.StartServiceAsync();
+        tray.StartApp();
     }
 
-    public void OnStopped()
+    public async Task OnStoppedAsync()
     {
-        _ = AppRuntime.cfsMain?.StopServiceAsync();
-        _ = AppRuntime.cfsTray?.StopServiceAsync();
-
-        AppRuntime.cfsMain = AppRuntime.cfsTray = null;
+        await _runnerSessions.ShutdownAllAsync().ConfigureAwait(false);
+        await _ipcHost.StopAsync().ConfigureAwait(false);
     }
-
-    public void Shutdown() => lifetime.StopApplication();
 }

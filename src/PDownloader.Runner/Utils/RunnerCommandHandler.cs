@@ -18,34 +18,26 @@ using PDownloader.Runner.Resources;
 namespace PDownloader.Runner.Utils;
 
 /// <summary>
-/// Handles application and lifecycle messages sent by Core to Runner.
+/// Applies typed application/lifecycle events sent by Core to Runner.
+/// IPC deserialization and routing stay in ConfluxService.
 /// </summary>
 public static class RunnerCommandHandler
 {
-    public static void Handle(IpcReceivedMessage message)
+    public static void HandleState(AppState state)
+    {
+        if (state != AppState.Shutdown)
+        {
+            return;
+        }
+
+        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            System.Windows.Application.Current?.Shutdown());
+    }
+
+    public static void HandleMainEvent(MainAppEvent mainEvent)
     {
         System.Windows.Application.Current?.Dispatcher.Invoke(() =>
         {
-            if (message.Is(DownloadProtocol.RunnerCancelMessage))
-            {
-                return;
-            }
-
-            if (message.TryGetPayload(AppProtocol.State, out AppState state))
-            {
-                if (state == AppState.Shutdown)
-                {
-                    System.Windows.Application.Current?.Shutdown();
-                }
-
-                return;
-            }
-
-            if (!message.TryGetPayload(AppProtocol.MainEvent, out MainAppEvent mainEvent))
-            {
-                return;
-            }
-
             switch (mainEvent)
             {
                 case MainAppEvent.LanguageChanged:

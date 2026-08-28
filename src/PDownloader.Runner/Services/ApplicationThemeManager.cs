@@ -78,7 +78,7 @@ public class ApplicationThemeManagerService
 
     public ThemeType GetSysApplicationTheme()
     {
-        ThemeType _ThemeType = ThemeType.Unknown;
+        ThemeType _ThemeType;
         if (UserDataStore.GetValue<string>("IThemeType") == "Auto")
         {
             ApplicationThemeManager.ApplySystemTheme();
