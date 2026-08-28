@@ -173,12 +173,14 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
                     AddSort(
                         nameof(DownloadItemViewModel.FileName),
                         ListSortDirection.Ascending);
+                    AddStableTieBreaker();
                     break;
 
                 case DownloadSortMode.NameDescending:
                     AddSort(
                         nameof(DownloadItemViewModel.FileName),
                         ListSortDirection.Descending);
+                    AddStableTieBreaker();
                     break;
 
                 case DownloadSortMode.TimeStartAscending:
@@ -228,6 +230,16 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     {
         DownloadsView.SortDescriptions.Add(
             new SortDescription(propertyName, direction));
+    }
+
+    private void AddStableTieBreaker()
+    {
+        // Progress updates replace the item in the source collection. Without a
+        // unique secondary key, equal file names can be reinserted at different
+        // positions in the sorted view after every update.
+        AddSort(
+            nameof(DownloadItemViewModel.Id),
+            ListSortDirection.Ascending);
     }
 
     private static bool ContainsKeyword(string? value, string keyword)
