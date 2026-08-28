@@ -1204,6 +1204,24 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to page_settings_auto_update_summary.
+        /// </summary>
+        internal static string page_settings_auto_update_summary {
+            get {
+                return ResourceManager.GetString("page_settings_auto_update_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_settings_auto_update_title.
+        /// </summary>
+        internal static string page_settings_auto_update_title {
+            get {
+                return ResourceManager.GetString("page_settings_auto_update_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to page_settings_corner_radius_summary.
         /// </summary>
         internal static string page_settings_corner_radius_summary {
