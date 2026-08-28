@@ -17,6 +17,18 @@ namespace PDownloader.Infrastructure.Media;
 
 internal sealed class FfmpegMuxer
 {
+    private readonly FfmpegExecutableLocator _executableLocator;
+
+    public FfmpegMuxer()
+        : this(new FfmpegExecutableLocator())
+    {
+    }
+
+    internal FfmpegMuxer(FfmpegExecutableLocator executableLocator)
+    {
+        _executableLocator = executableLocator;
+    }
+
     public async Task<string> MuxAsync(
         IReadOnlyList<DownloadedStreamFile> files,
         string outputFolder,
@@ -90,7 +102,7 @@ internal sealed class FfmpegMuxer
             cancellationToken);
     }
 
-    private static async Task<string> ExecuteAsync(
+    private async Task<string> ExecuteAsync(
         MergeRecoveryManifest manifest,
         Action<double>? reportProgress,
         CancellationToken cancellationToken)
@@ -112,7 +124,7 @@ internal sealed class FfmpegMuxer
 
         ValidateSources(manifest.SourcePaths);
 
-        string ffmpegPath = FfmpegExecutableLocator.Instance.Find()
+        string ffmpegPath = _executableLocator.Find()
             ?? throw new InvalidOperationException(
                 "ffmpeg not found — ffmpeg is required to merge separately downloaded video and audio into a single file. " +
                 "Place ffmpeg.exe next to PDownloader.Core.exe or add it to the PATH.");
@@ -229,7 +241,7 @@ internal sealed class FfmpegMuxer
         }
     }
 
-    private static async Task<string> ExecuteHighPerformanceAsync(
+    private async Task<string> ExecuteHighPerformanceAsync(
         IReadOnlyList<string> sourcePaths,
         string destinationPath,
         Action<double>? reportProgress,
@@ -237,7 +249,7 @@ internal sealed class FfmpegMuxer
     {
         ValidateSources(sourcePaths);
 
-        string ffmpegPath = FfmpegExecutableLocator.Instance.Find()
+        string ffmpegPath = _executableLocator.Find()
             ?? throw new InvalidOperationException(
                 "ffmpeg not found — ffmpeg is required to merge separately downloaded video and audio into a single file. " +
                 "Place ffmpeg.exe next to PDownloader.Core.exe or add it to the PATH.");

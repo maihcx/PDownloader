@@ -21,6 +21,7 @@ global using PDownloader.Contracts.Media;
 global using PDownloader.Contracts.Updates;
 global using PDownloader.Downloads;
 global using PDownloader.Downloads.Models;
+global using PDownloader.Downloads.Runtime;
 global using PDownloader.Infrastructure.ExternalTools.YtDlp;
 global using PDownloader.Infrastructure.Downloads;
 global using PDownloader.Core.Application.App;

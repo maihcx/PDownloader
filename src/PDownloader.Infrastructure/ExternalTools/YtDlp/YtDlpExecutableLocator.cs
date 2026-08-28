@@ -17,12 +17,11 @@ namespace PDownloader.Infrastructure.ExternalTools.YtDlp;
 
 internal sealed class YtDlpExecutableLocator
 {
-    public static YtDlpExecutableLocator Instance { get; } = new();
 
     private string? _resolvedYtDlpPath;
     private string? _resolvedQuickJsPath;
 
-    private YtDlpExecutableLocator()
+    internal YtDlpExecutableLocator()
     {
     }
 

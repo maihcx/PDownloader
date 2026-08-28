@@ -19,11 +19,10 @@ namespace PDownloader.Infrastructure.ExternalTools.YtDlp;
 
 internal sealed class YtDlpCookieFileService
 {
-    public static YtDlpCookieFileService Instance { get; } = new();
 
     private const string CookieExpiry = "2147483647";
 
-    private YtDlpCookieFileService()
+    internal YtDlpCookieFileService()
     {
     }
 

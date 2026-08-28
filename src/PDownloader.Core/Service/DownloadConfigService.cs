@@ -17,10 +17,13 @@ namespace PDownloader.Core.Services.DownloadServices;
 
 public class DownloadConfigService
 {
+    private readonly UserDataStore _userDataStore;
+
     public DownloadSettingsDto DownloadConfigs { get; private set; } = new();
 
-    public DownloadConfigService()
+    public DownloadConfigService(UserDataStore userDataStore)
     {
+        _userDataStore = userDataStore;
         Reload();
     }
 
@@ -30,12 +33,12 @@ public class DownloadConfigService
         "PDownloader",
         "Temp");
 
-    private static DownloadSettingsDto LoadSettings()
+    private DownloadSettingsDto LoadSettings()
     {
         try
         {
-            UserDataStore.Reload();
-            string? raw = UserDataStore.GetValue<string>(DownloadSettingsProtocol.StoreKey);
+            _userDataStore.Reload();
+            string? raw = _userDataStore.GetValue<string>(DownloadSettingsProtocol.StoreKey);
             if (!string.IsNullOrWhiteSpace(raw))
             {
                 DownloadSettingsDto? loaded = JsonSerializer.Deserialize<DownloadSettingsDto>(raw);
