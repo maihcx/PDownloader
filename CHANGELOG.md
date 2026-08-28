@@ -1,3 +1,26 @@
+## v1.0.0
+
+## 🚀 Changelog
+- [cfs-ipc] Introduce typed IPC protocol and refactor CFS (#207) — @maihcx
+- [arch] Restructure source tree under src (#205) — @maihcx
+- [arch] Break refactor: add Contracts, Downloads, Infrastructure (#204) — @maihcx
+
+## 🚀 Features
+
+- [installer] Add 'Delete user data' uninstall option (#203) — @maihcx
+
+## 🧹 Maintenance
+
+- [ui-installer-runner] Switch basic TextBlock to WPF UI TextBlock (#210) — @maihcx
+- [arch] Refactor download runtime to DI (#209) — @maihcx
+- [core-cfs-runner] Refactor Core IPC, Runner sessions and download flow (#208) — @maihcx
+- [arch] Introduce contracts, IPC topology and app protocol (#206) — @maihcx
+- [installer] Change default RunAtStartup to true (#202) — @maihcx
+- [installer] Refactor WPF helper converters (#201) — @maihcx
+
+
+---
+
 ## v0.13.0
 
 ## 🚀 Changelog
