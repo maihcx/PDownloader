@@ -15,6 +15,7 @@
 
 namespace PDownloader.Runner.Helpers;
 
+
 [ValueConversion(typeof(DownloadStatus), typeof(string))]
 public class StatusToIconConverter : IValueConverter
 {

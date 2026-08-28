@@ -51,7 +51,7 @@
                            Visibility="{Binding ViewModel.ImageVisible, Converter={StaticResource BoolToVisConverter}}"
                            Symbol="{Binding ViewModel.ImageView, Mode=OneWay}" />
             
-            <ui:TextBlock Grid.Column="1"
+            <TextBlock Grid.Column="1"
                        Text="{Binding ViewModel.Model.MessageContent, Mode=OneWay}"
                        HorizontalAlignment="Left"
                        VerticalAlignment="Center"

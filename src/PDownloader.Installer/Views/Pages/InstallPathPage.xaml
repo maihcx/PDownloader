@@ -1,42 +1,43 @@
-<UserControl x:Class="PDownloader.Installer.Views.Pages.InstallPathPage"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:PDownloader.Installer.Utils"
-             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+<UserControl
+    x:Class="PDownloader.Installer.Views.Pages.InstallPathPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:PDownloader.Installer.Utils"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <Grid Margin="40,32">
         <StackPanel>
-            <ui:TextBlock Margin="0,0,0,24"
-                          FontSize="22"
-                          FontWeight="Bold"
-                          Text="{local:LocalizationExtension path_title}" />
+            <TextBlock Margin="0,0,0,24"
+                       FontSize="22"
+                       FontWeight="Bold"
+                       Text="{local:LocalizationExtension path_title}" />
 
-            <ui:TextBlock Margin="0,0,0,8"
-                          FontSize="13"
-                          FontWeight="SemiBold"
-                          Text="{local:LocalizationExtension path_scope_label}" />
+            <TextBlock Margin="0,0,0,8"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       Text="{local:LocalizationExtension path_scope_label}" />
             <RadioButton GroupName="InstallScope"
                          Content="{local:LocalizationExtension path_scope_current_user}"
                          IsEnabled="{Binding CanChangeInstallLocation}"
                          IsChecked="{Binding IsCurrentUserInstall, Mode=TwoWay}" />
-            <ui:TextBlock Margin="24,2,0,10"
-                          FontSize="12"
-                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                          Text="{local:LocalizationExtension path_scope_current_user_description}"
-                          TextWrapping="Wrap" />
+            <TextBlock Margin="24,2,0,10"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                       Text="{local:LocalizationExtension path_scope_current_user_description}"
+                       TextWrapping="Wrap" />
             <RadioButton GroupName="InstallScope"
                          Content="{local:LocalizationExtension path_scope_all_users}"
                          IsEnabled="{Binding CanChangeInstallLocation}"
                          IsChecked="{Binding IsAllUsersInstall, Mode=TwoWay}" />
-            <ui:TextBlock Margin="24,2,0,18"
-                          FontSize="12"
-                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                          Text="{local:LocalizationExtension path_scope_all_users_description}"
-                          TextWrapping="Wrap" />
+            <TextBlock Margin="24,2,0,18"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                       Text="{local:LocalizationExtension path_scope_all_users_description}"
+                       TextWrapping="Wrap" />
 
-            <ui:TextBlock Margin="0,0,0,8"
-                          FontSize="13"
-                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                          Text="{local:LocalizationExtension path_label}" />
+            <TextBlock Margin="0,0,0,8"
+                       FontSize="13"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Text="{local:LocalizationExtension path_label}" />
 
             <Grid Margin="0,0,0,24">
                 <Grid.ColumnDefinitions>
@@ -54,12 +55,12 @@
                            IsEnabled="{Binding CanChangeInstallLocation}" />
             </Grid>
 
-            <ui:TextBlock Margin="0,0,0,16"
-                          FontSize="12"
-                          Foreground="{DynamicResource SystemFillColorCautionBrush}"
-                          Text="{local:LocalizationExtension path_locked_description}"
-                          TextWrapping="Wrap"
-                          Visibility="{Binding CanChangeInstallLocation,
+            <TextBlock Margin="0,0,0,16"
+                       FontSize="12"
+                       Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                       Text="{local:LocalizationExtension path_locked_description}"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding CanChangeInstallLocation,
                            Converter={StaticResource BoolToVisibilityInverted}}" />
 
             <ui:TextBlock Margin="0,0,0,24"

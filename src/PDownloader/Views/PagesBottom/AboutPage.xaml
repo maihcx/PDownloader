@@ -59,7 +59,7 @@
                         <ui:SymbolIcon Symbol="Apps24"
                                        FontSize="15"
                                        Margin="0 0 8 0" />
-                        <ui:TextBlock Text="{utils:Localization about_app_title}"
+                        <TextBlock Text="{utils:Localization about_app_title}"
                                    FontWeight="SemiBold"
                                    FontSize="14" />
                     </StackPanel>
@@ -108,7 +108,7 @@
                         <ui:SymbolIcon Symbol="BuildingFactory24"
                                        FontSize="15"
                                        Margin="0 0 8 0" />
-                        <ui:TextBlock Text="{utils:Localization about_us_title}"
+                        <TextBlock Text="{utils:Localization about_us_title}"
                                    FontWeight="SemiBold"
                                    FontSize="14" />
                     </StackPanel>
@@ -136,7 +136,7 @@
                                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                               Text="{Binding ViewModel.CopyRight, Mode=OneWay}"
                                               TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="0"
+                                <TextBlock Grid.Row="0"
                                            Grid.RowSpan="2"
                                            Grid.Column="1"
                                            Margin="0,0,16,0"
@@ -159,7 +159,7 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <ui:TextBlock Grid.Column="0"
+                                    <TextBlock Grid.Column="0"
                                                Text="{utils:Localization contact_us_title}" />
                                     <ui:SymbolIcon Grid.Column="1"
                                                    Symbol="Link24" />
@@ -200,7 +200,7 @@
                                        BasedOn="{StaticResource {x:Type ui:Button}}" />
                             </ui:HyperlinkButton.Resources>
 
-                            <ui:TextBlock Text="{utils:Localization report_issue_title}" />
+                            <TextBlock Text="{utils:Localization report_issue_title}" />
                         </ui:HyperlinkButton>
                     </Grid>
                 </StackPanel>

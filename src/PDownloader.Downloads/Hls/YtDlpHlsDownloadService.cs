@@ -193,6 +193,7 @@ internal sealed class YtDlpHlsDownloadService
         return startInfo;
     }
 
+
     private static void AddForwardedHeaders(
         ProcessStartInfo startInfo,
         IReadOnlyDictionary<string, string>? extraHeaders)

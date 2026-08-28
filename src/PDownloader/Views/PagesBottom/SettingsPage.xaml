@@ -78,7 +78,7 @@
                     Minimum="0"
                     Value="{Binding ViewModel.SliderCornerRadius, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=local:SettingsPage}, Mode=TwoWay}" />
 
-                <ui:TextBlock Text="{Binding ViewModel.SliderCornerRadius, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=local:SettingsPage}, Mode=OneWay}" />
+                <TextBlock Text="{Binding ViewModel.SliderCornerRadius, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=local:SettingsPage}, Mode=OneWay}" />
             </StackPanel>
         </controls:FormFieldCard>
 
@@ -194,7 +194,7 @@
                         VerticalAlignment="Center"
                         Minimum="0" Maximum="100"
                         Value="{Binding ViewModel.DownloadProgress, Mode=OneWay}" />
-                    <ui:TextBlock
+                    <TextBlock
                         Grid.Column="1"
                         Margin="8,0,0,0"
                         VerticalAlignment="Center"

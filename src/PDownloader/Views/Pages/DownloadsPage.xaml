@@ -189,13 +189,13 @@
                            FontSize="64"
                            Opacity="0.2"
                            HorizontalAlignment="Center" />
-            <ui:TextBlock Text="{utils:Localization page_downloads_empty_title}"
+            <TextBlock Text="{utils:Localization page_downloads_empty_title}"
                        Opacity="0.5"
                        FontSize="16"
                        FontWeight="SemiBold"
                        HorizontalAlignment="Center"
                        Margin="0,16,0,0" />
-            <ui:TextBlock Text="{utils:Localization page_downloads_empty_hint}"
+            <TextBlock Text="{utils:Localization page_downloads_empty_hint}"
                        Opacity="0.35"
                        FontSize="13"
                        HorizontalAlignment="Center"
@@ -265,12 +265,12 @@
                                 <StackPanel Grid.Column="1"
                                             Margin="0 0 10 0"
                                             VerticalAlignment="Center">
-                                    <ui:TextBlock Text="{Binding FileName}"
+                                    <TextBlock Text="{Binding FileName}"
                                                FontSize="13"
                                                FontWeight="SemiBold"
                                                TextTrimming="CharacterEllipsis"
                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    <ui:TextBlock Text="{Binding Url}"
+                                    <TextBlock Text="{Binding Url}"
                                                FontSize="11"
                                                Opacity="0.45"
                                                TextTrimming="CharacterEllipsis"
@@ -281,7 +281,7 @@
                                                  Height="10"
                                                  Maximum="100" 
                                                  Minimum="0" />
-                                    <ui:TextBlock FontSize="11"
+                                    <TextBlock FontSize="11"
                                                Opacity="0.6">
                                         <Run Text="{Binding DownloadedFormatted, Mode=OneWay}" />
                                         <Run Text=" / " />
@@ -296,7 +296,7 @@
                                                 </MultiBinding>
                                             </Run.Text>
                                         </Run>
-                                    </ui:TextBlock>
+                                    </TextBlock>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="2"
@@ -312,25 +312,25 @@
                                         <StackPanel Grid.Column="0"
                                                     VerticalAlignment="Center"
                                                     HorizontalAlignment="Center">
-                                            <ui:TextBlock Text="{Binding SpeedFormatted, Mode=OneWay}"
+                                            <TextBlock Text="{Binding SpeedFormatted, Mode=OneWay}"
                                                        FontSize="13"
                                                        FontWeight="SemiBold"
                                                        HorizontalAlignment="Center"
                                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                            <ui:TextBlock Text="{Binding EtaFormatted, Mode=OneWay}"
+                                            <TextBlock Text="{Binding EtaFormatted, Mode=OneWay}"
                                                        FontSize="11"
                                                        Opacity="0.5"
                                                        HorizontalAlignment="Center" />
                                         </StackPanel>
 
-                                        <ui:TextBlock Grid.Column="1"
+                                        <TextBlock Grid.Column="1"
                                                    VerticalAlignment="Top"
                                                    HorizontalAlignment="Right"
                                                    FontSize="13"
                                                    FontWeight="Bold"
                                                    Style="{StaticResource DownloadStatusTextStyle}">
                                                 <Run Text="{Binding Progress, Mode=OneWay, StringFormat={}{0:F0}%}" />
-                                        </ui:TextBlock>
+                                        </TextBlock>
                                     </Grid>
 
                                     <!-- Action buttons -->
@@ -486,7 +486,7 @@
                     <ColumnDefinition Width="4" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <ui:TextBlock Grid.Column="0"
+                <TextBlock Grid.Column="0"
                            Text="{Binding ViewModel.StatusText}"
                            Opacity="0.5"
                            FontSize="12"

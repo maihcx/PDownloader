@@ -1,22 +1,22 @@
-<UserControl x:Class="PDownloader.Installer.Views.Pages.UninstallingPage"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:PDownloader.Installer.Utils"
-             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+<UserControl
+    x:Class="PDownloader.Installer.Views.Pages.UninstallingPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:PDownloader.Installer.Utils">
     <Grid Margin="40,32">
         <StackPanel VerticalAlignment="Center">
-            <ui:TextBlock Margin="0,0,0,32"
-                          FontSize="22"
-                          FontWeight="Bold"
-                          Text="{local:LocalizationExtension uninstall_progress_title}" />
+            <TextBlock Margin="0,0,0,32"
+                       FontSize="22"
+                       FontWeight="Bold"
+                       Text="{local:LocalizationExtension uninstall_progress_title}" />
             <ProgressBar Height="8"
                          Margin="0,0,0,16"
                          Maximum="100"
                          Minimum="0"
                          Value="{Binding Progress}" />
-            <ui:TextBlock FontSize="13"
-                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                          Text="{Binding StatusText}" />
+            <TextBlock FontSize="13"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Text="{Binding StatusText}" />
         </StackPanel>
     </Grid>
 </UserControl>

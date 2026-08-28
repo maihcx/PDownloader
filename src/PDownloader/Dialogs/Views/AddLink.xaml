@@ -36,7 +36,7 @@
                                   Width="*" />
             </Grid.ColumnDefinitions>
 
-            <ui:TextBlock Grid.Column="0"
+            <TextBlock Grid.Column="0"
                        Text="{utils:Localization dialog_link_title}"
                        HorizontalAlignment="Left"
                        VerticalAlignment="Center"

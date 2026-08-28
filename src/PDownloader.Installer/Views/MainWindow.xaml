@@ -63,11 +63,11 @@
                            RenderOptions.BitmapScalingMode="HighQuality"
                            Source="/Assets/app-256.png" />
                     <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                        <ui:TextBlock FontSize="16"
+                        <TextBlock FontSize="16"
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    Text="PDownloader" />
-                        <ui:TextBlock FontSize="11"
+                        <TextBlock FontSize="11"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Text="Setup" />
                     </StackPanel>
@@ -79,27 +79,27 @@
                                 FallbackValue=Visible}">
                     <StackPanel Margin="0,6" Orientation="Horizontal">
                         <Ellipse Style="{Binding ViewModel.StepIndex, Converter={StaticResource StepDotConverter}, ConverterParameter=1}" />
-                        <ui:TextBlock Style="{Binding ViewModel.StepIndex, Converter={StaticResource SideLabelConverter}, ConverterParameter=1}"
+                        <TextBlock Style="{Binding ViewModel.StepIndex, Converter={StaticResource SideLabelConverter}, ConverterParameter=1}"
                                    Text="{local:LocalizationExtension welcome_title}" />
                     </StackPanel>
                     <StackPanel Margin="0,6" Orientation="Horizontal">
                         <Ellipse Style="{Binding ViewModel.StepIndex, Converter={StaticResource StepDotConverter}, ConverterParameter=2}" />
-                        <ui:TextBlock Style="{Binding ViewModel.StepIndex, Converter={StaticResource SideLabelConverter}, ConverterParameter=2}"
+                        <TextBlock Style="{Binding ViewModel.StepIndex, Converter={StaticResource SideLabelConverter}, ConverterParameter=2}"
                                    Text="{local:LocalizationExtension license_title}" />
                     </StackPanel>
                     <StackPanel Margin="0,6" Orientation="Horizontal">
                         <Ellipse Style="{Binding ViewModel.StepIndex, Converter={StaticResource StepDotConverter}, ConverterParameter=3}" />
-                        <ui:TextBlock Style="{Binding ViewModel.StepIndex, Converter={StaticResource SideLabelConverter}, ConverterParameter=3}"
+                        <TextBlock Style="{Binding ViewModel.StepIndex, Converter={StaticResource SideLabelConverter}, ConverterParameter=3}"
                                    Text="{local:LocalizationExtension path_title}" />
                     </StackPanel>
                     <StackPanel Margin="0,6" Orientation="Horizontal">
                         <Ellipse Style="{Binding ViewModel.StepIndex, Converter={StaticResource StepDotConverter}, ConverterParameter=4}" />
-                        <ui:TextBlock Style="{Binding ViewModel.StepIndex, Converter={StaticResource SideLabelConverter}, ConverterParameter=4}"
+                        <TextBlock Style="{Binding ViewModel.StepIndex, Converter={StaticResource SideLabelConverter}, ConverterParameter=4}"
                                    Text="{local:LocalizationExtension options_title}" />
                     </StackPanel>
                     <StackPanel Margin="0,6" Orientation="Horizontal">
                         <Ellipse Style="{Binding ViewModel.StepIndex, Converter={StaticResource StepDotConverter}, ConverterParameter=5}" />
-                        <ui:TextBlock Style="{Binding ViewModel.StepIndex, Converter={StaticResource SideLabelConverter}, ConverterParameter=5}"
+                        <TextBlock Style="{Binding ViewModel.StepIndex, Converter={StaticResource SideLabelConverter}, ConverterParameter=5}"
                                    Text="{local:LocalizationExtension installing_title}" />
                     </StackPanel>
                 </StackPanel>
