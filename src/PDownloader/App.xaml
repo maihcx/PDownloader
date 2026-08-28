@@ -34,7 +34,7 @@
             <ControlTemplate x:Key="StarErrorTemplate">
                 <Grid>
                     <AdornedElementPlaceholder x:Name="adornerPlaceholder" />
-                    <TextBlock Text="*"
+                    <ui:TextBlock Text="*"
                                Foreground="Red"
                                FontWeight="Bold"
                                VerticalAlignment="Center"
