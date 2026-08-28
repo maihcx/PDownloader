@@ -1,15 +1,14 @@
-<UserControl
-    x:Class="PDownloader.Installer.Views.Pages.OptionsPage"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="clr-namespace:PDownloader.Installer.Utils"
-    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+<UserControl x:Class="PDownloader.Installer.Views.Pages.OptionsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:PDownloader.Installer.Utils"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <Grid Margin="40,32">
         <StackPanel>
-            <TextBlock Margin="0,0,0,32"
-                       FontSize="22"
-                       FontWeight="Bold"
-                       Text="{local:LocalizationExtension options_title}" />
+            <ui:TextBlock Margin="0,0,0,32"
+                          FontSize="22"
+                          FontWeight="Bold"
+                          Text="{local:LocalizationExtension options_title}" />
             <CheckBox Margin="0,0,0,12"
                       FontSize="14"
                       Content="{local:LocalizationExtension options_shortcut_desktop}"

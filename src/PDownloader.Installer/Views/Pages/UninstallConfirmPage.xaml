@@ -1,9 +1,8 @@
-<UserControl
-    x:Class="PDownloader.Installer.Views.Pages.UninstallConfirmPage"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="clr-namespace:PDownloader.Installer.Utils"
-    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+<UserControl x:Class="PDownloader.Installer.Views.Pages.UninstallConfirmPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:PDownloader.Installer.Utils"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <Grid Margin="40,32">
         <StackPanel VerticalAlignment="Center">
             <ui:SymbolIcon Margin="0,0,0,20"
@@ -11,10 +10,10 @@
                            Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                            Symbol="Delete48" />
             <ui:TextBlock Margin="0,0,0,12"
-                       HorizontalAlignment="Center"
-                       FontSize="24"
-                       FontWeight="Bold"
-                       Text="{local:LocalizationExtension uninstall_title}" />
+                          HorizontalAlignment="Center"
+                          FontSize="24"
+                          FontWeight="Bold"
+                          Text="{local:LocalizationExtension uninstall_title}" />
             <CheckBox Margin="0,8,0,0"
                       HorizontalAlignment="Center"
                       Content="{local:LocalizationExtension delete_user_data}"
@@ -36,7 +35,8 @@
                           TextAlignment="Center"
                           TextWrapping="Wrap"
                           Visibility="{Binding IsDeleteUserData, Converter={StaticResource BoolToVisibility}}" />
-            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+            <StackPanel HorizontalAlignment="Center"
+                        Orientation="Horizontal">
                 <ui:Button Margin="0,0,12,0"
                            Command="{Binding CloseCommand}"
                            Content="{local:LocalizationExtension uninstall_cancel}" />
