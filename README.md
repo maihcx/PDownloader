@@ -36,26 +36,39 @@ Browser
   Companion extension (separate repository)
         │  HTTP POST http://localhost:6287
         ▼
-PDownloader.Core  (background service)
+PDownloader.Core  (background service / process owner)
   • HTTP bridge on :6287 (/ping, /download, /youtube/analyze, /youtube/download)
   • CFS coordinator — routes commands between processes
+  • Owns the download lifecycle through PDownloader.Downloads
         │
         ├── CFS ──▶ PDownloader        (main WPF UI: settings, app entry point)
         ├── CFS ──▶ PDownloader.Tray   (system tray icon, navigation events)
-        └── CFS ──▶ PDownloader.Runner (download engine window)
-                       • DownloadEngine: multi-segment / HLS fragment downloads
-                       • Resume, retry, and segment merging
+        └── CFS ──▶ PDownloader.Runner (download progress/control UI)
+
+PDownloader.Downloads
+  • DownloadManager / DownloadEngine / HLS / segments / recovery orchestration
+        │
+        ▼
+PDownloader.Infrastructure
+  • HTTP/IO adapters, hashing/merge recovery, yt-dlp and ffmpeg integration
+        │
+        ▼
+PDownloader.Contracts
+  • Shared DTOs, enums and CFS protocol constants
 ```
 
 ### Projects
 
 | Project | Role |
 |---|---|
-| `PDownloader` | Main WPF application: startup, app configuration, settings UI. Sends `download` commands to Core over CFS. |
-| `PDownloader.Core` | Background service that coordinates everything. Hosts the HTTP bridge on port `6287` and relays commands between the Main UI, Tray, Runner, and the browser extension. |
-| `PDownloader.Runner` | WPF download manager window. Receives `download` commands from Core and runs the `DownloadEngine`. |
-| `PDownloader.Tray` | System tray icon that forwards navigation events to Core. |
-| `PDownloader.CFS` | Shared library implementing the inter-process communication layer used by all components. |
+| `PDownloader` | Main WPF application: startup, app configuration, settings UI. Sends download commands to Core over CFS. |
+| `PDownloader.Core` | Background service and process owner. Hosts the HTTP bridge, coordinates CFS, owns update orchestration, and composes the download module. |
+| `PDownloader.Downloads` | Download application/domain module: manager, engine, HLS/segment orchestration, resume/retry and recovery state. |
+| `PDownloader.Infrastructure` | Concrete download adapters: HTTP/IO, hashing and merge recovery, external-process integration, yt-dlp and ffmpeg. |
+| `PDownloader.Contracts` | UI-free shared DTOs, enums, update contracts and download protocol constants used across process boundaries. |
+| `PDownloader.Runner` | WPF progress/control client for an individual download. The actual transfer remains owned by Core/Downloads. |
+| `PDownloader.Tray` | System tray icon that forwards navigation and update events to Core. |
+| `PDownloader.CFS` | Transport-only local IPC library used by the desktop processes. |
 | `PDownloader.Installer` | Windows installer/setup application. |
 | `PDownloader.BugTracker` | Companion crash-reporting window launched on unhandled exceptions. |
 | `WPF-UI.LIB` | Forked/customized WPF-UI controls used across the desktop apps. |
@@ -64,7 +77,7 @@ PDownloader.Core  (background service)
 
 ## Download Engine
 
-Located in `PDownloader.Core/Download/DownloadEngine.cs`, the engine works roughly like this:
+Located in `PDownloader.Downloads/DownloadEngine.cs`, the engine works roughly like this:
 
 1. **Probe** the target URL (`HEAD`, falling back to a ranged `GET`) to determine total size and whether the server supports `Accept-Ranges: bytes`.
 2. **Split into segments** — when range requests are supported, the file is divided across multiple parallel byte-range downloads.
