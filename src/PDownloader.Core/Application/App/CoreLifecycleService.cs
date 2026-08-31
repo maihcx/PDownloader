@@ -23,39 +23,26 @@ namespace PDownloader.Core.Application.App;
 public sealed class CoreLifecycleService
 {
     private readonly IHostApplicationLifetime _lifetime;
-    private readonly CoreIpcHost _ipcHost;
-    private readonly RunnerSessionManager _runnerSessions;
 
     public CoreLifecycleService(
-        IHostApplicationLifetime lifetime,
-        CoreIpcHost ipcHost,
-        RunnerSessionManager runnerSessions)
+        IHostApplicationLifetime lifetime)
     {
         _lifetime = lifetime;
-        _ipcHost = ipcHost;
-        _runnerSessions = runnerSessions;
     }
 
-    public async Task HandleCoreStateAsync(
+    public Task HandleCoreStateAsync(
         AppState state,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (state != AppState.Shutdown)
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        ConfluxService? main = _ipcHost.Main;
-        if (main is not null)
-        {
-            await main.SendAsync(
-                AppProtocol.State,
-                AppState.Shutdown,
-                TimeSpan.FromSeconds(2),
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        await _runnerSessions.ShutdownAllAsync().ConfigureAwait(false);
+        // The hosted shutdown path owns worker, history and UI teardown order.
+        // Do not close channels from the command handler that is using them.
         _lifetime.StopApplication();
+        return Task.CompletedTask;
     }
 }

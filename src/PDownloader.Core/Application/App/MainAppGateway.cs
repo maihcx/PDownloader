@@ -94,7 +94,10 @@ public sealed class MainAppGateway
                 return;
             }
 
-            if (!await main.IsReadyAsync().ConfigureAwait(false)) return;
+            if (!await main.IsReadyAsync().ConfigureAwait(false))
+            {
+                return;
+            }
 
             // Attach only after health adopted the exact ready Main process.
             // Repeated activation does not create another progress sender.
@@ -146,7 +149,10 @@ public sealed class MainAppGateway
         finally
         {
             Volatile.Write(ref _flushActive, 0);
-            if (Interlocked.Exchange(ref _flushRequested, 0) != 0) NotifyReady();
+            if (Interlocked.Exchange(ref _flushRequested, 0) != 0)
+            {
+                NotifyReady();
+            }
         }
     }
 }

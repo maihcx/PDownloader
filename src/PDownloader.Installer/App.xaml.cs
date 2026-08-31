@@ -59,8 +59,11 @@ public partial class App
         catch (Exception ex)
         {
             if (!_launchOptions.IsSilentMode)
+            {
                 System.Windows.MessageBox.Show(ex.Message, "PDownloader settings",
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+
             Shutdown(1);
         }
     }

@@ -37,9 +37,16 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
     {
         lock (_sync)
         {
-            if (_stopTask is not null) return;
+            if (_stopTask is not null)
+            {
+                return;
+            }
+
             _runners.TryGetValue(item.Id, out ProgressClientSender? runner);
-            if (_main is null && runner is null) return;
+            if (_main is null && runner is null)
+            {
+                return;
+            }
 
             // Capture and enqueue under the same short lock. Older callbacks must
             // not enqueue their DTO after a newer callback or a ready snapshot.
@@ -59,8 +66,15 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
 
         lock (_sync)
         {
-            if (_stopTask is not null || _main?.Matches(channel, processId) == true) return;
-            if (_main is not null) _ = _main.DisposeAsync();
+            if (_stopTask is not null || _main?.Matches(channel, processId) == true)
+            {
+                return;
+            }
+
+            if (_main is not null)
+            {
+                _ = _main.DisposeAsync();
+            }
 
             var sender = new ProgressClientSender(channel, processId);
             _main = sender;
@@ -70,23 +84,37 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
             // values inside the publication lock so startup cannot replay old progress.
             // Main still obtains its authoritative list through GetList as before.
             foreach (DownloadItem item in _downloads.GetAll())
+            {
                 sender.Publish(DownloadManager.ToContract(item));
+            }
         }
     }
 
     public void AttachRunner(RunnerSession session)
     {
-        if (!session.IsReady || session.Lifetime.IsCancellationRequested) return;
+        if (!session.IsReady || session.Lifetime.IsCancellationRequested)
+        {
+            return;
+        }
+
         int processId;
         try { processId = session.Channel.GetProcess().Id; }
         catch (InvalidOperationException) { return; }
 
         lock (_sync)
         {
-            if (_stopTask is not null || session.Lifetime.IsCancellationRequested) return;
+            if (_stopTask is not null || session.Lifetime.IsCancellationRequested)
+            {
+                return;
+            }
+
             if (_runners.TryGetValue(session.Id, out ProgressClientSender? previous))
             {
-                if (previous.Matches(session.Channel, processId)) return;
+                if (previous.Matches(session.Channel, processId))
+                {
+                    return;
+                }
+
                 _ = previous.DisposeAsync();
             }
 
@@ -95,7 +123,9 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
             Track(sender, session.Id);
             // A download may already have completed while Runner was starting.
             if (_downloads.Find(session.Id) is { } item)
+            {
                 sender.Publish(DownloadManager.ToContract(item));
+            }
         }
     }
 
@@ -123,9 +153,12 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
                 _ownedSenders.Remove(sender);
                 if (runnerId is null)
                 {
-                    if (ReferenceEquals(_main, sender)) _main = null;
+                    if (ReferenceEquals(_main, sender))
+                    {
+                        _main = null;
+                    }
                 }
-                else if (_runners.TryGetValue(runnerId, out var current)
+                else if (_runners.TryGetValue(runnerId, out ProgressClientSender? current)
                     && ReferenceEquals(current, sender))
                 {
                     _runners.Remove(runnerId);
@@ -142,6 +175,7 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
             if (_stopTask is null)
             {
                 ProgressClientSender[] senders = _ownedSenders.ToArray();
+                _main?.DisposeAsync();
                 _main = null;
                 _runners.Clear();
                 // Set the shared stop task before any worker can re-enter cleanup.
@@ -151,6 +185,7 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
                         .ConfigureAwait(false);
                 });
             }
+
             return new ValueTask(_stopTask);
         }
     }

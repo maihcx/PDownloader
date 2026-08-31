@@ -66,7 +66,7 @@ public sealed class CoreIpcHost
         }
         finally
         {
-            service.Dispose();
+            await service.DisposeAsync().ConfigureAwait(false);
         }
     }
 }

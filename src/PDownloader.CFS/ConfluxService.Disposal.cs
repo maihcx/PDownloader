@@ -28,7 +28,11 @@ public sealed partial class ConfluxService
     {
         lock (_serviceSync)
         {
-            if (_disposed) return null;
+            if (_disposed)
+            {
+                return null;
+            }
+
             var operation = new OperationLease(this, _operationsCancellation.Token);
             _activeOperations++;
             return operation;
@@ -40,7 +44,10 @@ public sealed partial class ConfluxService
         lock (_serviceSync)
         {
             _activeOperations--;
-            if (_activeOperations == 0) _operationsDrained?.TrySetResult();
+            if (_activeOperations == 0)
+            {
+                _operationsDrained?.TrySetResult();
+            }
         }
     }
 
@@ -80,6 +87,7 @@ public sealed partial class ConfluxService
                     drained = _operationsDrained.Task;
                 }
             }
+
             completionTask = _disposeTask;
         }
 
@@ -106,12 +114,18 @@ public sealed partial class ConfluxService
                         _serviceTask = null;
                         _dispatchQueue = null;
                     }
+
                     _sendGate.Dispose();
                     _startGate.Dispose();
                     _operationsCancellation.Dispose();
-                    lock (_processSync) ReplaceCurrentProcess(null);
+                    lock (_processSync)
+                    {
+                        ReplaceCurrentProcess(null);
+                    }
+
                     GC.SuppressFinalize(this);
                 }
+
                 completion.TrySetResult();
             }
             catch (Exception ex)

@@ -29,11 +29,20 @@ public sealed partial class ConfluxService
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (_stopTask is { IsCompleted: false })
+            {
                 throw new InvalidOperationException("The endpoint is still stopping.");
-            if (_cts is not null) return Task.CompletedTask;
+            }
+
+            if (_cts is not null)
+            {
+                return Task.CompletedTask;
+            }
+
             ArgumentException.ThrowIfNullOrWhiteSpace(ReceivePipeName);
             if (MaxConcurrentConnections is < 2 or > 64)
+            {
                 throw new ArgumentOutOfRangeException(nameof(MaxConcurrentConnections));
+            }
 
             // Create every listener before reporting startup success. Startup failures
             // propagate to the host instead of leaving a silently broken background loop.
@@ -41,13 +50,20 @@ public sealed partial class ConfluxService
             try
             {
                 for (int i = 0; i < MaxConcurrentConnections; i++)
+                {
                     listeners.Add(CreateListener(firstInstance: i == 0));
+                }
             }
             catch
             {
-                foreach (var listener in listeners) listener.Dispose();
+                foreach (NamedPipeServerStream listener in listeners)
+                {
+                    listener.Dispose();
+                }
+
                 throw;
             }
+
             _cts = new CancellationTokenSource();
             _stopTask = null;
             _dispatchQueue = Channel.CreateBounded<Func<CancellationToken, Task>>(
@@ -72,7 +88,7 @@ public sealed partial class ConfluxService
     {
         try
         {
-            await foreach (var work in reader.ReadAllAsync(token).ConfigureAwait(false))
+            await foreach (Func<CancellationToken, Task>? work in reader.ReadAllAsync(token).ConfigureAwait(false))
             {
                 try { await work(token).ConfigureAwait(false); }
                 catch (OperationCanceledException) when (token.IsCancellationRequested) { break; }
@@ -113,6 +129,7 @@ public sealed partial class ConfluxService
                 pipe = null;
             }
         }
+
         pipe?.Dispose();
     }
 
@@ -120,14 +137,22 @@ public sealed partial class ConfluxService
     {
         lock (_serviceSync)
         {
-            if (_stopTask is not null) return _stopTask;
-            if (_cts is null) return Task.CompletedTask;
+            if (_stopTask is not null)
+            {
+                return _stopTask;
+            }
+
+            if (_cts is null)
+            {
+                return Task.CompletedTask;
+            }
+
             _ready = false;
             _dispatchQueue?.Writer.TryComplete();
             // Cancel outside the lock and always join workers, including when a
             // cancellation callback faults. Never dispose a CTS while it is in use.
-            var cts = _cts;
-            var workers = _serviceTask ?? Task.CompletedTask;
+            CancellationTokenSource cts = _cts;
+            Task workers = _serviceTask ?? Task.CompletedTask;
             _stopTask = Task.Run(async () =>
             {
                 try
@@ -154,5 +179,4 @@ public sealed partial class ConfluxService
             return _stopTask;
         }
     }
-
 }

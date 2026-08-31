@@ -35,24 +35,33 @@ public sealed class UserDataStore
     {
         SettingsValue result = Get(key);
         if (!result.Found || result.Value.ValueKind == JsonValueKind.Null)
+        {
             return defaultValue;
+        }
+
         try { return result.Value.Deserialize<T>() ?? defaultValue; }
         catch (JsonException) { return defaultValue; }
     }
 
     public SettingsValue Get(string key)
     {
-        if (_file.TryGetValue(key, out var value)
+        if (_file.TryGetValue(key, out JsonElement value)
             || UserDataDefaults.Create().TryGetValue(key, out value))
+        {
             return new SettingsValue { Found = true, Value = value };
+        }
+
         return new SettingsValue();
     }
 
     public Dictionary<string, JsonElement> GetAll()
     {
-        var result = UserDataDefaults.Create();
-        foreach (var entry in _file.Read())
+        Dictionary<string, JsonElement> result = UserDataDefaults.Create();
+        foreach (KeyValuePair<string, JsonElement> entry in _file.Read())
+        {
             result[entry.Key] = entry.Value;
+        }
+
         return result;
     }
 

@@ -80,6 +80,7 @@ public sealed class CoreUpdateCoordinator : IDisposable
                 {
                     SetAutoUpdateEnabled(enabled);
                 }
+
                 break;
         }
     }
@@ -401,5 +402,4 @@ public sealed class CoreUpdateCoordinator : IDisposable
         _operationCancellation = null;
         GC.SuppressFinalize(this);
     }
-
 }

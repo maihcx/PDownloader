@@ -15,122 +15,135 @@
 
 namespace PDownloader.Core;
 
-/// <summary>
-/// Wires process-owned download persistence and publication to DownloadManager.
-/// </summary>
-public sealed class DownloadManagerBootstrap : IDisposable
+/// <summary>Owns the history subscription and debounce timer, not DownloadManager.</summary>
+public sealed class DownloadManagerBootstrap : IAsyncDisposable
 {
     private const int SaveDebounceMs = 1000;
-
     private readonly DownloadProgressPublisher _progressPublisher;
     private readonly DownloadManager _downloads;
     private readonly object _saveLock = new();
     private Timer? _saveDebounceTimer;
     private bool _initialized;
-    private bool _disposed;
+    private bool _historyLoaded;
+    private Task? _disposeTask;
 
-    public DownloadManagerBootstrap(
-        DownloadProgressPublisher progressPublisher,
-        DownloadManager downloads)
+    public DownloadManagerBootstrap(DownloadProgressPublisher progressPublisher, DownloadManager downloads)
     {
         _progressPublisher = progressPublisher;
         _downloads = downloads;
     }
 
-    public void Initialize()
+    public async Task InitializeAsync(CancellationToken cancellationToken)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        if (_initialized)
+        lock (_saveLock)
         {
-            return;
+            ObjectDisposedException.ThrowIf(_disposeTask is not null, this);
+            if (_initialized)
+            {
+                return;
+            }
+
+            _initialized = true;
+            _downloads.OnItemChanged += OnItemChanged;
+            _saveDebounceTimer = new Timer(_ => SaveHistoryNow(), null, Timeout.Infinite, Timeout.Infinite);
         }
 
-        _downloads.OnItemChanged += OnItemChanged;
-        RestoreHistoryOnStartup();
-        _initialized = true;
+        try
+        {
+            if (File.Exists(StorageDownloaderDataFile))
+            {
+                string json = await File.ReadAllTextAsync(StorageDownloaderDataFile, cancellationToken)
+                    .ConfigureAwait(false);
+                List<DownloadItem> restored = await _downloads.RestoreHistoryAsync(json, cancellationToken)
+                    .ConfigureAwait(false);
+                Debug.WriteLine($"[Bootstrap] Restored {restored.Count} history items.");
+            }
+
+            lock (_saveLock)
+            {
+                _historyLoaded = true;
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception ex)
+        {
+            // Do not overwrite an unreadable history with an empty shutdown snapshot.
+            Debug.WriteLine($"[Bootstrap] History could not be restored; saving disabled: {ex.Message}");
+        }
     }
 
     private void OnItemChanged(DownloadItem item)
     {
         _progressPublisher.Publish(item);
-        ScheduleSaveHistory();
-    }
-
-    private void ScheduleSaveHistory()
-    {
         lock (_saveLock)
         {
-            _saveDebounceTimer?.Dispose();
-            _saveDebounceTimer = new Timer(
-                _ => SaveHistoryNow(),
-                null,
-                SaveDebounceMs,
-                Timeout.Infinite);
+            if (_disposeTask is null)
+            {
+                _saveDebounceTimer?.Change(SaveDebounceMs, Timeout.Infinite);
+            }
         }
     }
 
     private void SaveHistoryNow()
     {
-        try
+        lock (_saveLock)
         {
-            Directory.CreateDirectory(StorageDataDir);
-            string json = _downloads.SerializeHistory();
-            File.WriteAllText(StorageDownloaderDataFile, json);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Bootstrap] Lưu lịch sử thất bại: {ex.Message}");
-        }
-    }
-
-    private void RestoreHistoryOnStartup()
-    {
-        try
-        {
-            if (!File.Exists(StorageDownloaderDataFile))
+            if (!_historyLoaded)
             {
                 return;
             }
 
-            string json = File.ReadAllText(StorageDownloaderDataFile);
-            List<DownloadItem> restored = _downloads.RestoreHistory(json);
-
-            Debug.WriteLine(
-                $"[Bootstrap] Đã khôi phục {restored.Count} item từ lịch sử.");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Bootstrap] Khôi phục lịch sử thất bại: {ex.Message}");
+            try
+            {
+                Directory.CreateDirectory(StorageDataDir);
+                File.WriteAllText(StorageDownloaderDataFile, _downloads.SerializeHistory());
+            }
+            catch (Exception ex) { Debug.WriteLine($"[Bootstrap] History save failed: {ex.Message}"); }
         }
     }
 
     private static string StorageDataDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SM SOFT",
-        "PDownloader");
+        "SM SOFT", "PDownloader");
+    private static string StorageDownloaderDataFile => Path.Combine(StorageDataDir, "downloads_history.json");
 
-    private static string StorageDownloaderDataFile =>
-        Path.Combine(StorageDataDir, "downloads_history.json");
-
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        if (_disposed)
-        {
-            return;
-        }
-
-        if (_initialized)
-        {
-            _downloads.OnItemChanged -= OnItemChanged;
-        }
-
+        TaskCompletionSource? owner = null;
+        Task completion;
+        Task timerStopped = Task.CompletedTask;
         lock (_saveLock)
         {
-            _saveDebounceTimer?.Dispose();
-            _saveDebounceTimer = null;
+            if (_disposeTask is null)
+            {
+                owner = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                _disposeTask = owner.Task;
+                if (_initialized)
+                {
+                    _downloads.OnItemChanged -= OnItemChanged;
+                }
+
+                timerStopped = _saveDebounceTimer?.DisposeAsync().AsTask() ?? Task.CompletedTask;
+                _saveDebounceTimer = null;
+            }
+
+            completion = _disposeTask;
         }
 
-        _disposed = true;
-        GC.SuppressFinalize(this);
+        if (owner is not null)
+        {
+            try
+            {
+                // Do not hold _saveLock while waiting for timer callbacks.
+                await timerStopped.ConfigureAwait(false);
+                // Bootstrap calls this only after downloads/hash work has stopped.
+                SaveHistoryNow();
+                GC.SuppressFinalize(this);
+                owner.TrySetResult();
+            }
+            catch (Exception ex) { owner.TrySetException(ex); }
+        }
+
+        await completion.ConfigureAwait(false);
     }
 }

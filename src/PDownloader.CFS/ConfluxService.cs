@@ -270,17 +270,22 @@ public sealed partial class ConfluxService : IDisposable, IAsyncDisposable
         if (!_ready)
         {
             if (envelope.Kind == IpcEnvelopeKind.Request)
+            {
                 await WriteResponseAsync(server, new IpcResponseEnvelope
                 {
                     Type = envelope.Type, RequestId = envelope.RequestId, Success = false,
                     Payload = JsonSerializer.SerializeToElement(new IpcNoPayload(), SerializerOptions),
                     Error = "Endpoint is not ready."
                 }, token).ConfigureAwait(false);
+            }
             else
+            {
                 await WriteAcknowledgementAsync(server, new IpcAcknowledgement
                 {
                     RequestId = envelope.RequestId, Success = false, Error = "Endpoint is not ready."
                 }, token).ConfigureAwait(false);
+            }
+
             return;
         }
 
@@ -320,7 +325,9 @@ public sealed partial class ConfluxService : IDisposable, IAsyncDisposable
         await QueueDispatchAsync(async ct =>
         {
             if (await accepted.Task.WaitAsync(ct).ConfigureAwait(false))
+            {
                 await DispatchMessageAsync(message, ct).ConfigureAwait(false);
+            }
         }, token).ConfigureAwait(false);
         try
         {
@@ -453,7 +460,11 @@ public sealed partial class ConfluxService : IDisposable, IAsyncDisposable
         CancellationToken cancellationToken = default)
     {
         using OperationLease? operation = TryBeginOperation();
-        if (operation is null) return false;
+        if (operation is null)
+        {
+            return false;
+        }
+
         timeout ??= TimeSpan.FromSeconds(5);
         using var timeoutCancellation =
             CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, operation.Token);
@@ -546,7 +557,10 @@ public sealed partial class ConfluxService : IDisposable, IAsyncDisposable
     {
         using OperationLease? operation = TryBeginOperation();
         if (operation is null)
+        {
             return new IpcRequestResult<TResponse>(false, default, "IPC endpoint is disposed.");
+        }
+
         timeout ??= TimeSpan.FromSeconds(5);
         using var timeoutCancellation =
             CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, operation.Token);
@@ -589,6 +603,7 @@ public sealed partial class ConfluxService : IDisposable, IAsyncDisposable
             {
                 await client.ConnectAsync(operationToken).ConfigureAwait(false);
             }
+
             ValidateServerProcess(client);
             await WriteFrameAsync(client, serialized, operationToken).ConfigureAwait(false);
 
@@ -857,5 +872,4 @@ public sealed partial class ConfluxService : IDisposable, IAsyncDisposable
             totalRead += read;
         }
     }
-
 }
