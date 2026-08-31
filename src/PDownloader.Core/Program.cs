@@ -58,6 +58,7 @@ internal class Program
                     services.AddSingleton<Bootstrap>();
                     services.AddSingleton<HttpBridgeService>();
 
+                    services.AddHostedService<CoreSettingsService>();
                     services.AddHostedService<CoreBackgroundService>();
                 })
                 .Build();

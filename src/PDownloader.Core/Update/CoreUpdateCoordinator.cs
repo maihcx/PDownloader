@@ -324,10 +324,8 @@ public sealed class CoreUpdateCoordinator : IDisposable
 
     private void SetAutoUpdateEnabled(bool enabled)
     {
-        IsAutoUpdateEnabled = enabled;
-        // Merge settings written by Main/Tray before Core persists its value.
-        _userDataStore.Reload();
         _userDataStore.SetValue(AutoUpdateSettingKey, enabled);
+        IsAutoUpdateEnabled = enabled;
         BroadcastState();
 
         if (enabled)

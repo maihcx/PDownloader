@@ -14,120 +14,25 @@
 // Copyright (C) Song Mai Software.
 
 using System.Text.Json;
+using PDownloader.Shared.Persistence;
 
 namespace PDownloader.Installer.Utils;
 
+/// <summary>Standalone installer settings access; no Core process, IPC or settings payload.</summary>
 public static class UserDataStore
 {
-    private static readonly string DataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SM SOFT", "PDownloader");
+    private static readonly UserDataFile FileStore = new();
 
-    private static readonly string DataFile = Path.Combine(DataDir, "userdata.json");
+    public static IReadOnlyDictionary<string, JsonElement> ReadSnapshot() => FileStore.Read();
 
-    private static Dictionary<string, object> _data = new();
+    public static T GetValue<T>(string key) => FileStore.GetValue<T>(key);
+    public static T GetValue<T>(string key, T defaultValue) => FileStore.GetValue(key, defaultValue);
+    public static bool SetValue<T>(string key, T value) => FileStore.SetValue(key, value);
+    public static void SetValues(IReadOnlyDictionary<string, object?> values) =>
+        FileStore.Patch(values.ToDictionary(pair => pair.Key,
+            pair => JsonSerializer.SerializeToElement(pair.Value)));
+    public static void Reset() => FileStore.Reset();
+    public static void Reload() => FileStore.Read();
+    public static void DeleteUserData() => FileStore.DeleteUserData();
 
-    static UserDataStore()
-    {
-        try
-        {
-            if (File.Exists(DataFile))
-            {
-                var json = File.ReadAllText(DataFile);
-                _data = JsonSerializer.Deserialize<Dictionary<string, object>>(json)
-                        ?? new Dictionary<string, object>();
-            }
-        }
-        catch
-        {
-            _data = new Dictionary<string, object>();
-        }
-    }
-
-    private static void SaveData()
-    {
-        try
-        {
-            Directory.CreateDirectory(DataDir);
-            var json = JsonSerializer.Serialize(_data, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
-            File.WriteAllText(DataFile, json);
-        }
-        catch { }
-    }
-
-    public static T GetValue<T>(string key)
-    {
-        return GetValue<T>(key, default!);
-    }
-
-    public static T GetValue<T>(string key, T defaultVal)
-    {
-        if (_data.TryGetValue(key, out var value))
-        {
-            try
-            {
-                if (value is JsonElement elem)
-                {
-                    return elem.Deserialize<T>()!;
-                }
-
-                return (T)Convert.ChangeType(value, typeof(T));
-            }
-            catch { }
-        }
-
-        try
-        {
-            var defaultValue = Properties.Settings.Default[key];
-            if (defaultValue is T tVal)
-            {
-                return tVal;
-            }
-
-            return (T)Convert.ChangeType(defaultValue, typeof(T));
-        }
-        catch
-        {
-            if (defaultVal != null)
-            {
-                return defaultVal;
-            }
-
-            return default!;
-        }
-    }
-
-    public static bool SetValue<T>(string key, T value)
-    {
-        _data[key] = value!;
-        SaveData();
-        return true;
-    }
-
-    public static void Reset()
-    {
-        _data.Clear();
-        SaveData();
-    }
-
-    public static void Reload()
-    {
-        _data.Clear();
-        if (File.Exists(DataFile))
-        {
-            try
-            {
-                var json = File.ReadAllText(DataFile);
-                _data = JsonSerializer.Deserialize<Dictionary<string, object>>(json)
-                        ?? new Dictionary<string, object>();
-            }
-            catch
-            {
-                _data = new Dictionary<string, object>();
-            }
-        }
-    }
 }

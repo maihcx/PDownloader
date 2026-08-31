@@ -13,173 +13,32 @@
 //
 // Copyright (C) Song Mai Software.
 
+using PDownloader.CoreClient.Settings;
+
 namespace PDownloader.Utils;
 
+/// <summary>Compatibility facade for existing callers; all storage operations go to Core via IPC.</summary>
 public static class UserDataStore
 {
-    private static readonly string DataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SM SOFT", "PDownloader");
+    private static readonly ISettingsClient Client = new SettingsClient();
 
-    private static readonly string DataFile = Path.Combine(DataDir, "userdata.json");
+    public static Task InitializeAsync(CancellationToken cancellationToken = default) =>
+        Client.WaitUntilReadyAsync(cancellationToken);
 
-    private static Dictionary<string, object> _data = new();
-
-    private static readonly Dictionary<string, string> _passCaching = new();
-
-    static UserDataStore()
-    {
-        try
-        {
-            if (File.Exists(DataFile))
-            {
-                var json = File.ReadAllText(DataFile);
-                _data = JsonSerializer.Deserialize<Dictionary<string, object>>(json)
-                        ?? new Dictionary<string, object>();
-            }
-        }
-        catch
-        {
-            _data = new Dictionary<string, object>();
-        }
-    }
-
-    private static void SaveData()
-    {
-        try
-        {
-            Directory.CreateDirectory(DataDir);
-            var json = JsonSerializer.Serialize(_data, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
-            File.WriteAllText(DataFile, json);
-        }
-        catch { }
-    }
-
-    public static T GetValue<T>(string key)
-    {
-        if (_data.TryGetValue(key, out var value))
-        {
-            try
-            {
-                if (value is JsonElement elem)
-                {
-                    return elem.Deserialize<T>()!;
-                }
-
-                return (T)Convert.ChangeType(value, typeof(T));
-            }
-            catch { }
-        }
-
-        try
-        {
-            var defaultValue = Properties.Settings.Default[key];
-            if (defaultValue is T tVal)
-            {
-                return tVal;
-            }
-
-            return (T)Convert.ChangeType(defaultValue, typeof(T));
-        }
-        catch
-        {
-            return default!;
-        }
-    }
-
-    public static T GetValue<T>(string key, T defaultVal)
-    {
-        if (_data.TryGetValue(key, out var value))
-        {
-            try
-            {
-                if (value is JsonElement elem)
-                {
-                    return elem.Deserialize<T>()!;
-                }
-
-                return (T)Convert.ChangeType(value, typeof(T));
-            }
-            catch { }
-        }
-
-        try
-        {
-            var defaultValue = Properties.Settings.Default[key];
-            if (defaultValue is T tVal)
-            {
-                return tVal;
-            }
-
-            return (T)Convert.ChangeType(defaultValue, typeof(T));
-        }
-        catch
-        {
-            return defaultVal!;
-        }
-    }
+    public static T GetValue<T>(string key) => Client.GetValue<T>(key);
+    public static T GetValue<T>(string key, T defaultValue) => Client.GetValue(key, defaultValue);
+    public static bool SetValue<T>(string key, T value) => Client.SetValue(key, value);
+    public static void SetValues(IReadOnlyDictionary<string, object?> values) => Client.SetValues(values);
+    public static void Reset() => Client.Reset();
+    public static void Reload() => Client.Reload();
 
     public static string GetValuePass(string key)
     {
-        try
-        {
-            _passCaching.TryGetValue(key, out var result);
-            if (string.IsNullOrEmpty(result))
-            {
-                result = GetValue<string>(key);
-
-                if (!string.IsNullOrEmpty(result))
-                {
-                    result = PasswordEncryptor.Decrypt(result);
-                    _passCaching[key] = result;
-                }
-            }
-
-            return result;
-        }
-        catch
-        {
-            return string.Empty;
-        }
+        string encrypted = GetValue(key, string.Empty);
+        return string.IsNullOrEmpty(encrypted) ? string.Empty : PasswordEncryptor.Decrypt(encrypted);
     }
 
-    public static bool SetValue<T>(string key, T value)
-    {
-        _data[key] = value!;
-        SaveData();
-        return true;
-    }
+    public static bool SetValuePass(string key, string value) =>
+        SetValue(key, PasswordEncryptor.Encrypt(value));
 
-    public static bool SetValuePass(string key, string value)
-    {
-        _passCaching[key] = value;
-        return SetValue(key, PasswordEncryptor.Encrypt(value));
-    }
-
-    public static void Reset()
-    {
-        _data.Clear();
-        SaveData();
-    }
-
-    public static void Reload()
-    {
-        _data.Clear();
-        if (File.Exists(DataFile))
-        {
-            try
-            {
-                var json = File.ReadAllText(DataFile);
-                _data = JsonSerializer.Deserialize<Dictionary<string, object>>(json)
-                        ?? new Dictionary<string, object>();
-            }
-            catch
-            {
-                _data = new Dictionary<string, object>();
-            }
-        }
-    }
 }

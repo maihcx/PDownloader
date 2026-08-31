@@ -73,13 +73,15 @@ public static class Bootstrap
 
         IsViewAtBoot = cfsPDownloaderCore.IsAppStarted();
 
+        if (!cfsPDownloaderCore.StartApp())
+            throw new IOException("Could not start PDownloader Core.");
+        _ = cfsPDownloaderCore.StartServiceAsync();
+        UserDataStore.InitializeAsync().GetAwaiter().GetResult();
+
         if (UserDataStore.GetValue<bool>("IsViewAtBoot"))
         {
             IsViewAtBoot = true;
         }
-
-        cfsPDownloaderCore.StartApp();
-        _ = cfsPDownloaderCore.StartServiceAsync();
 
         ConfluxManager.cfsPDownloaderCore = cfsPDownloaderCore;
 

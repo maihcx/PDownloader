@@ -50,7 +50,19 @@ public partial class App
 
     private void OnStartup(object sender, StartupEventArgs e)
     {
-        _host.StartAsync(CancellationToken.None).GetAwaiter().GetResult();
+        try
+        {
+            UserDataStore.Reload();
+            // Keep window creation on the WPF dispatcher, as before.
+            _host.StartAsync(CancellationToken.None).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            if (!_launchOptions.IsSilentMode)
+                System.Windows.MessageBox.Show(ex.Message, "PDownloader settings",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            Shutdown(1);
+        }
     }
 
     private void OnExit(object sender, ExitEventArgs e)

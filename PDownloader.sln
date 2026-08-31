@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader", "src\PDownloa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.CFS", "src\PDownloader.CFS\PDownloader.CFS.csproj", "{E76531E2-47A3-4FC4-B5C6-30E2F28D0207}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.CoreClient", "src\PDownloader.CoreClient\PDownloader.CoreClient.csproj", "{BE6A8E6F-163F-4574-B164-24E24F52F087}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Tray", "src\PDownloader.Tray\PDownloader.Tray.csproj", "{F960DFC4-2934-40EF-93A6-CA229CD5B3DD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Core", "src\PDownloader.Core\PDownloader.Core.csproj", "{215E38A5-C1E2-4C8A-91BF-002A65409656}"
@@ -35,6 +37,10 @@ Global
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BE6A8E6F-163F-4574-B164-24E24F52F087}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BE6A8E6F-163F-4574-B164-24E24F52F087}.Debug|x64.Build.0 = Debug|Any CPU
+		{BE6A8E6F-163F-4574-B164-24E24F52F087}.Release|x64.ActiveCfg = Release|Any CPU
+		{BE6A8E6F-163F-4574-B164-24E24F52F087}.Release|x64.Build.0 = Release|Any CPU
 		{7B07DA7F-507B-4C5F-A727-5ECF775C62E3}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{7B07DA7F-507B-4C5F-A727-5ECF775C62E3}.Debug|x64.Build.0 = Debug|Any CPU
 		{7B07DA7F-507B-4C5F-A727-5ECF775C62E3}.Release|x64.ActiveCfg = Release|Any CPU
@@ -80,6 +86,7 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{BE6A8E6F-163F-4574-B164-24E24F52F087} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}
 		{7B07DA7F-507B-4C5F-A727-5ECF775C62E3} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}
 		{E76531E2-47A3-4FC4-B5C6-30E2F28D0207} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}
 		{F960DFC4-2934-40EF-93A6-CA229CD5B3DD} = {902C5C8D-E273-4DAF-993E-806186FE7EA1}

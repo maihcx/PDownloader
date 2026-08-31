@@ -203,7 +203,8 @@ public partial class InstallerViewModel : ObservableObject
 
         LanguageBase.SetLanguage(SelectedLanguage.Code);
         LicenseText = _licenseService.Load(SelectedLanguage.Code);
-        SavePreferences();
+        // Selecting the installer language must not write an old startup value
+        // back over settings changed in the app. Persist only after installation.
         Step = IsUninstallMode
             ? InstallerStep.UninstallConfirm
             : InstallerStep.Welcome;
