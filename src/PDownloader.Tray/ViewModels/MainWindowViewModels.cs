@@ -111,12 +111,18 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
             return;
         }
 
-        IpcRequestResult<UpdateStateSnapshot> result =
-            await coreService.RequestAsync(UpdateProtocol.GetState);
-
-        if (result.Success && result.Value is { } snapshot)
+        try
         {
-            App.Current.Dispatcher.Invoke(() => ApplyUpdateState(snapshot));
+            await coreService.WaitUntilReadyAsync();
+            IpcRequestResult<UpdateStateSnapshot> result =
+                await coreService.RequestAsync(UpdateProtocol.GetState);
+
+            if (result.Success && result.Value is { } snapshot)
+                App.Current.Dispatcher.Invoke(() => ApplyUpdateState(snapshot));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Tray] Core is not ready: {ex.Message}");
         }
     }
 
@@ -171,50 +177,59 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
         switch (tag)
         {
             case "tray_open":
-                CoreService?.StartApp();
-                _ = CoreService?.SendAsync(
+                _ = SendCoreAsync(
                     AppProtocol.State,
                     AppState.Start);
                 break;
             case "tray_home":
-                CoreService?.StartApp();
-                _ = CoreService?.SendAsync(
+                _ = SendCoreAsync(
                     AppProtocol.TrayEvent,
                     TrayNavigationEvent.GoHome);
                 break;
             case "tray_config":
-                CoreService?.StartApp();
-                _ = CoreService?.SendAsync(
+                _ = SendCoreAsync(
                     AppProtocol.TrayEvent,
                     TrayNavigationEvent.GoConfig);
                 break;
             case "tray_download":
-                CoreService?.StartApp();
-                _ = CoreService?.SendAsync(
+                _ = SendCoreAsync(
                     AppProtocol.TrayEvent,
                     TrayNavigationEvent.GoDownload);
                 break;
             case "tray_settings":
-                CoreService?.StartApp();
-                _ = CoreService?.SendAsync(
+                _ = SendCoreAsync(
                     AppProtocol.TrayEvent,
                     TrayNavigationEvent.GoSettings);
                 break;
             case "tray_update":
-                CoreService?.StartApp();
-                _ = CoreService?.SendAsync(
+                _ = SendCoreAsync(
                     AppProtocol.TrayEvent,
                     TrayNavigationEvent.GoSettingsUpdate);
                 break;
             case "tray_about":
-                CoreService?.StartApp();
-                _ = CoreService?.SendAsync(
+                _ = SendCoreAsync(
                     AppProtocol.TrayEvent,
                     TrayNavigationEvent.GoAbout);
                 break;
             case "tray_close":
                 Application.Current.Shutdown();
                 break;
+        }
+    }
+
+    private async Task SendCoreAsync<TPayload>(
+        IpcMessageDefinition<TPayload> definition, TPayload payload)
+    {
+        if (CoreService is not { } core) return;
+        try
+        {
+            await core.StartAndWaitUntilReadyAsync();
+            if (!await core.SendAsync(definition, payload))
+                System.Diagnostics.Debug.WriteLine("[Tray] Core rejected the command.");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Tray] Core startup failed: {ex.Message}");
         }
     }
 

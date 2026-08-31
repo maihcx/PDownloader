@@ -27,6 +27,8 @@ public sealed class RunnerSessionManager : IDisposable
     private readonly ConcurrentDictionary<string, RunnerSession> _sessions =
         new(StringComparer.Ordinal);
     private int _disposed;
+    private bool _stopping;
+    private readonly object _sessionSync = new();
 
     public RunnerSessionManager(DownloadConfigService downloadConfig)
     {
@@ -34,141 +36,172 @@ public sealed class RunnerSessionManager : IDisposable
     }
 
     public event Action<RunnerSession>? SessionStarted;
+    public event Action<RunnerSession>? SessionReady;
 
-    public ConfluxService? EnsureStarted(string token, RunnerDownloadTask task)
+    public async Task<ConfluxService> EnsureStartedAsync(
+        string token, RunnerDownloadTask task, CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(
-            Volatile.Read(ref _disposed) != 0,
-            this);
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
         ArgumentNullException.ThrowIfNull(task);
-
-        if (_sessions.TryGetValue(token, out RunnerSession? existing))
+        while (true)
         {
-            return existing.Channel;
+            cancellationToken.ThrowIfCancellationRequested();
+            RunnerSession session;
+            Task? closing;
+            lock (_sessionSync)
+            {
+                ObjectDisposedException.ThrowIf(_disposed != 0, this);
+                if (_stopping) throw new InvalidOperationException("Runner sessions are stopping.");
+                if (!_sessions.TryGetValue(token, out session!))
+                {
+                    session = CreateSession(token, task);
+                    _sessions[token] = session;
+                    // All callers for one token share exactly one startup operation.
+                    session.StartupTask = Task.Run(() => StartSessionAsync(session));
+                    _ = ObserveStartupAsync(session.StartupTask, token);
+                }
+                closing = session.CloseTask;
+                if (closing is null && session.StartupTask.IsCompletedSuccessfully
+                    && !session.Channel.IsAppStarted())
+                    closing = CloseSessionAsync(session);
+            }
+            if (closing is not null)
+            {
+                await closing.WaitAsync(cancellationToken).ConfigureAwait(false);
+                continue;
+            }
+            // Cancelling a caller's wait does not tear down another caller's session.
+            return await session.StartupTask.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
+    }
 
-        int threads = task.Threads > 0
-            ? task.Threads
-            : _downloadConfig.DownloadConfigs.DefaultThreadCount;
-        if (threads <= 0)
+    private static async Task ObserveStartupAsync(Task<ConfluxService> startup, string token)
+    {
+        try { await startup.ConfigureAwait(false); }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
         {
-            threads = 8;
+            // A browser request may cancel its own wait while shared startup continues.
+            Debug.WriteLine($"[Runner session] Startup '{token}' failed: {ex.Message}");
         }
+    }
 
-        RunnerDownloadContext context = new()
+    private RunnerSession CreateSession(string token, RunnerDownloadTask task)
+    {
+        int threads = task.Threads > 0 ? task.Threads : _downloadConfig.DownloadConfigs.DefaultThreadCount;
+        var context = new RunnerDownloadContext
         {
-            Url = task.Url,
-            FormatId = task.FormatId,
-            SaveTo = task.SaveTo,
-            FileName = task.FileName,
-            Title = task.Title,
-            FileSize = task.FileSize,
-            IsRunner = task.IsRunner,
-            Threads = threads,
+            Url = task.Url, FormatId = task.FormatId, SaveTo = task.SaveTo,
+            FileName = task.FileName, Title = task.Title, FileSize = task.FileSize,
+            IsRunner = task.IsRunner, Threads = threads > 0 ? threads : 8,
             Headers = NormalizeHeaders(task.Headers)
         };
-
-        var channel = new ConfluxService
-        {
-            CanMultiple = true
-        };
-        channel.Register(
-            IpcTopology.RunnerProcessName,
-            IpcTopology.CoreToRunnerPipeName(token),
-            IpcTopology.RunnerToCorePipeName(token));
-
+        var channel = new ConfluxService { CanMultiple = true };
+        channel.Register(IpcTopology.RunnerProcessName,
+            IpcTopology.CoreToRunnerPipeName(token), IpcTopology.RunnerToCorePipeName(token));
         var session = new RunnerSession(token, channel, context);
-        if (!_sessions.TryAdd(token, session))
-        {
-            channel.Dispose();
-            return _sessions.TryGetValue(token, out existing)
-                ? existing.Channel
-                : null;
-        }
+        channel.TargetExited += processId => { _ = CloseSessionAsync(session); };
+        return session;
+    }
 
+    private async Task<ConfluxService> StartSessionAsync(RunnerSession session)
+    {
         try
         {
+            session.Lifetime.Token.ThrowIfCancellationRequested();
             SessionStarted?.Invoke(session);
-            _ = channel.StartServiceAsync();
-
-            // Only the opaque token is exposed through the process command line.
-            bool started = channel.StartApp(
-                $"{RunnerLaunchProtocol.TokenArgument} {Helpers.Base64Encode(token)}");
-            if (!started)
-            {
-                throw new InvalidOperationException(
-                    $"Failed to start Runner process for session '{token}'.");
-            }
-
-            return channel;
+            await session.Channel.StartServiceAsync().ConfigureAwait(false);
+            // Only an opaque token is exposed on the process command line.
+            await session.Channel.StartAndWaitUntilReadyAsync(
+                $"{RunnerLaunchProtocol.TokenArgument} {Helpers.Base64Encode(session.Id)}",
+                TimeSpan.FromSeconds(20), session.Lifetime.Token).ConfigureAwait(false);
+            session.MarkReady();
+            SessionReady?.Invoke(session);
+            return session.Channel;
         }
         catch
         {
-            _sessions.TryRemove(token, out _);
-            channel.Dispose();
+            session.Channel.TryTerminateStartedProcess();
+            // Cleanup is independent of StartupTask: it must never await itself.
+            await CloseSessionAsync(session).ConfigureAwait(false);
             throw;
         }
     }
 
-    public bool TryGet(
-        string id,
-        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out RunnerSession? session) =>
-        _sessions.TryGetValue(id, out session);
-
-    public async Task CloseAsync(string id)
+    public bool TryGet(string id,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out RunnerSession? session)
     {
-        if (string.IsNullOrWhiteSpace(id)
-            || !_sessions.TryRemove(id, out RunnerSession? session))
+        lock (_sessionSync)
         {
-            return;
+            if (_sessions.TryGetValue(id, out session) && session.CloseTask is null)
+                return true;
+            session = null;
+            return false;
         }
+    }
 
-        try
+    public Task CloseAsync(string id)
+    {
+        lock (_sessionSync)
+            return _sessions.TryGetValue(id, out var session)
+                ? CloseSessionAsync(session) : Task.CompletedTask;
+    }
+
+    private Task CloseSessionAsync(RunnerSession session)
+    {
+        lock (_sessionSync)
         {
-            await session.Channel.StopServiceAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Runner session] Failed to stop '{id}': {ex.Message}");
-        }
-        finally
-        {
-            session.Channel.Dispose();
+            if (session.CloseTask is not null) return session.CloseTask;
+            session.Lifetime.Cancel();
+            session.CloseTask = Task.Run(async () =>
+            {
+                try { await session.Channel.DisposeAsync().ConfigureAwait(false); }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Runner session] Close '{session.Id}': {ex.Message}");
+                }
+                finally
+                {
+                    lock (_sessionSync)
+                    {
+                        // An old exit callback must never remove a replacement session.
+                        if (_sessions.TryGetValue(session.Id, out var current)
+                            && ReferenceEquals(current, session))
+                            _sessions.TryRemove(session.Id, out _);
+                    }
+                    // Lifetime is still read by a possibly unwinding startup task;
+                    // let GC reclaim this managed CTS instead of racing Dispose.
+                }
+            });
+            return session.CloseTask;
         }
     }
 
     public async Task ShutdownAllAsync()
     {
-        RunnerSession[] sessions = _sessions.Values.ToArray();
-        foreach (RunnerSession session in sessions)
+        RunnerSession[] sessions;
+        lock (_sessionSync)
+        {
+            _stopping = true;
+            sessions = _sessions.Values.ToArray();
+        }
+        await Task.WhenAll(sessions.Select(async session =>
         {
             try
             {
-                session.Channel.Send(
-                    AppProtocol.State,
-                    AppState.Shutdown,
-                    TimeSpan.FromSeconds(1));
+                await session.Channel.SendAsync(AppProtocol.State, AppState.Shutdown,
+                    TimeSpan.FromSeconds(1)).ConfigureAwait(false);
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(
-                    $"[Runner session] Failed to notify '{session.Id}' of shutdown: {ex.Message}");
-            }
-        }
-
-        await Task.WhenAll(
-            sessions.Select(session => CloseAsync(session.Id)))
-            .ConfigureAwait(false);
+            finally { await CloseSessionAsync(session).ConfigureAwait(false); }
+        })).ConfigureAwait(false);
     }
 
-    public void Broadcast<TPayload>(
-        IpcMessageDefinition<TPayload> definition,
-        TPayload payload)
+    public void Broadcast<TPayload>(IpcMessageDefinition<TPayload> definition, TPayload payload)
     {
         foreach (RunnerSession session in _sessions.Values.ToArray())
         {
-            session.Channel.Send(definition, payload);
+            if (session.IsReady && session.CloseTask is null)
+                session.Channel.Send(definition, payload);
         }
     }
 
@@ -203,11 +236,11 @@ public sealed class RunnerSessionManager : IDisposable
             return;
         }
 
-        RunnerSession[] sessions = _sessions.Values.ToArray();
-        _sessions.Clear();
-        foreach (RunnerSession session in sessions)
+        lock (_sessionSync)
         {
-            session.Channel.Dispose();
+            _stopping = true;
+            foreach (RunnerSession session in _sessions.Values.ToArray())
+                _ = CloseSessionAsync(session);
         }
 
         GC.SuppressFinalize(this);

@@ -46,7 +46,7 @@ public sealed class CoreLifecycleService
         }
 
         ConfluxService? main = _ipcHost.Main;
-        if (main?.IsAppStarted() == true)
+        if (main is not null)
         {
             await main.SendAsync(
                 AppProtocol.State,

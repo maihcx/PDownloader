@@ -13,27 +13,14 @@
 //
 // Copyright (C) Song Mai Software.
 
-using System.Security.Principal;
+using Microsoft.Win32.SafeHandles;
+using System.Runtime.InteropServices;
 
 namespace PDownloader.CFS;
 
-/// <summary>OS identity used to scope IPC endpoints; contains no application protocol rules.</summary>
-public static class IpcUserScope
+internal static class NativeMethods
 {
-    public static string ScopeName(string name)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        string suffix = "-" + CurrentUserId;
-        return name.EndsWith(suffix, StringComparison.Ordinal) ? name : name + suffix;
-    }
-
-    public static string CurrentUserId
-    {
-        get
-        {
-            using var identity = WindowsIdentity.GetCurrent();
-            return identity.User?.Value
-                ?? throw new InvalidOperationException("Cannot resolve the current Windows user for IPC.");
-        }
-    }
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetNamedPipeServerProcessId(SafePipeHandle pipe, out uint processId);
 }

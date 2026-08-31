@@ -51,18 +51,16 @@ public class DownloaderService : IHostedService, IDisposable
     /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _ = CfsContact?.StopServiceAsync();
-
-        if (DownloaderStatus.State == RunnerState.Form)
+        if (CfsContact is null) return;
+        CfsContact.SetReady(false);
+        try
         {
-            CfsContact?.Send(DownloadProtocol.RunnerCancelExperience);
+            await CfsContact.SendAsync(
+                DownloaderStatus.State == RunnerState.Form
+                    ? DownloadProtocol.RunnerCancelExperience : DownloadProtocol.RunnerUiClosed,
+                TimeSpan.FromSeconds(1), cancellationToken);
         }
-        else
-        {
-            CfsContact?.Send(DownloadProtocol.RunnerUiClosed);
-        }
-
-        await Task.CompletedTask;
+        finally { await CfsContact.StopServiceAsync(); }
     }
 
     public async Task<DownloaderServiceStatus> StartDownload()
@@ -164,6 +162,7 @@ public class DownloaderService : IHostedService, IDisposable
     private async Task HandleActivationAsync(CancellationToken cancellationToken)
     {
         CfsContact = new ConfluxService();
+        CfsContact.SetReady(false);
         CfsContact.Register(
             IpcTopology.CoreProcessName,
             IpcTopology.RunnerToCorePipeName(_runnerConfig.Token),
@@ -180,6 +179,7 @@ public class DownloaderService : IHostedService, IDisposable
             HandleProgress);
 
         await CfsContact.StartServiceAsync();
+        await CfsContact.WaitUntilReadyAsync(TimeSpan.FromSeconds(15), cancellationToken);
         await LoadSessionAsync(cancellationToken);
     }
 
@@ -230,7 +230,7 @@ public class DownloaderService : IHostedService, IDisposable
             }
         }
 
-        Debug.WriteLine("[Runner] Failed to load Runner session from Core.");
+        throw new IOException("Runner could not load its session from Core.");
     }
 
     private bool SendWithRetry(RunnerStartDownloadRequest request, int retries)

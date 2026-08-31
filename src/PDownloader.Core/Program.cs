@@ -22,7 +22,21 @@ namespace PDownloader.Core;
 
 internal class Program
 {
-    static async Task Main(string[] args)
+    static void Main(string[] args)
+    {
+        // Mutex ownership is thread-affine. Keep acquisition and release on this
+        // entry thread while the async host runs on its normal continuations.
+        using var instance = new Mutex(false,
+            @"Global\PDownloader.Core-" + IpcUserScope.CurrentUserId);
+        bool ownsInstance;
+        try { ownsInstance = instance.WaitOne(0); }
+        catch (AbandonedMutexException) { ownsInstance = true; }
+        if (!ownsInstance) return;
+        try { RunAsync(args).GetAwaiter().GetResult(); }
+        finally { instance.ReleaseMutex(); }
+    }
+
+    private static async Task RunAsync(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
         TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;

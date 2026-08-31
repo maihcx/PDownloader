@@ -48,6 +48,13 @@ public sealed class CoreDownloadRuntime : IDownloadRuntime
 
     public void ShowRunner(string id, RunnerDownloadTask task)
     {
-        _ = _runnerSessions.EnsureStarted(id, task);
+        // IDownloadRuntime is synchronous. Do not block download control on UI startup.
+        _ = ShowRunnerAsync(id, task);
+    }
+
+    private async Task ShowRunnerAsync(string id, RunnerDownloadTask task)
+    {
+        try { await _runnerSessions.EnsureStartedAsync(id, task).ConfigureAwait(false); }
+        catch (Exception ex) { Debug.WriteLine($"[Runner] Could not show '{id}': {ex.Message}"); }
     }
 }

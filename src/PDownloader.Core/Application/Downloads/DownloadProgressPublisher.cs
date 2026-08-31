@@ -42,9 +42,13 @@ public sealed class DownloadProgressPublisher
         lock (broadcastLock)
         {
             DownloadItemDto dto = DownloadManager.ToContract(item);
-            _ipcHost.Main?.Send(DownloadProtocol.Progress, dto);
+            // MainReady/health adopts the exact Main process. A closed UI must
+            // not cause a connection timeout on every download progress event.
+            if (_ipcHost.Main is { } main && main.IsAppStarted())
+                main.Send(DownloadProtocol.Progress, dto);
 
-            if (_runnerSessions.TryGet(item.Id, out RunnerSession? session))
+            if (_runnerSessions.TryGet(item.Id, out RunnerSession? session)
+                && session.IsReady)
             {
                 session.Channel.Send(DownloadProtocol.Progress, dto);
             }

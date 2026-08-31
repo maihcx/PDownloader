@@ -44,8 +44,8 @@ public class CoreBackgroundService : BackgroundService
             return;
         }
 
-        _bootstrap.OnStarted();
         _bootstrapStarted = true;
+        await _bootstrap.OnStartedAsync(stoppingToken).ConfigureAwait(false);
 
         // Start HTTP bridge for browser extension (localhost:6287)
         try { _httpBridge.Start(); }

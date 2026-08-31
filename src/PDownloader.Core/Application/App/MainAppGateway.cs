@@ -25,6 +25,7 @@ public sealed class MainAppGateway
     private readonly object _pendingSync = new();
     private readonly Queue<Func<ConfluxService, Task<bool>>> _pending = new();
     private int _flushActive;
+    private int _flushRequested;
 
     public MainAppGateway(CoreIpcHost ipcHost)
     {
@@ -48,20 +49,20 @@ public sealed class MainAppGateway
             return;
         }
 
-        if (main.IsAppStarted()
-            && await main.SendAsync(definition, payload).ConfigureAwait(false))
-        {
-            return;
-        }
-
         lock (_pendingSync)
         {
             _pending.Enqueue(service => service.SendAsync(definition, payload));
         }
 
-        if (!main.IsAppStarted())
+        try
         {
-            main.StartApp();
+            await main.StartAndWaitUntilReadyAsync().ConfigureAwait(false);
+            NotifyReady();
+        }
+        catch (Exception ex)
+        {
+            // Keep the queue for the next MainReady/retry; never guess by process name.
+            Debug.WriteLine($"[Main gateway] Main is not ready: {ex.Message}");
         }
     }
 
@@ -71,6 +72,7 @@ public sealed class MainAppGateway
     /// </summary>
     public void NotifyReady()
     {
+        Interlocked.Exchange(ref _flushRequested, 1);
         if (Interlocked.CompareExchange(ref _flushActive, 1, 0) != 0)
         {
             return;
@@ -81,6 +83,7 @@ public sealed class MainAppGateway
 
     private async Task FlushPendingAsync()
     {
+        Interlocked.Exchange(ref _flushRequested, 0);
         try
         {
             ConfluxService? main = _ipcHost.Main;
@@ -88,6 +91,8 @@ public sealed class MainAppGateway
             {
                 return;
             }
+
+            if (!await main.IsReadyAsync().ConfigureAwait(false)) return;
 
             while (true)
             {
@@ -128,9 +133,14 @@ public sealed class MainAppGateway
                 }
             }
         }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Main gateway] Flush failed: {ex.Message}");
+        }
         finally
         {
             Volatile.Write(ref _flushActive, 0);
+            if (Interlocked.Exchange(ref _flushRequested, 0) != 0) NotifyReady();
         }
     }
 }
