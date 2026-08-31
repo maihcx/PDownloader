@@ -1,0 +1,30 @@
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Copyright (C) Song Mai Software.
+
+namespace PDownloader.Contracts.Ipc;
+
+/// <summary>Transport readiness, independent of application commands/settings.</summary>
+public static class IpcHealthProtocol
+{
+    public static readonly IpcRequestDefinition<IpcNoPayload, IpcEndpointHealth> Get =
+        new("ipc.health");
+}
+
+public sealed record IpcEndpointHealth(
+    bool Ready,
+    int ProcessId,
+    string InstanceId,
+    string Endpoint,
+    string ExecutablePath);

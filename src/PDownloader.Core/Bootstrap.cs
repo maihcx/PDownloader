@@ -36,7 +36,7 @@ public sealed class Bootstrap
         _ipcBindings = ipcBindings;
     }
 
-    public void OnStarted()
+    public async Task OnStartedAsync(CancellationToken cancellationToken)
     {
         _downloadManagerBootstrap.Initialize();
 
@@ -47,7 +47,7 @@ public sealed class Bootstrap
             IpcTopology.MainToCorePipeName);
         _ipcHost.AttachMain(main);
         _ipcBindings.BindMain(main);
-        _ = main.StartServiceAsync();
+        await main.StartServiceAsync().ConfigureAwait(false);
 
         ConfluxService tray = new()
         {
@@ -59,8 +59,9 @@ public sealed class Bootstrap
             IpcTopology.TrayToCorePipeName);
         _ipcHost.AttachTray(tray);
         _ipcBindings.BindTray(tray);
-        _ = tray.StartServiceAsync();
-        tray.StartApp();
+        await tray.StartServiceAsync().ConfigureAwait(false);
+        await tray.StartAndWaitUntilReadyAsync(cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public async Task OnStoppedAsync()

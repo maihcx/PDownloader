@@ -22,10 +22,19 @@ namespace PDownloader.Core.Application.Downloads;
 public sealed class DownloadCommandService
 {
     private readonly DownloadManager _downloads;
+    private readonly DownloadProgressPublisher _progress;
 
-    public DownloadCommandService(DownloadManager downloads)
+    public DownloadCommandService(DownloadManager downloads, DownloadProgressPublisher progress)
     {
         _downloads = downloads;
+        _progress = progress;
+    }
+
+    public void PublishRunnerSnapshot(RunnerSession session)
+    {
+        // The transfer may have completed before its UI finished starting.
+        // Use the normal publication lock so the initial snapshot cannot overtake progress.
+        if (_downloads.Find(session.Id) is { } item) _progress.Publish(item);
     }
 
     public void Pause(string id) => _downloads.Pause(id);

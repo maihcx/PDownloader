@@ -58,7 +58,7 @@ public sealed class DownloadLaunchService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        _runnerSessions.EnsureStarted(id, new RunnerDownloadTask
+        await _runnerSessions.EnsureStartedAsync(id, new RunnerDownloadTask
         {
             Id = id,
             FileName = fileName,
@@ -66,7 +66,7 @@ public sealed class DownloadLaunchService
             SaveTo = Helpers.GetDefaultFolder(_userDataStore),
             Threads = request.Threads,
             Headers = request.Headers
-        });
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public void StartFromRunner(

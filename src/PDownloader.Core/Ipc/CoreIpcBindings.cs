@@ -52,6 +52,7 @@ public sealed class CoreIpcBindings : IDisposable
         _updates = updates;
         _runnerSessions = runnerSessions;
         _runnerSessions.SessionStarted += BindRunner;
+        _runnerSessions.SessionReady += _downloadCommands.PublishRunnerSnapshot;
     }
 
     public void BindMain(ConfluxService main)
@@ -187,6 +188,7 @@ public sealed class CoreIpcBindings : IDisposable
         }
 
         _runnerSessions.SessionStarted -= BindRunner;
+        _runnerSessions.SessionReady -= _downloadCommands.PublishRunnerSnapshot;
         GC.SuppressFinalize(this);
     }
 }

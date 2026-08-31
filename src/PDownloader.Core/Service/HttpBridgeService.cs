@@ -255,7 +255,7 @@ public sealed class HttpBridgeService : IDisposable
             Headers = customHeaders,
         };
 
-        _runnerSessions.EnsureStarted(id, data);
+        await _runnerSessions.EnsureStartedAsync(id, data, ct).ConfigureAwait(false);
         await Json(response, new { ok = true });
     }
 
@@ -319,7 +319,7 @@ public sealed class HttpBridgeService : IDisposable
             Headers = headers,
         };
 
-        _runnerSessions.EnsureStarted(id, data);
+        await _runnerSessions.EnsureStartedAsync(id, data, ct).ConfigureAwait(false);
         await Json(response, new { success = true });
     }
 

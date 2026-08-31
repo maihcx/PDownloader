@@ -56,4 +56,10 @@ public sealed class RunnerSession
     public string Id { get; }
     public ConfluxService Channel { get; }
     public RunnerDownloadContext Context { get; }
+    public bool IsReady => Volatile.Read(ref _isReady);
+    private bool _isReady;
+    internal void MarkReady() => Volatile.Write(ref _isReady, true);
+    internal CancellationTokenSource Lifetime { get; } = new();
+    internal Task<ConfluxService> StartupTask { get; set; } = null!;
+    internal Task? CloseTask { get; set; }
 }

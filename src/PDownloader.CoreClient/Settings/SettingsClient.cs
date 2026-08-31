@@ -28,7 +28,6 @@ public sealed class SettingsClient : ISettingsClient
 {
     private readonly ConfluxService _connection = new()
     {
-        RequireTargetProcess = false,
         MaxMessageBytes = SettingsProtocol.MaxMessageBytes,
     };
 
@@ -42,23 +41,8 @@ public sealed class SettingsClient : ISettingsClient
 
     public async Task WaitUntilReadyAsync(CancellationToken cancellationToken = default)
     {
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(TimeSpan.FromSeconds(15));
-        try
-        {
-            while (true)
-            {
-                var result = await _connection.RequestAsync(SettingsProtocol.Ping,
-                    TimeSpan.FromMilliseconds(500), deadline.Token).ConfigureAwait(false);
-                if (result.Success && result.Value)
-                    return;
-                await Task.Delay(100, deadline.Token).ConfigureAwait(false);
-            }
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            throw new IOException("Core settings service did not become ready within 15 seconds.");
-        }
+        await _connection.WaitUntilReadyAsync(TimeSpan.FromSeconds(15), cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public async Task<T> GetValueAsync<T>(string key, T defaultValue = default!,

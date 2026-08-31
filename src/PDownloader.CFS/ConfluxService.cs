@@ -25,7 +25,7 @@ using System.Text.Json;
 
 namespace PDownloader.CFS;
 
-public sealed class ConfluxService : IDisposable
+public sealed partial class ConfluxService : IDisposable, IAsyncDisposable
 {
     private static readonly JsonSerializerOptions SerializerOptions = IpcJson.CreateSerializerOptions();
 
@@ -37,8 +37,6 @@ public sealed class ConfluxService : IDisposable
     public string SendPipeName { get; private set; } = string.Empty;
     public string ReceivePipeName { get; private set; } = string.Empty;
     public bool CanMultiple { get; set; }
-    // Dedicated request endpoints can use pipe readiness instead of a process-name heuristic.
-    public bool RequireTargetProcess { get; set; } = true;
     private readonly object _processSync = new();
     private Process? _currProcess;
 
@@ -49,6 +47,10 @@ public sealed class ConfluxService : IDisposable
 
     private CancellationTokenSource? _cts;
     private Task? _serviceTask;
+    private readonly object _serviceSync = new();
+    private Task? _stopTask;
+    public int MaxConcurrentConnections { get; set; } = 8;
+    public TimeSpan FrameTimeout { get; set; } = TimeSpan.FromSeconds(5);
     private readonly SemaphoreSlim _sendGate = new(1, 1);
     private readonly ConcurrentDictionary<
         string,
@@ -58,7 +60,7 @@ public sealed class ConfluxService : IDisposable
         string,
         Func<JsonElement, CancellationToken, Task<JsonElement>>> _requestHandlers =
         new(StringComparer.Ordinal);
-    private bool _disposed;
+    private volatile bool _disposed;
 
     public void Register(
         string processPackage,
@@ -71,8 +73,9 @@ public sealed class ConfluxService : IDisposable
 
         ProcessPackage = processPackage;
         ProcessName = Path.GetFileNameWithoutExtension(processPackage);
-        SendPipeName = sendPipeName;
-        ReceivePipeName = receivePipeName;
+        // Every endpoint (including private Runner pipes) is scoped to its user.
+        SendPipeName = IpcUserScope.ScopeName(sendPipeName);
+        ReceivePipeName = IpcUserScope.ScopeName(receivePipeName);
     }
 
     public void RegisterMessageHandler(
@@ -164,13 +167,14 @@ public sealed class ConfluxService : IDisposable
     private static PipeSecurity CreateRestrictedPipeSecurity()
     {
         var security = new PipeSecurity();
-        SecurityIdentifier? currentUser = WindowsIdentity.GetCurrent().User;
+        using var identity = WindowsIdentity.GetCurrent();
+        SecurityIdentifier? currentUser = identity.User;
 
         if (currentUser != null)
         {
             security.AddAccessRule(new PipeAccessRule(
                 currentUser,
-                PipeAccessRights.ReadWrite,
+                PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
                 AccessControlType.Allow));
         }
 
@@ -182,171 +186,6 @@ public sealed class ConfluxService : IDisposable
         return security;
     }
 
-    public bool StartApp(string argEnvironment = "")
-    {
-        try
-        {
-            if (IsAppStarted() && !CanMultiple)
-            {
-                return true;
-            }
-
-            string processPath = ResolveProcessPath();
-            string? workingDirectory = Path.GetDirectoryName(processPath);
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = processPath,
-                UseShellExecute = false,
-                Arguments = argEnvironment,
-                CreateNoWindow = CreateNoWindow,
-                WorkingDirectory = !string.IsNullOrWhiteSpace(workingDirectory)
-                    ? workingDirectory
-                    : AppContext.BaseDirectory
-            };
-
-            Process? startedProcess = Process.Start(psi);
-            if (startedProcess is null)
-            {
-                Debug.WriteLine(
-                    $"[ConfluxService] Process.Start returned null for '{processPath}'.");
-                return false;
-            }
-
-            lock (_processSync)
-            {
-                ReplaceCurrentProcess(startedProcess);
-            }
-
-            return true;
-        }
-        catch (Exception exception)
-        {
-            Debug.WriteLine(
-                $"[ConfluxService] Failed to start '{ProcessPackage}': {exception}");
-            return false;
-        }
-    }
-
-    private string ResolveProcessPath()
-    {
-        if (Path.IsPathFullyQualified(ProcessPackage))
-        {
-            return ProcessPackage;
-        }
-
-        string appLocalPath = Path.Combine(AppContext.BaseDirectory, ProcessPackage);
-        return File.Exists(appLocalPath)
-            ? appLocalPath
-            : ProcessPackage;
-    }
-
-    public Process GetProcess()
-    {
-        lock (_processSync)
-        {
-            if (_currProcess != null)
-            {
-                try
-                {
-                    if (!_currProcess.HasExited)
-                    {
-                        return _currProcess;
-                    }
-                }
-                catch (InvalidOperationException)
-                {
-                    // The cached Process no longer represents an accessible process.
-                }
-
-                ReplaceCurrentProcess(null);
-            }
-
-            Process[] processes = Process.GetProcessesByName(ProcessName);
-            if (processes.Length == 0)
-            {
-                throw new InvalidOperationException("Application is not running.");
-            }
-
-            Process selected = processes[0];
-            for (int i = 1; i < processes.Length; i++)
-            {
-                processes[i].Dispose();
-            }
-
-            ReplaceCurrentProcess(selected);
-            return selected;
-        }
-    }
-
-    public bool IsAppStarted()
-    {
-        Process[] processes = Process.GetProcessesByName(ProcessName);
-        try
-        {
-            return processes.Length > 0;
-        }
-        finally
-        {
-            foreach (Process process in processes)
-            {
-                process.Dispose();
-            }
-        }
-    }
-
-    private void ReplaceCurrentProcess(Process? process)
-    {
-        if (ReferenceEquals(_currProcess, process))
-        {
-            return;
-        }
-
-        _currProcess?.Dispose();
-        _currProcess = process;
-    }
-
-    private async Task RunPipeServer(CancellationToken token)
-    {
-        if (string.IsNullOrWhiteSpace(ReceivePipeName))
-        {
-            throw new InvalidOperationException("A receive pipe must be registered before starting CFS.");
-        }
-
-        PipeSecurity pipeSecurity = CreateRestrictedPipeSecurity();
-
-        while (!token.IsCancellationRequested)
-        {
-            try
-            {
-                using NamedPipeServerStream server = NamedPipeServerStreamAcl.Create(
-                    ReceivePipeName,
-                    PipeDirection.InOut,
-                    4,
-                    PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous,
-                    inBufferSize: 0,
-                    outBufferSize: 0,
-                    pipeSecurity: pipeSecurity);
-
-                await server.WaitForConnectionAsync(token).ConfigureAwait(false);
-                await HandleServerConnectionAsync(server, token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (token.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (IOException ex)
-            {
-                Debug.WriteLine($"[CFS] Pipe I/O error: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[CFS] Pipe server error: {ex}");
-            }
-        }
-    }
-
     private async Task HandleServerConnectionAsync(
         NamedPipeServerStream server,
         CancellationToken token)
@@ -354,7 +193,9 @@ public sealed class ConfluxService : IDisposable
         IpcEnvelope envelope;
         try
         {
-            byte[] payload = await ReadFrameAsync(server, token).ConfigureAwait(false);
+            using var frameDeadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+            frameDeadline.CancelAfter(FrameTimeout);
+            byte[] payload = await ReadFrameAsync(server, frameDeadline.Token).ConfigureAwait(false);
             envelope = JsonSerializer.Deserialize<IpcEnvelope>(payload, SerializerOptions)
                 ?? throw new JsonException("IPC envelope is null.");
         }
@@ -414,59 +255,91 @@ public sealed class ConfluxService : IDisposable
 
         var message = new IpcReceivedMessage(envelope);
 
+        if (envelope.Kind == IpcEnvelopeKind.Request && envelope.Type == IpcHealthProtocol.Get.Name)
+        {
+            await WriteResponseAsync(server, new IpcResponseEnvelope
+            {
+                Type = envelope.Type,
+                RequestId = envelope.RequestId,
+                Success = true,
+                Payload = JsonSerializer.SerializeToElement(GetLocalHealth(), SerializerOptions)
+            }, token).ConfigureAwait(false);
+            return;
+        }
+
+        if (!_ready)
+        {
+            if (envelope.Kind == IpcEnvelopeKind.Request)
+                await WriteResponseAsync(server, new IpcResponseEnvelope
+                {
+                    Type = envelope.Type, RequestId = envelope.RequestId, Success = false,
+                    Payload = JsonSerializer.SerializeToElement(new IpcNoPayload(), SerializerOptions),
+                    Error = "Endpoint is not ready."
+                }, token).ConfigureAwait(false);
+            else
+                await WriteAcknowledgementAsync(server, new IpcAcknowledgement
+                {
+                    RequestId = envelope.RequestId, Success = false, Error = "Endpoint is not ready."
+                }, token).ConfigureAwait(false);
+            return;
+        }
+
         if (envelope.Kind == IpcEnvelopeKind.Request)
         {
-            await HandleRequestAsync(server, envelope, token).ConfigureAwait(false);
-            return;
-        }
-
-        if (!_messageHandlers.ContainsKey(envelope.Type)
-            && OnMessageReceived is null)
-        {
-            await WriteAcknowledgementAsync(
-                server,
-                new IpcAcknowledgement
+            var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            await QueueDispatchAsync(async ct =>
+            {
+                try
                 {
-                    RequestId = envelope.RequestId,
-                    Success = false,
-                    Error = $"No IPC message handler is registered for '{envelope.Type}'."
-                },
-                token).ConfigureAwait(false);
+                    await HandleRequestAsync(server, envelope, ct).ConfigureAwait(false);
+                    completed.TrySetResult(true);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[CFS] Request connection ended: {ex.Message}");
+                    completed.TrySetResult(false);
+                }
+            }, token).ConfigureAwait(false);
+            await completed.Task.WaitAsync(token).ConfigureAwait(false);
             return;
         }
 
+        if (!_messageHandlers.ContainsKey(envelope.Type) && OnMessageReceived is null)
+        {
+            await WriteAcknowledgementAsync(server, new IpcAcknowledgement
+            {
+                RequestId = envelope.RequestId, Success = false,
+                Error = $"No IPC message handler is registered for '{envelope.Type}'."
+            }, token).ConfigureAwait(false);
+            return;
+        }
+
+        // Reserve bounded queue capacity before ACK. Execution waits for the ACK
+        // to complete, but later connections never wait for a UI dispatcher here.
+        var accepted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await QueueDispatchAsync(async ct =>
+        {
+            if (await accepted.Task.WaitAsync(ct).ConfigureAwait(false))
+                await DispatchMessageAsync(message, ct).ConfigureAwait(false);
+        }, token).ConfigureAwait(false);
         try
         {
-            await WriteAcknowledgementAsync(
-                server,
-                new IpcAcknowledgement
-                {
-                    RequestId = envelope.RequestId,
-                    Success = true
-                },
-                token).ConfigureAwait(false);
+            await WriteAcknowledgementAsync(server, new IpcAcknowledgement
+            {
+                RequestId = envelope.RequestId, Success = true
+            }, token).ConfigureAwait(false);
+            accepted.TrySetResult(true);
         }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[CFS] Failed to acknowledge '{envelope.Type}': {ex.Message}");
-            return;
-        }
-
-        DispatchMessage(message);
+        finally { accepted.TrySetResult(false); }
     }
 
-    private void DispatchMessage(IpcReceivedMessage message)
+    private async Task DispatchMessageAsync(IpcReceivedMessage message, CancellationToken serviceToken)
     {
         if (_messageHandlers.TryGetValue(message.Type, out Func<JsonElement, CancellationToken, Task>? typedHandler))
         {
             try
             {
-                CancellationToken serviceToken = _cts?.Token ?? CancellationToken.None;
-                Task task = typedHandler(message.Envelope.Payload, serviceToken);
-                if (!task.IsCompletedSuccessfully)
-                {
-                    _ = ObserveMessageHandlerAsync(task, message.Type);
-                }
+                await typedHandler(message.Envelope.Payload, serviceToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -494,22 +367,6 @@ public sealed class ConfluxService : IDisposable
                 Debug.WriteLine(
                     $"[CFS] Message handler failed for '{message.Type}': {ex}");
             }
-        }
-    }
-
-    private static async Task ObserveMessageHandlerAsync(Task task, string messageType)
-    {
-        try
-        {
-            await task.ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(
-                $"[CFS] Async message handler failed for '{messageType}': {ex}");
         }
     }
 
@@ -572,45 +429,6 @@ public sealed class ConfluxService : IDisposable
         }
     }
 
-    public Task StartServiceAsync()
-    {
-        if (_cts != null)
-        {
-            return Task.CompletedTask;
-        }
-
-        _cts = new CancellationTokenSource();
-        _serviceTask = RunPipeServer(_cts.Token);
-        return Task.CompletedTask;
-    }
-
-    public async Task StopServiceAsync()
-    {
-        if (_cts == null)
-        {
-            return;
-        }
-
-        _cts.Cancel();
-
-        try
-        {
-            if (_serviceTask != null)
-            {
-                await _serviceTask.ConfigureAwait(false);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        finally
-        {
-            _cts.Dispose();
-            _cts = null;
-            _serviceTask = null;
-        }
-    }
-
     public bool Send(
         IpcMessageDefinition<IpcNoPayload> definition,
         TimeSpan? timeout = null) =>
@@ -634,9 +452,11 @@ public sealed class ConfluxService : IDisposable
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        using OperationLease? operation = TryBeginOperation();
+        if (operation is null) return false;
         timeout ??= TimeSpan.FromSeconds(5);
         using var timeoutCancellation =
-            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, operation.Token);
         timeoutCancellation.CancelAfter(timeout.Value);
         CancellationToken operationToken = timeoutCancellation.Token;
         bool gateEntered = false;
@@ -646,7 +466,7 @@ public sealed class ConfluxService : IDisposable
             await _sendGate.WaitAsync(operationToken).ConfigureAwait(false);
             gateEntered = true;
 
-            if (RequireTargetProcess && !IsAppStarted())
+            if (TrackedSessionExited())
             {
                 return false;
             }
@@ -659,7 +479,9 @@ public sealed class ConfluxService : IDisposable
                 SendPipeName,
                 PipeDirection.InOut,
                 PipeOptions.Asynchronous);
+            ObjectDisposedException.ThrowIf(_disposed, this);
             await client.ConnectAsync(operationToken).ConfigureAwait(false);
+            ValidateServerProcess(client);
             await WriteFrameAsync(client, serialized, operationToken).ConfigureAwait(false);
 
             byte[] response = await ReadFrameAsync(client, operationToken).ConfigureAwait(false);
@@ -668,6 +490,11 @@ public sealed class ConfluxService : IDisposable
                 ?? throw new JsonException("IPC acknowledgement is null.");
 
             return ValidateAcknowledgement(envelope, acknowledgement);
+        }
+        catch (OperationCanceledException) when (operation.Token.IsCancellationRequested
+            && !cancellationToken.IsCancellationRequested)
+        {
+            return false;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -702,25 +529,40 @@ public sealed class ConfluxService : IDisposable
             timeout,
             cancellationToken);
 
-    public async Task<IpcRequestResult<TResponse>> RequestAsync<TRequest, TResponse>(
+    public Task<IpcRequestResult<TResponse>> RequestAsync<TRequest, TResponse>(
         IpcRequestDefinition<TRequest, TResponse> definition,
         TRequest request,
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        RequestCoreAsync(definition, request, timeout, cancellationToken, serialize: true);
+
+    private async Task<IpcRequestResult<TResponse>> RequestCoreAsync<TRequest, TResponse>(
+        IpcRequestDefinition<TRequest, TResponse> definition,
+        TRequest request,
+        TimeSpan? timeout,
+        CancellationToken cancellationToken,
+        bool serialize,
+        bool connectImmediately = false)
     {
+        using OperationLease? operation = TryBeginOperation();
+        if (operation is null)
+            return new IpcRequestResult<TResponse>(false, default, "IPC endpoint is disposed.");
         timeout ??= TimeSpan.FromSeconds(5);
         using var timeoutCancellation =
-            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, operation.Token);
         timeoutCancellation.CancelAfter(timeout.Value);
         CancellationToken operationToken = timeoutCancellation.Token;
         bool gateEntered = false;
 
         try
         {
-            await _sendGate.WaitAsync(operationToken).ConfigureAwait(false);
-            gateEntered = true;
+            if (serialize)
+            {
+                await _sendGate.WaitAsync(operationToken).ConfigureAwait(false);
+                gateEntered = true;
+            }
 
-            if (RequireTargetProcess && !IsAppStarted())
+            if (TrackedSessionExited())
             {
                 return new IpcRequestResult<TResponse>(
                     false,
@@ -736,7 +578,18 @@ public sealed class ConfluxService : IDisposable
                 SendPipeName,
                 PipeDirection.InOut,
                 PipeOptions.Asynchronous);
-            await client.ConnectAsync(operationToken).ConfigureAwait(false);
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (connectImmediately)
+            {
+                // Zero applies ONLY to acquiring a listener. Once connected,
+                // the health response still has the normal operation deadline.
+                await client.ConnectAsync(0, operationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                await client.ConnectAsync(operationToken).ConfigureAwait(false);
+            }
+            ValidateServerProcess(client);
             await WriteFrameAsync(client, serialized, operationToken).ConfigureAwait(false);
 
             byte[] responseBytes = await ReadFrameAsync(client, operationToken).ConfigureAwait(false);
@@ -785,6 +638,19 @@ public sealed class ConfluxService : IDisposable
             }
 
             return new IpcRequestResult<TResponse>(true, value);
+        }
+        catch (TimeoutException) when (connectImmediately)
+        {
+            // Missing/busy listener is expected during a startup preflight.
+            // A tracked live process is still protected by StartProcess's guard;
+            // singleton mutexes arbitrate a simultaneous external launch.
+            return new IpcRequestResult<TResponse>(false, default,
+                "No IPC listener is immediately available.");
+        }
+        catch (OperationCanceledException) when (operation.Token.IsCancellationRequested
+            && !cancellationToken.IsCancellationRequested)
+        {
+            return new IpcRequestResult<TResponse>(false, default, "IPC endpoint is disposed.");
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -957,11 +823,14 @@ public sealed class ConfluxService : IDisposable
         }
     }
 
-    private static async Task WriteFrameAsync(
+    private async Task WriteFrameAsync(
         Stream stream,
         ReadOnlyMemory<byte> payload,
         CancellationToken cancellationToken)
     {
+        using var frameDeadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        frameDeadline.CancelAfter(FrameTimeout);
+        cancellationToken = frameDeadline.Token;
         byte[] header = new byte[sizeof(int)];
         BinaryPrimitives.WriteInt32LittleEndian(header, payload.Length);
         await stream.WriteAsync(header.AsMemory(), cancellationToken).ConfigureAwait(false);
@@ -989,33 +858,4 @@ public sealed class ConfluxService : IDisposable
         }
     }
 
-    private void Dispose(bool disposing)
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        if (disposing)
-        {
-            _cts?.Cancel();
-            _cts?.Dispose();
-
-            lock (_processSync)
-            {
-                _currProcess?.Dispose();
-                _currProcess = null;
-            }
-
-            _sendGate.Dispose();
-        }
-
-        _disposed = true;
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
 }
