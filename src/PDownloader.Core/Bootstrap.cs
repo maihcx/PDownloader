@@ -24,24 +24,27 @@ public sealed class Bootstrap
     private readonly CoreIpcHost _ipcHost;
     private readonly CoreIpcBindings _ipcBindings;
     private readonly DownloadProgressPublisher _progressPublisher;
+    private readonly DownloadManager _downloads;
 
     public Bootstrap(
         RunnerSessionManager runnerSessions,
         DownloadManagerBootstrap downloadManagerBootstrap,
         CoreIpcHost ipcHost,
         CoreIpcBindings ipcBindings,
-        DownloadProgressPublisher progressPublisher)
+        DownloadProgressPublisher progressPublisher,
+        DownloadManager downloads)
     {
         _runnerSessions = runnerSessions;
         _downloadManagerBootstrap = downloadManagerBootstrap;
         _ipcHost = ipcHost;
         _ipcBindings = ipcBindings;
         _progressPublisher = progressPublisher;
+        _downloads = downloads;
     }
 
     public async Task OnStartedAsync(CancellationToken cancellationToken)
     {
-        _downloadManagerBootstrap.Initialize();
+        await _downloadManagerBootstrap.InitializeAsync(cancellationToken).ConfigureAwait(false);
 
         ConfluxService main = new();
         main.Register(
@@ -69,11 +72,35 @@ public sealed class Bootstrap
 
     public async Task OnStoppedAsync()
     {
-        // Stop accepting progress, cancel in-flight sends, and await every sender
-        // before the endpoints they borrow are torn down. Do not flush UI queues
-        // to a closed window; persistent download state has a separate lifecycle.
-        await _progressPublisher.DisposeAsync().ConfigureAwait(false);
-        await _runnerSessions.ShutdownAllAsync().ConfigureAwait(false);
-        await _ipcHost.StopAsync().ConfigureAwait(false);
+        try
+        {
+            // Close command admission, stop workers/hash jobs, then persist the
+            // final quiescent snapshot before removing UI endpoints.
+            await _downloads.DisposeAsync().ConfigureAwait(false);
+            await _downloadManagerBootstrap.DisposeAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            await _progressPublisher.DisposeAsync().ConfigureAwait(false);
+            try
+            {
+                await Task.WhenAll(
+                    NotifyShutdownAsync(_ipcHost.Main),
+                    NotifyShutdownAsync(_ipcHost.Tray),
+                    _runnerSessions.ShutdownAllAsync()).ConfigureAwait(false);
+            }
+            finally { await _ipcHost.StopAsync().ConfigureAwait(false); }
+        }
+    }
+
+    private static async Task NotifyShutdownAsync(ConfluxService? endpoint)
+    {
+        if (endpoint is null) return;
+        try
+        {
+            await endpoint.SendAsync(AppProtocol.State, AppState.Shutdown, TimeSpan.FromSeconds(2))
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) { Debug.WriteLine($"[Bootstrap] UI shutdown: {ex.Message}"); }
     }
 }

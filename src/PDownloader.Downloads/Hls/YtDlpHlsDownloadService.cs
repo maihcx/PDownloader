@@ -250,6 +250,7 @@ internal sealed class YtDlpHlsDownloadService
 
         process.OutputDataReceived += (_, args) =>
         {
+            if (cancellationToken.IsCancellationRequested) return;
             string? line = args.Data;
             if (string.IsNullOrEmpty(line))
             {
@@ -296,7 +297,7 @@ internal sealed class YtDlpHlsDownloadService
         catch (OperationCanceledException)
         {
             try { process.Kill(entireProcessTree: true); } catch { }
-
+            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
             throw;
         }
 

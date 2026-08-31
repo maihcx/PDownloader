@@ -54,6 +54,14 @@ internal sealed class ExternalProcessRunner
         catch (OperationCanceledException)
         {
             TryKill(process);
+            // Kill is asynchronous; do not let the next download generation
+            // reuse resources while the owned process or pipe readers are alive.
+            try { await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false); }
+            finally
+            {
+                try { await Task.WhenAll(standardOutputTask, standardErrorTask).ConfigureAwait(false); }
+                catch (Exception ex) { Debug.WriteLine($"[Process] Reader shutdown: {ex.Message}"); }
+            }
             throw;
         }
 

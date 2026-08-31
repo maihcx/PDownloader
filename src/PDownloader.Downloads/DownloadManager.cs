@@ -15,26 +15,26 @@
 
 namespace PDownloader.Downloads;
 
-public class DownloadManager : IDisposable
+/// <summary>
+/// Owns download sessions. Each session serializes its commands independently;
+/// transfer/hash work is tracked separately from command completion.
+/// </summary>
+public sealed partial class DownloadManager : IAsyncDisposable
 {
     private readonly IDownloadRuntime _runtime;
     private readonly DownloadPathService _pathService;
     private readonly YtDlpService _ytDlpService;
     private readonly FfmpegMuxer _ffmpegMuxer;
-    private readonly List<DownloadItem> _downloads = new();
-    private readonly object _lock = new();
-    private readonly ConcurrentDictionary<string, CancellationTokenSource> _ctsByItem = new();
-    private bool _disposed;
-
-    private readonly ConcurrentDictionary<string, Task> _runningTaskByItem = new();
-    private readonly ConcurrentDictionary<string, Task> _hashTaskByItem = new();
+    private readonly object _sync = new();
+    private readonly Dictionary<string, DownloadSession> _sessions = new(StringComparer.Ordinal);
+    private readonly HashSet<Task> _commands = new();
+    private readonly CancellationTokenSource _shutdown = new();
     private readonly SemaphoreSlim _hashSemaphore = new(1, 1);
+    private Task? _disposeTask;
 
     public event Action<DownloadItem>? OnItemChanged;
 
-    public DownloadManager(
-        IDownloadRuntime runtime,
-        YtDlpService ytDlpService)
+    public DownloadManager(IDownloadRuntime runtime, YtDlpService ytDlpService)
     {
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _ytDlpService = ytDlpService ?? throw new ArgumentNullException(nameof(ytDlpService));
@@ -42,530 +42,215 @@ public class DownloadManager : IDisposable
         _ffmpegMuxer = new FfmpegMuxer();
     }
 
-    public DownloadItem Enqueue(
-        string id,
-        string url,
-        string saveTo = "",
-        string fileName = "",
-        int threads = 8,
-        bool isYoutube = false,
-        string? formatId = null,
+    /// <summary>Returns after the download is registered and scheduled, not after transfer completion.</summary>
+    public async Task<DownloadItem> EnqueueAsync(
+        string id, string url, string saveTo = "", string fileName = "",
+        int threads = 8, bool isYoutube = false, string? formatId = null,
         Dictionary<string, string>? customHeaders = null,
-        FileMergeMode mergeMode = FileMergeMode.Balanced)
+        FileMergeMode mergeMode = FileMergeMode.Balanced,
+        CancellationToken cancellationToken = default)
     {
-        var item = new DownloadItem
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        cancellationToken.ThrowIfCancellationRequested();
+        DownloadSession session;
+        Task start;
+        lock (_sync)
         {
-            Id = id,
-            Url = url,
-            SavePath = saveTo,
-            FileName = fileName,
-            Threads = threads,
-            Status = DownloadStatus.Queued,
-            IsYoutube = isYoutube,
-            FormatId = formatId,
-            CustomHeaders = customHeaders,
-            MergeMode = mergeMode
-        };
-
-        _ = _pathService.GetTempDirectory(item);
-
-        lock (_lock) { _downloads.Add(item); }
-
-        OnItemChanged?.Invoke(item);
-        Task task = StartAsync(item);
-        _runningTaskByItem[item.Id] = task;
-        return item;
+            ThrowIfStopping();
+            // Duplicate requests for a registered ID never create another worker.
+            if (_sessions.TryGetValue(id, out session!)) return session.Item;
+            session = new DownloadSession(new DownloadItem
+            {
+                Id = id, Url = url, SavePath = saveTo, FileName = fileName,
+                Threads = threads, IsYoutube = isYoutube, FormatId = formatId,
+                CustomHeaders = customHeaders is null ? null
+                    : new Dictionary<string, string>(customHeaders, StringComparer.OrdinalIgnoreCase),
+                MergeMode = mergeMode, Status = DownloadStatus.Queued
+            });
+            _sessions.Add(id, session);
+            start = TrackCommand(session.QueueCommand(() =>
+            {
+                if (!_shutdown.IsCancellationRequested) StartWork(session, hashOnly: false);
+                else session.Item.Status = DownloadStatus.Paused;
+                return Task.CompletedTask;
+            }));
+        }
+        await start.ConfigureAwait(false);
+        return session.Item;
     }
+
+    public Task PauseAsync(string id, CancellationToken cancellationToken = default) =>
+        Submit(id, (session, _) => PauseCoreAsync(session), cancellationToken);
+
+    public Task ResumeAsync(string id, bool isShowRunner = true,
+        CancellationToken cancellationToken = default) =>
+        Submit(id, (session, generation) =>
+            RestartCoreAsync(session, generation, retry: false, isShowRunner), cancellationToken);
+
+    public Task RetryAsync(string id, CancellationToken cancellationToken = default) =>
+        Submit(id, (session, generation) =>
+            RestartCoreAsync(session, generation, retry: true, showRunner: false), cancellationToken);
+
+    public Task CancelAsync(string id, CancellationToken cancellationToken = default) =>
+        Submit(id, (session, _) => CancelCoreAsync(session), cancellationToken);
+
+    public Task PauseAllAsync(CancellationToken cancellationToken = default) =>
+        SubmitAll(session => !session.IsRemoved && (session.Item.CanPause
+                || session.Item.Status is DownloadStatus.Queued or DownloadStatus.Connecting or DownloadStatus.Retrying),
+            (session, _) => PauseCoreAsync(session), cancellationToken);
+
+    public Task ResumeAllAsync(CancellationToken cancellationToken = default) =>
+        SubmitAll(session => session.Item.Status == DownloadStatus.Paused,
+            (session, generation) => RestartCoreAsync(session, generation, retry: false, showRunner: true),
+            cancellationToken);
+
+    public Task RetryAllAsync(CancellationToken cancellationToken = default) =>
+        SubmitAll(session => session.Item.Status == DownloadStatus.Error,
+            (session, generation) => RestartCoreAsync(session, generation, retry: true, showRunner: false),
+            cancellationToken);
+
+    public Task ClearAllAsync(DownloadClearScope scope, CancellationToken cancellationToken = default) =>
+        SubmitAll(session => scope == DownloadClearScope.All
+                || (scope == DownloadClearScope.Completed && session.Item.Status == DownloadStatus.Completed),
+            (session, _) => CancelCoreAsync(session), cancellationToken);
+
+    private Task Submit(string id, Func<DownloadSession, long, Task> action, CancellationToken token)
+    {
+        // The caller may cancel before admission. An admitted command keeps its
+        // place and finishes cleanup even if that caller/IPC connection goes away.
+        token.ThrowIfCancellationRequested();
+        lock (_sync)
+        {
+            ThrowIfStopping();
+            if (!_sessions.TryGetValue(id, out var session)) return Task.CompletedTask;
+            long generation = session.Generation;
+            return TrackCommand(session.QueueCommand(() => action(session, generation)));
+        }
+    }
+
+    private Task SubmitAll(Func<DownloadSession, bool> predicate,
+        Func<DownloadSession, long, Task> action, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        lock (_sync)
+        {
+            ThrowIfStopping();
+            Task[] tasks = _sessions.Values.Where(predicate).Select(session =>
+            {
+                long generation = session.Generation;
+                return TrackCommand(session.QueueCommand(() => action(session, generation)));
+            }).ToArray();
+            return Task.WhenAll(tasks);
+        }
+    }
+
+    // Called under _sync, before shutdown can snapshot admitted commands.
+    private Task TrackCommand(Task task)
+    {
+        _commands.Add(task);
+        _ = ObserveCommandAsync(task);
+        return task;
+    }
+
+    private async Task ObserveCommandAsync(Task task)
+    {
+        try { await task.ConfigureAwait(false); }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { Debug.WriteLine($"[DownloadManager] Command failed: {ex.Message}"); }
+        finally { lock (_sync) _commands.Remove(task); }
+    }
+
+    private void ThrowIfStopping() =>
+        ObjectDisposedException.ThrowIf(_disposeTask is not null, this);
 
     public List<DownloadItem> GetAll()
     {
-        lock (_lock) { return _downloads.ToList(); }
-    }
-
-    public async Task StartAsync(DownloadItem item)
-    {
-        if (item.Status is DownloadStatus.Downloading or DownloadStatus.Merging or DownloadStatus.Connecting)
-        {
-            return;
-        }
-
-        if (item.Status == DownloadStatus.Cancelled)
-        {
-            return;
-        }
-
-        // Files start independently; only per-file connection settings apply.
-        item.Status = DownloadStatus.Connecting;
-        OnItemChanged?.Invoke(item);
-
-        try
-        {
-            var cts = new CancellationTokenSource();
-            _ctsByItem[item.Id] = cts;
-
-            var progress = new Progress<DownloadProgress>(_ =>
-            {
-                OnItemChanged?.Invoke(item);
-            });
-
-            const int maxAutoRetries = 5;
-            int attempt = 0;
-
-            while (true)
-            {
-                var engine = new DownloadEngine(
-                    item,
-                    progress,
-                    cts.Token,
-                    _pathService,
-                    _ytDlpService,
-                    _ffmpegMuxer);
-                try
-                {
-                    await engine.RunAsync();
-                    break;
-                }
-                catch (OperationCanceledException)
-                {
-                    if (item.Status != DownloadStatus.Paused && item.Status != DownloadStatus.Cancelled)
-                    {
-                        item.Status = DownloadStatus.Paused;
-                    }
-
-                    break;
-                }
-                catch (System.Exception ex)
-                {
-                    if (attempt >= maxAutoRetries)
-                    {
-                        item.Status = DownloadStatus.Error;
-                        item.ErrorMessage = ex.Message;
-                        break;
-                    }
-
-                    attempt++;
-                    item.Status = DownloadStatus.Retrying;
-                    item.ErrorMessage = $"An error occurred! Retrying ({attempt}/{maxAutoRetries})... Please wait...";
-                    OnItemChanged?.Invoke(item);
-
-                    int delayMilliseconds = 2000;
-                    try
-                    {
-                        await Task.Delay(delayMilliseconds, cts.Token);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        if (item.Status != DownloadStatus.Paused && item.Status != DownloadStatus.Cancelled)
-                        {
-                            item.Status = DownloadStatus.Paused;
-                        }
-
-                        break;
-                    }
-                }
-            }
-
-            if (item.Status != DownloadStatus.Cancelled)
-            {
-                OnItemChanged?.Invoke(item);
-
-                if (item.Status == DownloadStatus.Completed)
-                {
-                    QueueHashCalculation(item);
-                }
-            }
-        }
-        finally
-        {
-            _ctsByItem.TryRemove(item.Id, out _);
-            _runningTaskByItem.TryRemove(item.Id, out _);
-        }
-    }
-
-    public void Pause(string id)
-    {
-        DownloadItem? item = Find(id);
-        Pause(item);
-    }
-
-    public void Pause(DownloadItem? item)
-    {
-        if (item == null)
-        {
-            return;
-        }
-
-        if (!item.CanPause)
-        {
-            return;
-        }
-
-        if (_ctsByItem.TryGetValue(item.Id, out CancellationTokenSource? cts))
-        {
-            cts.Cancel();
-        }
-    }
-
-    public void Resume(string id, bool isShowRunner = true)
-    {
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            return;
-        }
-
-        DownloadItem? item = Find(id);
-
-        Resume(item);
-    }
-
-    public void Resume(DownloadItem? item, bool isShowRunner = true)
-    {
-        if (item == null)
-        {
-            return;
-        }
-
-        if (isShowRunner)
-        {
-            _runtime.ShowRunner(item.Id, new()
-            {
-                Id = item.Id,
-                FileName = item.FileName,
-                FormatId = item.FormatId ?? string.Empty,
-                FileSize = item.TotalBytes,
-                SaveTo = item.SavePath,
-                Url = item.Url,
-                IsRunner = true,
-                Threads = item.Threads,
-                Headers = item.CustomHeaders is null
-                    ? null
-                    : new Dictionary<string, string>(
-                        item.CustomHeaders,
-                        StringComparer.OrdinalIgnoreCase)
-            });
-        }
-
-        lock (_lock)
-        {
-            if (!item.CanResume)
-            {
-                return;
-            }
-
-            item.Status = DownloadStatus.Queued;
-        }
-
-        Task task = StartAsync(item);
-        _runningTaskByItem[item.Id] = task;
-    }
-
-    public void PauseAll()
-    {
-        foreach (DownloadItem item in _downloads)
-        {
-            if (item.Status != DownloadStatus.Completed && item.Status != DownloadStatus.Error)
-            {
-                Pause(item);
-            }
-        }
-    }
-
-    public void ResumeAll()
-    {
-        foreach (DownloadItem item in _downloads)
-        {
-            if (item.Status == DownloadStatus.Paused)
-            {
-                Resume(item);
-            }
-        }
-    }
-
-    public void RetryAll()
-    {
-        foreach (DownloadItem item in _downloads)
-        {
-            if (item.Status == DownloadStatus.Error)
-            {
-                Retry(item);
-            }
-        }
-    }
-
-    public void ClearAll(DownloadClearScope scope)
-    {
-        ClearAllAsync(scope).Wait();
-    }
-
-    public async Task ClearAllAsync(DownloadClearScope scope)
-    {
-        if (scope == DownloadClearScope.Completed)
-        {
-            for (int i = _downloads.Count - 1; i >= 0; i--)
-            {
-                DownloadItem item = _downloads[i];
-                if (item.Status == DownloadStatus.Completed)
-                {
-                    await CancelAsync(item);
-                }
-            }
-        }
-        else if (scope == DownloadClearScope.All)
-        {
-            for (int i = _downloads.Count - 1; i >= 0; i--)
-            {
-                DownloadItem item = _downloads[i];
-                await CancelAsync(item);
-            }
-        }
-    }
-
-    public async Task CancelAsync(string id)
-    {
-        DownloadItem? item = _downloads.FirstOrDefault(d => d.Id == id);
-
-        if (item != null)
-        {
-            await CancelAsync(item);
-        }
-    }
-
-    public async Task CancelAsync(DownloadItem item)
-    {
-        Task? runningTask;
-        lock (_lock)
-        {
-            if (item == null)
-            {
-                return;
-            }
-
-            item.Status = DownloadStatus.Cancelled;
-            _downloads.Remove(item);
-        }
-
-        _runningTaskByItem.TryGetValue(item.Id, out runningTask);
-
-        if (_ctsByItem.TryGetValue(item.Id, out CancellationTokenSource? cts))
-        {
-            cts.Cancel();
-        }
-
-        OnItemChanged?.Invoke(item);
-
-        if (runningTask != null)
-        {
-            await runningTask;
-        }
-
-        _pathService.DeleteTempFiles(item);
-
-        _runningTaskByItem.TryRemove(item.Id, out _);
-    }
-
-    public void Cancel(string id)
-    {
-        CancelAsync(id).Wait();
-    }
-
-    public void Retry(string id)
-    {
-        DownloadItem? item = Find(id);
-        Retry(item);
-    }
-
-    public void Retry(DownloadItem? item)
-    {
-        if (item == null)
-        {
-            return;
-        }
-
-        bool hasPendingMerge = HasPendingMerge(item);
-
-        item.Status = DownloadStatus.Queued;
-        item.ErrorMessage = string.Empty;
-        item.SpeedBps = 0;
-        item.MergeProgress = 0;
-        item.IsMergeProgressActive = hasPendingMerge;
-
-        if (!hasPendingMerge)
-        {
-            item.DownloadedBytes = 0;
-        }
-
-        Task task = StartAsync(item);
-        _runningTaskByItem[item.Id] = task;
+        lock (_sync)
+            return _sessions.Values.Where(session => !session.IsRemoved)
+                .Select(session => session.Item).ToList();
     }
 
     public DownloadItem? Find(string id)
     {
-        lock (_lock) { return _downloads.FirstOrDefault(d => d.Id == id); }
+        lock (_sync)
+            return _sessions.TryGetValue(id, out var session) && !session.IsRemoved
+                ? session.Item : null;
     }
 
-    public string SerializeHistory()
-        => JsonSerializer.Serialize(GetAll().Select(DownloadItemSnapshot.From), new JsonSerializerOptions
-        {
-            WriteIndented = true
-        });
+    public string SerializeHistory() =>
+        JsonSerializer.Serialize(GetAll().Select(DownloadItemSnapshot.From),
+            new JsonSerializerOptions { WriteIndented = true });
 
     public static List<DownloadItemSnapshot> DeserializeHistory(string json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return new List<DownloadItemSnapshot>();
-        }
-
-        try
-        {
-            List<DownloadItemSnapshot>? result = JsonSerializer.Deserialize<List<DownloadItemSnapshot>>(json);
-            return result ?? new List<DownloadItemSnapshot>();
-        }
-        catch (JsonException)
-        {
-            return new List<DownloadItemSnapshot>();
-        }
+        if (string.IsNullOrWhiteSpace(json)) return new();
+        // Let the persistence owner distinguish corrupt input from an empty list.
+        return JsonSerializer.Deserialize<List<DownloadItemSnapshot>>(json) ?? new();
     }
 
-    public DownloadItem RestoreItem(DownloadItemSnapshot snapshot)
+    public async Task<List<DownloadItem>> RestoreHistoryAsync(string json,
+        CancellationToken cancellationToken = default)
     {
-        var item = snapshot.ToDownloadItem();
-
-        if (item.Status is DownloadStatus.Queued
-            or DownloadStatus.Connecting
-            or DownloadStatus.Downloading
-            or DownloadStatus.Merging)
+        cancellationToken.ThrowIfCancellationRequested();
+        List<DownloadItemSnapshot> snapshots = DeserializeHistory(json);
+        var restored = new List<DownloadItem>();
+        var commands = new List<Task>();
+        lock (_sync)
         {
-            item.Status = DownloadStatus.Paused;
-            item.SpeedBps = 0;
+            ThrowIfStopping();
+            foreach (DownloadItemSnapshot snapshot in snapshots)
+            {
+                DownloadItem item = snapshot.ToDownloadItem();
+                if (string.IsNullOrWhiteSpace(item.Id) || _sessions.ContainsKey(item.Id)) continue;
+                bool resumeRetry = item.Status == DownloadStatus.Retrying;
+                if (item.Status is DownloadStatus.Queued or DownloadStatus.Connecting
+                    or DownloadStatus.Downloading or DownloadStatus.Merging or DownloadStatus.Retrying)
+                {
+                    item.Status = DownloadStatus.Paused;
+                    item.SpeedBps = 0;
+                }
+                var session = new DownloadSession(item);
+                _sessions.Add(item.Id, session);
+                restored.Add(item);
+                commands.Add(TrackCommand(session.QueueCommand(() =>
+                {
+                    if (_shutdown.IsCancellationRequested) return Task.CompletedTask;
+                    if ((item.Status is DownloadStatus.Paused or DownloadStatus.Error)
+                        && TryGetPendingMergeProgress(item, out double progress))
+                    {
+                        item.MergeProgress = progress;
+                        item.IsMergeProgressActive = true;
+                    }
+                    Notify(item);
+                    if (item.Status == DownloadStatus.Completed) StartWork(session, hashOnly: true);
+                    else if (resumeRetry) StartWork(session, hashOnly: false);
+                    return Task.CompletedTask;
+                })));
+            }
         }
-
-        if ((item.Status is DownloadStatus.Paused or DownloadStatus.Error)
-            && TryGetPendingMergeProgress(
-                item,
-                out double pendingMergeProgress))
-        {
-            item.MergeProgress = pendingMergeProgress;
-            item.IsMergeProgressActive = true;
-        }
-
-        lock (_lock) { _downloads.Add(item); }
-
-        OnItemChanged?.Invoke(item);
-
-        if (item.Status == DownloadStatus.Completed)
-        {
-            QueueHashCalculation(item);
-        }
-
-        if (item.Status == DownloadStatus.Retrying)
-        {
-            Retry(item);
-        }
-
-        return item;
+        await Task.WhenAll(commands).ConfigureAwait(false);
+        return restored;
     }
+
+    public List<DownloadItemDto> GetContractList() =>
+        GetAll().Select(DownloadItemContractMapper.From).ToList();
+
+    public static DownloadItemDto ToContract(DownloadItem item) => DownloadItemContractMapper.From(item);
 
     private bool HasPendingMerge(DownloadItem item) =>
         MergeRecoveryStore.HasPendingInTree(_pathService.GetTempDirectory(item));
 
-    private bool TryGetPendingMergeProgress(
-        DownloadItem item,
-        out double progress) =>
-        MergeRecoveryStore.TryGetPendingProgressInTree(
-            _pathService.GetTempDirectory(item),
-            out progress);
+    private bool TryGetPendingMergeProgress(DownloadItem item, out double progress) =>
+        MergeRecoveryStore.TryGetPendingProgressInTree(_pathService.GetTempDirectory(item), out progress);
 
-    private void QueueHashCalculation(DownloadItem item)
+    private void Notify(DownloadItem item)
     {
-        if (item.Status != DownloadStatus.Completed
-            || item.HasFileHashes
-            || string.IsNullOrWhiteSpace(item.SavePath)
-            || !File.Exists(item.SavePath))
+        // Observers must not fault a transfer or prevent resource cleanup.
+        Delegate[] handlers = OnItemChanged?.GetInvocationList() ?? Array.Empty<Delegate>();
+        foreach (Action<DownloadItem> handler in handlers)
         {
-            return;
+            try { handler(item); }
+            catch (Exception ex) { Debug.WriteLine($"[DownloadManager] Observer failed: {ex.Message}"); }
         }
-
-        _hashTaskByItem.GetOrAdd(
-            item.Id,
-            _ => Task.Run(() => CalculateFileHashesAsync(item)));
-    }
-
-    private async Task CalculateFileHashesAsync(DownloadItem item)
-    {
-        string filePath = item.SavePath;
-
-        try
-        {
-            await _hashSemaphore.WaitAsync();
-
-            FileHashResult hashes;
-            try
-            {
-                hashes = await FileHashCalculator.ComputeAsync(filePath);
-            }
-            finally
-            {
-                _hashSemaphore.Release();
-            }
-
-            if (item.Status != DownloadStatus.Completed
-                || !string.Equals(item.SavePath, filePath, StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
-
-            item.Md5Hash = hashes.Md5;
-            item.Sha1Hash = hashes.Sha1;
-            item.Sha256Hash = hashes.Sha256;
-            OnItemChanged?.Invoke(item);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(
-                $"[DownloadManager] Cannot calculate hash for '{filePath}': {ex.Message}");
-        }
-        finally
-        {
-            _hashTaskByItem.TryRemove(item.Id, out _);
-        }
-    }
-
-    public List<DownloadItem> RestoreHistory(string json)
-    {
-        List<DownloadItemSnapshot> snapshots = DeserializeHistory(json);
-        var restored = new List<DownloadItem>(snapshots.Count);
-        foreach (DownloadItemSnapshot snap in snapshots)
-        {
-            restored.Add(RestoreItem(snap));
-        }
-
-        return restored;
-    }
-
-    public List<DownloadItemDto> GetContractList()
-        => GetAll().Select(DownloadItemContractMapper.From).ToList();
-
-    public static DownloadItemDto ToContract(DownloadItem item)
-        => DownloadItemContractMapper.From(item);
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        if (disposing)
-        {
-            _hashSemaphore.Dispose();
-        }
-
-        _disposed = true;
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
     }
 }

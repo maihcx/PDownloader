@@ -69,9 +69,10 @@ public sealed class DownloadLaunchService
         }, cancellationToken).ConfigureAwait(false);
     }
 
-    public void StartFromRunner(
+    public async Task StartFromRunnerAsync(
         RunnerSession session,
-        RunnerStartDownloadRequest request)
+        RunnerStartDownloadRequest request,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(request);
@@ -111,7 +112,7 @@ public sealed class DownloadLaunchService
             ? null
             : context.FormatId;
 
-        _downloads.Enqueue(
+        await _downloads.EnqueueAsync(
             id: session.Id,
             url: context.Url,
             saveTo: saveTo ?? string.Empty,
@@ -120,6 +121,7 @@ public sealed class DownloadLaunchService
             isYoutube: formatId is not null,
             formatId: formatId,
             customHeaders: headers,
-            mergeMode: _downloadConfig.GetFileMergeMode());
+            mergeMode: _downloadConfig.GetFileMergeMode(),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

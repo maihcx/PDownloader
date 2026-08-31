@@ -63,11 +63,11 @@ public class DownloadEngine
 
     public async Task RunAsync()
     {
-        string tempDirectory = _pathService.GetTempDirectory(_item);
-        Directory.CreateDirectory(tempDirectory);
-
         try
         {
+            _cancellationToken.ThrowIfCancellationRequested();
+            string tempDirectory = _pathService.GetTempDirectory(_item);
+            Directory.CreateDirectory(tempDirectory);
             if (await TryRecoverPendingMergeAsync(tempDirectory))
             {
                 return;
