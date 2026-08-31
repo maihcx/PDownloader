@@ -62,6 +62,7 @@ internal sealed class ExternalProcessRunner
                 try { await Task.WhenAll(standardOutputTask, standardErrorTask).ConfigureAwait(false); }
                 catch (Exception ex) { Debug.WriteLine($"[Process] Reader shutdown: {ex.Message}"); }
             }
+
             throw;
         }
 

@@ -58,7 +58,11 @@ public sealed partial class DownloadManager : IAsyncDisposable
         {
             ThrowIfStopping();
             // Duplicate requests for a registered ID never create another worker.
-            if (_sessions.TryGetValue(id, out session!)) return session.Item;
+            if (_sessions.TryGetValue(id, out session!))
+            {
+                return session.Item;
+            }
+
             session = new DownloadSession(new DownloadItem
             {
                 Id = id, Url = url, SavePath = saveTo, FileName = fileName,
@@ -70,11 +74,19 @@ public sealed partial class DownloadManager : IAsyncDisposable
             _sessions.Add(id, session);
             start = TrackCommand(session.QueueCommand(() =>
             {
-                if (!_shutdown.IsCancellationRequested) StartWork(session, hashOnly: false);
-                else session.Item.Status = DownloadStatus.Paused;
+                if (!_shutdown.IsCancellationRequested)
+                {
+                    StartWork(session, hashOnly: false);
+                }
+                else
+                {
+                    session.Item.Status = DownloadStatus.Paused;
+                }
+
                 return Task.CompletedTask;
             }));
         }
+
         await start.ConfigureAwait(false);
         return session.Item;
     }
@@ -122,7 +134,11 @@ public sealed partial class DownloadManager : IAsyncDisposable
         lock (_sync)
         {
             ThrowIfStopping();
-            if (!_sessions.TryGetValue(id, out var session)) return Task.CompletedTask;
+            if (!_sessions.TryGetValue(id, out DownloadSession? session))
+            {
+                return Task.CompletedTask;
+            }
+
             long generation = session.Generation;
             return TrackCommand(session.QueueCommand(() => action(session, generation)));
         }
@@ -157,7 +173,11 @@ public sealed partial class DownloadManager : IAsyncDisposable
         try { await task.ConfigureAwait(false); }
         catch (OperationCanceledException) { }
         catch (Exception ex) { Debug.WriteLine($"[DownloadManager] Command failed: {ex.Message}"); }
-        finally { lock (_sync) _commands.Remove(task); }
+        finally { lock (_sync)
+            {
+                _commands.Remove(task);
+            }
+        }
     }
 
     private void ThrowIfStopping() =>
@@ -166,15 +186,19 @@ public sealed partial class DownloadManager : IAsyncDisposable
     public List<DownloadItem> GetAll()
     {
         lock (_sync)
+        {
             return _sessions.Values.Where(session => !session.IsRemoved)
                 .Select(session => session.Item).ToList();
+        }
     }
 
     public DownloadItem? Find(string id)
     {
         lock (_sync)
-            return _sessions.TryGetValue(id, out var session) && !session.IsRemoved
+        {
+            return _sessions.TryGetValue(id, out DownloadSession? session) && !session.IsRemoved
                 ? session.Item : null;
+        }
     }
 
     public string SerializeHistory() =>
@@ -183,7 +207,10 @@ public sealed partial class DownloadManager : IAsyncDisposable
 
     public static List<DownloadItemSnapshot> DeserializeHistory(string json)
     {
-        if (string.IsNullOrWhiteSpace(json)) return new();
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new();
+        }
         // Let the persistence owner distinguish corrupt input from an empty list.
         return JsonSerializer.Deserialize<List<DownloadItemSnapshot>>(json) ?? new();
     }
@@ -201,7 +228,11 @@ public sealed partial class DownloadManager : IAsyncDisposable
             foreach (DownloadItemSnapshot snapshot in snapshots)
             {
                 DownloadItem item = snapshot.ToDownloadItem();
-                if (string.IsNullOrWhiteSpace(item.Id) || _sessions.ContainsKey(item.Id)) continue;
+                if (string.IsNullOrWhiteSpace(item.Id) || _sessions.ContainsKey(item.Id))
+                {
+                    continue;
+                }
+
                 bool resumeRetry = item.Status == DownloadStatus.Retrying;
                 if (item.Status is DownloadStatus.Queued or DownloadStatus.Connecting
                     or DownloadStatus.Downloading or DownloadStatus.Merging or DownloadStatus.Retrying)
@@ -209,25 +240,39 @@ public sealed partial class DownloadManager : IAsyncDisposable
                     item.Status = DownloadStatus.Paused;
                     item.SpeedBps = 0;
                 }
+
                 var session = new DownloadSession(item);
                 _sessions.Add(item.Id, session);
                 restored.Add(item);
                 commands.Add(TrackCommand(session.QueueCommand(() =>
                 {
-                    if (_shutdown.IsCancellationRequested) return Task.CompletedTask;
+                    if (_shutdown.IsCancellationRequested)
+                    {
+                        return Task.CompletedTask;
+                    }
+
                     if ((item.Status is DownloadStatus.Paused or DownloadStatus.Error)
                         && TryGetPendingMergeProgress(item, out double progress))
                     {
                         item.MergeProgress = progress;
                         item.IsMergeProgressActive = true;
                     }
+
                     Notify(item);
-                    if (item.Status == DownloadStatus.Completed) StartWork(session, hashOnly: true);
-                    else if (resumeRetry) StartWork(session, hashOnly: false);
+                    if (item.Status == DownloadStatus.Completed)
+                    {
+                        StartWork(session, hashOnly: true);
+                    }
+                    else if (resumeRetry)
+                    {
+                        StartWork(session, hashOnly: false);
+                    }
+
                     return Task.CompletedTask;
                 })));
             }
         }
+
         await Task.WhenAll(commands).ConfigureAwait(false);
         return restored;
     }

@@ -50,17 +50,27 @@ public partial class App : Application, IDisposable
 
     private async void OnStartup(object sender, StartupEventArgs e)
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         _instance = new Mutex(false, @"Global\PDownloader.Tray-" + IpcUserScope.CurrentUserId);
         try { _ownsInstance = _instance.WaitOne(0); }
         catch (AbandonedMutexException) { _ownsInstance = true; }
+
         if (!_ownsInstance)
         {
             Shutdown();
             return;
         }
+
         await UserDataStore.InitializeAsync();
-        if (_disposed || Dispatcher.HasShutdownStarted) return;
+        if (_disposed || Dispatcher.HasShutdownStarted)
+        {
+            return;
+        }
+
         TranslationSource.Instance.CurrentCulture = LanguageBase.GetSetupLanguage();
 
         MainWindow mainWindow = new MainWindow();
@@ -82,7 +92,10 @@ public partial class App : Application, IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!disposing || _disposed) return;
+        if (!disposing || _disposed)
+        {
+            return;
+        }
 
         // Mutex ownership is thread-affine. OnStartup acquires it before its
         // first await; OnExit/Dispose must release it on the same dispatcher.
@@ -96,7 +109,10 @@ public partial class App : Application, IDisposable
         {
             try
             {
-                if (_ownsInstance) _instance?.ReleaseMutex();
+                if (_ownsInstance)
+                {
+                    _instance?.ReleaseMutex();
+                }
             }
             finally
             {

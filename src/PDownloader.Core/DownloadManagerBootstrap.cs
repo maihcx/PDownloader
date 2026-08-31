@@ -38,11 +38,16 @@ public sealed class DownloadManagerBootstrap : IAsyncDisposable
         lock (_saveLock)
         {
             ObjectDisposedException.ThrowIf(_disposeTask is not null, this);
-            if (_initialized) return;
+            if (_initialized)
+            {
+                return;
+            }
+
             _initialized = true;
             _downloads.OnItemChanged += OnItemChanged;
             _saveDebounceTimer = new Timer(_ => SaveHistoryNow(), null, Timeout.Infinite, Timeout.Infinite);
         }
+
         try
         {
             if (File.Exists(StorageDownloaderDataFile))
@@ -53,7 +58,11 @@ public sealed class DownloadManagerBootstrap : IAsyncDisposable
                     .ConfigureAwait(false);
                 Debug.WriteLine($"[Bootstrap] Restored {restored.Count} history items.");
             }
-            lock (_saveLock) _historyLoaded = true;
+
+            lock (_saveLock)
+            {
+                _historyLoaded = true;
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex)
@@ -69,7 +78,9 @@ public sealed class DownloadManagerBootstrap : IAsyncDisposable
         lock (_saveLock)
         {
             if (_disposeTask is null)
+            {
                 _saveDebounceTimer?.Change(SaveDebounceMs, Timeout.Infinite);
+            }
         }
     }
 
@@ -77,7 +88,11 @@ public sealed class DownloadManagerBootstrap : IAsyncDisposable
     {
         lock (_saveLock)
         {
-            if (!_historyLoaded) return;
+            if (!_historyLoaded)
+            {
+                return;
+            }
+
             try
             {
                 Directory.CreateDirectory(StorageDataDir);
@@ -103,12 +118,18 @@ public sealed class DownloadManagerBootstrap : IAsyncDisposable
             {
                 owner = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 _disposeTask = owner.Task;
-                if (_initialized) _downloads.OnItemChanged -= OnItemChanged;
+                if (_initialized)
+                {
+                    _downloads.OnItemChanged -= OnItemChanged;
+                }
+
                 timerStopped = _saveDebounceTimer?.DisposeAsync().AsTask() ?? Task.CompletedTask;
                 _saveDebounceTimer = null;
             }
+
             completion = _disposeTask;
         }
+
         if (owner is not null)
         {
             try
@@ -122,6 +143,7 @@ public sealed class DownloadManagerBootstrap : IAsyncDisposable
             }
             catch (Exception ex) { owner.TrySetException(ex); }
         }
+
         await completion.ConfigureAwait(false);
     }
 }

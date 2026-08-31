@@ -177,12 +177,14 @@ internal sealed class FfmpegMuxer
             catch (OperationCanceledException)
             {
                 try { process.Kill(entireProcessTree: true); } catch { }
+
                 try { await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false); }
                 finally
                 {
                     try { await standardErrorTask.ConfigureAwait(false); }
                     catch (Exception ex) { Debug.WriteLine($"[FFmpeg] Reader shutdown: {ex.Message}"); }
                 }
+
                 throw;
             }
             finally
@@ -307,12 +309,14 @@ internal sealed class FfmpegMuxer
             catch (OperationCanceledException)
             {
                 try { process.Kill(entireProcessTree: true); } catch { }
+
                 try { await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false); }
                 finally
                 {
                     try { await standardErrorTask.ConfigureAwait(false); }
                     catch (Exception ex) { Debug.WriteLine($"[FFmpeg] Reader shutdown: {ex.Message}"); }
                 }
+
                 throw;
             }
             finally

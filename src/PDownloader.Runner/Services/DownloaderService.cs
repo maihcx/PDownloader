@@ -51,7 +51,11 @@ public class DownloaderService : IHostedService, IDisposable
     /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        if (CfsContact is null) return;
+        if (CfsContact is null)
+        {
+            return;
+        }
+
         CfsContact.SetReady(false);
         try
         {

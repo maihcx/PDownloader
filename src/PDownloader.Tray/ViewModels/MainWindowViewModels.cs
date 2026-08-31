@@ -118,7 +118,9 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
                 await coreService.RequestAsync(UpdateProtocol.GetState);
 
             if (result.Success && result.Value is { } snapshot)
+            {
                 App.Current.Dispatcher.Invoke(() => ApplyUpdateState(snapshot));
+            }
         }
         catch (Exception ex)
         {
@@ -220,12 +222,18 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
     private async Task SendCoreAsync<TPayload>(
         IpcMessageDefinition<TPayload> definition, TPayload payload)
     {
-        if (CoreService is not { } core) return;
+        if (CoreService is not { } core)
+        {
+            return;
+        }
+
         try
         {
             await core.StartAndWaitUntilReadyAsync();
             if (!await core.SendAsync(definition, payload))
+            {
                 System.Diagnostics.Debug.WriteLine("[Tray] Core rejected the command.");
+            }
         }
         catch (Exception ex)
         {

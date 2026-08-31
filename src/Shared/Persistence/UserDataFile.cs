@@ -57,8 +57,11 @@ internal sealed class UserDataFile
 
     public T GetValue<T>(string key, T defaultValue = default!)
     {
-        if (!TryGetValue(key, out var value) || value.ValueKind == JsonValueKind.Null)
+        if (!TryGetValue(key, out JsonElement value) || value.ValueKind == JsonValueKind.Null)
+        {
             return defaultValue;
+        }
+
         try { return value.Deserialize<T>() ?? defaultValue; }
         catch (JsonException) { return defaultValue; }
     }
@@ -72,17 +75,23 @@ internal sealed class UserDataFile
     public void Patch(Dictionary<string, JsonElement> values)
     {
         ArgumentNullException.ThrowIfNull(values);
-        foreach (var entry in values)
+        foreach (KeyValuePair<string, JsonElement> entry in values)
         {
             ValidateKey(entry.Key);
             if (entry.Value.ValueKind == JsonValueKind.Undefined)
+            {
                 throw new ArgumentException("A setting must contain a JSON value.");
+            }
         }
+
         WithLock(() =>
         {
-            var data = LoadData();
-            foreach (var entry in values)
+            Dictionary<string, JsonElement> data = LoadData();
+            foreach (KeyValuePair<string, JsonElement> entry in values)
+            {
                 data[entry.Key] = entry.Value.Clone();
+            }
+
             SaveData(data);
             return true;
         });
@@ -98,7 +107,10 @@ internal sealed class UserDataFile
     public void DeleteUserData() => WithLock(() =>
     {
         if (Directory.Exists(_dataDir))
+        {
             Directory.Delete(_dataDir, recursive: true);
+        }
+
         return true;
     });
 
@@ -122,17 +134,25 @@ internal sealed class UserDataFile
                     Thread.Sleep(25);
                 }
             }
+
             using (lease)
+            {
                 return action();
+            }
         }
     }
 
     private Dictionary<string, JsonElement> LoadData()
     {
         if (!File.Exists(_dataFile))
+        {
             return new Dictionary<string, JsonElement>();
+        }
+
         if (new FileInfo(_dataFile).Length > MaxFileBytes)
+        {
             throw new InvalidDataException("The settings file exceeds the supported size.");
+        }
         // Never silently replace a corrupt/unreadable file with an empty dictionary.
         return JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(File.ReadAllBytes(_dataFile))
             ?? throw new InvalidDataException("The settings file must contain a JSON object.");
@@ -143,7 +163,10 @@ internal sealed class UserDataFile
         byte[] json = JsonSerializer.SerializeToUtf8Bytes(data,
             new JsonSerializerOptions { WriteIndented = true });
         if (json.Length > MaxFileBytes)
+        {
             throw new InvalidDataException("Settings exceed the supported size.");
+        }
+
         Directory.CreateDirectory(_dataDir);
         string temporary = _dataFile + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
@@ -154,14 +177,23 @@ internal sealed class UserDataFile
                 stream.Write(json);
                 stream.Flush(flushToDisk: true);
             }
+
             if (File.Exists(_dataFile))
+            {
                 File.Replace(temporary, _dataFile, destinationBackupFileName: null);
+            }
             else
+            {
                 File.Move(temporary, _dataFile);
+            }
         }
         finally
         {
-            try { if (File.Exists(temporary)) File.Delete(temporary); }
+            try { if (File.Exists(temporary))
+                {
+                    File.Delete(temporary);
+                }
+            }
             catch (IOException) { /* An orphan temp file does not invalidate a committed write. */ }
             catch (UnauthorizedAccessException) { }
         }
@@ -171,6 +203,8 @@ internal sealed class UserDataFile
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         if (key.Length > 256)
+        {
             throw new ArgumentException("Setting keys cannot exceed 256 characters.", nameof(key));
+        }
     }
 }

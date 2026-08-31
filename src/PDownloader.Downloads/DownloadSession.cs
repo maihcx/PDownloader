@@ -46,6 +46,7 @@ internal sealed class DownloadSession : IAsyncDisposable
                 // A failed command must not poison later Pause/Cancel requests.
                 try { await previous.ConfigureAwait(false); }
                 catch (Exception) { }
+
                 await action().ConfigureAwait(false);
             });
             return _commandTail;
@@ -55,7 +56,11 @@ internal sealed class DownloadSession : IAsyncDisposable
     // Only the serialized command path may replace a generation's resources.
     public CancellationToken BeginWork(CancellationToken shutdown)
     {
-        if (!Work.IsCompleted) throw new InvalidOperationException("Previous work is still running.");
+        if (!Work.IsCompleted)
+        {
+            throw new InvalidOperationException("Previous work is still running.");
+        }
+
         ObjectDisposedException.ThrowIf(_disposeTask is not null, this);
         _workCancellation?.Dispose();
         _workCancellation = CancellationTokenSource.CreateLinkedTokenSource(shutdown);
@@ -78,8 +83,10 @@ internal sealed class DownloadSession : IAsyncDisposable
                 owner = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 _disposeTask = owner.Task;
             }
+
             completion = _disposeTask;
         }
+
         if (owner is not null)
         {
             try
@@ -91,10 +98,12 @@ internal sealed class DownloadSession : IAsyncDisposable
                     _workCancellation = null;
                     GC.SuppressFinalize(this);
                 }
+
                 owner.TrySetResult();
             }
             catch (Exception ex) { owner.TrySetException(ex); }
         }
+
         await completion.ConfigureAwait(false);
     }
 }

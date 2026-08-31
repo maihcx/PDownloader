@@ -31,7 +31,12 @@ internal class Program
         bool ownsInstance;
         try { ownsInstance = instance.WaitOne(0); }
         catch (AbandonedMutexException) { ownsInstance = true; }
-        if (!ownsInstance) return;
+
+        if (!ownsInstance)
+        {
+            return;
+        }
+
         try { RunAsync(args).GetAwaiter().GetResult(); }
         finally { instance.ReleaseMutex(); }
     }
@@ -109,5 +114,4 @@ internal class Program
         CrashHandler.WriteOnly(e.Exception, "TaskScheduler");
         e.SetObserved();
     }
-
 }

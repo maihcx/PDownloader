@@ -51,7 +51,11 @@ public sealed class RunnerSessionManager : IDisposable
             lock (_sessionSync)
             {
                 ObjectDisposedException.ThrowIf(_disposed != 0, this);
-                if (_stopping) throw new InvalidOperationException("Runner sessions are stopping.");
+                if (_stopping)
+                {
+                    throw new InvalidOperationException("Runner sessions are stopping.");
+                }
+
                 if (!_sessions.TryGetValue(token, out session!))
                 {
                     session = CreateSession(token, task);
@@ -60,11 +64,15 @@ public sealed class RunnerSessionManager : IDisposable
                     session.StartupTask = Task.Run(() => StartSessionAsync(session));
                     _ = ObserveStartupAsync(session.StartupTask, token);
                 }
+
                 closing = session.CloseTask;
                 if (closing is null && session.StartupTask.IsCompletedSuccessfully
                     && !session.Channel.IsAppStarted())
+                {
                     closing = CloseSessionAsync(session);
+                }
             }
+
             if (closing is not null)
             {
                 await closing.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -134,7 +142,10 @@ public sealed class RunnerSessionManager : IDisposable
         lock (_sessionSync)
         {
             if (_sessions.TryGetValue(id, out session) && session.CloseTask is null)
+            {
                 return true;
+            }
+
             session = null;
             return false;
         }
@@ -143,15 +154,21 @@ public sealed class RunnerSessionManager : IDisposable
     public Task CloseAsync(string id)
     {
         lock (_sessionSync)
-            return _sessions.TryGetValue(id, out var session)
+        {
+            return _sessions.TryGetValue(id, out RunnerSession? session)
                 ? CloseSessionAsync(session) : Task.CompletedTask;
+        }
     }
 
     private Task CloseSessionAsync(RunnerSession session)
     {
         lock (_sessionSync)
         {
-            if (session.CloseTask is not null) return session.CloseTask;
+            if (session.CloseTask is not null)
+            {
+                return session.CloseTask;
+            }
+
             session.Lifetime.Cancel();
             session.CloseTask = Task.Run(async () =>
             {
@@ -165,9 +182,11 @@ public sealed class RunnerSessionManager : IDisposable
                     lock (_sessionSync)
                     {
                         // An old exit callback must never remove a replacement session.
-                        if (_sessions.TryGetValue(session.Id, out var current)
+                        if (_sessions.TryGetValue(session.Id, out RunnerSession? current)
                             && ReferenceEquals(current, session))
+                        {
                             _sessions.TryRemove(session.Id, out _);
+                        }
                     }
                     // Lifetime is still read by a possibly unwinding startup task;
                     // let GC reclaim this managed CTS instead of racing Dispose.
@@ -185,6 +204,7 @@ public sealed class RunnerSessionManager : IDisposable
             _stopping = true;
             sessions = _sessions.Values.ToArray();
         }
+
         await Task.WhenAll(sessions.Select(async session =>
         {
             try
@@ -201,7 +221,9 @@ public sealed class RunnerSessionManager : IDisposable
         foreach (RunnerSession session in _sessions.Values.ToArray())
         {
             if (session.IsReady && session.CloseTask is null)
+            {
                 session.Channel.Send(definition, payload);
+            }
         }
     }
 
@@ -240,7 +262,9 @@ public sealed class RunnerSessionManager : IDisposable
         {
             _stopping = true;
             foreach (RunnerSession session in _sessions.Values.ToArray())
+            {
                 _ = CloseSessionAsync(session);
+            }
         }
 
         GC.SuppressFinalize(this);

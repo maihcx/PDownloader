@@ -61,16 +61,26 @@ internal sealed class ProgressClientSender : IAsyncDisposable
     public bool Matches(ConfluxService channel, int processId)
     {
         lock (_sync)
+        {
             return !_stopping && !_worker.IsCompleted
                 && ReferenceEquals(_channel, channel) && _processId == processId;
+        }
     }
 
     public void Publish(DownloadItemDto snapshot)
     {
         lock (_sync)
         {
-            if (_stopping) return;
-            if (!_pending.ContainsKey(snapshot.Id)) _order.Enqueue(snapshot.Id);
+            if (_stopping)
+            {
+                return;
+            }
+
+            if (!_pending.ContainsKey(snapshot.Id))
+            {
+                _order.Enqueue(snapshot.Id);
+            }
+
             _pending[snapshot.Id] = snapshot;
             _wake.Writer.TryWrite(0);
         }
@@ -78,7 +88,10 @@ internal sealed class ProgressClientSender : IAsyncDisposable
 
     private void OnTargetExited(int processId)
     {
-        if (processId == _processId) _ = DisposeAsync();
+        if (processId == _processId)
+        {
+            _ = DisposeAsync();
+        }
     }
 
     private bool IsCurrentProcess()
@@ -98,23 +111,38 @@ internal sealed class ProgressClientSender : IAsyncDisposable
                 // Fixed cadence rather than debounce: continuous progress cannot
                 // postpone a send indefinitely, and hot IDs do not starve others.
                 await Task.Delay(PublishInterval, token).ConfigureAwait(false);
-                if (!IsCurrentProcess()) return;
+                if (!IsCurrentProcess())
+                {
+                    return;
+                }
 
                 int batchSize;
-                lock (_sync) batchSize = _order.Count;
+                lock (_sync)
+                {
+                    batchSize = _order.Count;
+                }
+
                 for (int index = 0; index < batchSize; index++)
                 {
                     DownloadItemDto snapshot;
                     lock (_sync)
                     {
-                        if (_stopping || _order.Count == 0) break;
+                        if (_stopping || _order.Count == 0)
+                        {
+                            break;
+                        }
+
                         string id = _order.Dequeue();
                         snapshot = _pending[id];
                         _pending.Remove(id);
                     }
 
                     token.ThrowIfCancellationRequested();
-                    if (!IsCurrentProcess()) return;
+                    if (!IsCurrentProcess())
+                    {
+                        return;
+                    }
+
                     bool sent;
                     try
                     {
@@ -133,7 +161,11 @@ internal sealed class ProgressClientSender : IAsyncDisposable
 
                     if (!sent)
                     {
-                        if (!IsCurrentProcess()) return;
+                        if (!IsCurrentProcess())
+                        {
+                            return;
+                        }
+
                         lock (_sync)
                         {
                             // Never restore an old in-flight DTO over a newer one.
@@ -143,15 +175,25 @@ internal sealed class ProgressClientSender : IAsyncDisposable
                                 _pending[snapshot.Id] = snapshot;
                                 _order.Enqueue(snapshot.Id);
                             }
-                            if (!_stopping) _wake.Writer.TryWrite(0);
+
+                            if (!_stopping)
+                            {
+                                _wake.Writer.TryWrite(0);
+                            }
                         }
+
                         await Task.Delay(RetryDelay, token).ConfigureAwait(false);
                         break;
                     }
                 }
 
                 lock (_sync)
-                    if (!_stopping && _order.Count > 0) _wake.Writer.TryWrite(0);
+                {
+                    if (!_stopping && _order.Count > 0)
+                    {
+                        _wake.Writer.TryWrite(0);
+                    }
+                }
             }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -184,6 +226,7 @@ internal sealed class ProgressClientSender : IAsyncDisposable
                 completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 _disposeTask = completion.Task;
             }
+
             completionTask = _disposeTask;
         }
 
@@ -206,6 +249,7 @@ internal sealed class ProgressClientSender : IAsyncDisposable
                 completion.TrySetResult();
             }
         }
+
         await completionTask.ConfigureAwait(false);
     }
 }

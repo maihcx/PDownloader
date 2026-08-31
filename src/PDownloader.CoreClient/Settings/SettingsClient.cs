@@ -48,9 +48,12 @@ public sealed class SettingsClient : ISettingsClient
     public async Task<T> GetValueAsync<T>(string key, T defaultValue = default!,
         CancellationToken cancellationToken = default)
     {
-        var result = await CallAsync(SettingsProtocol.Get, key, cancellationToken).ConfigureAwait(false);
+        SettingsValue result = await CallAsync(SettingsProtocol.Get, key, cancellationToken).ConfigureAwait(false);
         if (!result.Found || result.Value.ValueKind == JsonValueKind.Null)
+        {
             return defaultValue;
+        }
+
         try
         {
             return result.Value.Deserialize<T>() ?? defaultValue;
@@ -94,10 +97,13 @@ public sealed class SettingsClient : ISettingsClient
         IpcRequestDefinition<TRequest, TResponse> definition, TRequest request,
         CancellationToken cancellationToken = default)
     {
-        var result = await _connection.RequestAsync(definition, request,
+        IpcRequestResult<TResponse> result = await _connection.RequestAsync(definition, request,
             TimeSpan.FromSeconds(10), cancellationToken).ConfigureAwait(false);
         if (!result.Success || result.Value is null)
+        {
             throw new IOException($"Core settings request '{definition.Name}' failed: {result.Error ?? "empty reply"}");
+        }
+
         return result.Value;
     }
 

@@ -30,6 +30,7 @@ public sealed partial class DownloadManager
                 _disposeTask = owner.Task; // Closes command admission atomically.
                 commands = _commands.ToArray();
             }
+
             completion = _disposeTask;
         }
 
@@ -49,7 +50,11 @@ public sealed partial class DownloadManager
                 }
 
                 DownloadSession[] sessions;
-                lock (_sync) sessions = _sessions.Values.ToArray();
+                lock (_sync)
+                {
+                    sessions = _sessions.Values.ToArray();
+                }
+
                 try
                 {
                     await Task.WhenAll(sessions.Select(session => session.DisposeAsync().AsTask()))
@@ -62,10 +67,12 @@ public sealed partial class DownloadManager
                     _shutdown.Dispose();
                     GC.SuppressFinalize(this);
                 }
+
                 owner.TrySetResult();
             }
             catch (Exception ex) { owner.TrySetException(ex); }
         }
+
         await completion.ConfigureAwait(false);
     }
 }

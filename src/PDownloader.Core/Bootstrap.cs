@@ -95,7 +95,11 @@ public sealed class Bootstrap
 
     private static async Task NotifyShutdownAsync(ConfluxService? endpoint)
     {
-        if (endpoint is null) return;
+        if (endpoint is null)
+        {
+            return;
+        }
+
         try
         {
             await endpoint.SendAsync(AppProtocol.State, AppState.Shutdown, TimeSpan.FromSeconds(2))

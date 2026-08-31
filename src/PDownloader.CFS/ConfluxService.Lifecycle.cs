@@ -45,10 +45,12 @@ public sealed partial class ConfluxService
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (IsTrackedProcessAlive())
+            {
                 return _currProcess!;
+            }
 
             string path = ResolveProcessPath();
-            var process = Process.Start(new ProcessStartInfo
+            Process process = Process.Start(new ProcessStartInfo
             {
                 FileName = path,
                 UseShellExecute = false,
@@ -96,21 +98,29 @@ public sealed partial class ConfluxService
             {
                 // Private sessions must bind to our new child, never adopt an old
                 // Runner that still has the same token during its shutdown window.
-                if (!IsAppStarted()) StartProcess(arguments);
+                if (!IsAppStarted())
+                {
+                    StartProcess(arguments);
+                }
+
                 return await WaitUntilReadyAsync(timeout, deadline.Token).ConfigureAwait(false);
             }
             // Before launching a singleton, only probe an existing listener.
             // Waiting for a missing pipe here would delay Process.Start by the
             // full probe timeout on every cold launch from Tray.
-            var health = await GetHealthCoreAsync(TimeSpan.FromMilliseconds(300),
+            IpcEndpointHealth? health = await GetHealthCoreAsync(TimeSpan.FromMilliseconds(300),
                 deadline.Token, connectImmediately: true)
                 .ConfigureAwait(false);
             if (health is { Ready: true })
+            {
                 return health;
+            }
 
             // A reachable but initializing endpoint must not cause another launch.
             if (health is null && !IsAppStarted())
+            {
                 StartProcess(arguments);
+            }
 
             return await WaitUntilReadyAsync(timeout, deadline.Token).ConfigureAwait(false);
         }
@@ -125,7 +135,10 @@ public sealed partial class ConfluxService
         }
         finally
         {
-            if (entered) _startGate.Release();
+            if (entered)
+            {
+                _startGate.Release();
+            }
         }
     }
 
@@ -143,12 +156,17 @@ public sealed partial class ConfluxService
                 ObjectDisposedException.ThrowIf(_disposed, this);
                 deadline.Token.ThrowIfCancellationRequested();
                 if (TrackedSessionExited())
+                {
                     throw new IOException("The tracked Runner exited before becoming ready.");
+                }
 
-                var health = await GetHealthAsync(TimeSpan.FromMilliseconds(500), deadline.Token)
+                IpcEndpointHealth? health = await GetHealthAsync(TimeSpan.FromMilliseconds(500), deadline.Token)
                     .ConfigureAwait(false);
                 if (health is { Ready: true })
+                {
                     return health;
+                }
+
                 await Task.Delay(100, deadline.Token).ConfigureAwait(false);
             }
         }
@@ -171,7 +189,7 @@ public sealed partial class ConfluxService
         TimeSpan? timeout, CancellationToken cancellationToken, bool connectImmediately)
     {
         // Health must not queue behind application sends or command execution.
-        var result = await RequestCoreAsync(IpcHealthProtocol.Get, new IpcNoPayload(),
+        IpcRequestResult<IpcEndpointHealth> result = await RequestCoreAsync(IpcHealthProtocol.Get, new IpcNoPayload(),
             timeout ?? TimeSpan.FromMilliseconds(500), cancellationToken,
             serialize: false, connectImmediately: connectImmediately)
             .ConfigureAwait(false);
@@ -180,7 +198,10 @@ public sealed partial class ConfluxService
             || health.Endpoint != SendPipeName
             || !string.Equals(Path.GetFullPath(health.ExecutablePath), ResolveProcessPath(),
                 StringComparison.OrdinalIgnoreCase))
+        {
             return null;
+        }
+
         return health;
     }
 
@@ -191,14 +212,19 @@ public sealed partial class ConfluxService
     /// <summary>Only the tracked handle, never a process-name lookup or readiness check.</summary>
     public bool IsAppStarted()
     {
-        lock (_processSync) return IsTrackedProcessAlive();
+        lock (_processSync)
+        {
+            return IsTrackedProcessAlive();
+        }
     }
 
     public Process GetProcess()
     {
         lock (_processSync)
+        {
             return IsTrackedProcessAlive() ? _currProcess!
                 : throw new InvalidOperationException("No live process is tracked by this endpoint.");
+        }
     }
 
     /// <summary>Only for a failed child startup; never kills by name or an adopted process.</summary>
@@ -206,7 +232,11 @@ public sealed partial class ConfluxService
     {
         lock (_processSync)
         {
-            if (!CanMultiple || !_hasLaunched || !IsTrackedProcessAlive()) return;
+            if (!CanMultiple || !_hasLaunched || !IsTrackedProcessAlive())
+            {
+                return;
+            }
+
             try { _currProcess!.Kill(); }
             catch (Exception ex) { Debug.WriteLine($"[CFS] Child cleanup failed: {ex.Message}"); }
         }
@@ -220,7 +250,10 @@ public sealed partial class ConfluxService
 
     private bool TrackedSessionExited()
     {
-        lock (_processSync) return CanMultiple && _hasLaunched && !IsTrackedProcessAlive();
+        lock (_processSync)
+        {
+            return CanMultiple && _hasLaunched && !IsTrackedProcessAlive();
+        }
     }
 
     private string ResolveProcessPath() => Path.GetFullPath(
@@ -229,12 +262,17 @@ public sealed partial class ConfluxService
 
     private void ReplaceCurrentProcess(Process? process)
     {
-        if (ReferenceEquals(_currProcess, process)) return;
+        if (ReferenceEquals(_currProcess, process))
+        {
+            return;
+        }
+
         if (_currProcess is not null)
         {
             _currProcess.Exited -= OnTargetExited;
             _currProcess.Dispose();
         }
+
         _currProcess = process;
         if (process is not null)
         {
@@ -249,12 +287,16 @@ public sealed partial class ConfluxService
         lock (_processSync)
         {
             if (_disposed || sender is not Process process
-                || !ReferenceEquals(process, _currProcess)) return;
+                || !ReferenceEquals(process, _currProcess))
+            {
+                return;
+            }
+
             id = process.Id;
         }
         // EnableRaisingEvents may raise Exited synchronously inside StartProcess.
         // Do not call application lifecycle code while that outer process lock is held.
-        var handlers = TargetExited;
+        Action<int>? handlers = TargetExited;
         _ = Task.Run(() =>
         {
             try { handlers?.Invoke(id); }
@@ -265,7 +307,10 @@ public sealed partial class ConfluxService
     private void ValidateServerProcess(NamedPipeClientStream pipe)
     {
         if (!NativeMethods.GetNamedPipeServerProcessId(pipe.SafePipeHandle, out uint rawPid))
+        {
             throw new Win32Exception(Marshal.GetLastWin32Error());
+        }
+
         int pid = checked((int)rawPid);
         lock (_processSync)
         {
@@ -273,10 +318,17 @@ public sealed partial class ConfluxService
             if (CanMultiple && _hasLaunched)
             {
                 if (!IsTrackedProcessAlive() || _currProcess!.Id != pid)
+                {
                     throw new IOException("Pipe does not belong to the tracked Runner.");
+                }
+
                 return;
             }
-            if (IsTrackedProcessAlive() && _currProcess!.Id == pid) return;
+
+            if (IsTrackedProcessAlive() && _currProcess!.Id == pid)
+            {
+                return;
+            }
 
             Process process = Process.GetProcessById(pid);
             try
@@ -284,15 +336,21 @@ public sealed partial class ConfluxService
                 string? actualPath = process.MainModule?.FileName;
                 if (actualPath is null || !string.Equals(Path.GetFullPath(actualPath),
                         ResolveProcessPath(), StringComparison.OrdinalIgnoreCase))
+                {
                     throw new IOException("Pipe belongs to a different application installation.");
+                }
+
                 ReplaceCurrentProcess(process);
             }
             catch
             {
-                if (!ReferenceEquals(_currProcess, process)) process.Dispose();
+                if (!ReferenceEquals(_currProcess, process))
+                {
+                    process.Dispose();
+                }
+
                 throw;
             }
         }
     }
-
 }

@@ -19,11 +19,19 @@ public sealed partial class DownloadManager
 {
     private async Task PauseCoreAsync(DownloadSession session)
     {
-        if (session.IsRemoved || _shutdown.IsCancellationRequested) return;
+        if (session.IsRemoved || _shutdown.IsCancellationRequested)
+        {
+            return;
+        }
+
         DownloadItem item = session.Item;
         bool canPause = item.CanPause || item.Status is DownloadStatus.Queued
             or DownloadStatus.Connecting or DownloadStatus.Retrying;
-        if (!canPause || session.Work.IsCompleted) return;
+        if (!canPause || session.Work.IsCompleted)
+        {
+            return;
+        }
+
         await session.CancelWorkAsync().ConfigureAwait(false);
         // RunTransferAsync normalizes the state after the engine has unwound.
     }
@@ -32,22 +40,40 @@ public sealed partial class DownloadManager
         bool retry, bool showRunner)
     {
         if (session.IsRemoved || _shutdown.IsCancellationRequested
-            || session.Generation != expectedGeneration) return;
+            || session.Generation != expectedGeneration)
+        {
+            return;
+        }
+
         DownloadItem item = session.Item;
-        if (retry ? item.Status != DownloadStatus.Error : !item.CanResume) return;
+        if (retry ? item.Status != DownloadStatus.Error : !item.CanResume)
+        {
+            return;
+        }
 
         // Error/Paused may be published just before the old worker completes.
         await session.Work.ConfigureAwait(false);
         if (session.IsRemoved || _shutdown.IsCancellationRequested
-            || session.Generation != expectedGeneration) return;
-        if (retry ? item.Status != DownloadStatus.Error : !item.CanResume) return;
+            || session.Generation != expectedGeneration)
+        {
+            return;
+        }
+
+        if (retry ? item.Status != DownloadStatus.Error : !item.CanResume)
+        {
+            return;
+        }
 
         if (retry)
         {
             bool pendingMerge = HasPendingMerge(item);
             item.MergeProgress = 0;
             item.IsMergeProgressActive = pendingMerge;
-            if (!pendingMerge) item.DownloadedBytes = 0;
+            if (!pendingMerge)
+            {
+                item.DownloadedBytes = 0;
+            }
+
             item.Md5Hash = item.Sha1Hash = item.Sha256Hash = string.Empty;
         }
 
@@ -67,7 +93,11 @@ public sealed partial class DownloadManager
 
     private async Task CancelCoreAsync(DownloadSession session)
     {
-        if (session.IsRemoved) return;
+        if (session.IsRemoved)
+        {
+            return;
+        }
+
         session.MarkRemoved(); // Suppress progress from the old worker immediately.
         try
         {
@@ -79,6 +109,7 @@ public sealed partial class DownloadManager
                 // faults. Cleanup must still retire the item after that join.
                 Debug.WriteLine($"[DownloadManager] Cancellation cleanup: {ex.Message}");
             }
+
             session.Item.Status = DownloadStatus.Cancelled;
             session.Item.SpeedBps = 0;
             Notify(session.Item);
@@ -91,9 +122,11 @@ public sealed partial class DownloadManager
             {
                 lock (_sync)
                 {
-                    if (_sessions.TryGetValue(session.Item.Id, out var current)
+                    if (_sessions.TryGetValue(session.Item.Id, out DownloadSession? current)
                         && ReferenceEquals(current, session))
+                    {
                         _sessions.Remove(session.Item.Id);
+                    }
                 }
             }
         }
@@ -101,7 +134,11 @@ public sealed partial class DownloadManager
 
     private void StartWork(DownloadSession session, bool hashOnly)
     {
-        if (session.IsRemoved || _shutdown.IsCancellationRequested || !session.Work.IsCompleted) return;
+        if (session.IsRemoved || _shutdown.IsCancellationRequested || !session.Work.IsCompleted)
+        {
+            return;
+        }
+
         CancellationToken token = session.BeginWork(_shutdown.Token);
         long generation = session.Generation;
         if (!hashOnly)
@@ -124,7 +161,10 @@ public sealed partial class DownloadManager
         var progress = new InlineProgress<DownloadProgress>(_ =>
         {
             if (!token.IsCancellationRequested && !session.IsRemoved
-                && session.Generation == generation) Notify(item);
+                && session.Generation == generation)
+            {
+                Notify(item);
+            }
         });
         try
         {
@@ -137,7 +177,11 @@ public sealed partial class DownloadManager
                 try
                 {
                     await engine.RunAsync().ConfigureAwait(false);
-                    if (item.Status != DownloadStatus.Completed) token.ThrowIfCancellationRequested();
+                    if (item.Status != DownloadStatus.Completed)
+                    {
+                        token.ThrowIfCancellationRequested();
+                    }
+
                     break;
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
@@ -150,6 +194,7 @@ public sealed partial class DownloadManager
                         item.ErrorMessage = ex.Message;
                         break;
                     }
+
                     item.Status = DownloadStatus.Retrying;
                     item.ErrorMessage = $"An error occurred! Retrying ({attempt + 1}/{maxAutoRetries})... Please wait...";
                     Notify(item);
@@ -160,13 +205,19 @@ public sealed partial class DownloadManager
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
             // A late Pause must not downgrade a file already committed successfully.
-            if (item.Status != DownloadStatus.Completed) item.Status = DownloadStatus.Paused;
+            if (item.Status != DownloadStatus.Completed)
+            {
+                item.Status = DownloadStatus.Paused;
+            }
         }
         catch (Exception ex)
         {
             if (token.IsCancellationRequested)
             {
-                if (item.Status != DownloadStatus.Completed) item.Status = DownloadStatus.Paused;
+                if (item.Status != DownloadStatus.Completed)
+                {
+                    item.Status = DownloadStatus.Paused;
+                }
             }
             else
             {
@@ -177,11 +228,16 @@ public sealed partial class DownloadManager
         finally
         {
             item.SpeedBps = 0;
-            if (!session.IsRemoved) Notify(item);
+            if (!session.IsRemoved)
+            {
+                Notify(item);
+            }
         }
 
         if (!session.IsRemoved && !token.IsCancellationRequested && item.Status == DownloadStatus.Completed)
+        {
             await CalculateFileHashesAsync(session, token).ConfigureAwait(false);
+        }
     }
 
     private async Task CalculateFileHashesAsync(DownloadSession session, CancellationToken token)
@@ -189,7 +245,10 @@ public sealed partial class DownloadManager
         DownloadItem item = session.Item;
         string filePath = item.SavePath;
         if (session.IsRemoved || item.Status != DownloadStatus.Completed || item.HasFileHashes
-            || string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) return;
+            || string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        {
+            return;
+        }
 
         bool entered = false;
         try
@@ -198,7 +257,11 @@ public sealed partial class DownloadManager
             entered = true;
             FileHashResult hashes = await FileHashCalculator.ComputeAsync(filePath, token).ConfigureAwait(false);
             if (token.IsCancellationRequested || session.IsRemoved || item.Status != DownloadStatus.Completed
-                || !string.Equals(item.SavePath, filePath, StringComparison.OrdinalIgnoreCase)) return;
+                || !string.Equals(item.SavePath, filePath, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
             item.Md5Hash = hashes.Md5;
             item.Sha1Hash = hashes.Sha1;
             item.Sha256Hash = hashes.Sha256;
@@ -211,7 +274,10 @@ public sealed partial class DownloadManager
         }
         finally
         {
-            if (entered) _hashSemaphore.Release();
+            if (entered)
+            {
+                _hashSemaphore.Release();
+            }
         }
     }
 
