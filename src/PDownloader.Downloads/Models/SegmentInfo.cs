@@ -38,4 +38,34 @@ public class SegmentInfo
     public int RetryAttempt { get; set; }
 
     public long Length => RangeEnd - RangeStart + 1;
+
+    // Only this committed pair is persisted; live progress may be ahead of it.
+    private readonly object _checkpointLock = new();
+    private long _committedBytes;
+    private bool _committedCompletion;
+
+    internal void CommitCheckpoint(long bytesWritten, bool isCompleted)
+    {
+        lock (_checkpointLock)
+        {
+            _committedBytes = bytesWritten;
+            _committedCompletion = isCompleted;
+        }
+    }
+
+    internal SegmentInfo CaptureCheckpoint()
+    {
+        lock (_checkpointLock)
+        {
+            return new SegmentInfo
+            {
+                Index = Index,
+                RangeStart = RangeStart,
+                RangeEnd = RangeEnd,
+                TempFilePath = TempFilePath,
+                BytesWritten = _committedBytes,
+                IsCompleted = _committedCompletion
+            };
+        }
+    }
 }

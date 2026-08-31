@@ -69,7 +69,8 @@ public sealed partial class ConfluxService
             _dispatchQueue = Channel.CreateBounded<Func<CancellationToken, Task>>(
                 new BoundedChannelOptions(128)
                 {
-                    SingleReader = true, FullMode = BoundedChannelFullMode.Wait,
+                    SingleReader = true,
+                    FullMode = BoundedChannelFullMode.Wait,
                     AllowSynchronousContinuations = false
                 });
             CancellationToken token = _cts.Token;

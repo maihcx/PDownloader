@@ -13,196 +13,181 @@
 //
 // Copyright (C) Song Mai Software.
 
+using PDownloader.Infrastructure.Persistence;
+
 namespace PDownloader.Downloads.Segments;
 
 internal sealed class SegmentStateStore
 {
     private const string StateFileName = "segments.pdstate";
+    private readonly object _writeLock = new();
 
-    public List<SegmentInfo> BuildOrRestore(
-        string tempDirectory,
-        long totalBytes,
-        int threadCount)
+    public List<SegmentInfo> BuildOrRestore(string tempDirectory, long totalBytes, int threadCount)
     {
         Directory.CreateDirectory(tempDirectory);
-
-        List<SegmentInfo>? restored = TryRestore(tempDirectory, totalBytes, threadCount);
-        if (restored != null)
+        List<SegmentInfo> expected = BuildNew(tempDirectory, totalBytes, threadCount);
+        List<SegmentInfo>? restored = TryRestore(tempDirectory, expected);
+        if (restored is not null)
         {
             return restored;
         }
 
         Reset(tempDirectory);
-        return BuildNew(tempDirectory, totalBytes, threadCount);
+        return expected;
     }
 
-    public void Persist(string tempDirectory, IReadOnlyCollection<SegmentInfo> segments)
+    public void Persist(string tempDirectory, IReadOnlyCollection<SegmentInfo> segments,
+        bool keepBackup = true)
     {
-        try
+        lock (_writeLock)
         {
-            string stateFile = GetStateFilePath(tempDirectory);
-            File.WriteAllText(stateFile, JsonSerializer.Serialize(segments));
+            string path = GetStateFilePath(tempDirectory);
+            // A destructive restart must invalidate the old backup before truncating
+            // any part. Later checkpoints may safely rotate the reset primary.
+            if (!keepBackup)
+            {
+                File.Delete(AtomicFile.GetBackupPath(path));
+            }
+
+            SegmentInfo[] snapshot = segments.Select(segment => segment.CaptureCheckpoint()).ToArray();
+            AtomicFile.WriteJson(path, snapshot, keepBackup: keepBackup);
         }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Segments] Unable to save state: {ex.Message}");
-        }
+        // A final/initial commit failure is observable; the monitor logs and retries
+        // periodic failures. No caller may assume failed persistence succeeded.
     }
 
     public void Reset(string tempDirectory)
     {
-        try
+        lock (_writeLock)
         {
             if (!Directory.Exists(tempDirectory))
             {
                 return;
             }
 
-            foreach (string path in Directory.EnumerateFiles(tempDirectory, "seg_*.part"))
+            string path = GetStateFilePath(tempDirectory);
+            // Remove recovery metadata first, then its data. Never reuse a backup
+            // belonging to a previous layout after a range fallback or reset.
+            File.Delete(AtomicFile.GetBackupPath(path));
+            File.Delete(path);
+            foreach (string part in Directory.EnumerateFiles(tempDirectory, "seg_*.part"))
             {
-                try { File.Delete(path); } catch { }
+                File.Delete(part);
             }
-
-            string stateFile = GetStateFilePath(tempDirectory);
-            if (File.Exists(stateFile))
-            {
-                File.Delete(stateFile);
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Segments] Unable to reset status: {ex.Message}");
         }
     }
 
-    private List<SegmentInfo>? TryRestore(
-        string tempDirectory,
-        long totalBytes,
-        int threadCount)
+    private static List<SegmentInfo>? TryRestore(string tempDirectory,
+        IReadOnlyList<SegmentInfo> expected)
     {
-        string stateFile = GetStateFilePath(tempDirectory);
-        if (!File.Exists(stateFile))
-        {
-            return null;
-        }
-
+        List<SegmentInfo> saved;
         try
         {
-            List<SegmentInfo>? saved = JsonSerializer.Deserialize<List<SegmentInfo>>(
-                File.ReadAllText(stateFile));
-
-            if (saved == null || saved.Count != threadCount)
+            string? json = AtomicFile.ReadAllText(GetStateFilePath(tempDirectory),
+                value => { ParseAndValidate(value, expected); }, out bool recovered);
+            if (json is null)
             {
                 return null;
             }
 
-            if (!RangesMatch(saved, totalBytes, threadCount))
-            {
-                return null;
-            }
-
-            foreach (SegmentInfo segment in saved)
-            {
-                long actualLength = File.Exists(segment.TempFilePath)
-                    ? new FileInfo(segment.TempFilePath).Length
-                    : 0;
-
-                if (actualLength != segment.BytesWritten)
-                {
-                    Debug.WriteLine(
-                        $"[Segments] Segment {segment.Index}: state={segment.BytesWritten}B, " +
-                        $"actual={actualLength}B. Synchronize by file.");
-                    segment.BytesWritten = actualLength;
-                }
-
-                long expectedLength = segment.RangeEnd >= 0
-                    ? segment.RangeEnd - segment.RangeStart + 1
-                    : -1;
-
-                if (expectedLength > 0)
-                {
-                    if (actualLength > expectedLength)
-                    {
-                        return null;
-                    }
-
-                    segment.IsCompleted = actualLength == expectedLength;
-                }
-                else if (actualLength == 0)
-                {
-                    segment.IsCompleted = false;
-                }
-
-                segment.TransferState = segment.IsCompleted
-                    ? DownloadThreadState.Completed
-                    : DownloadThreadState.Waiting;
-                segment.RetryAttempt = 0;
-            }
-
-            return saved;
+            saved = ParseAndValidate(json, expected);
+            Debug.WriteLine($"[Segments] Restored checkpoint; backup={recovered}.");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is JsonException or InvalidDataException)
         {
-            Debug.WriteLine($"[Segments] Unable to restore state: {ex.Message}");
+            Debug.WriteLine($"[Segments] Invalid checkpoint; restarting segments: {ex.Message}");
             return null;
         }
-    }
-
-    private static bool RangesMatch(
-        IReadOnlyList<SegmentInfo> segments,
-        long totalBytes,
-        int threadCount)
-    {
-        List<SegmentInfo> expected = BuildNew(
-            Path.GetDirectoryName(segments[0].TempFilePath) ?? string.Empty,
-            totalBytes,
-            threadCount);
-
-        return segments.Count == expected.Count
-            && segments.Zip(expected).All(pair =>
-                pair.First.Index == pair.Second.Index
-                && pair.First.RangeStart == pair.Second.RangeStart
-                && pair.First.RangeEnd == pair.Second.RangeEnd
-                && Path.GetFullPath(pair.First.TempFilePath).Equals(
-                    Path.GetFullPath(pair.Second.TempFilePath),
-                    StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static List<SegmentInfo> BuildNew(
-        string tempDirectory,
-        long totalBytes,
-        int threadCount)
-    {
-        threadCount = Math.Max(1, threadCount);
-        var segments = new List<SegmentInfo>(threadCount);
-
-        if (threadCount == 1 || totalBytes <= 0)
+        // Sharing/access/I/O errors propagate without deleting recoverable files.
+        foreach (SegmentInfo segment in saved)
         {
-            segments.Add(new SegmentInfo
-            {
-                Index = 0,
-                RangeStart = 0,
-                RangeEnd = totalBytes > 0 ? totalBytes - 1 : -1,
-                TempFilePath = Path.Combine(tempDirectory, "seg_0.part"),
-            });
+            long actualLength;
+            bool exists = true;
+            try { actualLength = new FileInfo(segment.TempFilePath).Length; }
+            catch (FileNotFoundException) { actualLength = 0; exists = false; }
+            catch (DirectoryNotFoundException) { actualLength = 0; exists = false; }
 
-            return segments;
+            long committedLength = Math.Min(actualLength, segment.BytesWritten);
+            bool completed = exists && segment.IsCompleted && actualLength >= segment.BytesWritten;
+            if (segment.RangeEnd >= 0)
+            {
+                completed = committedLength == segment.Length;
+            }
+
+            if (actualLength > committedLength)
+            {
+                // Discard bytes written after the last durable checkpoint. File
+                // length alone must never promote an uncommitted tail to progress.
+                using var part = new FileStream(segment.TempFilePath, FileMode.Open,
+                    FileAccess.Write, FileShare.None);
+                part.SetLength(committedLength);
+                part.Flush(flushToDisk: true);
+            }
+
+            segment.BytesWritten = committedLength;
+            segment.IsCompleted = completed;
+            segment.CommitCheckpoint(committedLength, completed);
+            segment.TransferState = completed ? DownloadThreadState.Completed : DownloadThreadState.Waiting;
+            segment.RetryAttempt = 0;
         }
 
-        long chunkSize = totalBytes / threadCount;
+        return saved;
+    }
+
+    private static List<SegmentInfo> ParseAndValidate(string json,
+        IReadOnlyList<SegmentInfo> expected)
+    {
+        List<SegmentInfo> saved = JsonSerializer.Deserialize<List<SegmentInfo>>(json)
+            ?? throw new InvalidDataException("Segment state must contain an array.");
+        if (saved.Count != expected.Count)
+        {
+            throw new InvalidDataException("Segment layout changed.");
+        }
+
+        for (int index = 0; index < saved.Count; index++)
+        {
+            SegmentInfo segment = saved[index];
+            SegmentInfo range = expected[index];
+            if (segment is null || segment.Index != range.Index
+                || segment.RangeStart != range.RangeStart || segment.RangeEnd != range.RangeEnd
+                || segment.BytesWritten < 0
+                || (range.RangeEnd >= 0 && segment.BytesWritten > range.Length)
+                || string.IsNullOrWhiteSpace(segment.TempFilePath))
+            {
+                throw new InvalidDataException("Invalid segment range or checkpoint.");
+            }
+
+            try
+            {
+                if (!Path.GetFullPath(segment.TempFilePath).Equals(
+                    Path.GetFullPath(range.TempFilePath), StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidDataException("Segment path does not belong to this download.");
+                }
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            { throw new InvalidDataException("Invalid segment path.", ex); }
+        }
+
+        return saved;
+    }
+
+    private static List<SegmentInfo> BuildNew(string tempDirectory, long totalBytes, int threadCount)
+    {
+        threadCount = totalBytes > 0 ? (int)Math.Min(Math.Max(1, threadCount), totalBytes) : 1;
+        var segments = new List<SegmentInfo>(threadCount);
+        long chunkSize = totalBytes > 0 ? totalBytes / threadCount : 0;
         for (int index = 0; index < threadCount; index++)
         {
             long start = index * chunkSize;
-            long end = index == threadCount - 1
-                ? totalBytes - 1
-                : start + chunkSize - 1;
-
+            long end = totalBytes <= 0 ? -1 : index == threadCount - 1
+                ? totalBytes - 1 : start + chunkSize - 1;
             segments.Add(new SegmentInfo
             {
                 Index = index,
                 RangeStart = start,
                 RangeEnd = end,
-                TempFilePath = Path.Combine(tempDirectory, $"seg_{index}.part"),
+                TempFilePath = Path.Combine(tempDirectory, $"seg_{index}.part")
             });
         }
 

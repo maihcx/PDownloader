@@ -13,8 +13,8 @@
 //
 // Copyright (C) Song Mai Software.
 
-using System.Security.Cryptography;
 using PDownloader.Core.Services.DownloadServices;
+using System.Security.Cryptography;
 
 namespace PDownloader.Core.Service;
 

@@ -17,7 +17,6 @@ using PDownloader.Contracts.Ipc;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.IO;
 using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
@@ -273,7 +272,9 @@ public sealed partial class ConfluxService : IDisposable, IAsyncDisposable
             {
                 await WriteResponseAsync(server, new IpcResponseEnvelope
                 {
-                    Type = envelope.Type, RequestId = envelope.RequestId, Success = false,
+                    Type = envelope.Type,
+                    RequestId = envelope.RequestId,
+                    Success = false,
                     Payload = JsonSerializer.SerializeToElement(new IpcNoPayload(), SerializerOptions),
                     Error = "Endpoint is not ready."
                 }, token).ConfigureAwait(false);
@@ -282,7 +283,9 @@ public sealed partial class ConfluxService : IDisposable, IAsyncDisposable
             {
                 await WriteAcknowledgementAsync(server, new IpcAcknowledgement
                 {
-                    RequestId = envelope.RequestId, Success = false, Error = "Endpoint is not ready."
+                    RequestId = envelope.RequestId,
+                    Success = false,
+                    Error = "Endpoint is not ready."
                 }, token).ConfigureAwait(false);
             }
 
@@ -313,7 +316,8 @@ public sealed partial class ConfluxService : IDisposable, IAsyncDisposable
         {
             await WriteAcknowledgementAsync(server, new IpcAcknowledgement
             {
-                RequestId = envelope.RequestId, Success = false,
+                RequestId = envelope.RequestId,
+                Success = false,
                 Error = $"No IPC message handler is registered for '{envelope.Type}'."
             }, token).ConfigureAwait(false);
             return;
@@ -333,7 +337,8 @@ public sealed partial class ConfluxService : IDisposable, IAsyncDisposable
         {
             await WriteAcknowledgementAsync(server, new IpcAcknowledgement
             {
-                RequestId = envelope.RequestId, Success = true
+                RequestId = envelope.RequestId,
+                Success = true
             }, token).ConfigureAwait(false);
             accepted.TrySetResult(true);
         }

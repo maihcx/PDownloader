@@ -30,11 +30,12 @@ public partial class ReportPopup : Window
     public ReportAction SelectedAction { get; private set; }
         = ReportAction.None;
 
-    private bool _closed { 
-        get 
+    private bool _closed
+    {
+        get
         {
             return SelectedAction != ReportAction.None;
-        } 
+        }
     }
 
     public ReportPopup()
