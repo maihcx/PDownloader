@@ -23,8 +23,6 @@ public class DownloadManager : IDisposable
     private readonly FfmpegMuxer _ffmpegMuxer;
     private readonly List<DownloadItem> _downloads = new();
     private readonly object _lock = new();
-    private const int MaxConcurrent = 3;
-    private readonly SemaphoreSlim _sem = new(MaxConcurrent, MaxConcurrent);
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _ctsByItem = new();
     private bool _disposed;
 
@@ -96,8 +94,7 @@ public class DownloadManager : IDisposable
             return;
         }
 
-        await _sem.WaitAsync();
-
+        // Files start independently; only per-file connection settings apply.
         item.Status = DownloadStatus.Connecting;
         OnItemChanged?.Invoke(item);
 
@@ -180,7 +177,6 @@ public class DownloadManager : IDisposable
         }
         finally
         {
-            _sem.Release();
             _ctsByItem.TryRemove(item.Id, out _);
             _runningTaskByItem.TryRemove(item.Id, out _);
         }
@@ -562,7 +558,6 @@ public class DownloadManager : IDisposable
 
         if (disposing)
         {
-            _sem.Dispose();
             _hashSemaphore.Dispose();
         }
 

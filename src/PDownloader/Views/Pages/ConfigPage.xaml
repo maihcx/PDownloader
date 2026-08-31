@@ -301,30 +301,6 @@
                     </StackPanel>
                 </ui:CardExpander>
 
-                <!-- Concurrent downloads -->
-                <!--<ui:CardExpander Icon="{ui:SymbolIcon DocumentMultiple24}"
-                                 Margin="0,0,0,8" IsExpanded="True">
-                    <ui:CardExpander.Header>
-                        <StackPanel>
-                            <ui:TextBlock FontTypography="Body"
-                                         Text="{utils:Localization page_config_concurrent_title}"
-                                         FontWeight="SemiBold" TextWrapping="Wrap"/>
-                            <ui:TextBlock Text="{utils:Localization page_config_concurrent_summary}"
-                                       Opacity="0.6" FontSize="12"/>
-                        </StackPanel>
-                    </ui:CardExpander.Header>
-                    <StackPanel Orientation="Horizontal">
-                        <Slider Minimum="1" Maximum="10"
-                                Value="{Binding ViewModel.MaxConcurrentDownloads}"
-                                Width="200" VerticalAlignment="Center"/>
-                        <ui:TextBlock Text="{Binding ViewModel.MaxConcurrentDownloads}"
-                                   VerticalAlignment="Center" Margin="12,0,6,0"
-                                   FontSize="15" FontWeight="SemiBold"/>
-                        <ui:TextBlock Text="{utils:Localization page_config_concurrent_unit}"
-                                   VerticalAlignment="Center" Opacity="0.6" FontSize="12"/>
-                    </StackPanel>
-                </ui:CardExpander>-->
-
             </StackPanel>
         </ScrollViewer>
 
