@@ -23,17 +23,20 @@ public sealed class Bootstrap
     private readonly DownloadManagerBootstrap _downloadManagerBootstrap;
     private readonly CoreIpcHost _ipcHost;
     private readonly CoreIpcBindings _ipcBindings;
+    private readonly DownloadProgressPublisher _progressPublisher;
 
     public Bootstrap(
         RunnerSessionManager runnerSessions,
         DownloadManagerBootstrap downloadManagerBootstrap,
         CoreIpcHost ipcHost,
-        CoreIpcBindings ipcBindings)
+        CoreIpcBindings ipcBindings,
+        DownloadProgressPublisher progressPublisher)
     {
         _runnerSessions = runnerSessions;
         _downloadManagerBootstrap = downloadManagerBootstrap;
         _ipcHost = ipcHost;
         _ipcBindings = ipcBindings;
+        _progressPublisher = progressPublisher;
     }
 
     public async Task OnStartedAsync(CancellationToken cancellationToken)
@@ -66,6 +69,10 @@ public sealed class Bootstrap
 
     public async Task OnStoppedAsync()
     {
+        // Stop accepting progress, cancel in-flight sends, and await every sender
+        // before the endpoints they borrow are torn down. Do not flush UI queues
+        // to a closed window; persistent download state has a separate lifecycle.
+        await _progressPublisher.DisposeAsync().ConfigureAwait(false);
         await _runnerSessions.ShutdownAllAsync().ConfigureAwait(false);
         await _ipcHost.StopAsync().ConfigureAwait(false);
     }

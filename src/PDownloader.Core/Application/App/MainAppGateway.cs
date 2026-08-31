@@ -22,14 +22,16 @@ namespace PDownloader.Core.Application.App;
 public sealed class MainAppGateway
 {
     private readonly CoreIpcHost _ipcHost;
+    private readonly DownloadProgressPublisher _progress;
     private readonly object _pendingSync = new();
     private readonly Queue<Func<ConfluxService, Task<bool>>> _pending = new();
     private int _flushActive;
     private int _flushRequested;
 
-    public MainAppGateway(CoreIpcHost ipcHost)
+    public MainAppGateway(CoreIpcHost ipcHost, DownloadProgressPublisher progress)
     {
         _ipcHost = ipcHost;
+        _progress = progress;
     }
 
     public void Forward<TPayload>(
@@ -93,6 +95,10 @@ public sealed class MainAppGateway
             }
 
             if (!await main.IsReadyAsync().ConfigureAwait(false)) return;
+
+            // Attach only after health adopted the exact ready Main process.
+            // Repeated activation does not create another progress sender.
+            _progress.AttachMain(main);
 
             while (true)
             {
