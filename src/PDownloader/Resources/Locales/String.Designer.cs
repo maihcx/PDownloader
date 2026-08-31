@@ -601,33 +601,6 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to page_config_concurrent_summary.
-        /// </summary>
-        internal static string page_config_concurrent_summary {
-            get {
-                return ResourceManager.GetString("page_config_concurrent_summary", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to page_config_concurrent_title.
-        /// </summary>
-        internal static string page_config_concurrent_title {
-            get {
-                return ResourceManager.GetString("page_config_concurrent_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to page_config_concurrent_unit.
-        /// </summary>
-        internal static string page_config_concurrent_unit {
-            get {
-                return ResourceManager.GetString("page_config_concurrent_unit", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to page_config_folder_browse.
         /// </summary>
         internal static string page_config_folder_browse {

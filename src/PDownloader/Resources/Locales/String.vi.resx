@@ -306,15 +306,6 @@
   <data name="page_config_threads_unit" xml:space="preserve">
     <value>luồng</value>
   </data>
-  <data name="page_config_concurrent_title" xml:space="preserve">
-    <value>Số tải đồng thời tối đa</value>
-  </data>
-  <data name="page_config_concurrent_summary" xml:space="preserve">
-    <value>Bao nhiêu file có thể tải cùng lúc</value>
-  </data>
-  <data name="page_config_concurrent_unit" xml:space="preserve">
-    <value>file</value>
-  </data>
   <data name="page_config_open_runner" xml:space="preserve">
     <value>Mở cửa sổ tải xuống</value>
   </data>

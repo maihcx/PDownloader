@@ -306,15 +306,6 @@
   <data name="page_config_threads_unit" xml:space="preserve">
     <value>threads</value>
   </data>
-  <data name="page_config_concurrent_title" xml:space="preserve">
-    <value>Max concurrent downloads</value>
-  </data>
-  <data name="page_config_concurrent_summary" xml:space="preserve">
-    <value>How many files can download simultaneously</value>
-  </data>
-  <data name="page_config_concurrent_unit" xml:space="preserve">
-    <value>files</value>
-  </data>
   <data name="page_config_open_runner" xml:space="preserve">
     <value>Open download window</value>
   </data>
