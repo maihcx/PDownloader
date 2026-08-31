@@ -49,9 +49,9 @@ public class DownloadConfigService
                 configs!.ApplyContract(loaded);
             }
         }
-        catch
+        catch (JsonException)
         {
-            // Keep defaults when an old or malformed settings payload cannot be read.
+            // Malformed download DTOs can use defaults; an IPC/storage failure must surface.
         }
     }
 

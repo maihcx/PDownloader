@@ -30,6 +30,16 @@ public static class IpcTopology
     public const string TrayToCorePipeName = "PDownloader.TrayToCore";
     public const string CoreToTrayPipeName = "PDownloader.CoreToTray";
 
+    // Both Core and its clients derive endpoints from this shared contract.
+    // OS identity lookup belongs to the transport layer, not this portable assembly.
+    public const string SettingsPipePrefix = "PDownloader.Settings-";
+
+    public static string SettingsPipeName(string userId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        return SettingsPipePrefix + userId;
+    }
+
     public static string RunnerToCorePipeName(string token) =>
         $"PDownloader.RunnerToCore-{token}";
 

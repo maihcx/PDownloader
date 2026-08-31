@@ -44,8 +44,9 @@ public partial class App : Application
         RenderOptions.ProcessRenderMode = RenderMode.Default;
     }
 
-    private void OnStartup(object sender, StartupEventArgs e)
+    private async void OnStartup(object sender, StartupEventArgs e)
     {
+        await UserDataStore.InitializeAsync();
         TranslationSource.Instance.CurrentCulture = LanguageBase.GetSetupLanguage();
 
         MainWindow mainWindow = new MainWindow();

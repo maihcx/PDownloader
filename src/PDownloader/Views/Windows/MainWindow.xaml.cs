@@ -80,12 +80,15 @@ public sealed partial class MainWindow : IWindow
 
     private void SaveWindow()
     {
-        UserDataStore.SetValue("IsWindow_Maximized", this.WindowState == WindowState.Maximized);
-        UserDataStore.SetValue("Window_Top", this.Top);
-        UserDataStore.SetValue("Window_Left", this.Left);
-        UserDataStore.SetValue("Window_Width", this.Width);
-        UserDataStore.SetValue("Window_Height", this.Height);
-        UserDataStore.SetValue("StartUpCode", "xv2");
+        UserDataStore.SetValues(new Dictionary<string, object?>
+        {
+            ["IsWindow_Maximized"] = this.WindowState == WindowState.Maximized,
+            ["Window_Top"] = this.Top,
+            ["Window_Left"] = this.Left,
+            ["Window_Width"] = this.Width,
+            ["Window_Height"] = this.Height,
+            ["StartUpCode"] = "xv2",
+        });
     }
 
     private void SetupWindowSize()

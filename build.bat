@@ -114,6 +114,7 @@ echo.
 echo Starting %TARGET_RID% build process...
 
 REM Step 1: Publish every application for the selected architecture.
+REM CoreClient/CFS/Contracts are libraries built transitively via ProjectReference.
 for %%P in (%APP_PROJECTS%) do (
     echo [%%P] Building for !TARGET_RID!...
 

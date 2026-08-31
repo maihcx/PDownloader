@@ -13,124 +13,51 @@
 //
 // Copyright (C) Song Mai Software.
 
+using System.Text.Json;
+using PDownloader.Contracts.Settings;
+using PDownloader.Shared.Persistence;
+
 namespace PDownloader.Core.Utils;
 
 /// <summary>
-/// Process-scoped user-data store. The instance is owned by Core DI rather than
-/// a static mutable dictionary, making persistence dependencies explicit.
+/// Settings owner for the running application. Installer is a separate direct-file
+/// client; both use the same source-linked persistence and inter-process lease.
 /// </summary>
 public sealed class UserDataStore
 {
-    private readonly object _sync = new();
-    private readonly string _dataDir;
-    private readonly string _dataFile;
-    private Dictionary<string, object> _data = new();
+    private readonly UserDataFile _file;
 
-    public UserDataStore()
-    {
-        _dataDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "SM SOFT",
-            "PDownloader");
-        _dataFile = Path.Combine(_dataDir, "userdata.json");
-        Reload();
-    }
+    public UserDataStore() => _file = new UserDataFile();
 
     public T GetValue<T>(string key) => GetValue(key, default(T)!);
 
     public T GetValue<T>(string key, T defaultValue)
     {
-        lock (_sync)
-        {
-            if (!_data.TryGetValue(key, out object? value))
-            {
-                return defaultValue;
-            }
-
-            try
-            {
-                if (value is JsonElement element)
-                {
-                    T? deserialized = element.Deserialize<T>();
-                    return deserialized is null ? defaultValue : deserialized;
-                }
-
-                if (value is T typed)
-                {
-                    return typed;
-                }
-
-                return (T)Convert.ChangeType(value, typeof(T));
-            }
-            catch
-            {
-                return defaultValue;
-            }
-        }
+        SettingsValue result = Get(key);
+        if (!result.Found || result.Value.ValueKind == JsonValueKind.Null)
+            return defaultValue;
+        try { return result.Value.Deserialize<T>() ?? defaultValue; }
+        catch (JsonException) { return defaultValue; }
     }
 
-    public bool SetValue<T>(string key, T value)
+    public SettingsValue Get(string key)
     {
-        lock (_sync)
-        {
-            _data[key] = value!;
-            SaveDataLocked();
-            return true;
-        }
+        if (_file.TryGetValue(key, out var value)
+            || UserDataDefaults.Create().TryGetValue(key, out value))
+            return new SettingsValue { Found = true, Value = value };
+        return new SettingsValue();
     }
 
-    public void Reset()
+    public Dictionary<string, JsonElement> GetAll()
     {
-        lock (_sync)
-        {
-            _data.Clear();
-            SaveDataLocked();
-        }
+        var result = UserDataDefaults.Create();
+        foreach (var entry in _file.Read())
+            result[entry.Key] = entry.Value;
+        return result;
     }
 
-    public void Reload()
-    {
-        lock (_sync)
-        {
-            _data = LoadData();
-        }
-    }
-
-    private Dictionary<string, object> LoadData()
-    {
-        if (!File.Exists(_dataFile))
-        {
-            return new Dictionary<string, object>();
-        }
-
-        try
-        {
-            string json = File.ReadAllText(_dataFile);
-            return JsonSerializer.Deserialize<Dictionary<string, object>>(json)
-                ?? new Dictionary<string, object>();
-        }
-        catch
-        {
-            return new Dictionary<string, object>();
-        }
-    }
-
-    private void SaveDataLocked()
-    {
-        try
-        {
-            Directory.CreateDirectory(_dataDir);
-            string json = JsonSerializer.Serialize(
-                _data,
-                new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-            File.WriteAllText(_dataFile, json);
-        }
-        catch
-        {
-            // Keep in-memory state even if persistence temporarily fails.
-        }
-    }
+    public bool SetValue<T>(string key, T value) => _file.SetValue(key, value);
+    public void Patch(Dictionary<string, JsonElement> values) => _file.Patch(values);
+    public void Reset() => _file.Reset();
+    public void Reload() => _file.Read();
 }

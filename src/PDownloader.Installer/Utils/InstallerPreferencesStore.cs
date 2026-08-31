@@ -14,6 +14,7 @@
 // Copyright (C) Song Mai Software.
 
 using System.Globalization;
+using System.Text.Json;
 
 namespace PDownloader.Installer.Utils;
 
@@ -23,14 +24,11 @@ public static class InstallerPreferencesStore
 
     public static InstallerPreferences Load()
     {
-        InstallerPreferences defaults = CreateDefaults();
-        InstallerPreferences? stored =
-            UserDataStore.GetValue<InstallerPreferences?>(StorageKey);
-
-        if (stored is null)
-        {
-            return defaults;
-        }
+        // Read the current file once under the shared lease. The app writes root
+        // keys; InstallerPreferences is only a snapshot from a previous install.
+        IReadOnlyDictionary<string, JsonElement> settings = UserDataStore.ReadSnapshot();
+        InstallerPreferences defaults = new();
+        InstallerPreferences stored = ReadValue(settings, StorageKey, defaults);
 
         InstallScope installScope = Enum.IsDefined(
             typeof(InstallScope),
@@ -41,7 +39,8 @@ public static class InstallerPreferencesStore
         return stored with
         {
             InstallScope = installScope,
-            Language = NormalizeLanguage(stored.Language),
+            Language = NormalizeLanguage(ReadValue(settings, "Language", stored.Language)),
+            RunAtStartup = ReadValue(settings, "IsStartAtBoot", stored.RunAtStartup),
         };
     }
 
@@ -52,11 +51,12 @@ public static class InstallerPreferencesStore
             Language = NormalizeLanguage(preferences.Language),
         };
 
-        UserDataStore.SetValue(StorageKey, normalized);
-
-        // Keep the installer's startup option synchronized with the setting
-        // that the installed application already uses.
-        UserDataStore.SetValue("IsStartAtBoot", normalized.RunAtStartup);
+        // Commit both related values in one direct-file transaction.
+        UserDataStore.SetValues(new Dictionary<string, object?>
+        {
+            [StorageKey] = normalized,
+            ["IsStartAtBoot"] = normalized.RunAtStartup,
+        });
     }
 
     public static string NormalizeLanguage(string? language)
@@ -86,8 +86,26 @@ public static class InstallerPreferencesStore
         return "en";
     }
 
-    private static InstallerPreferences CreateDefaults() => new()
+    private static T ReadValue<T>(
+        IReadOnlyDictionary<string, JsonElement> settings,
+        string key,
+        T fallback)
     {
-        RunAtStartup = UserDataStore.GetValue<bool>("IsStartAtBoot", true),
-    };
+        if (!settings.TryGetValue(key, out JsonElement value)
+            || value.ValueKind == JsonValueKind.Null)
+        {
+            return fallback;
+        }
+
+        try
+        {
+            return value.Deserialize<T>() ?? fallback;
+        }
+        catch (JsonException)
+        {
+            // An invalid individual value may use its fallback. Errors reading
+            // the file itself still propagate from ReadSnapshot; never erase it.
+            return fallback;
+        }
+    }
 }

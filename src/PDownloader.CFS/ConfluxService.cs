@@ -37,6 +37,8 @@ public sealed class ConfluxService : IDisposable
     public string SendPipeName { get; private set; } = string.Empty;
     public string ReceivePipeName { get; private set; } = string.Empty;
     public bool CanMultiple { get; set; }
+    // Dedicated request endpoints can use pipe readiness instead of a process-name heuristic.
+    public bool RequireTargetProcess { get; set; } = true;
     private readonly object _processSync = new();
     private Process? _currProcess;
 
@@ -644,7 +646,7 @@ public sealed class ConfluxService : IDisposable
             await _sendGate.WaitAsync(operationToken).ConfigureAwait(false);
             gateEntered = true;
 
-            if (!IsAppStarted())
+            if (RequireTargetProcess && !IsAppStarted())
             {
                 return false;
             }
@@ -718,7 +720,7 @@ public sealed class ConfluxService : IDisposable
             await _sendGate.WaitAsync(operationToken).ConfigureAwait(false);
             gateEntered = true;
 
-            if (!IsAppStarted())
+            if (RequireTargetProcess && !IsAppStarted())
             {
                 return new IpcRequestResult<TResponse>(
                     false,
