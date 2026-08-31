@@ -32,9 +32,9 @@ public sealed class DownloadCommandService
 
     public void PublishRunnerSnapshot(RunnerSession session)
     {
-        // The transfer may have completed before its UI finished starting.
-        // Use the normal publication lock so the initial snapshot cannot overtake progress.
-        if (_downloads.Find(session.Id) is { } item) _progress.Publish(item);
+        // Register this exact ready session and seed its async mailbox with the
+        // current state, including transfers completed before Runner opened.
+        _progress.AttachRunner(session);
     }
 
     public void Pause(string id) => _downloads.Pause(id);
