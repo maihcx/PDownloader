@@ -13,6 +13,8 @@
 //
 // Copyright (C) Song Mai Software.
 
+using PDownloader.Infrastructure.Persistence;
+
 namespace PDownloader.Infrastructure.Downloads;
 
 internal enum MergeRecoveryKind
@@ -361,30 +363,8 @@ internal static class MergeRecoveryStore
         T value,
         bool writeIndented)
     {
-        string temporaryPath = destinationPath + ".tmp";
-        byte[] json = JsonSerializer.SerializeToUtf8Bytes(
-            value,
-            new JsonSerializerOptions { WriteIndented = writeIndented });
-
-        try
-        {
-            using (var stream = new FileStream(
-                temporaryPath,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None))
-            {
-                stream.Write(json);
-                stream.Flush(flushToDisk: true);
-            }
-
-            File.Move(temporaryPath, destinationPath, overwrite: true);
-        }
-        catch
-        {
-            TryDeleteTemporaryState(temporaryPath);
-            throw;
-        }
+        // Merge checkpoints cannot roll back after source files have been deleted.
+        AtomicFile.WriteJson(destinationPath, value, writeIndented, keepBackup: false);
     }
 
     private static void TryDeleteInvalidRecoveryState(string recoveryDirectory)

@@ -207,12 +207,22 @@ public sealed partial class DownloadManager : IAsyncDisposable
 
     public static List<DownloadItemSnapshot> DeserializeHistory(string json)
     {
-        if (string.IsNullOrWhiteSpace(json))
+        // Empty/truncated files and JSON null are not a deliberately empty history.
+        List<DownloadItemSnapshot> snapshots =
+            JsonSerializer.Deserialize<List<DownloadItemSnapshot>>(json)
+            ?? throw new InvalidDataException("History must contain a JSON array.");
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (DownloadItemSnapshot snapshot in snapshots)
         {
-            return new();
+            if (snapshot is null || string.IsNullOrWhiteSpace(snapshot.Id)
+                || snapshot.Url is null || snapshot.FileName is null || snapshot.SavePath is null
+                || !ids.Add(snapshot.Id))
+            {
+                throw new InvalidDataException("History contains an invalid or duplicate item.");
+            }
         }
-        // Let the persistence owner distinguish corrupt input from an empty list.
-        return JsonSerializer.Deserialize<List<DownloadItemSnapshot>>(json) ?? new();
+
+        return snapshots;
     }
 
     public async Task<List<DownloadItem>> RestoreHistoryAsync(string json,
