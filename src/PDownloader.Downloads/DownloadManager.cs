@@ -65,11 +65,17 @@ public sealed partial class DownloadManager : IAsyncDisposable
 
             session = new DownloadSession(new DownloadItem
             {
-                Id = id, Url = url, SavePath = saveTo, FileName = fileName,
-                Threads = threads, IsYoutube = isYoutube, FormatId = formatId,
+                Id = id,
+                Url = url,
+                SavePath = saveTo,
+                FileName = fileName,
+                Threads = threads,
+                IsYoutube = isYoutube,
+                FormatId = formatId,
                 CustomHeaders = customHeaders is null ? null
                     : new Dictionary<string, string>(customHeaders, StringComparer.OrdinalIgnoreCase),
-                MergeMode = mergeMode, Status = DownloadStatus.Queued
+                MergeMode = mergeMode,
+                Status = DownloadStatus.Queued
             });
             _sessions.Add(id, session);
             start = TrackCommand(session.QueueCommand(() =>
@@ -173,7 +179,9 @@ public sealed partial class DownloadManager : IAsyncDisposable
         try { await task.ConfigureAwait(false); }
         catch (OperationCanceledException) { }
         catch (Exception ex) { Debug.WriteLine($"[DownloadManager] Command failed: {ex.Message}"); }
-        finally { lock (_sync)
+        finally
+        {
+            lock (_sync)
             {
                 _commands.Remove(task);
             }

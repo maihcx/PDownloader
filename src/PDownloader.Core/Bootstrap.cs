@@ -13,8 +13,6 @@
 //
 // Copyright (C) Song Mai Software.
 
-using PDownloader.Core.Services.DownloadServices;
-
 namespace PDownloader.Core;
 
 public sealed class Bootstrap

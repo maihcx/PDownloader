@@ -50,7 +50,7 @@ public partial class CrashWindow : Window
 
         SourceInitialized += OnSourceInitialized;
 
-        Title    = $"{appName} — Bug Tracker";
+        Title = $"{appName} — Bug Tracker";
         _logPath = logPath;
         LoadLog();
     }
@@ -103,9 +103,9 @@ public partial class CrashWindow : Window
         if (_logPath == null || !File.Exists(_logPath))
         {
             ShowPlainError("Log file not found.\nPlease check the path passed as argument.");
-            LogPathText.Text        = _logPath ?? "(no path provided)";
+            LogPathText.Text = _logPath ?? "(no path provided)";
             OpenFolderBtn.IsEnabled = false;
-            DeleteBtn.IsEnabled     = false;
+            DeleteBtn.IsEnabled = false;
             return;
         }
 
@@ -266,25 +266,25 @@ public partial class CrashWindow : Window
         {
             var pill = new Border
             {
-                Background        = new SolidColorBrush(Color.FromArgb(0xCC, 0x1E, 0x29, 0x3B)),
-                CornerRadius      = new CornerRadius(5),
-                Padding           = new Thickness(10, 4, 10, 4),
-                Margin            = new Thickness(0, 0, 8, 0),
+                Background = new SolidColorBrush(Color.FromArgb(0xCC, 0x1E, 0x29, 0x3B)),
+                CornerRadius = new CornerRadius(5),
+                Padding = new Thickness(10, 4, 10, 4),
+                Margin = new Thickness(0, 0, 8, 0),
                 VerticalAlignment = VerticalAlignment.Center,
             };
 
             var sp = new StackPanel { Orientation = Orientation.Horizontal };
             sp.Children.Add(new TextBlock
             {
-                Text       = label + ": ",
+                Text = label + ": ",
                 Foreground = new SolidColorBrush(Color.FromRgb(0x60, 0xA5, 0xFA)),
-                FontSize   = 11,
+                FontSize = 11,
             });
             sp.Children.Add(new TextBlock
             {
-                Text       = value,
+                Text = value,
                 Foreground = new SolidColorBrush(Color.FromRgb(0xCB, 0xD5, 0xE1)),
-                FontSize   = 11,
+                FontSize = 11,
             });
 
             pill.Child = sp;
@@ -333,8 +333,8 @@ public partial class CrashWindow : Window
             File.Delete(_logPath);
             LogBlock.Inlines.Clear();
             LogBlock.Inlines.Add(new Run("Log file deleted.") { Foreground = BrushValue });
-            LogPathText.Text        = "(deleted)";
-            DeleteBtn.IsEnabled     = false;
+            LogPathText.Text = "(deleted)";
+            DeleteBtn.IsEnabled = false;
             OpenFolderBtn.IsEnabled = false;
         }
         catch (Exception ex)
@@ -396,7 +396,7 @@ public partial class CrashWindow : Window
 
     private static SolidColorBrush MakeBrush(string hex)
     {
-        hex  = hex.TrimStart('#');
+        hex = hex.TrimStart('#');
         byte r = Convert.ToByte(hex[0..2], 16);
         byte g = Convert.ToByte(hex[2..4], 16);
         byte b = Convert.ToByte(hex[4..6], 16);

@@ -15,7 +15,7 @@
 
 namespace PDownloader.Runner.Helpers;
 
-internal class AndVisibilityConverter: IMultiValueConverter
+internal class AndVisibilityConverter : IMultiValueConverter
 {
     public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
     {

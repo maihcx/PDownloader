@@ -82,9 +82,14 @@ public sealed partial class DownloadManager
         {
             _runtime.ShowRunner(item.Id, new RunnerDownloadTask
             {
-                Id = item.Id, FileName = item.FileName, FormatId = item.FormatId ?? string.Empty,
-                FileSize = item.TotalBytes, SaveTo = item.SavePath, Url = item.Url,
-                IsRunner = true, Threads = item.Threads,
+                Id = item.Id,
+                FileName = item.FileName,
+                FormatId = item.FormatId ?? string.Empty,
+                FileSize = item.TotalBytes,
+                SaveTo = item.SavePath,
+                Url = item.Url,
+                IsRunner = true,
+                Threads = item.Threads,
                 Headers = item.CustomHeaders is null ? null
                     : new Dictionary<string, string>(item.CustomHeaders, StringComparer.OrdinalIgnoreCase)
             });

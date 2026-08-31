@@ -99,9 +99,14 @@ public sealed class RunnerSessionManager : IDisposable
         int threads = task.Threads > 0 ? task.Threads : _downloadConfig.DownloadConfigs.DefaultThreadCount;
         var context = new RunnerDownloadContext
         {
-            Url = task.Url, FormatId = task.FormatId, SaveTo = task.SaveTo,
-            FileName = task.FileName, Title = task.Title, FileSize = task.FileSize,
-            IsRunner = task.IsRunner, Threads = threads > 0 ? threads : 8,
+            Url = task.Url,
+            FormatId = task.FormatId,
+            SaveTo = task.SaveTo,
+            FileName = task.FileName,
+            Title = task.Title,
+            FileSize = task.FileSize,
+            IsRunner = task.IsRunner,
+            Threads = threads > 0 ? threads : 8,
             Headers = NormalizeHeaders(task.Headers)
         };
         var channel = new ConfluxService { CanMultiple = true };

@@ -13,12 +13,8 @@
 //
 // Copyright (C) Song Mai Software.
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Text.Json;
-using System.Threading;
 
 namespace PDownloader.Shared.Persistence;
 
@@ -37,7 +33,8 @@ internal sealed class UserDataFile
 
     public UserDataFile() : this(Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SM SOFT", "PDownloader")) { }
+        "SM SOFT", "PDownloader"))
+    { }
 
     private UserDataFile(string dataDirectory)
     {
@@ -189,7 +186,9 @@ internal sealed class UserDataFile
         }
         finally
         {
-            try { if (File.Exists(temporary))
+            try
+            {
+                if (File.Exists(temporary))
                 {
                     File.Delete(temporary);
                 }

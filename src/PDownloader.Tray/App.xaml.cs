@@ -15,7 +15,6 @@
 
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Threading;
 
 namespace PDownloader.Tray;
 

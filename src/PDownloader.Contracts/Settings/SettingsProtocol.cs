@@ -13,7 +13,6 @@
 //
 // Copyright (C) Song Mai Software.
 
-using System.Text.Json;
 using PDownloader.Contracts.Ipc;
 
 namespace PDownloader.Contracts.Settings;

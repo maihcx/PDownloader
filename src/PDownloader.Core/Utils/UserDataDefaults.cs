@@ -13,8 +13,6 @@
 //
 // Copyright (C) Song Mai Software.
 
-using System.Text.Json;
-
 namespace PDownloader.Core.Utils;
 
 /// <summary>One set of application defaults, independent of each UI's user.config.</summary>

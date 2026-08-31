@@ -15,15 +15,10 @@
 
 global using PDownloader.CFS;
 global using PDownloader.Contracts.Application;
-global using PDownloader.Contracts.Ipc;
 global using PDownloader.Contracts.Downloads;
+global using PDownloader.Contracts.Ipc;
 global using PDownloader.Contracts.Media;
 global using PDownloader.Contracts.Updates;
-global using PDownloader.Downloads;
-global using PDownloader.Downloads.Models;
-global using PDownloader.Downloads.Runtime;
-global using PDownloader.Infrastructure.ExternalTools.YtDlp;
-global using PDownloader.Infrastructure.Downloads;
 global using PDownloader.Core.Application.App;
 global using PDownloader.Core.Application.Downloads;
 global using PDownloader.Core.Ipc;
@@ -31,6 +26,11 @@ global using PDownloader.Core.Runtime;
 global using PDownloader.Core.Service;
 global using PDownloader.Core.Update;
 global using PDownloader.Core.Utils;
+global using PDownloader.Downloads;
+global using PDownloader.Downloads.Models;
+global using PDownloader.Downloads.Runtime;
+global using PDownloader.Infrastructure.Downloads;
+global using PDownloader.Infrastructure.ExternalTools.YtDlp;
 global using System;
 global using System.Collections.Concurrent;
 global using System.Collections.Generic;
