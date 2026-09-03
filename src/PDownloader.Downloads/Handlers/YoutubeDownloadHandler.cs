@@ -114,9 +114,9 @@ internal sealed class YoutubeDownloadHandler
             return;
         }
 
-        _item.TotalBytes = streams.All(stream => stream.FilesizeApprox > 0)
+        _item.SetTotalBytes(streams.All(stream => stream.FilesizeApprox > 0)
             ? streams.Sum(stream => stream.FilesizeApprox)
-            : 0;
+            : 0, streams.Any(stream => stream.IsFilesizeEstimated));
         _item.Status = DownloadStatus.Downloading;
         _item.StartTime = DateTime.Now;
 
@@ -146,7 +146,7 @@ internal sealed class YoutubeDownloadHandler
                 cancellationToken);
         }
 
-        Complete(finalPath, rawFiles);
+        Complete(finalPath);
         DownloadPathService.CleanupTemp(tempDirectory);
     }
 
@@ -162,7 +162,7 @@ internal sealed class YoutubeDownloadHandler
     {
         _item.Status = DownloadStatus.Downloading;
         _item.StartTime = DateTime.Now;
-        _item.TotalBytes = 0;
+        _item.SetTotalBytes(0);
         _item.SetProgressVisualizationUnsupported("YtDlp");
         _reportProgress(_item.DownloadedBytes, _item.SpeedBps);
 
@@ -188,10 +188,12 @@ internal sealed class YoutubeDownloadHandler
             userAgent,
             _item.CustomHeaders,
             _item.Threads,
-            (downloadedBytes, totalBytes, ytDlpSpeedBps) =>
+            progress =>
             {
                 lock (progressSync)
                 {
+                    long downloadedBytes = progress.DownloadedBytes;
+                    double ytDlpSpeedBps = progress.SpeedBps;
                     long now = Stopwatch.GetTimestamp();
                     double elapsedSeconds =
                         (now - previousTimestamp) / (double)Stopwatch.Frequency;
@@ -205,10 +207,8 @@ internal sealed class YoutubeDownloadHandler
                     previousDownloadedBytes = downloadedBytes;
                     previousTimestamp = now;
 
-                    if (totalBytes > 0)
-                    {
-                        _item.TotalBytes = totalBytes;
-                    }
+                    _item.SetTotalBytes(progress.TotalBytes, progress.IsTotalEstimated);
+                    _item.DownloadProgressPercent = progress.Percent;
 
                     _reportProgress(
                         downloadedBytes,
@@ -220,7 +220,7 @@ internal sealed class YoutubeDownloadHandler
         long fileLength = new FileInfo(finalPath).Length;
         _item.FileName = Path.GetFileName(finalPath);
         _item.SavePath = finalPath;
-        _item.TotalBytes = Math.Max(_item.TotalBytes, fileLength);
+        _item.SetTotalBytes(fileLength);
         _reportProgress(_item.TotalBytes, 0);
         _item.Status = DownloadStatus.Completed;
         _item.EndTime = DateTime.Now;
@@ -235,11 +235,13 @@ internal sealed class YoutubeDownloadHandler
         var files = new List<DownloadedStreamFile>(streams.Count);
         long progressBaseOffset = 0;
         long[] streamSizes = streams.Select(stream => Math.Max(0, stream.FilesizeApprox)).ToArray();
+        bool[] estimatedSizes = streams.Select(stream => stream.IsFilesizeEstimated).ToArray();
 
         void UpdateTotalBytes()
         {
             // A partial sum is not the total size of a video + audio download.
-            _item.TotalBytes = streamSizes.All(size => size > 0) ? streamSizes.Sum() : 0;
+            _item.SetTotalBytes(streamSizes.All(size => size > 0) ? streamSizes.Sum() : 0,
+                estimatedSizes.Any(estimated => estimated));
         }
 
         foreach (ResolvedStream stream in streams)
@@ -291,7 +293,11 @@ internal sealed class YoutubeDownloadHandler
                 cancellationToken,
                 reportProbe: result =>
                 {
-                    if (result.TotalBytes > 0) streamSizes[streamIndex] = result.TotalBytes;
+                    if (result.TotalBytes > 0)
+                    {
+                        streamSizes[streamIndex] = result.TotalBytes;
+                        estimatedSizes[streamIndex] = false;
+                    }
                     UpdateTotalBytes();
                 });
 
@@ -302,6 +308,7 @@ internal sealed class YoutubeDownloadHandler
                 ? new FileInfo(rawPath).Length
                 : probe.TotalBytes;
             streamSizes[streamIndex] = actualLength;
+            estimatedSizes[streamIndex] = false;
             progressBaseOffset += actualLength;
             UpdateTotalBytes();
             _item.DownloadProgressPercent = (streamIndex + 1.0) / streams.Count * 100;
@@ -312,7 +319,7 @@ internal sealed class YoutubeDownloadHandler
 
         if (_item.TotalBytes <= 0 || progressBaseOffset > _item.TotalBytes)
         {
-            _item.TotalBytes = progressBaseOffset;
+            _item.SetTotalBytes(progressBaseOffset);
         }
 
         return files;
@@ -373,15 +380,11 @@ internal sealed class YoutubeDownloadHandler
         return finalPath;
     }
 
-    private void Complete(
-        string finalPath,
-        IReadOnlyCollection<DownloadedStreamFile> rawFiles)
+    private void Complete(string finalPath)
     {
-        long sourceBytes = rawFiles.Sum(file =>
-            File.Exists(file.Path) ? new FileInfo(file.Path).Length : file.Stream.FilesizeApprox);
         long finalLength = new FileInfo(finalPath).Length;
 
-        _item.TotalBytes = Math.Max(_item.TotalBytes, Math.Max(sourceBytes, finalLength));
+        _item.SetTotalBytes(finalLength);
         _item.FileName = Path.GetFileName(finalPath);
         _item.SavePath = finalPath;
         _reportProgress(_item.TotalBytes, 0);
