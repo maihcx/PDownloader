@@ -1,3 +1,25 @@
+## v1.0.1
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- [ui] Ensure stable sorting with ID tie-breaker (#216) — @maihcx
+
+## ⚡ Performance
+
+- [core] Implement per-client download progress senders (#219) — @maihcx
+
+## 🧹 Maintenance
+
+- [core-download] Add atomic persistence and robust checkpoints (#222) — @maihcx
+- [core-download-infra] Refactor download manager for async lifecycle (#221) — @maihcx
+- [download] Remove global max-concurrent-downloads and UI (#220) — @maihcx
+- [cfs-ipc] Refactor ConfluxService lifecycle and IPC scoping (#218) — @maihcx
+- [arch-continue] Add shared settings IPC and file lease (#217) — @maihcx
+
+
+---
+
 ## v1.0.0
 
 ## 🚀 Changelog
