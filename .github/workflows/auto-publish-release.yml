@@ -35,7 +35,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # ── Lấy version từ release-drafter (không publish) ──────────────────
+      # ── Get version from release-drafter (do not publish) ──────────────────
       - name: Draft release (get version only)
         id: drafter
         uses: release-drafter/release-drafter@v6
@@ -54,7 +54,7 @@ jobs:
           echo "${{ steps.drafter.outputs.body }}" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
 
-      # ── Cập nhật version trong tất cả .csproj ───────────────────────────
+      # ── Update version in all .csproj files ───────────────────────────
       - name: Update AssemblyVersion in all .csproj files
         shell: pwsh
         run: |
@@ -76,7 +76,7 @@ jobs:
             Write-Host "Updated $($file.Name) → $version4"
           }
 
-      # ── Cập nhật CHANGELOG.md ────────────────────────────────────────────
+      # ── Update CHANGELOG.md ────────────────────────────────────────────
       - name: Update CHANGELOG.md
         shell: bash
         run: |
@@ -168,7 +168,7 @@ jobs:
             git push origin HEAD:${{ github.event.repository.default_branch }}
           fi
 
-      # ── Publish release kèm file installer ──────────────────────────────
+      # ── Publish release with installer ──────────────────────────────
       - name: Publish release with installer
         uses: release-drafter/release-drafter@v6
         with:
