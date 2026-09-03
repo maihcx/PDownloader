@@ -60,11 +60,26 @@ public class DownloadItem : INotifyPropertyChanged
 
     public string? FormatId { get; set; }
 
-    public double Progress => IsMergeProgressActive
-        ? MergeProgress
-        : TotalBytes > 0
-            ? (double)DownloadedBytes / TotalBytes * 100
-            : 0;
+    private double _downloadProgressPercent;
+    // Fallback for transfers with known work units but unknown total byte size.
+    public double DownloadProgressPercent
+    {
+        get => _downloadProgressPercent;
+        set
+        {
+            _downloadProgressPercent = double.IsFinite(value) ? Math.Clamp(value, 0, 100) : 0;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(Progress));
+        }
+    }
+
+    public double Progress => Status == DownloadStatus.Completed
+        ? 100
+        : IsMergeProgressActive
+            ? MergeProgress
+            : TotalBytes > 0
+                ? Math.Clamp((double)DownloadedBytes / TotalBytes * 100, 0, 100)
+                : DownloadProgressPercent;
 
     public bool IsActive => Status is DownloadStatus.Downloading or DownloadStatus.Connecting or DownloadStatus.Merging;
 
@@ -239,7 +254,7 @@ public class DownloadItem : INotifyPropertyChanged
         set { _endTime = value; OnPropertyChanged(); }
     }
 
-    public string TotalFormatted => FormatBytes(TotalBytes);
+    public string TotalFormatted => TotalBytes > 0 ? FormatBytes(TotalBytes) : "–";
 
     public string DownloadedFormatted => FormatBytes(DownloadedBytes);
 

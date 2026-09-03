@@ -82,10 +82,14 @@ internal static class YtDlpJsonParser
         }
 
         formats = formats
-            .OrderBy(format => format.Note == "" ? 0
-                : format.Note == "Video Only" ? 1
-                : 2)
-            .ThenByDescending(format => format.Height ?? 0)
+            // The browser consumes this order directly. Rank resolution before
+            // muxed/video-only so a low-resolution muxed file cannot jump ahead
+            // of a higher-resolution video that will be merged with audio.
+            .OrderBy(GetFormatSortGroup)
+            .ThenByDescending(format => format.Note == "Audio Only"
+                ? 0 : Math.Max(0, format.Height ?? 0))
+            .ThenBy(format => format.Note == "" ? 0
+                : format.Note == "Video Only" ? 1 : 2)
             .ThenByDescending(format => format.Filesize)
             .ToList();
 
@@ -93,8 +97,19 @@ internal static class YtDlpJsonParser
         {
             Success = true,
             Title = title,
+            Duration = GetDuration(root),
             Formats = formats,
         };
+    }
+
+    private static int GetFormatSortGroup(YtFormat format)
+    {
+        if (format.Note == "Audio Only") return 1;
+
+        // A known video with incomplete audio metadata still belongs with the
+        // other resolutions. Entirely unknown formats follow audio-only files.
+        return format.HasVideo == true || format.Height is > 0
+            || format.Note is "" or "Video Only" ? 0 : 2;
     }
 
     public static HlsFragmentsResult? ParseHlsFragments(string standardOutput)
@@ -181,15 +196,39 @@ internal static class YtDlpJsonParser
         }
 
         long fileSize = GetFileSize(element);
-        string videoCodec = element.GetStringOrDefault("vcodec") ?? "none";
-        string audioCodec = element.GetStringOrDefault("acodec") ?? "none";
-        bool hasVideo = videoCodec != "none";
-        bool hasAudio = audioCodec != "none";
-        string note = hasVideo && hasAudio
-            ? string.Empty
-            : hasVideo
+        bool? hasVideo = GetCodecPresence(element, "vcodec");
+        bool? hasAudio = GetCodecPresence(element, "acodec");
+
+        // Missing/null codec metadata is unknown, not an explicit "none".
+        // Track-specific measurements can establish presence, but a container
+        // extension (including MP4/WebM) cannot establish which tracks exist.
+        if (hasVideo is null && (HasPositiveNumber(element, "height")
+            || HasPositiveNumber(element, "width")
+            || HasPositiveNumber(element, "fps")
+            || HasPositiveNumber(element, "vbr")))
+        {
+            hasVideo = true;
+        }
+
+        if (hasAudio is null && (HasPositiveNumber(element, "abr")
+            || HasPositiveNumber(element, "asr")
+            || HasPositiveNumber(element, "audio_channels")))
+        {
+            hasAudio = true;
+        }
+
+        if (hasVideo == false && hasAudio == false)
+        {
+            return null;
+        }
+
+        string note = hasVideo == false
+            ? "Audio Only"
+            : hasAudio == false
                 ? "Video Only"
-                : "Audio Only";
+                : hasVideo == true && hasAudio == true
+                    ? string.Empty
+                    : "Unknown";
 
         int? height = element.TryGetProperty("height", out JsonElement heightElement)
             && heightElement.ValueKind == JsonValueKind.Number
@@ -201,11 +240,47 @@ internal static class YtDlpJsonParser
             Id = element.GetStringOrDefault("format_id") ?? string.Empty,
             Ext = extension,
             Height = height,
+            HasVideo = hasVideo,
+            HasAudio = hasAudio,
             Note = note,
             Filesize = fileSize,
             Size = FormatSize(fileSize),
         };
     }
+
+    private static double? GetDuration(JsonElement element)
+    {
+        if (element.TryGetProperty("is_live", out JsonElement isLive)
+            && isLive.ValueKind == JsonValueKind.True)
+        {
+            return null;
+        }
+
+        return element.TryGetProperty("duration", out JsonElement duration)
+            && duration.ValueKind == JsonValueKind.Number
+            && duration.TryGetDouble(out double seconds)
+            && double.IsFinite(seconds) && seconds > 0
+                ? seconds
+                : null;
+    }
+
+    private static bool? GetCodecPresence(JsonElement element, string propertyName)
+    {
+        string? codec = element.GetStringOrDefault(propertyName)?.Trim();
+        if (string.IsNullOrEmpty(codec)
+            || codec.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return !codec.Equals("none", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasPositiveNumber(JsonElement element, string propertyName) =>
+        element.TryGetProperty(propertyName, out JsonElement value)
+        && value.ValueKind == JsonValueKind.Number
+        && value.TryGetDouble(out double number)
+        && number > 0;
 
     private static bool IsSupportedMediaFormat(JsonElement element)
     {

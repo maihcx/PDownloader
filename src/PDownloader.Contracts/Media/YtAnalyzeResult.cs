@@ -23,6 +23,10 @@ public sealed class YtAnalyzeResult
     [JsonPropertyName("title")]
     public string? Title { get; init; }
 
+    // Duration in seconds; null for live media or unavailable metadata.
+    [JsonPropertyName("duration")]
+    public double? Duration { get; init; }
+
     [JsonPropertyName("formats")]
     public List<YtFormat>? Formats { get; init; }
 
