@@ -26,6 +26,13 @@ public sealed class YtFormat
     [JsonPropertyName("height")]
     public int? Height { get; init; }
 
+    // null means the extractor did not determine whether this stream exists.
+    [JsonPropertyName("hasVideo")]
+    public bool? HasVideo { get; init; }
+
+    [JsonPropertyName("hasAudio")]
+    public bool? HasAudio { get; init; }
+
     [JsonPropertyName("note")]
     public string Note { get; init; } = "";
 
