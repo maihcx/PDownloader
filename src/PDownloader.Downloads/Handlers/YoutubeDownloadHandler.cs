@@ -114,7 +114,9 @@ internal sealed class YoutubeDownloadHandler
             return;
         }
 
-        _item.TotalBytes = streams.Sum(stream => stream.FilesizeApprox);
+        _item.TotalBytes = streams.All(stream => stream.FilesizeApprox > 0)
+            ? streams.Sum(stream => stream.FilesizeApprox)
+            : 0;
         _item.Status = DownloadStatus.Downloading;
         _item.StartTime = DateTime.Now;
 
@@ -232,6 +234,13 @@ internal sealed class YoutubeDownloadHandler
     {
         var files = new List<DownloadedStreamFile>(streams.Count);
         long progressBaseOffset = 0;
+        long[] streamSizes = streams.Select(stream => Math.Max(0, stream.FilesizeApprox)).ToArray();
+
+        void UpdateTotalBytes()
+        {
+            // A partial sum is not the total size of a video + audio download.
+            _item.TotalBytes = streamSizes.All(size => size > 0) ? streamSizes.Sum() : 0;
+        }
 
         foreach (ResolvedStream stream in streams)
         {
@@ -251,6 +260,17 @@ internal sealed class YoutubeDownloadHandler
                 streamClientLease.Client);
 
             string progressStage = stream.HasVideo ? "Video" : "Audio";
+            int streamIndex = files.Count;
+
+            void ReportStreamProgress(long downloadedBytes, double speedBps)
+            {
+                long currentBytes = Math.Max(0, downloadedBytes - progressBaseOffset);
+                double fraction = streamSizes[streamIndex] > 0
+                    ? Math.Clamp(currentBytes / (double)streamSizes[streamIndex], 0, 1)
+                    : 0;
+                _item.DownloadProgressPercent = (streamIndex + fraction) / streams.Count * 100;
+                _reportProgress(downloadedBytes, speedBps);
+            }
 
             DownloadProbeResult probe = await streamDownloader.ProbeAndDownloadAsync(
                 stream.Url,
@@ -258,7 +278,7 @@ internal sealed class YoutubeDownloadHandler
                 segmentDirectory,
                 _item.Threads,
                 progressBaseOffset,
-                _reportProgress,
+                ReportStreamProgress,
                 progress => _reportThreadProgress(progressStage, progress),
                 () =>
                 {
@@ -268,7 +288,12 @@ internal sealed class YoutubeDownloadHandler
                 _reportMergeProgress,
                 streams.Count == 1 ? ApplyFileHashes : null,
                 _item.MergeMode,
-                cancellationToken);
+                cancellationToken,
+                reportProbe: result =>
+                {
+                    if (result.TotalBytes > 0) streamSizes[streamIndex] = result.TotalBytes;
+                    UpdateTotalBytes();
+                });
 
             _item.Status = DownloadStatus.Downloading;
             DownloadContentInspector.EnsureDownloadedMediaFile(rawPath, stream);
@@ -276,7 +301,10 @@ internal sealed class YoutubeDownloadHandler
             long actualLength = File.Exists(rawPath)
                 ? new FileInfo(rawPath).Length
                 : probe.TotalBytes;
+            streamSizes[streamIndex] = actualLength;
             progressBaseOffset += actualLength;
+            UpdateTotalBytes();
+            _item.DownloadProgressPercent = (streamIndex + 1.0) / streams.Count * 100;
             _reportProgress(progressBaseOffset, 0);
             files.Add(new DownloadedStreamFile(stream, rawPath));
             DownloadPathService.CleanupTemp(segmentDirectory);

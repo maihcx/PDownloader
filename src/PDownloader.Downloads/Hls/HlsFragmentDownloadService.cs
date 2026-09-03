@@ -39,11 +39,14 @@ internal sealed class HlsFragmentDownloadService
         Action<double>? reportMergeProgress,
         Action<FileHashResult>? reportFileHashes,
         FileMergeMode fileMergeMode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<double>? reportDownloadProgress = null)
     {
         List<string> urls = fragmentResult.FragmentUrls;
         int fragmentCount = urls.Count;
         var bytesPerFragment = new long[fragmentCount];
+        var totalBytesPerFragment = new long[fragmentCount];
+        var completedFragments = new int[fragmentCount];
         var tempPaths = new string[fragmentCount];
 
         int concurrency = Math.Clamp(preferredConcurrency, 1, 16);
@@ -56,6 +59,25 @@ internal sealed class HlsFragmentDownloadService
 
         void PublishProgress(long downloadedBytes, double speedBps)
         {
+            double completedUnits = 0;
+            for (int index = 0; index < fragmentCount; index++)
+            {
+                if (Volatile.Read(ref completedFragments[index]) != 0)
+                {
+                    completedUnits++;
+                }
+                else
+                {
+                    long total = Interlocked.Read(ref totalBytesPerFragment[index]);
+                    long downloaded = Interlocked.Read(ref bytesPerFragment[index]);
+                    if (total > 0)
+                    {
+                        // Reserve completion until the fragment has finished successfully.
+                        completedUnits += Math.Clamp(downloaded / (double)total, 0, 0.99);
+                    }
+                }
+            }
+            reportDownloadProgress?.Invoke(fragmentCount > 0 ? completedUnits / fragmentCount * 100 : 0);
             reportThreadProgress?.Invoke(threadTracker.Capture());
             reportProgress(downloadedBytes, speedBps);
         }
@@ -77,6 +99,8 @@ internal sealed class HlsFragmentDownloadService
                     tempDirectory,
                     tempPaths,
                     bytesPerFragment,
+                    totalBytesPerFragment,
+                    completedFragments,
                     () => Interlocked.Increment(ref nextFragmentIndex),
                     cancellationToken))
                 .ToArray();
@@ -114,6 +138,8 @@ internal sealed class HlsFragmentDownloadService
         string tempDirectory,
         string[] tempPaths,
         long[] bytesPerFragment,
+        long[] totalBytesPerFragment,
+        int[] completedFragments,
         Func<int> getNextFragmentIndex,
         CancellationToken cancellationToken)
     {
@@ -137,8 +163,10 @@ internal sealed class HlsFragmentDownloadService
                 tempPath,
                 index,
                 bytesPerFragment,
+                totalBytesPerFragment,
                 worker,
                 cancellationToken);
+            Volatile.Write(ref completedFragments[index], 1);
         }
     }
 
@@ -147,6 +175,7 @@ internal sealed class HlsFragmentDownloadService
         string tempPath,
         int index,
         long[] bytesPerFragment,
+        long[] totalBytesPerFragment,
         HlsWorkerState worker,
         CancellationToken cancellationToken)
     {
@@ -156,6 +185,7 @@ internal sealed class HlsFragmentDownloadService
         {
             cancellationToken.ThrowIfCancellationRequested();
             Interlocked.Exchange(ref bytesPerFragment[index], 0);
+            Interlocked.Exchange(ref totalBytesPerFragment[index], 0);
             worker.BeginAttempt();
 
             try
@@ -167,8 +197,9 @@ internal sealed class HlsFragmentDownloadService
                     cancellationToken);
                 response.EnsureSuccessStatusCode();
 
-                worker.SetCurrentTotalBytes(
-                    Math.Max(0, response.Content.Headers.ContentLength ?? 0));
+                long totalBytes = Math.Max(0, response.Content.Headers.ContentLength ?? 0);
+                Interlocked.Exchange(ref totalBytesPerFragment[index], totalBytes);
+                worker.SetCurrentTotalBytes(totalBytes);
 
                 await using var output = new FileStream(
                     tempPath,

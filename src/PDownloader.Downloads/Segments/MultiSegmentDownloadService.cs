@@ -49,7 +49,8 @@ internal sealed class MultiSegmentDownloadService
         Action<double>? reportMergeProgress,
         Action<FileHashResult>? reportFileHashes,
         FileMergeMode fileMergeMode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<DownloadProbeResult>? reportProbe = null)
     {
         MergeRecoveryManifest? pendingMerge = MergeRecoveryStore.TryLoad(tempDirectory);
         if (pendingMerge is { Kind: MergeRecoveryKind.Concatenate }
@@ -67,16 +68,18 @@ internal sealed class MultiSegmentDownloadService
             long recoveredLength = File.Exists(destinationPath)
                 ? new FileInfo(destinationPath).Length
                 : pendingMerge.ExpectedOutputBytes;
-            reportProgress(progressBaseOffset + recoveredLength, 0);
-
-            return new DownloadProbeResult(
+            var recoveredProbe = new DownloadProbeResult(
                 recoveredLength,
                 true,
                 Path.GetFileName(destinationPath),
                 url);
+            reportProbe?.Invoke(recoveredProbe);
+            reportProgress(progressBaseOffset + recoveredLength, 0);
+            return recoveredProbe;
         }
 
         DownloadProbeResult probe = await _probe.ProbeAsync(url, cancellationToken);
+        reportProbe?.Invoke(probe);
         await DownloadAsync(
             url,
             destinationPath,
