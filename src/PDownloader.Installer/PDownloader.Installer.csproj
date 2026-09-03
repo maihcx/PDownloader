@@ -20,8 +20,8 @@
     <!--<ExcludeFromSingleFile>true</ExcludeFromSingleFile>-->
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
 
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <FileVersion>1.0.1.0</FileVersion>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
 
     <Authors>Song Mai Software</Authors>
     <RepositoryUrl>https://github.com/maihcx/PDownloader.git</RepositoryUrl>

@@ -1,3 +1,19 @@
+## v1.0.2
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- [infra] Fix yt-dlp format ordering for video quality (#231) — @maihcx
+- [download] Improve progress reporting (#229) — @maihcx
+- [core] Add hasVideo/hasAudio and improve yt-dlp parsing (#228) — @maihcx
+
+## 🧹 Maintenance
+
+- [download] Add duration to YtAnalyzeResult and parser (#230) — @maihcx
+
+
+---
+
 ## v1.0.1
 
 ## 🚀 Changelog
