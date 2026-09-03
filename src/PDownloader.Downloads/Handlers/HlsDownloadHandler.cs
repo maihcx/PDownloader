@@ -94,7 +94,7 @@ internal sealed class HlsDownloadHandler
 
             _item.Status = DownloadStatus.Downloading;
             _item.StartTime = DateTime.Now;
-            _item.TotalBytes = 0;
+            _item.SetTotalBytes(0);
 
             string finalPath = fragmentResult is { FragmentUrls.Count: > 0 }
                 ? await DownloadResolvedFragmentsAsync(
@@ -184,7 +184,8 @@ internal sealed class HlsDownloadHandler
             ApplyFileHashes,
             _item.MergeMode,
             cancellationToken,
-            reportDownloadProgress: progress => _item.DownloadProgressPercent = progress);
+            reportDownloadProgress: progress => _item.DownloadProgressPercent = progress,
+            reportTotalBytes: (bytes, estimated) => _item.SetTotalBytes(bytes, estimated));
     }
 
     private async Task<string> DownloadWithYtDlpAsync(
@@ -222,10 +223,12 @@ internal sealed class HlsDownloadHandler
             userAgent,
             _item.CustomHeaders,
             _item.Threads,
-            (downloadedBytes, totalBytes, ytDlpSpeedBps) =>
+            progress =>
             {
                 lock (progressSync)
                 {
+                    long downloadedBytes = progress.DownloadedBytes;
+                    double ytDlpSpeedBps = progress.SpeedBps;
                     long now = Stopwatch.GetTimestamp();
                     double elapsedSeconds =
                         (now - previousTimestamp) / (double)Stopwatch.Frequency;
@@ -240,10 +243,8 @@ internal sealed class HlsDownloadHandler
                     previousDownloadedBytes = downloadedBytes;
                     previousTimestamp = now;
 
-                    if (totalBytes > 0)
-                    {
-                        _item.TotalBytes = totalBytes;
-                    }
+                    _item.SetTotalBytes(progress.TotalBytes, progress.IsTotalEstimated);
+                    _item.DownloadProgressPercent = progress.Percent;
 
                     double speedBps = ytDlpSpeedBps > 0
                         ? ytDlpSpeedBps
@@ -267,7 +268,7 @@ internal sealed class HlsDownloadHandler
         long fileLength = new FileInfo(finalPath).Length;
         _item.FileName = Path.GetFileName(finalPath);
         _item.SavePath = finalPath;
-        _item.TotalBytes = fileLength;
+        _item.SetTotalBytes(fileLength);
         _reportProgress(fileLength, 0);
         _item.Status = DownloadStatus.Completed;
         _item.EndTime = DateTime.Now;

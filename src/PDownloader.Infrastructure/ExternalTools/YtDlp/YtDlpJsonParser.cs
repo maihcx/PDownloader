@@ -30,7 +30,7 @@ internal static class YtDlpJsonParser
         {
             foreach (JsonElement element in requestedFormats.EnumerateArray())
             {
-                streams.Add(ParseResolvedStream(element));
+                streams.Add(ParseResolvedStream(element, root));
             }
         }
         else if (root.TryGetProperty("requested_downloads", out JsonElement requestedDownloads)
@@ -39,12 +39,12 @@ internal static class YtDlpJsonParser
         {
             foreach (JsonElement element in requestedDownloads.EnumerateArray())
             {
-                streams.Add(ParseResolvedStream(element));
+                streams.Add(ParseResolvedStream(element, root));
             }
         }
         else
         {
-            streams.Add(ParseResolvedStream(root));
+            streams.Add(ParseResolvedStream(root, root));
         }
 
         streams.RemoveAll(stream => string.IsNullOrWhiteSpace(stream.Url));
@@ -74,7 +74,7 @@ internal static class YtDlpJsonParser
         var formats = new List<YtFormat>();
         foreach (JsonElement formatElement in formatArray.EnumerateArray())
         {
-            YtFormat? format = ParseFormat(formatElement);
+            YtFormat? format = ParseFormat(formatElement, root);
             if (format != null)
             {
                 formats.Add(format);
@@ -119,6 +119,8 @@ internal static class YtDlpJsonParser
         JsonElement root = document.RootElement;
         JsonElement target = root;
 
+        if (MediaSizeEstimate.IsLive(root)) return null;
+
         if (root.TryGetProperty("requested_formats", out JsonElement requestedFormats)
             && requestedFormats.ValueKind == JsonValueKind.Array)
         {
@@ -133,13 +135,14 @@ internal static class YtDlpJsonParser
             }
         }
 
-        return ExtractFragments(target);
+        return MediaSizeEstimate.IsLive(target) ? null : ExtractFragments(target, root);
     }
 
-    private static ResolvedStream ParseResolvedStream(JsonElement element)
+    private static ResolvedStream ParseResolvedStream(JsonElement element, JsonElement root)
     {
         string videoCodec = element.GetStringOrDefault("vcodec") ?? "none";
         string audioCodec = element.GetStringOrDefault("acodec") ?? "none";
+        MediaSizeEstimate size = GetFileSize(element, root);
 
         return new ResolvedStream
         {
@@ -149,7 +152,8 @@ internal static class YtDlpJsonParser
             Ext = element.GetStringOrDefault("ext") ?? "mp4",
             HasVideo = !string.Equals(videoCodec, "none", StringComparison.OrdinalIgnoreCase),
             HasAudio = !string.Equals(audioCodec, "none", StringComparison.OrdinalIgnoreCase),
-            FilesizeApprox = GetFileSize(element),
+            FilesizeApprox = size.Bytes,
+            IsFilesizeEstimated = size.IsEstimated,
             HttpHeaders = ParseHttpHeaders(element),
         };
     }
@@ -182,7 +186,7 @@ internal static class YtDlpJsonParser
         return headers;
     }
 
-    private static YtFormat? ParseFormat(JsonElement element)
+    private static YtFormat? ParseFormat(JsonElement element, JsonElement root)
     {
         string extension = element.GetStringOrDefault("ext") ?? "none";
         if (extension is "mhtml" or "none")
@@ -195,7 +199,7 @@ internal static class YtDlpJsonParser
             return null;
         }
 
-        long fileSize = GetFileSize(element);
+        MediaSizeEstimate fileSize = GetFileSize(element, root);
         bool? hasVideo = GetCodecPresence(element, "vcodec");
         bool? hasAudio = GetCodecPresence(element, "acodec");
 
@@ -243,15 +247,16 @@ internal static class YtDlpJsonParser
             HasVideo = hasVideo,
             HasAudio = hasAudio,
             Note = note,
-            Filesize = fileSize,
-            Size = FormatSize(fileSize),
+            // Older extensions forward this number as an exact size when queuing.
+            // Keep estimates in the display string; the app resolves them on start.
+            Filesize = fileSize.IsEstimated ? 0 : fileSize.Bytes,
+            Size = (fileSize.IsEstimated ? "≈ " : string.Empty) + FormatSize(fileSize.Bytes),
         };
     }
 
     private static double? GetDuration(JsonElement element)
     {
-        if (element.TryGetProperty("is_live", out JsonElement isLive)
-            && isLive.ValueKind == JsonValueKind.True)
+        if (MediaSizeEstimate.IsLive(element))
         {
             return null;
         }
@@ -300,7 +305,7 @@ internal static class YtDlpJsonParser
             || protocol.Contains("dash", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static HlsFragmentsResult? ExtractFragments(JsonElement element)
+    private static HlsFragmentsResult? ExtractFragments(JsonElement element, JsonElement root)
     {
         if (!element.TryGetProperty("fragments", out JsonElement fragmentArray)
             || fragmentArray.ValueKind != JsonValueKind.Array
@@ -312,9 +317,14 @@ internal static class YtDlpJsonParser
         string? baseUrl = element.GetStringOrDefault("fragment_base_url");
         string extension = element.GetStringOrDefault("ext") ?? "ts";
         var urls = new List<string>();
+        var durations = new List<double>();
 
         foreach (JsonElement fragment in fragmentArray.EnumerateArray())
         {
+            // The simple concatenating downloader cannot safely handle ranges
+            // or encryption. Let yt-dlp handle these rather than fetch whole files.
+            if (fragment.TryGetProperty("byte_range", out _)
+                || fragment.TryGetProperty("decrypt_info", out _)) return null;
             string? resolvedUrl = fragment.GetStringOrDefault("url");
             string? fragmentPath = fragment.GetStringOrDefault("path");
 
@@ -329,14 +339,19 @@ internal static class YtDlpJsonParser
             if (!string.IsNullOrEmpty(resolvedUrl))
             {
                 urls.Add(resolvedUrl);
+                durations.Add(MediaSizeEstimate.PositiveNumber(fragment, "duration"));
             }
+            else return null; // Never silently omit a segment from a finite playlist.
         }
 
+        MediaSizeEstimate size = GetFileSize(element, root);
         return urls.Count == 0
             ? null
             : new HlsFragmentsResult
             {
                 FragmentUrls = urls,
+                FragmentDurations = durations,
+                Size = size,
                 Ext = extension,
             };
     }
@@ -352,22 +367,9 @@ internal static class YtDlpJsonParser
             "yt-dlp does not return valid JSON.");
     }
 
-    private static long GetFileSize(JsonElement element)
-    {
-        if (element.TryGetProperty("filesize", out JsonElement fileSize)
-            && fileSize.ValueKind == JsonValueKind.Number)
-        {
-            return fileSize.GetInt64();
-        }
-
-        if (element.TryGetProperty("filesize_approx", out JsonElement approximateFileSize)
-            && approximateFileSize.ValueKind == JsonValueKind.Number)
-        {
-            return approximateFileSize.GetInt64();
-        }
-
-        return 0;
-    }
+    private static MediaSizeEstimate GetFileSize(JsonElement element, JsonElement root) =>
+        MediaSizeEstimate.FromMetadata(element,
+            MediaSizeEstimate.PositiveNumber(root, "duration"), MediaSizeEstimate.IsLive(root));
 
     private static string FormatSize(long bytes)
     {

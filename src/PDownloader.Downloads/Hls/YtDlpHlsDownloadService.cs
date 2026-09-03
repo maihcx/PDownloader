@@ -14,6 +14,7 @@
 // Copyright (C) Song Mai Software.
 
 using System.Globalization;
+using System.Text.Json;
 
 namespace PDownloader.Downloads.Hls;
 
@@ -21,13 +22,19 @@ internal sealed class YtDlpHlsDownloadService
 {
     private const string ProgressPrefix = "__PD_PROGRESS__|";
     private const string DestinationPrefix = "__PD_DESTINATION__|";
+    private const string MetadataPrefix = "__PD_MEDIA__|";
 
     private const string ProgressTemplate =
         "download:" + ProgressPrefix +
         "%(progress.downloaded_bytes)s|" +
         "%(progress.total_bytes)s|" +
         "%(progress.total_bytes_estimate)s|" +
-        "%(progress.speed)s";
+        "%(progress.speed)s|%(progress.status)s|%(info.is_live)s|" +
+        "%(progress.fragment_index)s|%(progress.fragment_count)s|%(info.format_id|default)s";
+
+    private const string MetadataTemplate = "before_dl:" + MetadataPrefix +
+        "%(.{format_id,is_live,live_status,duration,filesize,filesize_approx," +
+        "tbr,vbr,abr,vcodec,acodec,requested_formats})j";
 
     private readonly YtDlpService _ytDlpService;
 
@@ -47,7 +54,7 @@ internal sealed class YtDlpHlsDownloadService
         string? userAgent,
         IReadOnlyDictionary<string, string>? extraHeaders,
         int preferredFragmentCount,
-        Action<long, long, double>? reportProgress,
+        Action<MediaDownloadProgress>? reportProgress,
         CancellationToken cancellationToken)
     {
         string ytDlpPath = _ytDlpService.FindYtDlp()
@@ -138,6 +145,9 @@ internal sealed class YtDlpHlsDownloadService
         };
 
         startInfo.ArgumentList.Add("--newline");
+        // --print enables quiet mode implicitly. Keep ordered metadata/progress
+        // on stdout; also recognize tagged progress on stderr below.
+        startInfo.ArgumentList.Add("--no-quiet");
         startInfo.ArgumentList.Add("--no-warnings");
         startInfo.ArgumentList.Add("--no-playlist");
 
@@ -152,6 +162,8 @@ internal sealed class YtDlpHlsDownloadService
         startInfo.ArgumentList.Add("0.25");
         startInfo.ArgumentList.Add("--progress-template");
         startInfo.ArgumentList.Add(ProgressTemplate);
+        startInfo.ArgumentList.Add("--print");
+        startInfo.ArgumentList.Add(MetadataTemplate);
         startInfo.ArgumentList.Add("--print");
         startInfo.ArgumentList.Add(
             $"after_move:{DestinationPrefix}%(filepath)s");
@@ -240,36 +252,46 @@ internal sealed class YtDlpHlsDownloadService
 
     private static async Task<YtDlpProcessResult> RunProcessAsync(
         ProcessStartInfo startInfo,
-        Action<long, long, double>? reportProgress,
+        Action<MediaDownloadProgress>? reportProgress,
         CancellationToken cancellationToken)
     {
         using var process = new Process { StartInfo = startInfo };
         var standardError = new StringBuilder();
-        var totalSizeTracker = new StableTotalSizeTracker();
+        var progressTracker = new YtDlpProgressTracker();
         string? destinationPath = null;
+        object outputSync = new();
 
-        process.OutputDataReceived += (_, args) =>
+        bool ProcessLine(string? line)
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                return;
+                return true;
             }
 
-            string? line = args.Data;
             if (string.IsNullOrEmpty(line))
             {
-                return;
+                return true;
+            }
+
+            if (line.StartsWith(MetadataPrefix, StringComparison.Ordinal))
+            {
+                try
+                {
+                    using JsonDocument metadata = JsonDocument.Parse(line[MetadataPrefix.Length..]);
+                    progressTracker.Initialize(metadata.RootElement);
+                    reportProgress?.Invoke(progressTracker.Capture(0));
+                }
+                catch (JsonException) { /* Metadata must not prevent a download. */ }
+                return true;
             }
 
             if (TryParseProgress(line, out YtDlpProgressSnapshot progress))
             {
-                long stableTotalBytes = totalSizeTracker.GetStableTotalBytes(progress);
-
-                reportProgress?.Invoke(
-                    progress.DownloadedBytes,
-                    stableTotalBytes,
-                    progress.SpeedBps);
-                return;
+                reportProgress?.Invoke(progressTracker.Update(
+                    progress.FormatId, progress.DownloadedBytes,
+                    progress.ExactTotalBytes, progress.EstimatedTotalBytes, progress.SpeedBps,
+                    progress.Finished, progress.IsLive, progress.FragmentIndex, progress.FragmentCount));
+                return true;
             }
 
             if (line.StartsWith(DestinationPrefix, StringComparison.Ordinal))
@@ -279,14 +301,22 @@ internal sealed class YtDlpHlsDownloadService
                 {
                     destinationPath = path;
                 }
+                return true;
             }
+            return false;
+        }
+
+        process.OutputDataReceived += (_, args) =>
+        {
+            lock (outputSync) ProcessLine(args.Data);
         };
 
         process.ErrorDataReceived += (_, args) =>
         {
-            if (args.Data != null)
+            lock (outputSync)
             {
-                standardError.AppendLine(args.Data);
+                if (!ProcessLine(args.Data) && args.Data != null)
+                    standardError.AppendLine(args.Data);
             }
         };
 
@@ -323,8 +353,8 @@ internal sealed class YtDlpHlsDownloadService
             return false;
         }
 
-        string[] values = line[ProgressPrefix.Length..].Split('|');
-        if (values.Length < 4
+        string[] values = line[ProgressPrefix.Length..].Split('|', 9);
+        if (values.Length < 9
             || !TryParseNonNegativeInt64(values[0], out long downloadedBytes))
         {
             return false;
@@ -333,12 +363,19 @@ internal sealed class YtDlpHlsDownloadService
         _ = TryParseNonNegativeInt64(values[1], out long exactTotalBytes);
         _ = TryParseNonNegativeInt64(values[2], out long estimatedTotalBytes);
         _ = TryParseNonNegativeDouble(values[3], out double speedBps);
+        _ = TryParseNonNegativeInt64(values[6], out long fragmentIndex);
+        _ = TryParseNonNegativeInt64(values[7], out long fragmentCount);
 
         progress = new YtDlpProgressSnapshot(
             downloadedBytes,
             exactTotalBytes,
             estimatedTotalBytes,
-            speedBps);
+            speedBps,
+            values[8],
+            values[4].Equals("finished", StringComparison.OrdinalIgnoreCase),
+            values[5].Equals("true", StringComparison.OrdinalIgnoreCase),
+            fragmentIndex,
+            fragmentCount);
         return true;
     }
 
@@ -428,56 +465,12 @@ internal sealed class YtDlpHlsDownloadService
         long DownloadedBytes,
         long ExactTotalBytes,
         long EstimatedTotalBytes,
-        double SpeedBps);
-
-    private sealed class StableTotalSizeTracker
-    {
-        private const int EstimateWarmupSampleCount = 4;
-
-        private int _estimateSampleCount;
-        private long _largestWarmupEstimate;
-        private long _lockedEstimatedTotalBytes;
-        private long _lockedExactTotalBytes;
-
-        public long GetStableTotalBytes(YtDlpProgressSnapshot progress)
-        {
-            if (_lockedExactTotalBytes > 0)
-            {
-                return _lockedExactTotalBytes;
-            }
-
-            if (progress.ExactTotalBytes > 0)
-            {
-                _lockedExactTotalBytes = Math.Max(
-                    progress.ExactTotalBytes,
-                    progress.DownloadedBytes);
-
-                return _lockedExactTotalBytes;
-            }
-
-            if (_lockedEstimatedTotalBytes > 0)
-            {
-                return _lockedEstimatedTotalBytes;
-            }
-
-            if (progress.EstimatedTotalBytes <= 0)
-            {
-                return 0;
-            }
-
-            _estimateSampleCount++;
-            _largestWarmupEstimate = Math.Max(
-                _largestWarmupEstimate,
-                Math.Max(progress.EstimatedTotalBytes, progress.DownloadedBytes));
-
-            if (_estimateSampleCount >= EstimateWarmupSampleCount)
-            {
-                _lockedEstimatedTotalBytes = _largestWarmupEstimate;
-            }
-
-            return _lockedEstimatedTotalBytes;
-        }
-    }
+        double SpeedBps,
+        string FormatId,
+        bool Finished,
+        bool IsLive,
+        long FragmentIndex,
+        long FragmentCount);
 
     private sealed record YtDlpProcessResult(
         string? DestinationPath,

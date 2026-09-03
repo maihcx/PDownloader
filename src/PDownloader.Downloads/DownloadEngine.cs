@@ -142,7 +142,7 @@ public class DownloadEngine
         long fileLength = new FileInfo(finalPath).Length;
         _item.FileName = Path.GetFileName(finalPath);
         _item.SavePath = finalPath;
-        _item.TotalBytes = Math.Max(_item.TotalBytes, fileLength);
+        _item.SetTotalBytes(fileLength);
         ReportProgress(_item.TotalBytes, 0);
         _item.MergeProgress = 100;
         _item.Status = DownloadStatus.Completed;
@@ -174,7 +174,7 @@ public class DownloadEngine
             _item.FileName = probe.SuggestedFileName;
         }
 
-        _item.TotalBytes = probe.TotalBytes;
+        _item.SetTotalBytes(probe.TotalBytes);
         _item.Status = DownloadStatus.Downloading;
         _item.StartTime = DateTime.Now;
 
@@ -204,7 +204,7 @@ public class DownloadEngine
         DownloadPathService.CleanupTemp(tempDirectory);
 
         long fileLength = new FileInfo(finalPath).Length;
-        _item.TotalBytes = probe.TotalBytes > 0 ? probe.TotalBytes : fileLength;
+        _item.SetTotalBytes(fileLength);
         ReportProgress(_item.TotalBytes, 0);
         _item.Status = DownloadStatus.Completed;
         _item.EndTime = DateTime.Now;

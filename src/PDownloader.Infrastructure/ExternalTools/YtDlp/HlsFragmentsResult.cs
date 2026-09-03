@@ -19,5 +19,9 @@ public sealed class HlsFragmentsResult
 {
     public List<string> FragmentUrls { get; set; } = new();
 
+    public List<double> FragmentDurations { get; set; } = new();
+
+    public MediaSizeEstimate Size { get; set; }
+
     public string Ext { get; set; } = "ts";
 }

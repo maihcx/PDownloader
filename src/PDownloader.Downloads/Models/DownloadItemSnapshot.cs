@@ -28,6 +28,8 @@ public record DownloadItemSnapshot(
 
     public double DownloadProgressPercent { get; init; }
 
+    public bool IsTotalBytesEstimated { get; init; }
+
     public double MergeProgress { get; init; }
 
     public bool IsMergeProgressActive { get; init; }
@@ -50,6 +52,7 @@ public record DownloadItemSnapshot(
         ResolvedUrl = i.ResolvedUrl,
         TempRootPath = i.TempRootPath,
         DownloadProgressPercent = i.DownloadProgressPercent,
+        IsTotalBytesEstimated = i.IsTotalBytesEstimated,
         MergeProgress = i.MergeProgress,
         IsMergeProgressActive = i.IsMergeProgressActive,
         FileMergeMode = i.MergeMode.ToString(),
@@ -75,6 +78,7 @@ public record DownloadItemSnapshot(
             TotalBytes = TotalBytes,
             DownloadedBytes = DownloadedBytes,
             DownloadProgressPercent = DownloadProgressPercent,
+            IsTotalBytesEstimated = IsTotalBytesEstimated,
             MergeProgress = MergeProgress,
             IsMergeProgressActive = IsMergeProgressActive,
             MergeMode = FileMergeModeParser.Parse(FileMergeMode),

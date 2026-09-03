@@ -31,6 +31,8 @@ public sealed class ResolvedStream
 
     public long FilesizeApprox { get; set; }
 
+    public bool IsFilesizeEstimated { get; set; }
+
     public Dictionary<string, string> HttpHeaders { get; set; } =
         new(StringComparer.OrdinalIgnoreCase);
 
