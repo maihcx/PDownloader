@@ -183,7 +183,8 @@ internal sealed class HlsDownloadHandler
             _reportMergeProgress,
             ApplyFileHashes,
             _item.MergeMode,
-            cancellationToken);
+            cancellationToken,
+            reportDownloadProgress: progress => _item.DownloadProgressPercent = progress);
     }
 
     private async Task<string> DownloadWithYtDlpAsync(

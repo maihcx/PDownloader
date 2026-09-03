@@ -74,6 +74,7 @@ public class DownloadEngine
             }
 
             _item.IsMergeProgressActive = false;
+            _item.DownloadProgressPercent = 0;
 
             if (_item.IsYoutube)
             {
