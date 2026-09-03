@@ -19,7 +19,8 @@ public static class Bootstrap
 {
     private static Thread? _pipeThread;
     private static Mutex? _mutex;
-    private static readonly string _uniqueAppId = @"Global\PDownloader.SingleInstance.App";
+    private static readonly string _uniqueAppId = @"Global\PDownloader.SingleInstance.App-" + IpcUserScope.CurrentUserId;
+    private static readonly string _activationPipe = "PDownloader.MainActivation-" + IpcUserScope.CurrentUserId;
     private static bool _isPrimaryInstance = false;
     private static SplashScreen? SplashScreen;
 
@@ -29,21 +30,21 @@ public static class Bootstrap
     public static void OnBeforeStartup()
     {
         #region Mutex checker
+        _mutex = CreateMutexWithSecurity(_uniqueAppId);
         try
         {
-            _mutex = CreateMutexWithSecurity(_uniqueAppId);
             _isPrimaryInstance = _mutex.WaitOne(0, false);
         }
-        catch
+        catch (AbandonedMutexException)
         {
-            _mutex = new Mutex(true, _uniqueAppId, out _isPrimaryInstance);
+            _isPrimaryInstance = true;
         }
 
         if (!_isPrimaryInstance)
         {
             try
             {
-                using var client = new NamedPipeClientStream(".", _uniqueAppId, PipeDirection.Out);
+                using var client = new NamedPipeClientStream(".", _activationPipe, PipeDirection.Out);
                 client.Connect(1000);
                 using var writer = new StreamWriter(client) { AutoFlush = true };
                 writer.WriteLine("SHOW");
@@ -71,15 +72,15 @@ public static class Bootstrap
             IpcTopology.MainToCorePipeName,
             IpcTopology.CoreToMainPipeName);
 
-        IsViewAtBoot = cfsPDownloaderCore.IsAppStarted();
+        IsViewAtBoot = cfsPDownloaderCore.IsReadyAsync().GetAwaiter().GetResult();
+        cfsPDownloaderCore.StartAndWaitUntilReadyAsync().GetAwaiter().GetResult();
+        cfsPDownloaderCore.SetReady(false);
+        UserDataStore.InitializeAsync().GetAwaiter().GetResult();
 
         if (UserDataStore.GetValue<bool>("IsViewAtBoot"))
         {
             IsViewAtBoot = true;
         }
-
-        cfsPDownloaderCore.StartApp();
-        _ = cfsPDownloaderCore.StartServiceAsync();
 
         ConfluxManager.cfsPDownloaderCore = cfsPDownloaderCore;
 
@@ -134,6 +135,7 @@ public static class Bootstrap
                 }
             });
         };
+        _ = cfsPDownloaderCore.StartServiceAsync();
         #endregion
 
         #region Single-instance pipe server
@@ -145,12 +147,12 @@ public static class Bootstrap
                 {
                     var pipeSecurity = new PipeSecurity();
                     pipeSecurity.AddAccessRule(new PipeAccessRule(
-                        new SecurityIdentifier(WellKnownSidType.WorldSid, null),
+                        new SecurityIdentifier(IpcUserScope.CurrentUserId),
                         PipeAccessRights.ReadWrite,
                         AccessControlType.Allow));
 
                     using NamedPipeServerStream server = NamedPipeServerStreamAcl.Create(
-                        _uniqueAppId, PipeDirection.In, 1,
+                        _activationPipe, PipeDirection.In, 1,
                         PipeTransmissionMode.Byte, PipeOptions.None,
                         0, 0, pipeSecurity);
 
@@ -175,6 +177,7 @@ public static class Bootstrap
         StartupManager.RefreshStartWithWin();
         SplashScreen?.Close(new TimeSpan(0));
 
+        ConfluxManager.cfsPDownloaderCore?.SetReady(true);
         _ = ConfluxManager.cfsPDownloaderCore?.SendAsync(
             AppProtocol.MainReady);
         _ = App.GetRequiredService<UpdateHostService>().RequestStateAsync();
@@ -187,6 +190,7 @@ public static class Bootstrap
 
     public static void OnExit()
     {
+        ConfluxManager.cfsPDownloaderCore?.Dispose();
         if (_mutex != null)
         {
             try { _mutex.ReleaseMutex(); } catch { }
@@ -198,7 +202,7 @@ public static class Bootstrap
     private static Mutex CreateMutexWithSecurity(string name)
     {
         var rule = new MutexAccessRule(
-            new SecurityIdentifier(WellKnownSidType.WorldSid, null),
+            new SecurityIdentifier(IpcUserScope.CurrentUserId),
             MutexRights.FullControl,
             AccessControlType.Allow);
         var sec = new MutexSecurity();

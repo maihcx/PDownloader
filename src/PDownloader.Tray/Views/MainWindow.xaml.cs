@@ -44,9 +44,7 @@ public partial class MainWindow : INavigableView<MainWindowViewModels>, IDisposa
 
     private void TrayIcon_BalloonTipClicked([System.Diagnostics.CodeAnalysis.NotNull] Wpf.Ui.Tray.Controls.NotifyIcon sender, RoutedEventArgs e)
     {
-        _ = AppRuntime.CoreService?.SendAsync(
-            AppProtocol.TrayEvent,
-            TrayNavigationEvent.GoSettingsUpdate);
+        ViewModel.OnTrayExecute("tray_update");
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -63,10 +61,7 @@ public partial class MainWindow : INavigableView<MainWindowViewModels>, IDisposa
 
     private void NotifyIcon_LeftClick(Wpf.Ui.Tray.Controls.NotifyIcon sender, RoutedEventArgs e)
     {
-        AppRuntime.CoreService?.StartApp();
-        _ = AppRuntime.CoreService?.SendAsync(
-            AppProtocol.State,
-            AppState.Start);
+        ViewModel.OnTrayExecute("tray_open");
     }
 
     public void ShowUpdateBalloon(string version)
@@ -79,11 +74,11 @@ public partial class MainWindow : INavigableView<MainWindowViewModels>, IDisposa
 
     protected override void OnClosing(CancelEventArgs e)
     {
-        if (AppRuntime.CoreService!.IsAppStarted())
+        if (AppRuntime.CoreService is { } core)
         {
-            AppRuntime.CoreService.Send(
+            core.Send(
                 AppProtocol.CoreServiceState,
-                AppState.Shutdown);
+                AppState.Shutdown, TimeSpan.FromSeconds(1));
         }
 
         base.OnClosing(e);

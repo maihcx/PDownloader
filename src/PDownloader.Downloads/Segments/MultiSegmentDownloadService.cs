@@ -195,6 +195,8 @@ internal sealed class MultiSegmentDownloadService
             PublishProgress,
             () => _stateStore.Persist(tempDirectory, segments));
 
+        // Commit the layout before the first worker creates any part file.
+        _stateStore.Persist(tempDirectory, segments);
         PublishProgress(GetDownloadedBytes(), 0);
         monitor.Start();
         try
@@ -203,6 +205,7 @@ internal sealed class MultiSegmentDownloadService
                 segments,
                 supportsRange,
                 url,
+                () => _stateStore.Persist(tempDirectory, segments, keepBackup: false),
                 cancellationToken);
             monitor.ReportFinal();
         }

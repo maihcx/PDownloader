@@ -13,124 +13,165 @@
 //
 // Copyright (C) Song Mai Software.
 
+using PDownloader.Infrastructure.Persistence;
+
 namespace PDownloader.Core;
 
-/// <summary>
-/// Wires process-owned download persistence and publication to DownloadManager.
-/// </summary>
-public sealed class DownloadManagerBootstrap : IDisposable
+/// <summary>Owns history persistence; progress callbacks never perform disk I/O.</summary>
+public sealed class DownloadManagerBootstrap : IAsyncDisposable
 {
-    private const int SaveDebounceMs = 1000;
-
     private readonly DownloadProgressPublisher _progressPublisher;
     private readonly DownloadManager _downloads;
-    private readonly object _saveLock = new();
-    private Timer? _saveDebounceTimer;
-    private bool _initialized;
-    private bool _disposed;
+    private readonly object _lifecycleLock = new();
+    private readonly CancellationTokenSource _stopSaving = new();
+    private Task? _initializeTask;
+    private Task _saveLoopTask = Task.CompletedTask;
+    private Task? _disposeTask;
+    private bool _historyLoaded;
+    private long _changeVersion;
+    private long _savedVersion;
 
-    public DownloadManagerBootstrap(
-        DownloadProgressPublisher progressPublisher,
-        DownloadManager downloads)
+    public DownloadManagerBootstrap(DownloadProgressPublisher progressPublisher, DownloadManager downloads)
     {
         _progressPublisher = progressPublisher;
         _downloads = downloads;
     }
 
-    public void Initialize()
+    public Task InitializeAsync(CancellationToken cancellationToken)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        if (_initialized)
+        lock (_lifecycleLock)
         {
-            return;
-        }
+            ObjectDisposedException.ThrowIf(_disposeTask is not null, this);
+            if (_initializeTask is null)
+            {
+                _downloads.OnItemChanged += OnItemChanged;
+                _initializeTask = Task.Run(() => InitializeCoreAsync(cancellationToken));
+            }
 
-        _downloads.OnItemChanged += OnItemChanged;
-        RestoreHistoryOnStartup();
-        _initialized = true;
+            return _initializeTask;
+        }
+    }
+
+    private async Task InitializeCoreAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string? json = AtomicFile.ReadAllText(StorageDownloaderDataFile,
+                value => { DownloadManager.DeserializeHistory(value); }, out bool recovered);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (json is not null)
+            {
+                List<DownloadItem> restored = await _downloads.RestoreHistoryAsync(json, cancellationToken)
+                    .ConfigureAwait(false);
+                Debug.WriteLine($"[Bootstrap] Restored {restored.Count} history items; backup={recovered}.");
+            }
+
+            _historyLoaded = true;
+            lock (_lifecycleLock)
+            {
+                if (_disposeTask is null)
+                {
+                    _saveLoopTask = Task.Run(SaveLoopAsync);
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception ex)
+        {
+            // Keep both files untouched if neither can be safely restored.
+            Debug.WriteLine($"[Bootstrap] History could not be restored; saving disabled: {ex.Message}");
+        }
     }
 
     private void OnItemChanged(DownloadItem item)
     {
+        Interlocked.Increment(ref _changeVersion);
         _progressPublisher.Publish(item);
-        ScheduleSaveHistory();
     }
 
-    private void ScheduleSaveHistory()
+    private async Task SaveLoopAsync()
     {
-        lock (_saveLock)
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        try
         {
-            _saveDebounceTimer?.Dispose();
-            _saveDebounceTimer = new Timer(
-                _ => SaveHistoryNow(),
-                null,
-                SaveDebounceMs,
-                Timeout.Infinite);
+            while (await timer.WaitForNextTickAsync(_stopSaving.Token).ConfigureAwait(false))
+            {
+                if (Interlocked.Read(ref _changeVersion) != _savedVersion)
+                {
+                    SaveHistoryNow();
+                }
+            }
         }
+        catch (OperationCanceledException) when (_stopSaving.IsCancellationRequested) { }
     }
 
     private void SaveHistoryNow()
     {
-        try
-        {
-            Directory.CreateDirectory(StorageDataDir);
-            string json = _downloads.SerializeHistory();
-            File.WriteAllText(StorageDownloaderDataFile, json);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Bootstrap] Lưu lịch sử thất bại: {ex.Message}");
-        }
-    }
-
-    private void RestoreHistoryOnStartup()
-    {
-        try
-        {
-            if (!File.Exists(StorageDownloaderDataFile))
-            {
-                return;
-            }
-
-            string json = File.ReadAllText(StorageDownloaderDataFile);
-            List<DownloadItem> restored = _downloads.RestoreHistory(json);
-
-            Debug.WriteLine(
-                $"[Bootstrap] Đã khôi phục {restored.Count} item từ lịch sử.");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Bootstrap] Khôi phục lịch sử thất bại: {ex.Message}");
-        }
-    }
-
-    private static string StorageDataDir => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SM SOFT",
-        "PDownloader");
-
-    private static string StorageDownloaderDataFile =>
-        Path.Combine(StorageDataDir, "downloads_history.json");
-
-    public void Dispose()
-    {
-        if (_disposed)
+        if (!_historyLoaded)
         {
             return;
         }
 
-        if (_initialized)
+        long version = Interlocked.Read(ref _changeVersion);
+        try
         {
-            _downloads.OnItemChanged -= OnItemChanged;
+            string json = _downloads.SerializeHistory();
+            // Never replace a good backup with an invalid in-memory snapshot.
+            DownloadManager.DeserializeHistory(json);
+            AtomicFile.WriteAllText(StorageDownloaderDataFile, json);
+            _savedVersion = version;
+        }
+        catch (Exception ex)
+        {
+            // Keep the dirty version so the next tick retries even without progress.
+            Debug.WriteLine($"[Bootstrap] History save failed: {ex.Message}");
+        }
+    }
+
+    private static string StorageDownloaderDataFile => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "SM SOFT", "PDownloader", "downloads_history.json");
+
+    public async ValueTask DisposeAsync()
+    {
+        TaskCompletionSource? owner = null;
+        Task completion;
+        Task initialization;
+        lock (_lifecycleLock)
+        {
+            if (_disposeTask is null)
+            {
+                owner = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                _disposeTask = owner.Task;
+                _downloads.OnItemChanged -= OnItemChanged;
+            }
+
+            completion = _disposeTask;
+            initialization = _initializeTask ?? Task.CompletedTask;
         }
 
-        lock (_saveLock)
+        if (owner is not null)
         {
-            _saveDebounceTimer?.Dispose();
-            _saveDebounceTimer = null;
+            try
+            {
+                await _stopSaving.CancelAsync().ConfigureAwait(false);
+                try { await initialization.ConfigureAwait(false); }
+                catch (OperationCanceledException) { }
+                // The writer has exclusive ownership until it has fully stopped.
+                await _saveLoopTask.ConfigureAwait(false);
+                // Bootstrap calls this only after download/hash workers have stopped.
+                await Task.Run(SaveHistoryNow).ConfigureAwait(false);
+                owner.TrySetResult();
+            }
+            catch (Exception ex) { owner.TrySetException(ex); }
+            finally
+            {
+                _stopSaving.Dispose();
+                GC.SuppressFinalize(this);
+            }
         }
 
-        _disposed = true;
-        GC.SuppressFinalize(this);
+        await completion.ConfigureAwait(false);
     }
 }

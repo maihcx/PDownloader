@@ -13,8 +13,6 @@
 //
 // Copyright (C) Song Mai Software.
 
-using PDownloader.Core.Services.DownloadServices;
-
 namespace PDownloader.Core;
 
 public sealed class Bootstrap
@@ -23,22 +21,28 @@ public sealed class Bootstrap
     private readonly DownloadManagerBootstrap _downloadManagerBootstrap;
     private readonly CoreIpcHost _ipcHost;
     private readonly CoreIpcBindings _ipcBindings;
+    private readonly DownloadProgressPublisher _progressPublisher;
+    private readonly DownloadManager _downloads;
 
     public Bootstrap(
         RunnerSessionManager runnerSessions,
         DownloadManagerBootstrap downloadManagerBootstrap,
         CoreIpcHost ipcHost,
-        CoreIpcBindings ipcBindings)
+        CoreIpcBindings ipcBindings,
+        DownloadProgressPublisher progressPublisher,
+        DownloadManager downloads)
     {
         _runnerSessions = runnerSessions;
         _downloadManagerBootstrap = downloadManagerBootstrap;
         _ipcHost = ipcHost;
         _ipcBindings = ipcBindings;
+        _progressPublisher = progressPublisher;
+        _downloads = downloads;
     }
 
-    public void OnStarted()
+    public async Task OnStartedAsync(CancellationToken cancellationToken)
     {
-        _downloadManagerBootstrap.Initialize();
+        await _downloadManagerBootstrap.InitializeAsync(cancellationToken).ConfigureAwait(false);
 
         ConfluxService main = new();
         main.Register(
@@ -47,7 +51,7 @@ public sealed class Bootstrap
             IpcTopology.MainToCorePipeName);
         _ipcHost.AttachMain(main);
         _ipcBindings.BindMain(main);
-        _ = main.StartServiceAsync();
+        await main.StartServiceAsync().ConfigureAwait(false);
 
         ConfluxService tray = new()
         {
@@ -59,13 +63,46 @@ public sealed class Bootstrap
             IpcTopology.TrayToCorePipeName);
         _ipcHost.AttachTray(tray);
         _ipcBindings.BindTray(tray);
-        _ = tray.StartServiceAsync();
-        tray.StartApp();
+        await tray.StartServiceAsync().ConfigureAwait(false);
+        await tray.StartAndWaitUntilReadyAsync(cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public async Task OnStoppedAsync()
     {
-        await _runnerSessions.ShutdownAllAsync().ConfigureAwait(false);
-        await _ipcHost.StopAsync().ConfigureAwait(false);
+        try
+        {
+            // Close command admission, stop workers/hash jobs, then persist the
+            // final quiescent snapshot before removing UI endpoints.
+            await _downloads.DisposeAsync().ConfigureAwait(false);
+            await _downloadManagerBootstrap.DisposeAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            await _progressPublisher.DisposeAsync().ConfigureAwait(false);
+            try
+            {
+                await Task.WhenAll(
+                    NotifyShutdownAsync(_ipcHost.Main),
+                    NotifyShutdownAsync(_ipcHost.Tray),
+                    _runnerSessions.ShutdownAllAsync()).ConfigureAwait(false);
+            }
+            finally { await _ipcHost.StopAsync().ConfigureAwait(false); }
+        }
+    }
+
+    private static async Task NotifyShutdownAsync(ConfluxService? endpoint)
+    {
+        if (endpoint is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await endpoint.SendAsync(AppProtocol.State, AppState.Shutdown, TimeSpan.FromSeconds(2))
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) { Debug.WriteLine($"[Bootstrap] UI shutdown: {ex.Message}"); }
     }
 }

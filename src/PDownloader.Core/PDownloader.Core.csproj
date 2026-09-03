@@ -58,6 +58,7 @@
 
   <ItemGroup>
     <ExtFiles Include="Ext\$(ExtPlatformFolder)\**\*" />
+    <Compile Include="..\Shared\Persistence\UserDataFile.cs" Link="Persistence\UserDataFile.cs" />
   </ItemGroup>
 
   <Target Name="CopyExtFilesAfterBuild" AfterTargets="Build">

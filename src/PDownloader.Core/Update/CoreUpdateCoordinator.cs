@@ -80,6 +80,7 @@ public sealed class CoreUpdateCoordinator : IDisposable
                 {
                     SetAutoUpdateEnabled(enabled);
                 }
+
                 break;
         }
     }
@@ -324,10 +325,8 @@ public sealed class CoreUpdateCoordinator : IDisposable
 
     private void SetAutoUpdateEnabled(bool enabled)
     {
-        IsAutoUpdateEnabled = enabled;
-        // Merge settings written by Main/Tray before Core persists its value.
-        _userDataStore.Reload();
         _userDataStore.SetValue(AutoUpdateSettingKey, enabled);
+        IsAutoUpdateEnabled = enabled;
         BroadcastState();
 
         if (enabled)
@@ -403,5 +402,4 @@ public sealed class CoreUpdateCoordinator : IDisposable
         _operationCancellation = null;
         GC.SuppressFinalize(this);
     }
-
 }

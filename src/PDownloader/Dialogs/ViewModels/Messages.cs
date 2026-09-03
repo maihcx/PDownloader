@@ -52,7 +52,7 @@ public partial class Messages : ObservableObject
 
     public Messages()
     {
-        
+
     }
 
     public Models.Messages.MessageResult MessageResult { get; set; }

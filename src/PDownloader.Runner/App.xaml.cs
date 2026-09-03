@@ -79,6 +79,7 @@ public partial class App
     /// </summary>
     private async void OnStartup(object sender, StartupEventArgs e)
     {
+        await UserDataStore.InitializeAsync();
         await _host.StartAsync();
 
         TranslationSource.Instance.CurrentCulture = LanguageBase.GetSetupLanguage();
@@ -88,6 +89,7 @@ public partial class App
         ApplicationHostService applicationHost =
             Services.GetRequiredService<ApplicationHostService>();
         await applicationHost.ShowAsync();
+        Services.GetRequiredService<DownloaderService>().CfsContact?.SetReady(true);
     }
 
     /// <summary>

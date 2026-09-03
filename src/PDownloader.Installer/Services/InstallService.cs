@@ -315,7 +315,7 @@ public sealed class InstallService : IInstallService
         if (isCleanupUserData)
         {
             progress?.Report((0.95, Utils.LocalizationHelper.Get("uninstall_removing")));
-            DeleteUserData();
+            await Task.Run(UserDataStore.DeleteUserData, ct);
         }
 
         if (isCleanupExtension)
@@ -324,13 +324,6 @@ public sealed class InstallService : IInstallService
         }
 
         progress?.Report((1.0, Utils.LocalizationHelper.Get("uninstall_done_title")));
-    }
-
-    private static void DeleteUserData()
-    {
-        string path_stored = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SM SOFT", "PDownloader");
-
-        Directory.Delete(path_stored, true);
     }
 
     private static void ScheduleCleanup(string directory)

@@ -22,19 +22,29 @@ namespace PDownloader.Core.Application.Downloads;
 public sealed class DownloadCommandService
 {
     private readonly DownloadManager _downloads;
+    private readonly DownloadProgressPublisher _progress;
 
-    public DownloadCommandService(DownloadManager downloads)
+    public DownloadCommandService(DownloadManager downloads, DownloadProgressPublisher progress)
     {
         _downloads = downloads;
+        _progress = progress;
     }
 
-    public void Pause(string id) => _downloads.Pause(id);
-    public void Resume(string id) => _downloads.Resume(id);
-    public void Retry(string id) => _downloads.Retry(id);
-    public void Cancel(string id) => _downloads.Cancel(id);
-    public void Clear(DownloadClearScope scope) => _downloads.ClearAll(scope);
-    public void PauseAll() => _downloads.PauseAll();
-    public void ResumeAll() => _downloads.ResumeAll();
-    public void RetryAll() => _downloads.RetryAll();
+    public void PublishRunnerSnapshot(RunnerSession session)
+    {
+        // Register this exact ready session and seed its async mailbox with the
+        // current state, including transfers completed before Runner opened.
+        _progress.AttachRunner(session);
+    }
+
+    public Task PauseAsync(string id, CancellationToken token) => _downloads.PauseAsync(id, token);
+    public Task ResumeAsync(string id, CancellationToken token) =>
+        _downloads.ResumeAsync(id, cancellationToken: token);
+    public Task RetryAsync(string id, CancellationToken token) => _downloads.RetryAsync(id, token);
+    public Task CancelAsync(string id, CancellationToken token) => _downloads.CancelAsync(id, token);
+    public Task ClearAsync(DownloadClearScope scope, CancellationToken token) => _downloads.ClearAllAsync(scope, token);
+    public Task PauseAllAsync(CancellationToken token) => _downloads.PauseAllAsync(token);
+    public Task ResumeAllAsync(CancellationToken token) => _downloads.ResumeAllAsync(token);
+    public Task RetryAllAsync(CancellationToken token) => _downloads.RetryAllAsync(token);
     public List<DownloadItemDto> GetList() => _downloads.GetContractList();
 }

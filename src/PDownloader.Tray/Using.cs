@@ -30,7 +30,6 @@ global using System.ComponentModel;
 global using System.Globalization;
 global using System.IO;
 global using System.Resources;
-global using System.Text.Json;
 global using System.Windows;
 global using System.Windows.Data;
 global using Wpf.Ui.Abstractions.Controls;

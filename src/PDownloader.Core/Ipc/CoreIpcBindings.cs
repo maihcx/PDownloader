@@ -52,6 +52,7 @@ public sealed class CoreIpcBindings : IDisposable
         _updates = updates;
         _runnerSessions = runnerSessions;
         _runnerSessions.SessionStarted += BindRunner;
+        _runnerSessions.SessionReady += _downloadCommands.PublishRunnerSnapshot;
     }
 
     public void BindMain(ConfluxService main)
@@ -118,7 +119,7 @@ public sealed class CoreIpcBindings : IDisposable
 
         runner.RegisterMessageHandler(
             DownloadProtocol.RunnerStartDownload,
-            request => _downloadLauncher.StartFromRunner(session, request));
+            (request, token) => _downloadLauncher.StartFromRunnerAsync(session, request, token));
 
         BindRunnerDownloadControls(runner, session);
 
@@ -134,28 +135,28 @@ public sealed class CoreIpcBindings : IDisposable
     {
         main.RegisterMessageHandler(
             DownloadProtocol.RunnerPause,
-            request => _downloadCommands.Pause(request.DownloadId));
+            (request, token) => _downloadCommands.PauseAsync(request.DownloadId, token));
         main.RegisterMessageHandler(
             DownloadProtocol.RunnerResume,
-            request => _downloadCommands.Resume(request.DownloadId));
+            (request, token) => _downloadCommands.ResumeAsync(request.DownloadId, token));
         main.RegisterMessageHandler(
             DownloadProtocol.RunnerRetry,
-            request => _downloadCommands.Retry(request.DownloadId));
+            (request, token) => _downloadCommands.RetryAsync(request.DownloadId, token));
         main.RegisterMessageHandler(
             DownloadProtocol.RunnerCancel,
-            request => _downloadCommands.Cancel(request.DownloadId));
+            (request, token) => _downloadCommands.CancelAsync(request.DownloadId, token));
         main.RegisterMessageHandler(
             DownloadProtocol.RunnerClear,
-            _downloadCommands.Clear);
+            (scope, token) => _downloadCommands.ClearAsync(scope, token));
         main.RegisterMessageHandler(
             DownloadProtocol.RunnerPauseAll,
-            _downloadCommands.PauseAll);
+            (_, token) => _downloadCommands.PauseAllAsync(token));
         main.RegisterMessageHandler(
             DownloadProtocol.RunnerResumeAll,
-            _downloadCommands.ResumeAll);
+            (_, token) => _downloadCommands.ResumeAllAsync(token));
         main.RegisterMessageHandler(
             DownloadProtocol.RunnerRetryAll,
-            _downloadCommands.RetryAll);
+            (_, token) => _downloadCommands.RetryAllAsync(token));
     }
 
     private void BindRunnerDownloadControls(
@@ -167,16 +168,16 @@ public sealed class CoreIpcBindings : IDisposable
         // controlling another download by forging DownloadIdRequest.DownloadId.
         runner.RegisterMessageHandler(
             DownloadProtocol.RunnerPause,
-            _ => _downloadCommands.Pause(session.Id));
+            (_, token) => _downloadCommands.PauseAsync(session.Id, token));
         runner.RegisterMessageHandler(
             DownloadProtocol.RunnerResume,
-            _ => _downloadCommands.Resume(session.Id));
+            (_, token) => _downloadCommands.ResumeAsync(session.Id, token));
         runner.RegisterMessageHandler(
             DownloadProtocol.RunnerRetry,
-            _ => _downloadCommands.Retry(session.Id));
+            (_, token) => _downloadCommands.RetryAsync(session.Id, token));
         runner.RegisterMessageHandler(
             DownloadProtocol.RunnerCancel,
-            _ => _downloadCommands.Cancel(session.Id));
+            (_, token) => _downloadCommands.CancelAsync(session.Id, token));
     }
 
     public void Dispose()
@@ -187,6 +188,7 @@ public sealed class CoreIpcBindings : IDisposable
         }
 
         _runnerSessions.SessionStarted -= BindRunner;
+        _runnerSessions.SessionReady -= _downloadCommands.PublishRunnerSnapshot;
         GC.SuppressFinalize(this);
     }
 }

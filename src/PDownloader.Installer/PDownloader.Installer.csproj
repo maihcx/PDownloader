@@ -66,6 +66,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Source reuse only: Installer does not reference application/IPC assemblies. -->
+    <Compile Include="..\Shared\Persistence\UserDataFile.cs" Link="Persistence\UserDataFile.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="Wpf.Ui">
       <HintPath>..\WPF-UI.LIB\Wpf.Ui.dll</HintPath>
     </Reference>

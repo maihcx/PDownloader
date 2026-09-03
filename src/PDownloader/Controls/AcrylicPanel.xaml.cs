@@ -394,11 +394,11 @@ public class AcrylicPanel : ContentControl
         }
         catch (InvalidOperationException)
         {
-            
+
         }
         catch (ArgumentException)
         {
-            
+
         }
     }
 

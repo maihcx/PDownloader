@@ -154,7 +154,7 @@ public class InfoRow : ContentControl
     private void UpdateValueVisibility()
     {
         var contentPresenter = GetTemplateChild("PART_ValueContent") as ContentPresenter;
-        var valueText = GetTemplateChild("PART_ValueText")    as FrameworkElement;
+        var valueText = GetTemplateChild("PART_ValueText") as FrameworkElement;
         var hyperlinkBtn = GetTemplateChild("PART_HyperlinkButton") as FrameworkElement;
 
         bool hasContent = ValueContent != null;

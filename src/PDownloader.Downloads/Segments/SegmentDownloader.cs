@@ -23,6 +23,7 @@ internal sealed class SegmentDownloader
     private const int MaxRetries = 5;
     private const int BufferSize = 81920;
     private const int StallTimeoutSeconds = 20;
+    private static readonly TimeSpan CheckpointInterval = TimeSpan.FromSeconds(2);
 
     private readonly HttpClient _httpClient;
 
@@ -35,6 +36,7 @@ internal sealed class SegmentDownloader
         IReadOnlyCollection<SegmentInfo> segments,
         bool supportsRange,
         string url,
+        Action persistResetCheckpoint,
         CancellationToken cancellationToken)
     {
         IEnumerable<Task> tasks = segments
@@ -43,6 +45,7 @@ internal sealed class SegmentDownloader
                 segment,
                 supportsRange,
                 url,
+                persistResetCheckpoint,
                 cancellationToken));
 
         return Task.WhenAll(tasks);
@@ -52,6 +55,7 @@ internal sealed class SegmentDownloader
         SegmentInfo segment,
         bool supportsRange,
         string url,
+        Action persistResetCheckpoint,
         CancellationToken cancellationToken)
     {
         int attempt = 0;
@@ -67,6 +71,7 @@ internal sealed class SegmentDownloader
                     segment,
                     supportsRange,
                     url,
+                    persistResetCheckpoint,
                     cancellationToken);
                 segment.TransferState = DownloadThreadState.Completed;
                 segment.RetryAttempt = 0;
@@ -104,6 +109,7 @@ internal sealed class SegmentDownloader
         SegmentInfo segment,
         bool supportsRange,
         string url,
+        Action persistResetCheckpoint,
         CancellationToken cancellationToken)
     {
         SynchronizeLengthWithFile(segment);
@@ -165,7 +171,26 @@ internal sealed class SegmentDownloader
 
         if (mode == FileMode.Create)
         {
+            SegmentInfo previousCheckpoint = segment.CaptureCheckpoint();
             segment.BytesWritten = 0;
+            segment.IsCompleted = false;
+            segment.CommitCheckpoint(0, false);
+            try
+            {
+                if (previousCheckpoint.BytesWritten > 0)
+                {
+                    persistResetCheckpoint();
+                }
+            }
+            catch
+            {
+                // The part has not been truncated. Do not let a retry truncate
+                // it using a reset checkpoint whose commit failed.
+                segment.BytesWritten = previousCheckpoint.BytesWritten;
+                segment.IsCompleted = previousCheckpoint.IsCompleted;
+                segment.CommitCheckpoint(previousCheckpoint.BytesWritten, previousCheckpoint.IsCompleted);
+                throw;
+            }
         }
 
         string? directory = Path.GetDirectoryName(segment.TempFilePath);
@@ -179,44 +204,48 @@ internal sealed class SegmentDownloader
             mode,
             FileAccess.Write,
             FileShare.None);
-        await using Stream input = await response.Content.ReadAsStreamAsync(cancellationToken);
-
-        byte[] buffer = new byte[BufferSize];
-        int firstRead = await input.ReadAsync(buffer.AsMemory(), stallCancellation.Token);
-        ResetStallTimeout(stallCancellation);
-
-        if (firstRead > 0 && segment.BytesWritten == 0 && segment.Index == 0
-            && DownloadContentInspector.LooksLikeHtml(buffer, firstRead))
+        bool completed = false;
+        long lastCheckpointTimestamp = Stopwatch.GetTimestamp();
+        try
         {
-            throw new InvalidOperationException(
-                "The downloaded content is an HTML page (an error page or a login prompt), " +
-                "not the actual file.");
+            await using Stream input = await response.Content.ReadAsStreamAsync(cancellationToken);
+            byte[] buffer = new byte[BufferSize];
+            int read;
+            while ((read = await input.ReadAsync(buffer.AsMemory(), stallCancellation.Token)) > 0)
+            {
+                ResetStallTimeout(stallCancellation);
+                if (segment.BytesWritten == 0 && segment.Index == 0
+                    && DownloadContentInspector.LooksLikeHtml(buffer, read))
+                {
+                    throw new InvalidOperationException(
+                        "The downloaded content is an HTML page, not the actual file.");
+                }
+
+                await WriteBufferAsync(output, buffer, read, segment, cancellationToken);
+                if (Stopwatch.GetElapsedTime(lastCheckpointTimestamp) >= CheckpointInterval)
+                {
+                    FlushCheckpoint(output, segment, completed: false);
+                    lastCheckpointTimestamp = Stopwatch.GetTimestamp();
+                }
+            }
+
+            ValidateCompletedLength(segment);
+            completed = true;
+        }
+        finally
+        {
+            // No canceled token here: pause/shutdown must finish committing data
+            // before the state store publishes its final metadata snapshot.
+            FlushCheckpoint(output, segment, completed);
         }
 
-        if (firstRead > 0)
-        {
-            await WriteBufferAsync(
-                output,
-                buffer,
-                firstRead,
-                segment,
-                cancellationToken);
-        }
-
-        int read;
-        while ((read = await input.ReadAsync(buffer.AsMemory(), stallCancellation.Token)) > 0)
-        {
-            ResetStallTimeout(stallCancellation);
-            await WriteBufferAsync(
-                output,
-                buffer,
-                read,
-                segment,
-                cancellationToken);
-        }
-
-        ValidateCompletedLength(segment);
         segment.IsCompleted = true;
+    }
+
+    private static void FlushCheckpoint(FileStream output, SegmentInfo segment, bool completed)
+    {
+        output.Flush(flushToDisk: true);
+        segment.CommitCheckpoint(segment.BytesWritten, completed);
     }
 
     private static void HandleRangeResponse(
@@ -297,14 +326,25 @@ internal sealed class SegmentDownloader
 
     private static void SynchronizeLengthWithFile(SegmentInfo segment)
     {
-        long actualLength = File.Exists(segment.TempFilePath)
-            ? new FileInfo(segment.TempFilePath).Length
-            : 0;
+        long actualLength;
+        bool exists = true;
+        try { actualLength = new FileInfo(segment.TempFilePath).Length; }
+        catch (FileNotFoundException) { actualLength = 0; exists = false; }
+        catch (DirectoryNotFoundException) { actualLength = 0; exists = false; }
 
-        if (actualLength != segment.BytesWritten)
+        SegmentInfo checkpoint = segment.CaptureCheckpoint();
+        long committedLength = Math.Min(actualLength, checkpoint.BytesWritten);
+        if (actualLength > committedLength)
         {
-            segment.BytesWritten = actualLength;
+            using var part = new FileStream(segment.TempFilePath, FileMode.Open,
+                FileAccess.Write, FileShare.None);
+            part.SetLength(committedLength);
+            part.Flush(flushToDisk: true);
         }
+
+        segment.BytesWritten = committedLength;
+        segment.IsCompleted = exists && checkpoint.IsCompleted && actualLength >= checkpoint.BytesWritten;
+        segment.CommitCheckpoint(committedLength, segment.IsCompleted);
     }
 
     private static void ValidateCompletedLength(SegmentInfo segment)

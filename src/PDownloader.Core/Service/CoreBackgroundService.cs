@@ -44,8 +44,8 @@ public class CoreBackgroundService : BackgroundService
             return;
         }
 
-        _bootstrap.OnStarted();
         _bootstrapStarted = true;
+        await _bootstrap.OnStartedAsync(stoppingToken).ConfigureAwait(false);
 
         // Start HTTP bridge for browser extension (localhost:6287)
         try { _httpBridge.Start(); }
@@ -76,12 +76,21 @@ public class CoreBackgroundService : BackgroundService
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _httpBridge.Stop();
-        if (_bootstrapStarted)
+        try
         {
-            await _bootstrap.OnStoppedAsync().ConfigureAwait(false);
-            _bootstrapStarted = false;
+            // Signal the background token and join startup/update execution before
+            // tearing down services it may still be initializing. A host timeout
+            // must not make Dispose race live download work.
+            await base.StopAsync(CancellationToken.None).ConfigureAwait(false);
         }
-
-        await base.StopAsync(cancellationToken).ConfigureAwait(false);
+        finally
+        {
+            _httpBridge.Stop();
+            if (_bootstrapStarted)
+            {
+                await _bootstrap.OnStoppedAsync().ConfigureAwait(false);
+                _bootstrapStarted = false;
+            }
+        }
     }
 }

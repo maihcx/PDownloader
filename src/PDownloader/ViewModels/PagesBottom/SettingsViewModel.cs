@@ -29,7 +29,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationAware
 
     private readonly ThemeManagerService ThemeManagerService;
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private string _appVersion = string.Empty;
 
     public SettingsViewModel(
