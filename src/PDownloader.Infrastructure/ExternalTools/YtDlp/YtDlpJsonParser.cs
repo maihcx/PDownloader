@@ -82,11 +82,14 @@ internal static class YtDlpJsonParser
         }
 
         formats = formats
-            .OrderBy(format => format.Note == "" ? 0
-                : format.Note == "Video Only" ? 1
-                : format.Note == "Audio Only" ? 2
-                : 3)
-            .ThenByDescending(format => format.Height ?? 0)
+            // The browser consumes this order directly. Rank resolution before
+            // muxed/video-only so a low-resolution muxed file cannot jump ahead
+            // of a higher-resolution video that will be merged with audio.
+            .OrderBy(GetFormatSortGroup)
+            .ThenByDescending(format => format.Note == "Audio Only"
+                ? 0 : Math.Max(0, format.Height ?? 0))
+            .ThenBy(format => format.Note == "" ? 0
+                : format.Note == "Video Only" ? 1 : 2)
             .ThenByDescending(format => format.Filesize)
             .ToList();
 
@@ -97,6 +100,16 @@ internal static class YtDlpJsonParser
             Duration = GetDuration(root),
             Formats = formats,
         };
+    }
+
+    private static int GetFormatSortGroup(YtFormat format)
+    {
+        if (format.Note == "Audio Only") return 1;
+
+        // A known video with incomplete audio metadata still belongs with the
+        // other resolutions. Entirely unknown formats follow audio-only files.
+        return format.HasVideo == true || format.Height is > 0
+            || format.Note is "" or "Video Only" ? 0 : 2;
     }
 
     public static HlsFragmentsResult? ParseHlsFragments(string standardOutput)
