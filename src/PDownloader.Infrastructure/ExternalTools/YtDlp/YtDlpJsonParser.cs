@@ -94,6 +94,7 @@ internal static class YtDlpJsonParser
         {
             Success = true,
             Title = title,
+            Duration = GetDuration(root),
             Formats = formats,
         };
     }
@@ -232,6 +233,22 @@ internal static class YtDlpJsonParser
             Filesize = fileSize,
             Size = FormatSize(fileSize),
         };
+    }
+
+    private static double? GetDuration(JsonElement element)
+    {
+        if (element.TryGetProperty("is_live", out JsonElement isLive)
+            && isLive.ValueKind == JsonValueKind.True)
+        {
+            return null;
+        }
+
+        return element.TryGetProperty("duration", out JsonElement duration)
+            && duration.ValueKind == JsonValueKind.Number
+            && duration.TryGetDouble(out double seconds)
+            && double.IsFinite(seconds) && seconds > 0
+                ? seconds
+                : null;
     }
 
     private static bool? GetCodecPresence(JsonElement element, string propertyName)
