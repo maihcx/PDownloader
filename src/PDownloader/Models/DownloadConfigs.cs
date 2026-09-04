@@ -17,6 +17,8 @@ namespace PDownloader.Models;
 
 public partial class DownloadConfigs : ObservableObject
 {
+    public ObservableCollection<DownloadCategoryViewModel> DownloadCategories { get; } = [];
+
     [ObservableProperty]
     public string _defaultDownloadFolder = string.Empty;
 
@@ -43,6 +45,11 @@ public partial class DownloadConfigs : ObservableObject
         ArgumentNullException.ThrowIfNull(settings);
 
         DefaultDownloadFolder = settings.DefaultDownloadFolder;
+        DownloadCategories.Clear();
+        foreach (DownloadCategoryDto category in settings.DownloadCategories ?? [])
+        {
+            DownloadCategories.Add(DownloadCategoryViewModel.FromContract(category));
+        }
         DefaultTempFolder = settings.DefaultTempFolder;
         DefaultThreadCount = settings.DefaultThreadCount;
         FileMergeMode = settings.FileMergeMode;
@@ -54,6 +61,7 @@ public partial class DownloadConfigs : ObservableObject
     public DownloadSettingsDto ToContract() => new()
     {
         DefaultDownloadFolder = DefaultDownloadFolder,
+        DownloadCategories = DownloadCategories.Select(category => category.ToContract()).ToList(),
         DefaultTempFolder = DefaultTempFolder,
         DefaultThreadCount = DefaultThreadCount,
         FileMergeMode = FileMergeMode,

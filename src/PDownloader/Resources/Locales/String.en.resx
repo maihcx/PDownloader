@@ -271,13 +271,13 @@
     <value>PDownloader — Download Settings</value>
   </data>
   <data name="page_config_header_summary" xml:space="preserve">
-    <value>Configure download folders, temporary data and thread count</value>
+    <value>Configure file groups, download folders, temporary data and thread count</value>
   </data>
   <data name="page_config_folder_title" xml:space="preserve">
     <value>Download Folder</value>
   </data>
   <data name="page_config_folder_summary" xml:space="preserve">
-    <value>Where to save files after download</value>
+    <value>Route file types into customizable folders and control their priority</value>
   </data>
   <data name="page_config_folder_placeholder" xml:space="preserve">
     <value>Leave empty = default Downloads folder</value>
@@ -615,4 +615,17 @@ Do you want to continue?</value>
   <data name="download_status_retrying_title" xml:space="preserve">
     <value>Retrying: {0}</value>
   </data>
+  <data name="page_config_groups_root_title" xml:space="preserve"><value>Default download root</value></data>
+  <data name="page_config_groups_list_title" xml:space="preserve"><value>File groups</value></data>
+  <data name="page_config_groups_add" xml:space="preserve"><value>Add group</value></data>
+  <data name="page_config_groups_remove" xml:space="preserve"><value>Remove selected group</value></data>
+  <data name="page_config_groups_move_up" xml:space="preserve"><value>Move up (higher priority)</value></data>
+  <data name="page_config_groups_move_down" xml:space="preserve"><value>Move down (lower priority)</value></data>
+  <data name="page_config_groups_enabled_title" xml:space="preserve"><value>Use this group</value></data>
+  <data name="page_config_groups_enabled_summary" xml:space="preserve"><value>Disabled groups are hidden from Runner and ignored during automatic classification.</value></data>
+  <data name="page_config_groups_name_title" xml:space="preserve"><value>Group name</value></data>
+  <data name="page_config_groups_path_title" xml:space="preserve"><value>Destination folder</value></data>
+  <data name="page_config_groups_extensions_title" xml:space="preserve"><value>Supported file extensions</value></data>
+  <data name="page_config_groups_extensions_summary" xml:space="preserve"><value>Separate extensions with commas, spaces, semicolons, or new lines. The first matching group has priority; a group with no extensions can be used as the fallback.</value></data>
+  <data name="page_config_groups_new_name" xml:space="preserve"><value>New group</value></data>
 </root>

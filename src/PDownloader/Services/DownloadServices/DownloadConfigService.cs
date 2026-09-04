@@ -73,6 +73,22 @@ public class DownloadConfigService
         }
 
         configs.FileMergeMode = NormalizeFileMergeMode(configs.FileMergeMode);
+
+        if (string.IsNullOrWhiteSpace(configs.DefaultDownloadFolder))
+        {
+            configs.DefaultDownloadFolder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "Downloads");
+        }
+
+        if (configs.DownloadCategories.Count == 0)
+        {
+            foreach (DownloadCategoryDto category in DownloadCategoryDefaults.Create(
+                         configs.DefaultDownloadFolder))
+            {
+                configs.DownloadCategories.Add(DownloadCategoryViewModel.FromContract(category));
+            }
+        }
     }
 
     public void Reload()
@@ -90,10 +106,43 @@ public class DownloadConfigService
             DownloadConfigs configs = DownloadConfigs
                 ?? throw new InvalidOperationException("Download settings are unavailable.");
 
+            string downloadRoot = string.IsNullOrWhiteSpace(configs.DefaultDownloadFolder)
+                ? Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    "Downloads")
+                : configs.DefaultDownloadFolder;
+            configs.DefaultDownloadFolder = NormalizeAndValidateFolder(
+                downloadRoot,
+                "download");
             configs.DefaultTempFolder = NormalizeAndValidateTempFolder(
                 configs.DefaultTempFolder);
             configs.DefaultThreadCount = Math.Clamp(configs.DefaultThreadCount, 1, 32);
             configs.FileMergeMode = NormalizeFileMergeMode(configs.FileMergeMode);
+
+            if (configs.DownloadCategories.Count == 0)
+            {
+                throw new InvalidOperationException("At least one download group is required.");
+            }
+
+            if (!configs.DownloadCategories.Any(category => category.IsEnabled))
+            {
+                throw new InvalidOperationException("At least one download group must be enabled.");
+            }
+
+            foreach (DownloadCategoryViewModel category in configs.DownloadCategories)
+            {
+                category.Name = category.Name.Trim();
+                if (string.IsNullOrWhiteSpace(category.Name))
+                {
+                    throw new InvalidOperationException("Download group names cannot be empty.");
+                }
+
+                category.FolderPath = NormalizeAndValidateFolder(
+                    category.FolderPath,
+                    "download group");
+                category.ExtensionsText = string.Join(", ",
+                    DownloadCategoryViewModel.ParseExtensions(category.ExtensionsText));
+            }
 
             string raw = JsonSerializer.Serialize(configs.ToContract());
             UserDataStore.SetValue(DownloadSettingsProtocol.StoreKey, raw);
@@ -169,6 +218,24 @@ public class DownloadConfigService
             }
         }
 
+        return fullPath;
+    }
+
+    private static string NormalizeAndValidateFolder(string? folder, string description)
+    {
+        if (string.IsNullOrWhiteSpace(folder))
+        {
+            throw new IOException($"The {description} folder cannot be empty.");
+        }
+
+        string candidate = Environment.ExpandEnvironmentVariables(folder.Trim().Trim('"'));
+        string fullPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(candidate));
+        if (File.Exists(fullPath))
+        {
+            throw new IOException($"The {description} path points to a file instead of a folder.");
+        }
+
+        Directory.CreateDirectory(fullPath);
         return fullPath;
     }
 }
