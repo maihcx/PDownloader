@@ -98,7 +98,9 @@ public class DownloaderService : IHostedService, IDisposable
             {
                 SaveTo = _runnerConfig.SaveTo,
                 FileName = _runnerConfig.FileName,
-                Threads = _runnerConfig.Threads
+                Threads = _runnerConfig.Threads,
+                CategoryId = _runnerConfig.SelectedCategory?.Id ?? string.Empty,
+                RememberPathForCategory = _runnerConfig.RememberPathForCategory
             };
 
             bool ok = await Task.Run(() => SendWithRetry(request, retries: 3));

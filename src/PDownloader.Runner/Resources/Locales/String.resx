@@ -291,4 +291,7 @@
   <data name="download_status_retry_title" xml:space="preserve">
     <value>download_status_retry_title</value>
   </data>
+  <data name="download_group_title" xml:space="preserve"><value>download_group_title</value></data>
+  <data name="download_group_all_other_types" xml:space="preserve"><value>download_group_all_other_types</value></data>
+  <data name="remember_group_path_title" xml:space="preserve"><value>remember_group_path_title</value></data>
 </root>

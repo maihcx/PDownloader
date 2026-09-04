@@ -17,6 +17,8 @@ namespace PDownloader.Runner.Utils;
 
 public partial class RunnerConfig : ObservableObject
 {
+    private bool _applyingSession;
+
     [ObservableProperty]
     public string _token = string.Empty;
 
@@ -38,6 +40,22 @@ public partial class RunnerConfig : ObservableObject
     [ObservableProperty]
     public bool _isRunner = false;
 
+    public ObservableCollection<DownloadCategoryItem> Categories { get; } = [];
+
+    [ObservableProperty]
+    private DownloadCategoryItem? _selectedCategory;
+
+    [ObservableProperty]
+    private bool _rememberPathForCategory;
+
+    public string RememberPathLabel => string.Format(
+        CultureInfo.CurrentCulture,
+        LanguageBase.GetLangValue("remember_group_path_title"),
+        SelectedCategory?.Name ?? string.Empty);
+
+    public string SelectedCategoryExtensions =>
+        SelectedCategory?.ExtensionsSummary ?? string.Empty;
+
     public static RunnerConfig ParseArgs(string[] args)
     {
         var cfg = new RunnerConfig();
@@ -57,10 +75,35 @@ public partial class RunnerConfig : ObservableObject
     public void ApplySession(RunnerSessionView session)
     {
         ArgumentNullException.ThrowIfNull(session);
+        _applyingSession = true;
+        Categories.Clear();
+        foreach (DownloadCategoryDto category in session.Categories)
+        {
+            Categories.Add(DownloadCategoryItem.FromContract(category));
+        }
+
+        SelectedCategory = Categories.FirstOrDefault(category =>
+            string.Equals(category.Id, session.SelectedCategoryId,
+                StringComparison.OrdinalIgnoreCase))
+            ?? Categories.FirstOrDefault();
         InitialUrl = session.Url;
         SaveTo = session.SaveTo;
         FileName = session.FileName;
         Threads = session.Threads > 0 ? session.Threads : 8;
         IsRunner = session.IsRunner;
+        _applyingSession = false;
+        OnPropertyChanged(nameof(RememberPathLabel));
+        OnPropertyChanged(nameof(SelectedCategoryExtensions));
+    }
+
+    partial void OnSelectedCategoryChanged(DownloadCategoryItem? value)
+    {
+        if (!_applyingSession && value is not null)
+        {
+            SaveTo = value.FolderPath;
+        }
+
+        OnPropertyChanged(nameof(RememberPathLabel));
+        OnPropertyChanged(nameof(SelectedCategoryExtensions));
     }
 }
