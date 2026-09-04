@@ -1,3 +1,19 @@
+## v1.0.3
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- [core-infra] remove YouTube workaround | see #165 (#235) — @maihcx
+
+## 🧹 Maintenance
+
+- [dep] update bundled FFmpeg and yt-dlp (#236) — @maihcx
+- [infra] Adjust yt-dlp format prioritization (#234) — @maihcx
+- [download-infra] Support estimated media sizes and yt-dlp progress (#233) — @maihcx
+
+
+---
+
 ## v1.0.2
 
 ## 🚀 Changelog
