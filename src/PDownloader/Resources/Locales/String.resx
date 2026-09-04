@@ -609,4 +609,17 @@
   <data name="download_status_retrying_title" xml:space="preserve">
     <value>download_status_retrying_title</value>
   </data>
+  <data name="page_config_groups_root_title" xml:space="preserve"><value>page_config_groups_root_title</value></data>
+  <data name="page_config_groups_list_title" xml:space="preserve"><value>page_config_groups_list_title</value></data>
+  <data name="page_config_groups_add" xml:space="preserve"><value>page_config_groups_add</value></data>
+  <data name="page_config_groups_remove" xml:space="preserve"><value>page_config_groups_remove</value></data>
+  <data name="page_config_groups_move_up" xml:space="preserve"><value>page_config_groups_move_up</value></data>
+  <data name="page_config_groups_move_down" xml:space="preserve"><value>page_config_groups_move_down</value></data>
+  <data name="page_config_groups_enabled_title" xml:space="preserve"><value>page_config_groups_enabled_title</value></data>
+  <data name="page_config_groups_enabled_summary" xml:space="preserve"><value>page_config_groups_enabled_summary</value></data>
+  <data name="page_config_groups_name_title" xml:space="preserve"><value>page_config_groups_name_title</value></data>
+  <data name="page_config_groups_path_title" xml:space="preserve"><value>page_config_groups_path_title</value></data>
+  <data name="page_config_groups_extensions_title" xml:space="preserve"><value>page_config_groups_extensions_title</value></data>
+  <data name="page_config_groups_extensions_summary" xml:space="preserve"><value>page_config_groups_extensions_summary</value></data>
+  <data name="page_config_groups_new_name" xml:space="preserve"><value>page_config_groups_new_name</value></data>
 </root>

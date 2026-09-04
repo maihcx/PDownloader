@@ -271,13 +271,13 @@
     <value>PDownloader — Cài đặt tải xuống</value>
   </data>
   <data name="page_config_header_summary" xml:space="preserve">
-    <value>Cấu hình thư mục tải, dữ liệu tạm và số luồng mặc định</value>
+    <value>Cấu hình nhóm loại tệp, thư mục tải, dữ liệu tạm và số luồng mặc định</value>
   </data>
   <data name="page_config_folder_title" xml:space="preserve">
     <value>Thư mục tải xuống</value>
   </data>
   <data name="page_config_folder_summary" xml:space="preserve">
-    <value>Nơi lưu file khi tải xong</value>
+    <value>Phân loại tệp vào các thư mục tùy chỉnh và thiết lập thứ tự ưu tiên</value>
   </data>
   <data name="page_config_folder_placeholder" xml:space="preserve">
     <value>Để trống = thư mục Downloads mặc định</value>
@@ -615,4 +615,17 @@ Bạn có muốn tiếp tục không?</value>
   <data name="download_status_retrying_title" xml:space="preserve">
     <value>Đang thử lại: {0}</value>
   </data>
+  <data name="page_config_groups_root_title" xml:space="preserve"><value>Thư mục tải xuống gốc</value></data>
+  <data name="page_config_groups_list_title" xml:space="preserve"><value>Nhóm loại tệp</value></data>
+  <data name="page_config_groups_add" xml:space="preserve"><value>Thêm nhóm</value></data>
+  <data name="page_config_groups_remove" xml:space="preserve"><value>Xóa nhóm đang chọn</value></data>
+  <data name="page_config_groups_move_up" xml:space="preserve"><value>Di chuyển lên (ưu tiên cao hơn)</value></data>
+  <data name="page_config_groups_move_down" xml:space="preserve"><value>Di chuyển xuống (ưu tiên thấp hơn)</value></data>
+  <data name="page_config_groups_enabled_title" xml:space="preserve"><value>Sử dụng nhóm này</value></data>
+  <data name="page_config_groups_enabled_summary" xml:space="preserve"><value>Nhóm bị tắt sẽ không xuất hiện trong Runner và không được dùng khi tự động phân loại.</value></data>
+  <data name="page_config_groups_name_title" xml:space="preserve"><value>Tên nhóm</value></data>
+  <data name="page_config_groups_path_title" xml:space="preserve"><value>Thư mục đích</value></data>
+  <data name="page_config_groups_extensions_title" xml:space="preserve"><value>Các đuôi tệp được hỗ trợ</value></data>
+  <data name="page_config_groups_extensions_summary" xml:space="preserve"><value>Phân cách đuôi tệp bằng dấu phẩy, dấu cách, dấu chấm phẩy hoặc xuống dòng. Nhóm khớp đầu tiên có mức ưu tiên cao hơn; nhóm không có đuôi tệp có thể dùng làm dự phòng.</value></data>
+  <data name="page_config_groups_new_name" xml:space="preserve"><value>Nhóm mới</value></data>
 </root>
