@@ -112,6 +112,13 @@ public sealed class DownloadLaunchService
             ? null
             : context.FormatId;
 
+        saveTo = _downloadConfig.PrepareOutputFolder(saveTo);
+        if (request.RememberPathForCategory
+            && !string.IsNullOrWhiteSpace(request.CategoryId))
+        {
+            _downloadConfig.RememberCategoryPath(request.CategoryId, saveTo);
+        }
+
         await _downloads.EnqueueAsync(
             id: session.Id,
             url: context.Url,
