@@ -13,8 +13,6 @@
 //
 // Copyright (C) Song Mai Software.
 
-using System.Text.Json;
-
 namespace PDownloader.Infrastructure.ExternalTools.YtDlp;
 
 // Bytes describe the selected stream, not the eventual muxed output file.

@@ -14,7 +14,6 @@
 // Copyright (C) Song Mai Software.
 
 using System.Globalization;
-using System.Text.Json;
 
 namespace PDownloader.Downloads.Hls;
 
