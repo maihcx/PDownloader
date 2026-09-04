@@ -37,7 +37,7 @@
                 <!-- Download folders and file groups -->
                 <ui:CardExpander Icon="{ui:SymbolIcon Folder24}"
                                  Margin="0,0,0,8"
-                                 IsExpanded="True">
+                                 IsExpanded="False">
                     <ui:CardExpander.Header>
                         <StackPanel>
                             <ui:TextBlock FontTypography="Body"
