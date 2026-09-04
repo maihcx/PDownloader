@@ -13,8 +13,6 @@
 //
 // Copyright (C) Song Mai Software.
 
-using System.Text.Json;
-
 namespace PDownloader.Downloads.Hls;
 
 internal readonly record struct MediaDownloadProgress(
