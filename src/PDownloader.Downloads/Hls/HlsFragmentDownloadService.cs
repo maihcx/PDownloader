@@ -97,11 +97,15 @@ internal sealed class HlsFragmentDownloadService
             // obtained during normal downloads. Never extrapolate partial/retried data.
             MediaSizeEstimate size = fragmentResult.Size;
             if (allSizesKnown)
+            {
                 size = new(MediaSizeEstimate.ToBytes(knownBytes), false);
+            }
             else if (completedWeight > 0 && completedBytes > 0
                 && (size.Bytes <= 0 || size.IsEstimated))
+            {
                 size = new(MediaSizeEstimate.ToBytes(
                     knownBytes + completedBytes / completedWeight * unknownWeight), true);
+            }
 
             long totalBytes = size.Bytes > 0 ? Math.Max(size.Bytes, downloadedBytes) : 0;
             reportTotalBytes?.Invoke(totalBytes, size.IsEstimated);

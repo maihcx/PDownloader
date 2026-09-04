@@ -39,16 +39,29 @@ public readonly record struct MediaSizeEstimate(long Bytes, bool IsEstimated)
         JsonElement element, double duration = 0, bool isLive = false)
     {
         // A live playlist is open-ended, even if an extractor returns a window size.
-        if (isLive || IsLive(element)) return default;
+        if (isLive || IsLive(element))
+        {
+            return default;
+        }
 
         long exact = ReadBytes(element, "filesize");
-        if (exact > 0) return new(exact, false);
+        if (exact > 0)
+        {
+            return new(exact, false);
+        }
 
         long approximate = ReadBytes(element, "filesize_approx");
-        if (approximate > 0) return new(approximate, true);
+        if (approximate > 0)
+        {
+            return new(approximate, true);
+        }
 
         double ownDuration = PositiveNumber(element, "duration");
-        if (ownDuration > 0) duration = ownDuration;
+        if (ownDuration > 0)
+        {
+            duration = ownDuration;
+        }
+
         double bitrate = PositiveNumber(element, "tbr");
         // Only use track-specific rates when all present tracks are accounted for.
         if (bitrate <= 0)
@@ -58,7 +71,9 @@ public readonly record struct MediaSizeEstimate(long Bytes, bool IsEstimated)
             bool noVideo = IsNone(element, "vcodec");
             bool noAudio = IsNone(element, "acodec");
             if ((video > 0 || noVideo) && (audio > 0 || noAudio))
+            {
                 bitrate = (noVideo ? 0 : video) + (noAudio ? 0 : audio);
+            }
         }
 
         // yt-dlp rates are kilobits/second. This is deliberately labelled approximate.
@@ -75,7 +90,11 @@ public readonly record struct MediaSizeEstimate(long Bytes, bool IsEstimated)
         if (element.ValueKind == JsonValueKind.Object
             && element.TryGetProperty(name, out JsonElement value)
             && value.ValueKind == JsonValueKind.Number
-            && value.TryGetInt64(out long bytes)) return Math.Max(0, bytes);
+            && value.TryGetInt64(out long bytes))
+        {
+            return Math.Max(0, bytes);
+        }
+
         return ToBytes(PositiveNumber(element, name));
     }
 
