@@ -104,7 +104,10 @@ internal static class YtDlpJsonParser
 
     private static int GetFormatSortGroup(YtFormat format)
     {
-        if (format.HasVideo == false) return 1;
+        if (format.HasVideo == false)
+        {
+            return 1;
+        }
 
         // A known video with incomplete audio metadata still belongs with the
         // other resolutions. Entirely unknown formats follow audio-only files.
@@ -118,7 +121,10 @@ internal static class YtDlpJsonParser
         JsonElement root = document.RootElement;
         JsonElement target = root;
 
-        if (MediaSizeEstimate.IsLive(root)) return null;
+        if (MediaSizeEstimate.IsLive(root))
+        {
+            return null;
+        }
 
         if (root.TryGetProperty("requested_formats", out JsonElement requestedFormats)
             && requestedFormats.ValueKind == JsonValueKind.Array)
@@ -321,7 +327,11 @@ internal static class YtDlpJsonParser
             // The simple concatenating downloader cannot safely handle ranges
             // or encryption. Let yt-dlp handle these rather than fetch whole files.
             if (fragment.TryGetProperty("byte_range", out _)
-                || fragment.TryGetProperty("decrypt_info", out _)) return null;
+                || fragment.TryGetProperty("decrypt_info", out _))
+            {
+                return null;
+            }
+
             string? resolvedUrl = fragment.GetStringOrDefault("url");
             string? fragmentPath = fragment.GetStringOrDefault("path");
 
@@ -338,7 +348,10 @@ internal static class YtDlpJsonParser
                 urls.Add(resolvedUrl);
                 durations.Add(MediaSizeEstimate.PositiveNumber(fragment, "duration"));
             }
-            else return null; // Never silently omit a segment from a finite playlist.
+            else
+            {
+                return null; // Never silently omit a segment from a finite playlist.
+            }
         }
 
         MediaSizeEstimate size = GetFileSize(element, root);

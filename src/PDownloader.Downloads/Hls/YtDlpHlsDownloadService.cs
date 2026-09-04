@@ -282,6 +282,7 @@ internal sealed class YtDlpHlsDownloadService
                     reportProgress?.Invoke(progressTracker.Capture(0));
                 }
                 catch (JsonException) { /* Metadata must not prevent a download. */ }
+
                 return true;
             }
 
@@ -301,14 +302,19 @@ internal sealed class YtDlpHlsDownloadService
                 {
                     destinationPath = path;
                 }
+
                 return true;
             }
+
             return false;
         }
 
         process.OutputDataReceived += (_, args) =>
         {
-            lock (outputSync) ProcessLine(args.Data);
+            lock (outputSync)
+            {
+                ProcessLine(args.Data);
+            }
         };
 
         process.ErrorDataReceived += (_, args) =>
@@ -316,7 +322,9 @@ internal sealed class YtDlpHlsDownloadService
             lock (outputSync)
             {
                 if (!ProcessLine(args.Data) && args.Data != null)
+                {
                     standardError.AppendLine(args.Data);
+                }
             }
         };
 

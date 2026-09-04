@@ -28,7 +28,11 @@ internal sealed class YtDlpProgressTracker
 
     public void Initialize(JsonElement metadata)
     {
-        if (metadata.ValueKind != JsonValueKind.Object) return;
+        if (metadata.ValueKind != JsonValueKind.Object)
+        {
+            return;
+        }
+
         var previous = new Dictionary<string, StreamState>(_streams, StringComparer.Ordinal);
         _streams.Clear();
         _isLive |= MediaSizeEstimate.IsLive(metadata);
@@ -38,21 +42,31 @@ internal sealed class YtDlpProgressTracker
             && formats.ValueKind == JsonValueKind.Array && formats.GetArrayLength() > 0)
         {
             foreach (JsonElement format in formats.EnumerateArray())
+            {
                 _streams[GetId(format)] = new()
                 {
                     Size = MediaSizeEstimate.FromMetadata(format, duration, _isLive),
                 };
+            }
         }
         else
+        {
             _streams[_combinedFormatId] = new()
             {
                 Size = MediaSizeEstimate.FromMetadata(metadata, duration, _isLive),
             };
+        }
 
         // stdout/stderr can arrive out of order; late metadata must not reset bytes.
         if (previous.ContainsKey(_combinedFormatId) && !_streams.ContainsKey(_combinedFormatId))
+        {
             _streams.Clear();
-        foreach (var (id, state) in previous) _streams[id] = state;
+        }
+
+        foreach ((string? id, StreamState? state) in previous)
+        {
+            _streams[id] = state;
+        }
     }
 
     public MediaDownloadProgress Update(
@@ -67,25 +81,38 @@ internal sealed class YtDlpProgressTracker
             _streams.Clear();
             _streams[formatId] = new() { Size = new(combined.TotalBytes, combined.IsTotalEstimated) };
         }
+
         if (!_streams.TryGetValue(formatId, out StreamState? stream))
+        {
             _streams[formatId] = stream = new();
+        }
 
         // Values are per selected format. Assignment also handles retries/resume;
         // completed formats stay in the dictionary instead of being reset to zero.
         stream.DownloadedBytes = downloadedBytes;
         stream.Finished = finished;
         if (finished)
+        {
             stream.Size = new(downloadedBytes, false);
+        }
         else if (exactTotalBytes > 0)
+        {
             stream.Size = new(exactTotalBytes, false);
+        }
         else if (estimatedTotalBytes > 0 && (stream.Size.Bytes <= 0 || stream.Size.IsEstimated))
+        {
             stream.Size = new(Math.Max(estimatedTotalBytes, downloadedBytes), true);
+        }
         else if (fragmentIndex > 0 && fragmentCount > fragmentIndex
             && (stream.Size.Bytes <= 0 || stream.Size.IsEstimated))
+        {
             stream.Size = new(MediaSizeEstimate.ToBytes(
                 downloadedBytes / (double)fragmentIndex * fragmentCount), true);
+        }
         else if (stream.Size.Bytes > 0 && downloadedBytes > stream.Size.Bytes)
+        {
             stream.Size = new(downloadedBytes, true);
+        }
 
         stream.Fraction = finished ? 1
             : fragmentCount > 0 ? Math.Clamp(fragmentIndex / (double)fragmentCount, 0, 0.99)
@@ -106,6 +133,7 @@ internal sealed class YtDlpProgressTracker
             estimated |= stream.Size.IsEstimated;
             fractions += stream.Fraction;
         }
+
         long totalBytes = !_isLive && allKnown ? MediaSizeEstimate.ToBytes(total) : 0;
         // If byte totals are missing, retain segment-based progress. Live has no endpoint.
         double percent = _isLive ? 0 : totalBytes > 0
