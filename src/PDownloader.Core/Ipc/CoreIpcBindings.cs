@@ -31,6 +31,7 @@ public sealed class CoreIpcBindings : IDisposable
     private readonly DownloadLaunchService _downloadLauncher;
     private readonly CoreUpdateCoordinator _updates;
     private readonly RunnerSessionManager _runnerSessions;
+    private ConfluxService? _main;
     private int _disposed;
 
     public CoreIpcBindings(
@@ -51,12 +52,14 @@ public sealed class CoreIpcBindings : IDisposable
         _downloadLauncher = downloadLauncher;
         _updates = updates;
         _runnerSessions = runnerSessions;
+        _downloadConfig.Changed += PublishDownloadSettings;
         _runnerSessions.SessionStarted += BindRunner;
         _runnerSessions.SessionReady += _downloadCommands.PublishRunnerSnapshot;
     }
 
     public void BindMain(ConfluxService main)
     {
+        _main = main;
         main.RegisterMessageHandler(
             AppProtocol.MainEvent,
             _appEvents.RelayMainEvent);
@@ -87,6 +90,18 @@ public sealed class CoreIpcBindings : IDisposable
         main.RegisterRequestHandler(
             UpdateProtocol.GetState,
             _updates.GetStateSnapshot);
+    }
+
+    private void PublishDownloadSettings(DownloadSettingsDto settings)
+    {
+        try
+        {
+            _main?.Send(DownloadSettingsProtocol.Changed, settings);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Settings] Could not publish download settings: {ex.Message}");
+        }
     }
 
     public void BindTray(ConfluxService tray)
@@ -189,6 +204,8 @@ public sealed class CoreIpcBindings : IDisposable
 
         _runnerSessions.SessionStarted -= BindRunner;
         _runnerSessions.SessionReady -= _downloadCommands.PublishRunnerSnapshot;
+        _downloadConfig.Changed -= PublishDownloadSettings;
+        _main = null;
         GC.SuppressFinalize(this);
     }
 }
