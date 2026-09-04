@@ -40,7 +40,8 @@ internal sealed class HlsFragmentDownloadService
         Action<FileHashResult>? reportFileHashes,
         FileMergeMode fileMergeMode,
         CancellationToken cancellationToken,
-        Action<double>? reportDownloadProgress = null)
+        Action<double>? reportDownloadProgress = null,
+        Action<long, bool>? reportTotalBytes = null)
     {
         List<string> urls = fragmentResult.FragmentUrls;
         int fragmentCount = urls.Count;
@@ -48,6 +49,8 @@ internal sealed class HlsFragmentDownloadService
         var totalBytesPerFragment = new long[fragmentCount];
         var completedFragments = new int[fragmentCount];
         var tempPaths = new string[fragmentCount];
+        bool useDurations = fragmentResult.FragmentDurations.Count == fragmentCount
+            && fragmentResult.FragmentDurations.All(duration => double.IsFinite(duration) && duration > 0);
 
         int concurrency = Math.Clamp(preferredConcurrency, 1, 16);
         concurrency = Math.Min(concurrency, Math.Max(1, fragmentCount));
@@ -60,23 +63,48 @@ internal sealed class HlsFragmentDownloadService
         void PublishProgress(long downloadedBytes, double speedBps)
         {
             double completedUnits = 0;
+            double knownBytes = 0, completedBytes = 0, completedWeight = 0, unknownWeight = 0;
+            bool allSizesKnown = true;
             for (int index = 0; index < fragmentCount; index++)
             {
-                if (Volatile.Read(ref completedFragments[index]) != 0)
+                bool completed = Volatile.Read(ref completedFragments[index]) != 0;
+                long total = Interlocked.Read(ref totalBytesPerFragment[index]);
+                long downloaded = Interlocked.Read(ref bytesPerFragment[index]);
+                double weight = useDurations ? fragmentResult.FragmentDurations[index] : 1;
+                if (completed)
                 {
                     completedUnits++;
+                    knownBytes += downloaded;
+                    completedBytes += downloaded;
+                    completedWeight += weight;
                 }
                 else
                 {
-                    long total = Interlocked.Read(ref totalBytesPerFragment[index]);
-                    long downloaded = Interlocked.Read(ref bytesPerFragment[index]);
                     if (total > 0)
                     {
+                        knownBytes += total;
                         // Reserve completion until the fragment has finished successfully.
                         completedUnits += Math.Clamp(downloaded / (double)total, 0, 0.99);
                     }
+                    else
+                    {
+                        allSizesKnown = false;
+                        unknownWeight += weight;
+                    }
                 }
             }
+            // No extra HEAD requests: refine from successful segments and headers
+            // obtained during normal downloads. Never extrapolate partial/retried data.
+            MediaSizeEstimate size = fragmentResult.Size;
+            if (allSizesKnown)
+                size = new(MediaSizeEstimate.ToBytes(knownBytes), false);
+            else if (completedWeight > 0 && completedBytes > 0
+                && (size.Bytes <= 0 || size.IsEstimated))
+                size = new(MediaSizeEstimate.ToBytes(
+                    knownBytes + completedBytes / completedWeight * unknownWeight), true);
+
+            long totalBytes = size.Bytes > 0 ? Math.Max(size.Bytes, downloadedBytes) : 0;
+            reportTotalBytes?.Invoke(totalBytes, size.IsEstimated);
             reportDownloadProgress?.Invoke(fragmentCount > 0 ? completedUnits / fragmentCount * 100 : 0);
             reportThreadProgress?.Invoke(threadTracker.Capture());
             reportProgress(downloadedBytes, speedBps);

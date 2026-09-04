@@ -77,8 +77,10 @@ public class DownloadItem : INotifyPropertyChanged
         ? 100
         : IsMergeProgressActive
             ? MergeProgress
+            : IsTotalBytesEstimated && DownloadProgressPercent > 0
+                ? Math.Min(99, DownloadProgressPercent)
             : TotalBytes > 0
-                ? Math.Clamp((double)DownloadedBytes / TotalBytes * 100, 0, 100)
+                ? Math.Clamp((double)DownloadedBytes / TotalBytes * 100, 0, IsTotalBytesEstimated ? 99 : 100)
                 : DownloadProgressPercent;
 
     public bool IsActive => Status is DownloadStatus.Downloading or DownloadStatus.Connecting or DownloadStatus.Merging;
@@ -135,17 +137,36 @@ public class DownloadItem : INotifyPropertyChanged
             && MergeMode == FileMergeMode.HighPerformance);
 
     private long _totalBytes = 0;
+    private bool _isTotalBytesEstimated;
+    public bool IsTotalBytesEstimated
+    {
+        get => _isTotalBytesEstimated;
+        set
+        {
+            _isTotalBytesEstimated = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(TotalFormatted));
+            OnPropertyChanged(nameof(Progress));
+        }
+    }
+
+    public void SetTotalBytes(long bytes, bool isEstimated = false)
+    {
+        IsTotalBytesEstimated = bytes > 0 && isEstimated;
+        TotalBytes = Math.Max(0, bytes);
+    }
+
     public long TotalBytes
     {
         get => _totalBytes;
-        set { _totalBytes = value; OnPropertyChanged(); OnPropertyChanged(nameof(Progress)); OnPropertyChanged(nameof(TotalFormatted)); }
+        set { _totalBytes = value; OnPropertyChanged(); OnPropertyChanged(nameof(Progress)); OnPropertyChanged(nameof(TotalFormatted)); OnPropertyChanged(nameof(EtaFormatted)); }
     }
 
     private long _downloadedBytes = 0;
     public long DownloadedBytes
     {
         get => _downloadedBytes;
-        set { _downloadedBytes = value; OnPropertyChanged(); OnPropertyChanged(nameof(Progress)); OnPropertyChanged(nameof(DownloadedFormatted)); }
+        set { _downloadedBytes = value; OnPropertyChanged(); OnPropertyChanged(nameof(Progress)); OnPropertyChanged(nameof(DownloadedFormatted)); OnPropertyChanged(nameof(EtaFormatted)); }
     }
 
     private double _mergeProgress;
@@ -254,7 +275,8 @@ public class DownloadItem : INotifyPropertyChanged
         set { _endTime = value; OnPropertyChanged(); }
     }
 
-    public string TotalFormatted => TotalBytes > 0 ? FormatBytes(TotalBytes) : "–";
+    public string TotalFormatted => TotalBytes > 0
+        ? (IsTotalBytesEstimated ? "≈ " : string.Empty) + FormatBytes(TotalBytes) : "–";
 
     public string DownloadedFormatted => FormatBytes(DownloadedBytes);
 
@@ -269,7 +291,7 @@ public class DownloadItem : INotifyPropertyChanged
                 return "–";
             }
 
-            long remaining = TotalBytes - DownloadedBytes;
+            long remaining = Math.Max(0, TotalBytes - DownloadedBytes);
             var eta = TimeSpan.FromSeconds(remaining / SpeedBps);
             return eta.TotalHours >= 1
                 ? $"{(int)eta.TotalHours}g {eta.Minutes:D2}p"
