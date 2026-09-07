@@ -26,6 +26,7 @@ public class DownloadEngine
     private readonly HlsDownloadHandler _hlsHandler;
     private readonly YoutubeDownloadHandler _youtubeHandler;
     private readonly FfmpegMuxer _ffmpegMuxer;
+    private readonly TorrentEngineService _torrentEngine;
 
     internal DownloadEngine(
         DownloadItem item,
@@ -33,7 +34,8 @@ public class DownloadEngine
         CancellationToken cancellationToken,
         DownloadPathService pathService,
         YtDlpService ytDlpService,
-        FfmpegMuxer ffmpegMuxer)
+        FfmpegMuxer ffmpegMuxer,
+        TorrentEngineService torrentEngine)
     {
         _item = item;
         _progress = progress;
@@ -42,6 +44,7 @@ public class DownloadEngine
         _httpClientLease = DownloadHttpClientFactory.Create(item.CustomHeaders);
         _pathService = pathService ?? throw new ArgumentNullException(nameof(pathService));
         _ffmpegMuxer = ffmpegMuxer ?? throw new ArgumentNullException(nameof(ffmpegMuxer));
+        _torrentEngine = torrentEngine ?? throw new ArgumentNullException(nameof(torrentEngine));
         _multiSegmentDownloader = new MultiSegmentDownloadService(_httpClientLease.Client);
         _hlsHandler = new HlsDownloadHandler(
             item,
@@ -66,6 +69,12 @@ public class DownloadEngine
         try
         {
             _cancellationToken.ThrowIfCancellationRequested();
+            if (_item.DownloadKind == DownloadKind.Torrent)
+            {
+                await RunTorrentDownloadAsync().ConfigureAwait(false);
+                return;
+            }
+
             string tempDirectory = _pathService.GetTempDirectory(_item);
             Directory.CreateDirectory(tempDirectory);
             if (await TryRecoverPendingMergeAsync(tempDirectory))
@@ -102,6 +111,45 @@ public class DownloadEngine
 
     public static Task<string?> GetRemoteFileNameAsync(string url) =>
         HttpDownloadProbe.GetRemoteFileNameAsync(url);
+
+    private async Task RunTorrentDownloadAsync()
+    {
+        _item.IsMergeProgressActive = false;
+        _item.DownloadProgressPercent = 0;
+        _item.SetProgressVisualizationUnsupported("Torrent");
+        _item.Status = DownloadStatus.Downloading;
+        if (_item.StartTime == default)
+        {
+            _item.StartTime = DateTime.Now;
+        }
+
+        string finalPath = _item.TorrentDestinationPath;
+        if (string.IsNullOrWhiteSpace(finalPath))
+        {
+            finalPath = _pathService.GetFinalPath(_item);
+            _item.TorrentDestinationPath = finalPath;
+        }
+
+        finalPath = await _torrentEngine.DownloadFileAsync(
+            _item,
+            finalPath,
+            ReportProgress,
+            _cancellationToken).ConfigureAwait(false);
+        _cancellationToken.ThrowIfCancellationRequested();
+
+        if (!File.Exists(finalPath))
+        {
+            throw new IOException("The selected torrent file was not created.");
+        }
+
+        long fileLength = new FileInfo(finalPath).Length;
+        _item.FileName = Path.GetFileName(finalPath);
+        _item.SavePath = finalPath;
+        _item.SetTotalBytes(fileLength);
+        ReportProgress(fileLength, 0);
+        _item.Status = DownloadStatus.Completed;
+        _item.EndTime = DateTime.Now;
+    }
 
     private async Task<bool> TryRecoverPendingMergeAsync(string tempDirectory)
     {

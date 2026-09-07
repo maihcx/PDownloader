@@ -298,6 +298,7 @@ internal sealed class YoutubeDownloadHandler
                         streamSizes[streamIndex] = result.TotalBytes;
                         estimatedSizes[streamIndex] = false;
                     }
+
                     UpdateTotalBytes();
                 });
 

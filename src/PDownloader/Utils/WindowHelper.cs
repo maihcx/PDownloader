@@ -24,26 +24,18 @@ public static class WindowHelper
             return;
         }
 
-        var handle = new WindowInteropHelper(window).Handle;
+        IntPtr handle = new WindowInteropHelper(window).Handle;
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
 
         NativeMethods.ShowWindow(handle, NativeMethods.SW_RESTORE);
-
-        IntPtr foreground = NativeMethods.GetForegroundWindow();
-        uint curThread = NativeMethods.GetCurrentThreadId();
-
-        NativeMethods.keybd_event(NativeMethods.VK_MENU, 0, 0, UIntPtr.Zero);
-        NativeMethods.keybd_event(NativeMethods.VK_MENU, 0, NativeMethods.KEYEVENTF_KEYUP, UIntPtr.Zero);
-
-        if (foreground != IntPtr.Zero)
+        bool activated = NativeMethods.SetForegroundWindow(handle);
+        if (!activated && NativeMethods.GetForegroundWindow() != handle)
         {
-            uint fgThread = NativeMethods.GetWindowThreadProcessId(foreground, IntPtr.Zero);
-            NativeMethods.AttachThreadInput(fgThread, curThread, true);
-            NativeMethods.SetForegroundWindow(handle);
-            NativeMethods.AttachThreadInput(fgThread, curThread, false);
-        }
-        else
-        {
-            NativeMethods.SetForegroundWindow(handle);
+            Debug.WriteLine("[Main window] Windows rejected foreground activation.");
+            return;
         }
 
         window.Activate();

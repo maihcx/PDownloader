@@ -26,17 +26,20 @@ public sealed class DownloadLaunchService
     private readonly RunnerSessionManager _runnerSessions;
     private readonly DownloadManager _downloads;
     private readonly UserDataStore _userDataStore;
+    private readonly TorrentWorkflowService _torrentWorkflow;
 
     public DownloadLaunchService(
         DownloadConfigService downloadConfig,
         RunnerSessionManager runnerSessions,
         DownloadManager downloads,
-        UserDataStore userDataStore)
+        UserDataStore userDataStore,
+        TorrentWorkflowService torrentWorkflow)
     {
         _downloadConfig = downloadConfig;
         _runnerSessions = runnerSessions;
         _downloads = downloads;
         _userDataStore = userDataStore;
+        _torrentWorkflow = torrentWorkflow;
     }
 
     public async Task LaunchFromUrlAsync(
@@ -47,6 +50,17 @@ public sealed class DownloadLaunchService
 
         if (string.IsNullOrWhiteSpace(request.Url))
         {
+            return;
+        }
+
+        if (DownloadSource.DetectKind(request.Url, request.FileName) == DownloadKind.Torrent)
+        {
+            await _torrentWorkflow.LaunchAsync(
+                request.Url,
+                request.SaveTo,
+                request.Threads,
+                request.Headers,
+                cancellationToken).ConfigureAwait(false);
             return;
         }
 
@@ -112,6 +126,17 @@ public sealed class DownloadLaunchService
             ? null
             : context.FormatId;
 
+        saveTo = EnsureDestinationSubfolder(saveTo, context.DestinationSubfolder);
+        saveTo = _downloadConfig.PrepareOutputFolder(saveTo);
+        if (request.RememberPathForCategory
+            && !string.IsNullOrWhiteSpace(request.CategoryId))
+        {
+            string categoryFolder = GetCategoryFolderToRemember(
+                saveTo,
+                context.DestinationSubfolder);
+            _downloadConfig.RememberCategoryPath(request.CategoryId, categoryFolder);
+        }
+
         await _downloads.EnqueueAsync(
             id: session.Id,
             url: context.Url,
@@ -122,6 +147,43 @@ public sealed class DownloadLaunchService
             formatId: formatId,
             customHeaders: headers,
             mergeMode: _downloadConfig.GetFileMergeMode(),
+            downloadKind: context.DownloadKind,
+            torrentInfoHash: context.TorrentInfoHash,
+            torrentFileIndex: context.TorrentFileIndex,
+            torrentRelativePath: context.TorrentRelativePath,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string GetCategoryFolderToRemember(
+        string saveTo,
+        string destinationSubfolder)
+    {
+        if (string.IsNullOrWhiteSpace(destinationSubfolder)
+            || !string.Equals(
+                Path.GetFileName(Path.TrimEndingDirectorySeparator(saveTo)),
+                destinationSubfolder,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return saveTo;
+        }
+
+        return Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(saveTo))
+            ?? saveTo;
+    }
+
+    private static string EnsureDestinationSubfolder(
+        string saveTo,
+        string destinationSubfolder)
+    {
+        if (string.IsNullOrWhiteSpace(destinationSubfolder)
+            || string.Equals(
+                Path.GetFileName(Path.TrimEndingDirectorySeparator(saveTo)),
+                destinationSubfolder,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return saveTo;
+        }
+
+        return Path.Combine(saveTo, destinationSubfolder);
     }
 }

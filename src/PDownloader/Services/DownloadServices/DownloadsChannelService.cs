@@ -39,6 +39,7 @@ namespace PDownloader.Services.DownloadServices;
 public class DownloadsChannelService
 {
     public event Action<DownloadItemViewModel>? OnProgress;
+    public event Action<DownloadSettingsDto>? OnDownloadSettingsChanged;
 
     public void Handle(IpcReceivedMessage message)
     {
@@ -47,6 +48,12 @@ public class DownloadsChannelService
                 out ContractDownloadItemDto dto))
         {
             OnProgress?.Invoke(DownloadItemViewModel.FromContract(dto));
+        }
+        else if (message.TryGetPayload(
+                     DownloadSettingsProtocol.Changed,
+                     out DownloadSettingsDto settings))
+        {
+            OnDownloadSettingsChanged?.Invoke(settings);
         }
     }
 }

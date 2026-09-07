@@ -24,6 +24,7 @@ namespace PDownloader.Contracts.Downloads;
 public sealed class DownloadSettingsDto
 {
     public string DefaultDownloadFolder { get; set; } = string.Empty;
+    public List<DownloadCategoryDto> DownloadCategories { get; set; } = [];
     public string DefaultTempFolder { get; set; } = string.Empty;
     public int DefaultThreadCount { get; set; } = 8;
     public string FileMergeMode { get; set; } = "Balanced";
@@ -38,4 +39,7 @@ public static class DownloadSettingsProtocol
 
     public static readonly IpcMessageDefinition<IpcNoPayload> Reload =
         new("download.settings.reload");
+
+    public static readonly IpcMessageDefinition<DownloadSettingsDto> Changed =
+        new("download.settings.changed");
 }

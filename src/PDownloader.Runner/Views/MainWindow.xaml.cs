@@ -20,7 +20,7 @@ namespace PDownloader.Runner.Views;
 /// </summary>
 public partial class MainWindow : IWindow
 {
-    private const double NormalWindowHeight = 370;
+    private const double NormalWindowHeight = 485;
     private const double CompactWindowHeight = 300;
     private const double ExpandedWindowHeight = 455;
     private static readonly TimeSpan WindowResizeDuration = TimeSpan.FromMilliseconds(280);

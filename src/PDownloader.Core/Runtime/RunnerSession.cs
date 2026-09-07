@@ -30,6 +30,13 @@ public sealed class RunnerDownloadContext
     public bool IsRunner { get; init; }
     public int Threads { get; init; }
     public Dictionary<string, string>? Headers { get; init; }
+    public List<DownloadCategoryDto> Categories { get; init; } = [];
+    public string SelectedCategoryId { get; init; } = string.Empty;
+    public DownloadKind DownloadKind { get; init; } = DownloadKind.Http;
+    public string DestinationSubfolder { get; init; } = string.Empty;
+    public string TorrentInfoHash { get; init; } = string.Empty;
+    public int TorrentFileIndex { get; init; } = -1;
+    public string TorrentRelativePath { get; init; } = string.Empty;
 
     public RunnerSessionView ToView() => new()
     {
@@ -37,7 +44,17 @@ public sealed class RunnerDownloadContext
         SaveTo = SaveTo,
         FileName = FileName,
         Threads = Threads,
-        IsRunner = IsRunner
+        IsRunner = IsRunner,
+        Categories = Categories.Select(category => new DownloadCategoryDto
+        {
+            Id = category.Id,
+            Name = category.Name,
+            FolderPath = category.FolderPath,
+            Extensions = [.. category.Extensions],
+            IsEnabled = category.IsEnabled
+        }).ToList(),
+        SelectedCategoryId = SelectedCategoryId,
+        DestinationSubfolder = DestinationSubfolder
     };
 }
 

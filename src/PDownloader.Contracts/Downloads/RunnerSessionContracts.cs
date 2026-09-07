@@ -35,6 +35,15 @@ public sealed class RunnerSessionView
 
     [JsonPropertyName("isRunner")]
     public bool IsRunner { get; init; }
+
+    [JsonPropertyName("categories")]
+    public List<DownloadCategoryDto> Categories { get; init; } = [];
+
+    [JsonPropertyName("selectedCategoryId")]
+    public string SelectedCategoryId { get; init; } = string.Empty;
+
+    [JsonPropertyName("destinationSubfolder")]
+    public string DestinationSubfolder { get; init; } = string.Empty;
 }
 
 /// <summary>
@@ -51,4 +60,11 @@ public sealed class RunnerStartDownloadRequest
 
     [JsonPropertyName("threads")]
     public int Threads { get; init; }
+
+    [JsonPropertyName("categoryId")]
+    public string CategoryId { get; init; } = string.Empty;
+
+    [JsonPropertyName("rememberPathForCategory")]
+    public bool RememberPathForCategory { get; init; }
+
 }

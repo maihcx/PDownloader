@@ -33,4 +33,9 @@ public sealed class RunnerDownloadTask
     public bool IsRunner { get; set; }
     public int Threads { get; set; }
     public Dictionary<string, string>? Headers { get; set; }
+    public DownloadKind DownloadKind { get; set; } = DownloadKind.Http;
+    public string DestinationSubfolder { get; set; } = string.Empty;
+    public string TorrentInfoHash { get; set; } = string.Empty;
+    public int TorrentFileIndex { get; set; } = -1;
+    public string TorrentRelativePath { get; set; } = string.Empty;
 }

@@ -79,7 +79,9 @@ public class DownloaderService : IHostedService, IDisposable
             DownloaderStatus.ErrorKey = "err_download_uri_unavailable_title";
             DownloaderStatus.HasError = true;
         }
-        else if (string.IsNullOrWhiteSpace(_runnerConfig.SaveTo) || !Directory.Exists(_runnerConfig.SaveTo))
+        else if (string.IsNullOrWhiteSpace(_runnerConfig.SaveTo)
+            || (!Directory.Exists(_runnerConfig.SaveTo)
+                && string.IsNullOrWhiteSpace(_runnerConfig.DestinationSubfolder)))
         {
             DownloaderStatus.ErrorKey = "err_download_folder_not_exists_title";
             DownloaderStatus.HasError = true;
@@ -98,7 +100,9 @@ public class DownloaderService : IHostedService, IDisposable
             {
                 SaveTo = _runnerConfig.SaveTo,
                 FileName = _runnerConfig.FileName,
-                Threads = _runnerConfig.Threads
+                Threads = _runnerConfig.Threads,
+                CategoryId = _runnerConfig.SelectedCategory?.Id ?? string.Empty,
+                RememberPathForCategory = _runnerConfig.RememberPathForCategory
             };
 
             bool ok = await Task.Run(() => SendWithRetry(request, retries: 3));

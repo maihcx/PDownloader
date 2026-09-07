@@ -64,6 +64,15 @@ public static class DownloadProtocol
     public static readonly IpcMessageDefinition<IpcNoPayload> RunnerUiClosed =
         new("runner.ui-closed");
 
+    public static readonly IpcRequestDefinition<IpcNoPayload, TorrentSelectionSessionView> TorrentSelectionGetSession =
+        new("torrent-selection.session.get");
+
+    public static readonly IpcMessageDefinition<TorrentSelectionResult> TorrentSelectionConfirm =
+        new("torrent-selection.confirm");
+
+    public static readonly IpcMessageDefinition<IpcNoPayload> TorrentSelectionCancel =
+        new("torrent-selection.cancel");
+
 }
 
 public sealed record DownloadIdRequest(string DownloadId);

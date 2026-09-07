@@ -31,6 +31,9 @@ public sealed class CoreIpcBindings : IDisposable
     private readonly DownloadLaunchService _downloadLauncher;
     private readonly CoreUpdateCoordinator _updates;
     private readonly RunnerSessionManager _runnerSessions;
+    private readonly TorrentSelectionSessionManager _torrentSelectionSessions;
+    private readonly TorrentWorkflowService _torrentWorkflow;
+    private ConfluxService? _main;
     private int _disposed;
 
     public CoreIpcBindings(
@@ -41,7 +44,9 @@ public sealed class CoreIpcBindings : IDisposable
         DownloadCommandService downloadCommands,
         DownloadLaunchService downloadLauncher,
         CoreUpdateCoordinator updates,
-        RunnerSessionManager runnerSessions)
+        RunnerSessionManager runnerSessions,
+        TorrentSelectionSessionManager torrentSelectionSessions,
+        TorrentWorkflowService torrentWorkflow)
     {
         _appEvents = appEvents;
         _lifecycle = lifecycle;
@@ -51,12 +56,17 @@ public sealed class CoreIpcBindings : IDisposable
         _downloadLauncher = downloadLauncher;
         _updates = updates;
         _runnerSessions = runnerSessions;
+        _torrentSelectionSessions = torrentSelectionSessions;
+        _torrentWorkflow = torrentWorkflow;
+        _downloadConfig.Changed += PublishDownloadSettings;
         _runnerSessions.SessionStarted += BindRunner;
         _runnerSessions.SessionReady += _downloadCommands.PublishRunnerSnapshot;
+        _torrentSelectionSessions.SessionStarted += BindTorrentSelector;
     }
 
     public void BindMain(ConfluxService main)
     {
+        _main = main;
         main.RegisterMessageHandler(
             AppProtocol.MainEvent,
             _appEvents.RelayMainEvent);
@@ -89,6 +99,50 @@ public sealed class CoreIpcBindings : IDisposable
             _updates.GetStateSnapshot);
     }
 
+    private void BindTorrentSelector(TorrentSelectionSession session)
+    {
+        ConfluxService selector = session.Channel;
+        selector.RegisterRequestHandler(
+            DownloadProtocol.TorrentSelectionGetSession,
+            () => session.Context.ToView());
+        selector.RegisterMessageHandler(
+            DownloadProtocol.TorrentSelectionConfirm,
+            result => _ = CompleteTorrentSelectionAsync(session, result));
+        selector.RegisterMessageHandler(
+            DownloadProtocol.TorrentSelectionCancel,
+            () => _ = _torrentSelectionSessions.CloseAsync(session.Id));
+    }
+
+    private async Task CompleteTorrentSelectionAsync(
+        TorrentSelectionSession session,
+        TorrentSelectionResult result)
+    {
+        try
+        {
+            await _torrentWorkflow.CompleteSelectionAsync(
+                session,
+                result,
+                CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Torrent selector] Could not launch Runners: {ex}");
+            await _torrentSelectionSessions.CloseAsync(session.Id).ConfigureAwait(false);
+        }
+    }
+
+    private void PublishDownloadSettings(DownloadSettingsDto settings)
+    {
+        try
+        {
+            _main?.Send(DownloadSettingsProtocol.Changed, settings);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Settings] Could not publish download settings: {ex.Message}");
+        }
+    }
+
     public void BindTray(ConfluxService tray)
     {
         tray.RegisterMessageHandler(
@@ -103,6 +157,11 @@ public sealed class CoreIpcBindings : IDisposable
         tray.RegisterMessageHandler(
             UpdateProtocol.Command,
             _updates.HandleCommand);
+
+        tray.RegisterRequestHandler(
+            AppProtocol.PrepareMainActivation,
+            (_, cancellationToken) =>
+                _mainGateway.PrepareActivationAsync(cancellationToken));
 
         tray.RegisterRequestHandler(
             UpdateProtocol.GetState,
@@ -189,6 +248,9 @@ public sealed class CoreIpcBindings : IDisposable
 
         _runnerSessions.SessionStarted -= BindRunner;
         _runnerSessions.SessionReady -= _downloadCommands.PublishRunnerSnapshot;
+        _torrentSelectionSessions.SessionStarted -= BindTorrentSelector;
+        _downloadConfig.Changed -= PublishDownloadSettings;
+        _main = null;
         GC.SuppressFinalize(this);
     }
 }

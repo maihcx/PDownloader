@@ -97,17 +97,30 @@ public sealed class RunnerSessionManager : IDisposable
     private RunnerSession CreateSession(string token, RunnerDownloadTask task)
     {
         int threads = task.Threads > 0 ? task.Threads : _downloadConfig.DownloadConfigs.DefaultThreadCount;
+        DownloadCategorySelection selection = _downloadConfig.CreateRunnerSelection(
+            task.FileName,
+            task.SaveTo,
+            preserveRequestedPath: task.IsRunner,
+            downloadKind: task.DownloadKind,
+            destinationSubfolder: task.DestinationSubfolder);
         var context = new RunnerDownloadContext
         {
             Url = task.Url,
             FormatId = task.FormatId,
-            SaveTo = task.SaveTo,
+            SaveTo = selection.SaveTo,
             FileName = task.FileName,
             Title = task.Title,
             FileSize = task.FileSize,
             IsRunner = task.IsRunner,
             Threads = threads > 0 ? threads : 8,
-            Headers = NormalizeHeaders(task.Headers)
+            Headers = NormalizeHeaders(task.Headers),
+            Categories = selection.Categories,
+            SelectedCategoryId = selection.SelectedCategoryId,
+            DownloadKind = task.DownloadKind,
+            DestinationSubfolder = task.DestinationSubfolder,
+            TorrentInfoHash = task.TorrentInfoHash,
+            TorrentFileIndex = task.TorrentFileIndex,
+            TorrentRelativePath = task.TorrentRelativePath
         };
         var channel = new ConfluxService { CanMultiple = true };
         channel.Register(IpcTopology.RunnerProcessName,

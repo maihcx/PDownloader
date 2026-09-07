@@ -86,10 +86,16 @@ public sealed partial class DownloadManager
                 FileName = item.FileName,
                 FormatId = item.FormatId ?? string.Empty,
                 FileSize = item.TotalBytes,
-                SaveTo = item.SavePath,
+                SaveTo = string.IsNullOrWhiteSpace(item.DestinationFolder)
+                    ? item.SavePath
+                    : item.DestinationFolder,
                 Url = item.Url,
                 IsRunner = true,
                 Threads = item.Threads,
+                DownloadKind = item.DownloadKind,
+                TorrentInfoHash = item.TorrentInfoHash,
+                TorrentFileIndex = item.TorrentFileIndex,
+                TorrentRelativePath = item.TorrentRelativePath,
                 Headers = item.CustomHeaders is null ? null
                     : new Dictionary<string, string>(item.CustomHeaders, StringComparer.OrdinalIgnoreCase)
             });
@@ -103,6 +109,7 @@ public sealed partial class DownloadManager
             return;
         }
 
+        bool wasCompleted = session.Item.Status == DownloadStatus.Completed;
         session.MarkRemoved(); // Suppress progress from the old worker immediately.
         try
         {
@@ -118,6 +125,17 @@ public sealed partial class DownloadManager
             session.Item.Status = DownloadStatus.Cancelled;
             session.Item.SpeedBps = 0;
             Notify(session.Item);
+            if (!wasCompleted
+                && session.Item.DownloadKind == DownloadKind.Torrent
+                && !string.IsNullOrWhiteSpace(session.Item.TorrentDestinationPath))
+            {
+                try { File.Delete(session.Item.TorrentDestinationPath); }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Torrent] Could not delete partial file: {ex.Message}");
+                }
+            }
+
             _pathService.DeleteTempFiles(session.Item);
         }
         finally
@@ -178,7 +196,14 @@ public sealed partial class DownloadManager
             {
                 token.ThrowIfCancellationRequested();
                 item.Status = DownloadStatus.Connecting;
-                var engine = new DownloadEngine(item, progress, token, _pathService, _ytDlpService, _ffmpegMuxer);
+                var engine = new DownloadEngine(
+                    item,
+                    progress,
+                    token,
+                    _pathService,
+                    _ytDlpService,
+                    _ffmpegMuxer,
+                    _torrentEngine);
                 try
                 {
                     await engine.RunAsync().ConfigureAwait(false);

@@ -57,18 +57,21 @@ public sealed class HttpBridgeService : IDisposable
     private readonly DownloadConfigService _downloadConfig;
     private readonly YtDlpService _ytDlpService;
     private readonly UserDataStore _userDataStore;
+    private readonly TorrentWorkflowService _torrentWorkflow;
     private CancellationTokenSource? _cts;
 
     public HttpBridgeService(
         RunnerSessionManager runnerSessions,
         DownloadConfigService downloadConfig,
         YtDlpService ytDlpService,
-        UserDataStore userDataStore)
+        UserDataStore userDataStore,
+        TorrentWorkflowService torrentWorkflow)
     {
         _runnerSessions = runnerSessions;
         _downloadConfig = downloadConfig;
         _ytDlpService = ytDlpService;
         _userDataStore = userDataStore;
+        _torrentWorkflow = torrentWorkflow;
     }
 
     public void Start()
@@ -238,9 +241,17 @@ public sealed class HttpBridgeService : IDisposable
         EnsureJsonPost(request);
         DownloadPayload payload = await ReadJsonAsync<DownloadPayload>(request, ct);
 
-        string url = ValidateHttpUrl(payload.Url);
+        string url = ValidateDownloadUrl(payload.Url);
         string fileName = SanitizeBridgeFileName(payload.FileName);
         Dictionary<string, string>? customHeaders = SanitizeForwardedHeaders(payload.Headers);
+
+        if (DownloadSource.DetectKind(url, fileName) == DownloadKind.Torrent)
+        {
+            string saveTo = GetBridgeDownloadFolder();
+            _ = LaunchTorrentFromBridgeAsync(url, saveTo, customHeaders);
+            await Json(response, new { ok = true });
+            return;
+        }
 
         string id = Guid.NewGuid().ToString();
         var data = new RunnerDownloadTask
@@ -257,6 +268,27 @@ public sealed class HttpBridgeService : IDisposable
 
         await _runnerSessions.EnsureStartedAsync(id, data, ct).ConfigureAwait(false);
         await Json(response, new { ok = true });
+    }
+
+    private async Task LaunchTorrentFromBridgeAsync(
+        string url,
+        string saveTo,
+        Dictionary<string, string>? headers)
+    {
+        try
+        {
+            await _torrentWorkflow.LaunchAsync(
+                url,
+                saveTo,
+                _downloadConfig.DownloadConfigs.DefaultThreadCount,
+                headers,
+                _cts?.Token ?? CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (_cts?.IsCancellationRequested == true) { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[HTTP Bridge] Torrent launch failed: {ex}");
+        }
     }
 
     private async Task HandleMediaAnalyze(
@@ -585,6 +617,16 @@ public sealed class HttpBridgeService : IDisposable
         }
 
         return value.Trim();
+    }
+
+    private static string ValidateDownloadUrl(string? value)
+    {
+        if (DownloadSource.IsMagnet(value) && value!.Length <= 16 * 1024)
+        {
+            return value.Trim();
+        }
+
+        return ValidateHttpUrl(value);
     }
 
     private static string SanitizeBridgeFileName(string? value)
