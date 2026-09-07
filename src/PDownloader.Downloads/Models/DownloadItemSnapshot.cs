@@ -42,6 +42,18 @@ public record DownloadItemSnapshot(
 
     public string Sha256Hash { get; init; } = string.Empty;
 
+    public string DownloadKind { get; init; } = nameof(PDownloader.Contracts.Downloads.DownloadKind.Http);
+
+    public string DestinationFolder { get; init; } = string.Empty;
+
+    public string TorrentInfoHash { get; init; } = string.Empty;
+
+    public int TorrentFileIndex { get; init; } = -1;
+
+    public string TorrentRelativePath { get; init; } = string.Empty;
+
+    public string TorrentDestinationPath { get; init; } = string.Empty;
+
     public static DownloadItemSnapshot From(DownloadItem i) => new(
         i.Id, i.Url, i.FileName, i.SavePath,
         i.Threads, i.IsYoutube, i.FormatId,
@@ -58,7 +70,13 @@ public record DownloadItemSnapshot(
         FileMergeMode = i.MergeMode.ToString(),
         Md5Hash = i.Md5Hash,
         Sha1Hash = i.Sha1Hash,
-        Sha256Hash = i.Sha256Hash
+        Sha256Hash = i.Sha256Hash,
+        DownloadKind = i.DownloadKind.ToString(),
+        DestinationFolder = i.DestinationFolder,
+        TorrentInfoHash = i.TorrentInfoHash,
+        TorrentFileIndex = i.TorrentFileIndex,
+        TorrentRelativePath = i.TorrentRelativePath,
+        TorrentDestinationPath = i.TorrentDestinationPath
     };
 
     public DownloadItem ToDownloadItem()
@@ -75,6 +93,14 @@ public record DownloadItemSnapshot(
             Threads = Threads,
             IsYoutube = IsYoutube,
             FormatId = FormatId,
+            DownloadKind = Enum.TryParse(DownloadKind, out PDownloader.Contracts.Downloads.DownloadKind kind)
+                ? kind
+                : PDownloader.Contracts.Downloads.DownloadKind.Http,
+            DestinationFolder = DestinationFolder,
+            TorrentInfoHash = TorrentInfoHash,
+            TorrentFileIndex = TorrentFileIndex,
+            TorrentRelativePath = TorrentRelativePath,
+            TorrentDestinationPath = TorrentDestinationPath,
             TotalBytes = TotalBytes,
             DownloadedBytes = DownloadedBytes,
             DownloadProgressPercent = DownloadProgressPercent,

@@ -58,16 +58,19 @@ internal class Program
                     services.AddSingleton<DownloadConfigService>();
                     services.AddSingleton<YtDlpService>();
                     services.AddSingleton<IDownloadRuntime, CoreDownloadRuntime>();
+                    services.AddSingleton<TorrentEngineService>();
                     services.AddSingleton<DownloadManager>();
 
                     services.AddSingleton<CoreIpcHost>();
                     services.AddSingleton<MainAppGateway>();
                     services.AddSingleton<RunnerSessionManager>();
+                    services.AddSingleton<TorrentSelectionSessionManager>();
                     services.AddSingleton<AppEventRelay>();
                     services.AddSingleton<CoreLifecycleService>();
 
                     services.AddSingleton<DownloadCommandService>();
                     services.AddSingleton<DownloadLaunchService>();
+                    services.AddSingleton<TorrentWorkflowService>();
                     services.AddSingleton<DownloadProgressPublisher>();
                     services.AddSingleton<DownloadManagerBootstrap>();
 

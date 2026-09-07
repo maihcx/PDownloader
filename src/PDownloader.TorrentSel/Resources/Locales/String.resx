@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="torrent_selector_app_title" xml:space="preserve"><value>Select torrent files</value></data>
+  <data name="torrent_selector_default_name" xml:space="preserve"><value>Torrent</value></data>
+  <data name="torrent_selector_description" xml:space="preserve"><value>Choose the files to download. Each selected file opens in its own Runner.</value></data>
+  <data name="torrent_selector_select_all" xml:space="preserve"><value>Select all</value></data>
+  <data name="torrent_selector_clear" xml:space="preserve"><value>Clear</value></data>
+  <data name="torrent_selector_continue" xml:space="preserve"><value>Continue</value></data>
+  <data name="torrent_selector_selection_summary" xml:space="preserve"><value>{0} of {1} files · {2}</value></data>
+  <data name="torrent_selector_send_selection_error" xml:space="preserve"><value>Could not send the selection to PDownloader Core.</value></data>
+  <data name="torrent_selector_invalid_token_error" xml:space="preserve"><value>The torrent selection session token is missing or invalid.</value></data>
+  <data name="torrent_selector_metadata_error" xml:space="preserve"><value>PDownloader Core could not provide torrent metadata. {0}</value></data>
+</root>

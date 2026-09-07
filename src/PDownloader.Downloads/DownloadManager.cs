@@ -25,6 +25,7 @@ public sealed partial class DownloadManager : IAsyncDisposable
     private readonly DownloadPathService _pathService;
     private readonly YtDlpService _ytDlpService;
     private readonly FfmpegMuxer _ffmpegMuxer;
+    private readonly TorrentEngineService _torrentEngine;
     private readonly object _sync = new();
     private readonly Dictionary<string, DownloadSession> _sessions = new(StringComparer.Ordinal);
     private readonly HashSet<Task> _commands = new();
@@ -34,12 +35,16 @@ public sealed partial class DownloadManager : IAsyncDisposable
 
     public event Action<DownloadItem>? OnItemChanged;
 
-    public DownloadManager(IDownloadRuntime runtime, YtDlpService ytDlpService)
+    public DownloadManager(
+        IDownloadRuntime runtime,
+        YtDlpService ytDlpService,
+        TorrentEngineService torrentEngine)
     {
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _ytDlpService = ytDlpService ?? throw new ArgumentNullException(nameof(ytDlpService));
         _pathService = new DownloadPathService(_runtime);
         _ffmpegMuxer = new FfmpegMuxer();
+        _torrentEngine = torrentEngine ?? throw new ArgumentNullException(nameof(torrentEngine));
     }
 
     /// <summary>Returns after the download is registered and scheduled, not after transfer completion.</summary>
@@ -48,6 +53,10 @@ public sealed partial class DownloadManager : IAsyncDisposable
         int threads = 8, bool isYoutube = false, string? formatId = null,
         Dictionary<string, string>? customHeaders = null,
         FileMergeMode mergeMode = FileMergeMode.Balanced,
+        DownloadKind downloadKind = DownloadKind.Http,
+        string torrentInfoHash = "",
+        int torrentFileIndex = -1,
+        string torrentRelativePath = "",
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
@@ -68,6 +77,7 @@ public sealed partial class DownloadManager : IAsyncDisposable
                 Id = id,
                 Url = url,
                 SavePath = saveTo,
+                DestinationFolder = saveTo,
                 FileName = fileName,
                 Threads = threads,
                 IsYoutube = isYoutube,
@@ -75,6 +85,10 @@ public sealed partial class DownloadManager : IAsyncDisposable
                 CustomHeaders = customHeaders is null ? null
                     : new Dictionary<string, string>(customHeaders, StringComparer.OrdinalIgnoreCase),
                 MergeMode = mergeMode,
+                DownloadKind = downloadKind,
+                TorrentInfoHash = torrentInfoHash,
+                TorrentFileIndex = torrentFileIndex,
+                TorrentRelativePath = torrentRelativePath,
                 Status = DownloadStatus.Queued
             });
             _sessions.Add(id, session);

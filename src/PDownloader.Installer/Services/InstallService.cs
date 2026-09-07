@@ -645,6 +645,11 @@ public sealed class InstallService : IInstallService
             {
                 try { p.Kill(entireProcessTree: true); } catch { }
             }
+
+            foreach (Process p in Process.GetProcessesByName("PDownloader.TorrentSel"))
+            {
+                try { p.Kill(entireProcessTree: true); } catch { }
+            }
         }, ct);
     }
 }

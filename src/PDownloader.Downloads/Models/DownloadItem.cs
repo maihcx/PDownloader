@@ -60,6 +60,18 @@ public class DownloadItem : INotifyPropertyChanged
 
     public string? FormatId { get; set; }
 
+    public DownloadKind DownloadKind { get; set; } = DownloadKind.Http;
+
+    public string DestinationFolder { get; set; } = string.Empty;
+
+    public string TorrentInfoHash { get; set; } = string.Empty;
+
+    public int TorrentFileIndex { get; set; } = -1;
+
+    public string TorrentRelativePath { get; set; } = string.Empty;
+
+    public string TorrentDestinationPath { get; set; } = string.Empty;
+
     private double _downloadProgressPercent;
     // Fallback for transfers with known work units but unknown total byte size.
     public double DownloadProgressPercent
