@@ -27,7 +27,11 @@ public partial class DownloadItemViewModel : ObservableObject
     }
 
     public string Id { get; set; } = string.Empty;
+    [ObservableProperty]
+    private bool _isExpanded;
     public string Url { get; set; } = string.Empty;
+    public DownloadKind DownloadKind { get; set; } = DownloadKind.Http;
+    public bool IsTorrent => DownloadKind == DownloadKind.Torrent;
     public string FileName { get; set; } = string.Empty;
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
@@ -80,6 +84,7 @@ public partial class DownloadItemViewModel : ObservableObject
     public string Md5Hash { get; set; } = string.Empty;
     public string Sha1Hash { get; set; } = string.Empty;
     public string Sha256Hash { get; set; } = string.Empty;
+    public IReadOnlyList<TorrentFileProgressViewModel> TorrentFiles { get; set; } = [];
 
     public static DownloadItemViewModel FromContract(DownloadItemDto dto)
     {
@@ -89,6 +94,7 @@ public partial class DownloadItemViewModel : ObservableObject
         {
             Id = dto.Id,
             Url = dto.Url,
+            DownloadKind = dto.DownloadKind,
             FileName = dto.FileName,
             StartTime = dto.StartTime,
             EndTime = dto.EndTime,
@@ -109,6 +115,7 @@ public partial class DownloadItemViewModel : ObservableObject
             Md5Hash = dto.Md5Hash,
             Sha1Hash = dto.Sha1Hash,
             Sha256Hash = dto.Sha256Hash,
+            TorrentFiles = dto.TorrentFiles.Select(TorrentFileProgressViewModel.FromContract).ToList(),
             Status = dto.Status.ToString()
         };
     }
@@ -116,6 +123,10 @@ public partial class DownloadItemViewModel : ObservableObject
     private void LanguageBase_LanguageChanged(string language)
     {
         RefreshStatusText();
+        foreach (TorrentFileProgressViewModel file in TorrentFiles)
+        {
+            file.RefreshLanguage();
+        }
     }
 
     private void RefreshStatusText()

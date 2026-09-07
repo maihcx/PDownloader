@@ -17,7 +17,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 
-namespace PDownloader.TorrentSel.Utils;
+namespace PDownloader.TorrentShell.Utils;
 
 public static class WindowHelper
 {
@@ -67,7 +67,7 @@ public static class WindowHelper
             return;
         }
 
-        Debug.WriteLine("[TorrentSel focus] Foreground activation was denied.");
+        Debug.WriteLine("[TorrentShell focus] Foreground activation was denied.");
         FlashUntilForeground(handle);
     }
 
@@ -80,7 +80,7 @@ public static class WindowHelper
 
         bool accepted = NativeMethods.SetForegroundWindow(handle);
         bool foreground = NativeMethods.GetForegroundWindow() == handle;
-        Debug.WriteLine($"[TorrentSel focus] SetForegroundWindow={accepted}, foreground={foreground}.");
+        Debug.WriteLine($"[TorrentShell focus] SetForegroundWindow={accepted}, foreground={foreground}.");
         return foreground;
     }
 
@@ -124,12 +124,12 @@ public static class WindowHelper
             uint released = NativeMethods.SendInput(1, [keyUp], inputSize);
             if (released != 1)
             {
-                Debug.WriteLine("[TorrentSel focus] Synthetic Alt release was rejected.");
+                Debug.WriteLine("[TorrentShell focus] Synthetic Alt release was rejected.");
             }
         }
 
         // UIPI/secure desktop can reject this attempt; do not retry in a loop.
-        Debug.WriteLine($"[TorrentSel focus] SendInput inserted {sent}/2 events, error={error}.");
+        Debug.WriteLine($"[TorrentShell focus] SendInput inserted {sent}/2 events, error={error}.");
         return false;
     }
 

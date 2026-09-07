@@ -13,7 +13,7 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.TorrentSel.Views;
+namespace PDownloader.TorrentShell.Views;
 
 public partial class MainWindow : FluentWindow
 {
@@ -36,6 +36,7 @@ public partial class MainWindow : FluentWindow
 
     private void MainWindow_ContentRendered(object? sender, EventArgs e)
     {
+        // Apply the same one-time activation as Runner after WPF has rendered.
         ContentRendered -= MainWindow_ContentRendered;
         WindowHelper.BringToFront(this);
     }

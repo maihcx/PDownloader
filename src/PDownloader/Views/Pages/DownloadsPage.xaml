@@ -244,7 +244,8 @@
             <!-- Item Content -->
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <ui:CardExpander Margin="0,0,0,8">
+                    <ui:CardExpander Margin="0,0,0,8"
+                                     IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
                         <ui:CardExpander.Header>
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -427,6 +428,94 @@
 
                         <ui:CardExpander.Content>
                             <StackPanel>
+                                <Border Margin="0,-8,0,10"
+                                        Padding="10"
+                                        BorderThickness="1"
+                                        BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                                        CornerRadius="{DynamicResource ControlCornerRadius}"
+                                        Visibility="{Binding IsTorrent, Converter={StaticResource BoolToVisConverter}}">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <ui:TextBlock Text="{utils:Localization download_view_torrent_files_title}"
+                                                      FontSize="12"
+                                                      FontWeight="SemiBold"
+                                                      Margin="2,0,0,7" />
+                                        <ListBox Grid.Row="1"
+                                                 MaxHeight="320"
+                                                 ItemsSource="{Binding TorrentFiles}"
+                                                 Background="Transparent"
+                                                 BorderThickness="0"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 VirtualizingPanel.IsVirtualizing="True"
+                                                 VirtualizingPanel.VirtualizationMode="Recycling">
+                                            <ListBox.ItemContainerStyle>
+                                                <Style TargetType="ListBoxItem">
+                                                    <Setter Property="Padding" Value="0" />
+                                                    <Setter Property="Margin" Value="0,0,0,7" />
+                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                    <Setter Property="Focusable" Value="False" />
+                                                </Style>
+                                            </ListBox.ItemContainerStyle>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Padding="10,8"
+                                                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                                            CornerRadius="{DynamicResource ControlCornerRadius}">
+                                                        <Grid>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto" />
+                                                                <RowDefinition Height="Auto" />
+                                                            </Grid.RowDefinitions>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <StackPanel>
+                                                                <ui:TextBlock Text="{Binding FileName}"
+                                                                              FontWeight="SemiBold"
+                                                                              TextTrimming="CharacterEllipsis" />
+                                                                <ui:TextBlock Text="{Binding RelativePath}"
+                                                                              Margin="0,2,12,0"
+                                                                              FontSize="10"
+                                                                              Opacity="0.5"
+                                                                              TextTrimming="CharacterEllipsis" />
+                                                            </StackPanel>
+                                                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                                                <ui:TextBlock Text="{Binding ProgressText}"
+                                                                              HorizontalAlignment="Right"
+                                                                              FontWeight="Bold" />
+                                                                <ui:TextBlock Text="{Binding StatusText}"
+                                                                              HorizontalAlignment="Right"
+                                                                              FontSize="10"
+                                                                              Opacity="0.65" />
+                                                            </StackPanel>
+                                                            <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,7,0,0">
+                                                                <Grid.RowDefinitions>
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                </Grid.RowDefinitions>
+                                                                <ProgressBar Style="{StaticResource DownloadProgressBar}"
+                                                                             Height="7"
+                                                                             Maximum="100"
+                                                                             Value="{Binding Progress}" />
+                                                                <Grid Grid.Row="1" Margin="0,3,0,0">
+                                                                    <ui:TextBlock Text="{Binding DownloadedText}"
+                                                                                  FontSize="10" Opacity="0.5" />
+                                                                    <ui:TextBlock Text="{Binding SpeedText}"
+                                                                                  FontSize="10" Opacity="0.5"
+                                                                                  HorizontalAlignment="Right" />
+                                                                </Grid>
+                                                            </Grid>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Grid>
+                                </Border>
                                 <controls:InfoRow LabelText="{utils:Localization download_view_file_name_title}"
                                                   ValueText="{Binding FileName}"
                                                   Margin="0 -10 0 0" />

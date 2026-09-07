@@ -23,7 +23,7 @@ public sealed class Bootstrap
     private readonly CoreIpcBindings _ipcBindings;
     private readonly DownloadProgressPublisher _progressPublisher;
     private readonly DownloadManager _downloads;
-    private readonly TorrentSelectionSessionManager _torrentSelectionSessions;
+    private readonly TorrentShellSessionManager _torrentShellSessions;
 
     public Bootstrap(
         RunnerSessionManager runnerSessions,
@@ -32,7 +32,7 @@ public sealed class Bootstrap
         CoreIpcBindings ipcBindings,
         DownloadProgressPublisher progressPublisher,
         DownloadManager downloads,
-        TorrentSelectionSessionManager torrentSelectionSessions)
+        TorrentShellSessionManager torrentShellSessions)
     {
         _runnerSessions = runnerSessions;
         _downloadManagerBootstrap = downloadManagerBootstrap;
@@ -40,7 +40,7 @@ public sealed class Bootstrap
         _ipcBindings = ipcBindings;
         _progressPublisher = progressPublisher;
         _downloads = downloads;
-        _torrentSelectionSessions = torrentSelectionSessions;
+        _torrentShellSessions = torrentShellSessions;
     }
 
     public async Task OnStartedAsync(CancellationToken cancellationToken)
@@ -89,7 +89,7 @@ public sealed class Bootstrap
                     NotifyShutdownAsync(_ipcHost.Main),
                     NotifyShutdownAsync(_ipcHost.Tray),
                     _runnerSessions.ShutdownAllAsync(),
-                    _torrentSelectionSessions.ShutdownAllAsync()).ConfigureAwait(false);
+                    _torrentShellSessions.ShutdownAllAsync()).ConfigureAwait(false);
             }
             finally { await _ipcHost.StopAsync().ConfigureAwait(false); }
         }

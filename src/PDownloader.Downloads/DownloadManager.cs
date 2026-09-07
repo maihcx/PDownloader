@@ -57,6 +57,7 @@ public sealed partial class DownloadManager : IAsyncDisposable
         string torrentInfoHash = "",
         int torrentFileIndex = -1,
         string torrentRelativePath = "",
+        IReadOnlyCollection<TorrentFileProgressDto>? torrentFiles = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
@@ -72,7 +73,7 @@ public sealed partial class DownloadManager : IAsyncDisposable
                 return session.Item;
             }
 
-            session = new DownloadSession(new DownloadItem
+            var item = new DownloadItem
             {
                 Id = id,
                 Url = url,
@@ -90,7 +91,9 @@ public sealed partial class DownloadManager : IAsyncDisposable
                 TorrentFileIndex = torrentFileIndex,
                 TorrentRelativePath = torrentRelativePath,
                 Status = DownloadStatus.Queued
-            });
+            };
+            item.SetTorrentFiles(torrentFiles ?? []);
+            session = new DownloadSession(item);
             _sessions.Add(id, session);
             start = TrackCommand(session.QueueCommand(() =>
             {
@@ -271,6 +274,10 @@ public sealed partial class DownloadManager : IAsyncDisposable
                 {
                     item.Status = DownloadStatus.Paused;
                     item.SpeedBps = 0;
+                    if (item.DownloadKind == DownloadKind.Torrent)
+                    {
+                        item.SetTorrentFileStatus(DownloadStatus.Paused);
+                    }
                 }
 
                 var session = new DownloadSession(item);

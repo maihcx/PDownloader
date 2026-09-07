@@ -54,6 +54,8 @@ public record DownloadItemSnapshot(
 
     public string TorrentDestinationPath { get; init; } = string.Empty;
 
+    public List<TorrentFileProgressDto> TorrentFiles { get; init; } = [];
+
     public static DownloadItemSnapshot From(DownloadItem i) => new(
         i.Id, i.Url, i.FileName, i.SavePath,
         i.Threads, i.IsYoutube, i.FormatId,
@@ -76,13 +78,14 @@ public record DownloadItemSnapshot(
         TorrentInfoHash = i.TorrentInfoHash,
         TorrentFileIndex = i.TorrentFileIndex,
         TorrentRelativePath = i.TorrentRelativePath,
-        TorrentDestinationPath = i.TorrentDestinationPath
+        TorrentDestinationPath = i.TorrentDestinationPath,
+        TorrentFiles = i.GetTorrentFilesSnapshot().ToList()
     };
 
     public DownloadItem ToDownloadItem()
     {
         DownloadStatus status = Enum.TryParse<DownloadStatus>(Status, out DownloadStatus s) ? s : DownloadStatus.Queued;
-        return new DownloadItem
+        DownloadItem item = new()
         {
             Id = Id,
             Url = Url,
@@ -116,5 +119,7 @@ public record DownloadItemSnapshot(
             StartTime = StartTime,
             EndTime = EndTime
         };
+        item.SetTorrentFiles(TorrentFiles ?? []);
+        return item;
     }
 }

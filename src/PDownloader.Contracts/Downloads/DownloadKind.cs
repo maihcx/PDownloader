@@ -16,9 +16,9 @@
 namespace PDownloader.Contracts.Downloads;
 
 /// <summary>
-/// Identifies the transfer engine used by a normal, single-file download item.
-/// A torrent with several selected files is represented by several items which
-/// share one torrent session in Core.
+/// Identifies the transfer engine used by a download item. HTTP/media items
+/// represent one output file; a torrent item represents one aggregate session
+/// and carries its selected child files separately.
 /// </summary>
 public enum DownloadKind
 {

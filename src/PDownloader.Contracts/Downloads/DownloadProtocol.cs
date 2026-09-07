@@ -64,14 +64,29 @@ public static class DownloadProtocol
     public static readonly IpcMessageDefinition<IpcNoPayload> RunnerUiClosed =
         new("runner.ui-closed");
 
-    public static readonly IpcRequestDefinition<IpcNoPayload, TorrentSelectionSessionView> TorrentSelectionGetSession =
-        new("torrent-selection.session.get");
+    public static readonly IpcRequestDefinition<IpcNoPayload, TorrentShellSessionView> TorrentShellGetSession =
+        new("torrent-shell.session.get");
 
-    public static readonly IpcMessageDefinition<TorrentSelectionResult> TorrentSelectionConfirm =
-        new("torrent-selection.confirm");
+    public static readonly IpcMessageDefinition<TorrentShellStartRequest> TorrentShellStart =
+        new("torrent-shell.start");
 
-    public static readonly IpcMessageDefinition<IpcNoPayload> TorrentSelectionCancel =
-        new("torrent-selection.cancel");
+    public static readonly IpcMessageDefinition<IpcNoPayload> TorrentShellPause =
+        new("torrent-shell.pause");
+
+    public static readonly IpcMessageDefinition<IpcNoPayload> TorrentShellResume =
+        new("torrent-shell.resume");
+
+    public static readonly IpcMessageDefinition<IpcNoPayload> TorrentShellRetry =
+        new("torrent-shell.retry");
+
+    public static readonly IpcMessageDefinition<IpcNoPayload> TorrentShellCancel =
+        new("torrent-shell.cancel");
+
+    public static readonly IpcMessageDefinition<IpcNoPayload> TorrentShellCancelExperience =
+        new("torrent-shell.cancel-experience");
+
+    public static readonly IpcMessageDefinition<IpcNoPayload> TorrentShellUiClosed =
+        new("torrent-shell.ui-closed");
 
 }
 

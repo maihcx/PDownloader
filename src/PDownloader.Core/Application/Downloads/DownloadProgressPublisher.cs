@@ -129,6 +129,44 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
         }
     }
 
+    public void AttachTorrentShell(TorrentShellSession session)
+    {
+        if (!session.IsReady || session.Lifetime.IsCancellationRequested)
+        {
+            return;
+        }
+
+        int processId;
+        try { processId = session.Channel.GetProcess().Id; }
+        catch (InvalidOperationException) { return; }
+
+        lock (_sync)
+        {
+            if (_stopTask is not null || session.Lifetime.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (_runners.TryGetValue(session.Id, out ProgressClientSender? previous))
+            {
+                if (previous.Matches(session.Channel, processId))
+                {
+                    return;
+                }
+
+                _ = previous.DisposeAsync();
+            }
+
+            var sender = new ProgressClientSender(session.Channel, processId, session.Lifetime.Token);
+            _runners[session.Id] = sender;
+            Track(sender, session.Id);
+            if (_downloads.Find(session.Id) is { } item)
+            {
+                sender.Publish(DownloadManager.ToContract(item));
+            }
+        }
+    }
+
     private void Track(ProgressClientSender sender, string? runnerId)
     {
         _ownedSenders.Add(sender);

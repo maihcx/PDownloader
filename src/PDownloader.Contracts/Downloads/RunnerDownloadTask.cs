@@ -38,4 +38,5 @@ public sealed class RunnerDownloadTask
     public string TorrentInfoHash { get; set; } = string.Empty;
     public int TorrentFileIndex { get; set; } = -1;
     public string TorrentRelativePath { get; set; } = string.Empty;
+    public List<TorrentFileProgressDto> TorrentFiles { get; set; } = [];
 }

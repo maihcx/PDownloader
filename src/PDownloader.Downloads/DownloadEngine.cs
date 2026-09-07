@@ -123,30 +123,27 @@ public class DownloadEngine
             _item.StartTime = DateTime.Now;
         }
 
-        string finalPath = _item.TorrentDestinationPath;
-        if (string.IsNullOrWhiteSpace(finalPath))
+        string destinationRoot = _item.SavePath;
+        if (string.IsNullOrWhiteSpace(destinationRoot))
         {
-            finalPath = _pathService.GetFinalPath(_item);
-            _item.TorrentDestinationPath = finalPath;
+            destinationRoot = _item.DestinationFolder;
         }
 
-        finalPath = await _torrentEngine.DownloadFileAsync(
+        destinationRoot = Path.GetFullPath(destinationRoot);
+        Directory.CreateDirectory(destinationRoot);
+        _item.SavePath = destinationRoot;
+        _item.DestinationFolder = destinationRoot;
+        _item.SetTotalBytes(_item.GetTorrentFilesSnapshot().Sum(file => file.Length));
+        _item.SetTorrentFileStatus(DownloadStatus.Downloading);
+
+        await _torrentEngine.DownloadFilesAsync(
             _item,
-            finalPath,
+            destinationRoot,
             ReportProgress,
             _cancellationToken).ConfigureAwait(false);
         _cancellationToken.ThrowIfCancellationRequested();
-
-        if (!File.Exists(finalPath))
-        {
-            throw new IOException("The selected torrent file was not created.");
-        }
-
-        long fileLength = new FileInfo(finalPath).Length;
-        _item.FileName = Path.GetFileName(finalPath);
-        _item.SavePath = finalPath;
-        _item.SetTotalBytes(fileLength);
-        ReportProgress(fileLength, 0);
+        _item.SetTorrentFileStatus(DownloadStatus.Completed);
+        ReportProgress(_item.TotalBytes, 0);
         _item.Status = DownloadStatus.Completed;
         _item.EndTime = DateTime.Now;
     }

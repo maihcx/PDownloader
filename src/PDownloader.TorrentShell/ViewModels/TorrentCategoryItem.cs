@@ -13,21 +13,11 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.TorrentSel.Utils;
+namespace PDownloader.TorrentShell.ViewModels;
 
-/// <summary>
-/// Compatibility facade matching Runner's settings access. TorrentSel reads
-/// the application language from Core and never owns a separate settings file.
-/// </summary>
-public static class UserDataStore
+public sealed class TorrentCategoryItem
 {
-    private static readonly ISettingsClient Client = new SettingsClient();
-
-    public static Task InitializeAsync(CancellationToken cancellationToken = default) =>
-        Client.WaitUntilReadyAsync(cancellationToken);
-
-    public static T GetValue<T>(string key, T defaultValue = default!) =>
-        Client.GetValue(key, defaultValue);
-
-    public static void Reload() => Client.Reload();
+    public string Id { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
+    public string FolderPath { get; init; } = string.Empty;
 }

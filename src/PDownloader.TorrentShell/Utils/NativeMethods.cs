@@ -15,7 +15,7 @@
 
 using System.Runtime.InteropServices;
 
-namespace PDownloader.TorrentSel.Utils;
+namespace PDownloader.TorrentShell.Utils;
 
 internal static class NativeMethods
 {

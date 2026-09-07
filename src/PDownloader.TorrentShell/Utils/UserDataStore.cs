@@ -13,19 +13,21 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Downloads.Runtime;
+namespace PDownloader.TorrentShell.Utils;
 
 /// <summary>
-/// Process-owned capabilities required by the download module. The Downloads
-/// assembly depends on this boundary instead of storing Core callbacks/config
-/// in static mutable state.
+/// Compatibility facade matching Runner's settings access. TorrentShell reads
+/// the application language from Core and never owns a separate settings file.
 /// </summary>
-public interface IDownloadRuntime
+public static class UserDataStore
 {
-    string? DefaultDownloadFolder { get; }
-    string? DefaultTempFolder { get; }
-    string FallbackDownloadFolder { get; }
+    private static readonly ISettingsClient Client = new SettingsClient();
 
-    void ShowRunner(string id, RunnerDownloadTask task);
-    void ShowTorrentShell(string id, RunnerDownloadTask task);
+    public static Task InitializeAsync(CancellationToken cancellationToken = default) =>
+        Client.WaitUntilReadyAsync(cancellationToken);
+
+    public static T GetValue<T>(string key, T defaultValue = default!) =>
+        Client.GetValue(key, defaultValue);
+
+    public static void Reload() => Client.Reload();
 }

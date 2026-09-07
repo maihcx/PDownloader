@@ -87,6 +87,7 @@ public sealed class ApplicationHostService
             shell.Activated += MainWindow_Activated;
             shell.Closed += MainWindow_Closed;
         }
+
         _mainWindow.Show();
         _shown = true;
     }

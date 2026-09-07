@@ -13,7 +13,7 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.TorrentSel.Utils;
+namespace PDownloader.TorrentShell.Utils;
 
 public sealed class LocalizationExtension : Binding
 {

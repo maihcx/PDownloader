@@ -124,7 +124,7 @@
     <value>Torrent</value>
   </data>
   <data name="torrent_selector_description" xml:space="preserve">
-    <value>Chọn các tệp cần tải xuống. Mỗi tệp được chọn sẽ mở trong một Runner riêng.</value>
+    <value>Chọn các tệp torrent và nơi lưu. Chúng sẽ được tải cùng nhau trong cửa sổ này.</value>
   </data>
   <data name="torrent_selector_select_all" xml:space="preserve">
     <value>Chọn tất cả</value>
@@ -146,5 +146,62 @@
   </data>
   <data name="torrent_selector_metadata_error" xml:space="preserve">
     <value>PDownloader Core không thể cung cấp siêu dữ liệu torrent. {0}</value>
+  </data>
+  <data name="torrent_files_title" xml:space="preserve">
+    <value>Các tệp trong torrent</value>
+  </data>
+  <data name="torrent_files_progress_title" xml:space="preserve">
+    <value>Tiến trình từng tệp</value>
+  </data>
+  <data name="download_group_title" xml:space="preserve">
+    <value>Nhóm loại tệp</value>
+  </data>
+  <data name="save_to_title" xml:space="preserve">
+    <value>Lưu vào thư mục</value>
+  </data>
+  <data name="remember_group_path_title" xml:space="preserve">
+    <value>Ghi nhớ đường dẫn cho nhóm “{0}”</value>
+  </data>
+  <data name="select_folder_title" xml:space="preserve">
+    <value>Chọn thư mục</value>
+  </data>
+  <data name="download_start_title" xml:space="preserve">
+    <value>Bắt đầu tải</value>
+  </data>
+  <data name="pause_title" xml:space="preserve">
+    <value>Tạm dừng</value>
+  </data>
+  <data name="resume_title" xml:space="preserve">
+    <value>Tiếp tục</value>
+  </data>
+  <data name="retry_title" xml:space="preserve">
+    <value>Thử lại</value>
+  </data>
+  <data name="cancel_title" xml:space="preserve">
+    <value>Hủy</value>
+  </data>
+  <data name="open_folder_title" xml:space="preserve">
+    <value>Mở thư mục</value>
+  </data>
+  <data name="download_status_queued_title" xml:space="preserve">
+    <value>Đang chờ</value>
+  </data>
+  <data name="download_status_connecting_title" xml:space="preserve">
+    <value>Đang kết nối...</value>
+  </data>
+  <data name="download_status_downloading_title" xml:space="preserve">
+    <value>Đang tải xuống</value>
+  </data>
+  <data name="download_status_paused_title" xml:space="preserve">
+    <value>Đã tạm dừng</value>
+  </data>
+  <data name="download_status_completed_title" xml:space="preserve">
+    <value>Đã hoàn thành</value>
+  </data>
+  <data name="download_status_error_title" xml:space="preserve">
+    <value>Lỗi: {0}</value>
+  </data>
+  <data name="download_status_retry_title" xml:space="preserve">
+    <value>Đang thử lại: {0}</value>
   </data>
 </root>

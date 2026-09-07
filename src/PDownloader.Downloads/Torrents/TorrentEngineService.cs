@@ -19,9 +19,9 @@ using MonoTorrent.Client;
 namespace PDownloader.Downloads.Torrents;
 
 /// <summary>
-/// Owns the single MonoTorrent engine used by Core. Multiple Runner download
-/// items for the same info-hash attach to one shared TorrentManager so pieces
-/// crossing file boundaries are never fetched by duplicate swarms.
+/// Owns the single MonoTorrent engine used by Core. Every aggregate torrent job
+/// uses one TorrentManager for all selected files, so shared pieces are fetched
+/// once and per-file progress comes from the same swarm.
 /// </summary>
 public sealed class TorrentEngineService : IAsyncDisposable
 {
@@ -135,75 +135,144 @@ public sealed class TorrentEngineService : IAsyncDisposable
         _preparations[preparation.InfoHash] = preparation;
     }
 
-    public async Task<string> DownloadFileAsync(
+    /// <summary>Downloads all files selected for one aggregate torrent job.</summary>
+    public async Task DownloadFilesAsync(
         DownloadItem item,
-        string destinationPath,
+        string destinationRoot,
         Action<long, double> reportProgress,
         CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed != 0, this);
         ArgumentNullException.ThrowIfNull(item);
-        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationRoot);
         ArgumentNullException.ThrowIfNull(reportProgress);
 
         TorrentPreparation preparation = await GetPreparationAsync(item, cancellationToken)
             .ConfigureAwait(false);
-        TorrentAttachment attachment = await AttachAsync(
-            preparation,
-            item.TorrentFileIndex,
-            destinationPath,
-            cancellationToken).ConfigureAwait(false);
-        item.TorrentDestinationPath = attachment.DestinationPath;
+        TorrentFileProgressDto[] selected = item.GetTorrentFilesSnapshot().ToArray();
+        if (selected.Length == 0)
+        {
+            throw new InvalidDataException("No torrent files were selected.");
+        }
 
+        string root = Path.GetFullPath(destinationRoot);
+        Directory.CreateDirectory(root);
+        var attachments = new List<TorrentAttachment>(selected.Length);
         try
         {
-            TorrentPreparedFile preparedFile = preparation.Files.First(file =>
-                file.Index == item.TorrentFileIndex);
-            if (!string.IsNullOrWhiteSpace(item.TorrentRelativePath)
-                && !string.Equals(
-                    item.TorrentRelativePath,
-                    preparedFile.RelativePath,
-                    StringComparison.Ordinal))
+            foreach (TorrentFileProgressDto file in selected)
             {
-                throw new InvalidDataException("Torrent file metadata does not match the saved download.");
+                TorrentPreparedFile prepared = preparation.Files.FirstOrDefault(candidate =>
+                    candidate.Index == file.Index)
+                    ?? throw new InvalidDataException("A selected torrent file no longer exists.");
+                if (!string.Equals(prepared.RelativePath, file.RelativePath, StringComparison.Ordinal))
+                {
+                    throw new InvalidDataException("Torrent file metadata does not match the saved download.");
+                }
+
+                string destination = CombineUnderRoot(root, prepared.RelativePath);
+                TorrentAttachment attachment = await AttachAsync(
+                    preparation,
+                    file.Index,
+                    destination,
+                    cancellationToken,
+                    startManager: false).ConfigureAwait(false);
+                attachments.Add(attachment);
+                item.UpdateTorrentFile(file.Index, attachment.File.BytesDownloaded(), 0,
+                    DownloadStatus.Downloading, savePath: attachment.DestinationPath);
             }
 
-            item.TorrentRelativePath = preparedFile.RelativePath;
-            item.SetTotalBytes(preparedFile.Length);
-            long lastBytes = attachment.File.BytesDownloaded();
+            if (attachments[0].Batch.Manager.State is TorrentState.Stopped or TorrentState.Paused)
+            {
+                await attachments[0].Batch.Manager.StartAsync().ConfigureAwait(false);
+            }
+
+            long lastTotal = attachments.Sum(attachment =>
+                Math.Min(attachment.File.Length, attachment.File.BytesDownloaded()));
             long lastTick = Stopwatch.GetTimestamp();
-            reportProgress(lastBytes, 0);
+            reportProgress(lastTotal, 0);
 
             using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
-            while (attachment.File.Length > 0
-                && attachment.File.BitField.PercentComplete < 99.999)
+            while (attachments.Any(attachment => attachment.File.Length > 0
+                && attachment.File.BitField.PercentComplete < 99.999))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (attachment.Batch.Manager.State == TorrentState.Error)
+                TorrentManager manager = attachments[0].Batch.Manager;
+                if (manager.State == TorrentState.Error)
                 {
-                    throw attachment.Batch.Manager.Error?.Exception
+                    throw manager.Error?.Exception
                         ?? new IOException("The torrent engine entered an error state.");
                 }
 
                 await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false);
-                long bytes = Math.Min(attachment.File.Length, attachment.File.BytesDownloaded());
                 long now = Stopwatch.GetTimestamp();
                 double seconds = Stopwatch.GetElapsedTime(lastTick, now).TotalSeconds;
-                double speed = seconds > 0 ? Math.Max(0, bytes - lastBytes) / seconds : 0;
-                reportProgress(bytes, speed);
-                lastBytes = bytes;
+                long total = 0;
+                foreach (TorrentAttachment attachment in attachments)
+                {
+                    long bytes = Math.Min(attachment.File.Length, attachment.File.BytesDownloaded());
+                    TorrentFileProgressDto previous = item.GetTorrentFilesSnapshot()
+                        .First(file => file.Index == attachment.FileIndex);
+                    double fileSpeed = seconds > 0
+                        ? Math.Max(0, bytes - previous.DownloadedBytes) / seconds
+                        : 0;
+                    DownloadStatus status = attachment.File.Length == 0
+                        || attachment.File.BitField.PercentComplete >= 99.999
+                        ? DownloadStatus.Completed
+                        : DownloadStatus.Downloading;
+                    item.UpdateTorrentFile(attachment.FileIndex, bytes, fileSpeed, status);
+                    total += bytes;
+                }
+
+                double speed = seconds > 0 ? Math.Max(0, total - lastTotal) / seconds : 0;
+                reportProgress(total, speed);
+                lastTotal = total;
                 lastTick = now;
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
-            reportProgress(attachment.File.Length, 0);
+            foreach (TorrentAttachment attachment in attachments)
+            {
+                item.UpdateTorrentFile(attachment.FileIndex, attachment.File.Length, 0,
+                    DownloadStatus.Completed);
+                if (!File.Exists(attachment.DestinationPath))
+                {
+                    throw new IOException($"Torrent file was not created: {attachment.DestinationPath}");
+                }
+            }
+
+            reportProgress(attachments.Sum(attachment => attachment.File.Length), 0);
+        }
+        catch (OperationCanceledException)
+        {
+            item.SetTorrentFileStatus(DownloadStatus.Paused);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            item.SetTorrentFileStatus(DownloadStatus.Error, ex.Message);
+            throw;
         }
         finally
         {
-            await DetachAsync(attachment).ConfigureAwait(false);
+            foreach (TorrentAttachment attachment in attachments.AsEnumerable().Reverse())
+            {
+                await DetachAsync(attachment).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private static string CombineUnderRoot(string root, string relativePath)
+    {
+        string normalized = relativePath.Replace('/', Path.DirectorySeparatorChar)
+            .Replace('\\', Path.DirectorySeparatorChar);
+        string result = Path.GetFullPath(Path.Combine(root, normalized));
+        string prefix = Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar;
+        if (!result.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException("A torrent file path escapes the destination folder.");
         }
 
-        return attachment.DestinationPath;
+        return result;
     }
 
     private async Task<TorrentPreparation> GetPreparationAsync(
@@ -235,6 +304,7 @@ public sealed class TorrentEngineService : IAsyncDisposable
         {
             _preparationGate.Release();
         }
+
         if (!string.IsNullOrWhiteSpace(item.TorrentInfoHash)
             && !string.Equals(item.TorrentInfoHash, preparation.InfoHash,
                 StringComparison.OrdinalIgnoreCase))
@@ -250,7 +320,8 @@ public sealed class TorrentEngineService : IAsyncDisposable
         TorrentPreparation preparation,
         int fileIndex,
         string destinationPath,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool startManager = true)
     {
         if (fileIndex < 0
             || !preparation.Files.Any(file => file.Index == fileIndex))
@@ -300,7 +371,8 @@ public sealed class TorrentEngineService : IAsyncDisposable
                     .ConfigureAwait(false);
                 batch.ActiveFileIndexes.Add(fileIndex);
 
-                if (batch.Manager.State is TorrentState.Stopped or TorrentState.Paused)
+                if (startManager
+                    && batch.Manager.State is (TorrentState.Stopped or TorrentState.Paused))
                 {
                     await batch.Manager.StartAsync().ConfigureAwait(false);
                 }

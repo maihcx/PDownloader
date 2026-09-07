@@ -158,7 +158,10 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
             || ContainsKeyword(download.Url, keyword)
             || ContainsKeyword(download.Status, keyword)
             || ContainsKeyword(download.ErrorMessage, keyword)
-            || ContainsKeyword(download.SavePath, keyword);
+            || ContainsKeyword(download.SavePath, keyword)
+            || download.TorrentFiles.Any(file =>
+                ContainsKeyword(file.FileName, keyword)
+                || ContainsKeyword(file.RelativePath, keyword));
     }
 
     private void ApplySort(DownloadSortMode mode)
@@ -296,6 +299,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
                 }
                 else
                 {
+                    dto.IsExpanded = existing.IsExpanded;
                     int index = Downloads.IndexOf(existing);
                     Downloads[index] = dto;
                 }
@@ -330,7 +334,14 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         if (item.StatusState == DownloadStatus.Completed)
         {
-            OpenFile(item);
+            if (item.IsTorrent)
+            {
+                OpenFolder(item);
+            }
+            else
+            {
+                OpenFile(item);
+            }
         }
         else if (item.StatusState == DownloadStatus.Paused && item.CanResume)
         {
@@ -376,6 +387,15 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     {
         if (item == null)
         {
+            return;
+        }
+
+        if (item.IsTorrent && Directory.Exists(item.SavePath))
+        {
+            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{item.SavePath}\"")
+            {
+                UseShellExecute = true
+            });
             return;
         }
 

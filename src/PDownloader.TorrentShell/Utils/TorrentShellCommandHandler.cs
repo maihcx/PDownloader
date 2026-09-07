@@ -13,9 +13,9 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.TorrentSel.Utils;
+namespace PDownloader.TorrentShell.Utils;
 
-public static class TorrentSelectorCommandHandler
+public static class TorrentShellCommandHandler
 {
     public static void HandleMainEvent(MainAppEvent mainEvent)
     {

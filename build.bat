@@ -6,7 +6,7 @@ cd /d "%~dp0"
 
 set "SOURCE_ROOT=.\src"
 
-set "APP_PROJECTS=PDownloader PDownloader.BugTracker PDownloader.Core PDownloader.Runner PDownloader.TorrentSel PDownloader.Tray"
+set "APP_PROJECTS=PDownloader PDownloader.BugTracker PDownloader.Core PDownloader.Runner PDownloader.TorrentShell PDownloader.Tray"
 set "INSTALLER_PROJECT=%SOURCE_ROOT%\PDownloader.Installer\PDownloader.Installer.csproj"
 set "OUTPUT_ROOT=.\installer-output"
 set "PAYLOAD_ZIP=%SOURCE_ROOT%\PDownloader.Installer\Resources\payload.zip"

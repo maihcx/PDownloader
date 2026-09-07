@@ -124,7 +124,7 @@
     <value>Torrent</value>
   </data>
   <data name="torrent_selector_description" xml:space="preserve">
-    <value>Choose the files to download. Each selected file opens in its own Runner.</value>
+    <value>Choose the torrent files and destination. They will be downloaded together in this window.</value>
   </data>
   <data name="torrent_selector_select_all" xml:space="preserve">
     <value>Select all</value>
@@ -146,5 +146,62 @@
   </data>
   <data name="torrent_selector_metadata_error" xml:space="preserve">
     <value>PDownloader Core could not provide torrent metadata. {0}</value>
+  </data>
+  <data name="torrent_files_title" xml:space="preserve">
+    <value>Files in this torrent</value>
+  </data>
+  <data name="torrent_files_progress_title" xml:space="preserve">
+    <value>File progress</value>
+  </data>
+  <data name="download_group_title" xml:space="preserve">
+    <value>File group</value>
+  </data>
+  <data name="save_to_title" xml:space="preserve">
+    <value>Save to folder</value>
+  </data>
+  <data name="remember_group_path_title" xml:space="preserve">
+    <value>Remember this path for the “{0}” group</value>
+  </data>
+  <data name="select_folder_title" xml:space="preserve">
+    <value>Select folder</value>
+  </data>
+  <data name="download_start_title" xml:space="preserve">
+    <value>Start downloading</value>
+  </data>
+  <data name="pause_title" xml:space="preserve">
+    <value>Pause</value>
+  </data>
+  <data name="resume_title" xml:space="preserve">
+    <value>Resume</value>
+  </data>
+  <data name="retry_title" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="cancel_title" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="open_folder_title" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="download_status_queued_title" xml:space="preserve">
+    <value>Pending</value>
+  </data>
+  <data name="download_status_connecting_title" xml:space="preserve">
+    <value>Connecting...</value>
+  </data>
+  <data name="download_status_downloading_title" xml:space="preserve">
+    <value>Downloading</value>
+  </data>
+  <data name="download_status_paused_title" xml:space="preserve">
+    <value>Paused</value>
+  </data>
+  <data name="download_status_completed_title" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="download_status_error_title" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="download_status_retry_title" xml:space="preserve">
+    <value>Retrying: {0}</value>
   </data>
 </root>

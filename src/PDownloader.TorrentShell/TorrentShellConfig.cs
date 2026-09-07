@@ -13,19 +13,19 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.TorrentSel;
+namespace PDownloader.TorrentShell;
 
-public sealed class TorrentSelectorConfig
+public sealed class TorrentShellConfig
 {
     public string Token { get; private init; } = string.Empty;
 
-    public static TorrentSelectorConfig Parse(string[] args)
+    public static TorrentShellConfig Parse(string[] args)
     {
         for (int index = 0; index < args.Length - 1; index++)
         {
             if (!string.Equals(
                     args[index],
-                    TorrentSelectionLaunchProtocol.TokenArgument,
+                    TorrentShellLaunchProtocol.TokenArgument,
                     StringComparison.Ordinal))
             {
                 continue;
@@ -35,7 +35,7 @@ public sealed class TorrentSelectorConfig
             {
                 string token = System.Text.Encoding.UTF8.GetString(
                     Convert.FromBase64String(args[index + 1].Trim()));
-                return new TorrentSelectorConfig { Token = token };
+                return new TorrentShellConfig { Token = token };
             }
             catch (FormatException)
             {

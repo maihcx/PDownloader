@@ -13,7 +13,7 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.TorrentSel;
+namespace PDownloader.TorrentShell;
 
 public partial class App
 {
@@ -31,7 +31,7 @@ public partial class App
             MainWindow window = _host.Services.GetRequiredService<MainWindow>();
             MainWindow = window;
             window.Show();
-            _host.Services.GetRequiredService<TorrentSelectionService>().SetReady(true);
+            _host.Services.GetRequiredService<TorrentShellService>().SetReady(true);
         }
         catch (Exception exception)
         {
@@ -59,11 +59,11 @@ public partial class App
         .CreateDefaultBuilder()
         .ConfigureServices(services =>
         {
-            services.AddSingleton(TorrentSelectorConfig.Parse(
+            services.AddSingleton(TorrentShellConfig.Parse(
                 Environment.GetCommandLineArgs().Skip(1).ToArray()));
-            services.AddSingleton<TorrentSelectionService>();
+            services.AddSingleton<TorrentShellService>();
             services.AddHostedService(service =>
-                service.GetRequiredService<TorrentSelectionService>());
+                service.GetRequiredService<TorrentShellService>());
             services.AddSingleton<MainWindowViewModel>();
             services.AddSingleton<MainWindow>();
         })

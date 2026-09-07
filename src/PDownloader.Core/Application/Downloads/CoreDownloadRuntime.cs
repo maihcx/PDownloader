@@ -25,15 +25,18 @@ public sealed class CoreDownloadRuntime : IDownloadRuntime
 {
     private readonly DownloadConfigService _downloadConfig;
     private readonly RunnerSessionManager _runnerSessions;
+    private readonly TorrentShellSessionManager _torrentShellSessions;
     private readonly UserDataStore _userDataStore;
 
     public CoreDownloadRuntime(
         DownloadConfigService downloadConfig,
         RunnerSessionManager runnerSessions,
+        TorrentShellSessionManager torrentShellSessions,
         UserDataStore userDataStore)
     {
         _downloadConfig = downloadConfig;
         _runnerSessions = runnerSessions;
+        _torrentShellSessions = torrentShellSessions;
         _userDataStore = userDataStore;
     }
 
@@ -55,5 +58,36 @@ public sealed class CoreDownloadRuntime : IDownloadRuntime
     {
         try { await _runnerSessions.EnsureStartedAsync(id, task).ConfigureAwait(false); }
         catch (Exception ex) { Debug.WriteLine($"[Runner] Could not show '{id}': {ex.Message}"); }
+    }
+
+    public void ShowTorrentShell(string id, RunnerDownloadTask task) =>
+        _ = ShowTorrentShellAsync(id, task);
+
+    private async Task ShowTorrentShellAsync(string id, RunnerDownloadTask task)
+    {
+        try
+        {
+            DownloadCategorySelection selection = _downloadConfig.CreateRunnerSelection(
+                task.FileName, task.SaveTo, preserveRequestedPath: true, DownloadKind.Torrent);
+            await _torrentShellSessions.EnsureStartedAsync(id, new TorrentShellContext
+            {
+                Source = task.Url,
+                Name = task.FileName,
+                InfoHash = task.TorrentInfoHash,
+                TotalBytes = task.FileSize,
+                SaveTo = task.SaveTo,
+                DestinationSubfolder = Path.GetFileName(
+                    Path.TrimEndingDirectorySeparator(task.SaveTo)),
+                IsStarted = true,
+                Headers = task.Headers,
+                Categories = selection.Categories,
+                SelectedCategoryId = selection.SelectedCategoryId,
+                Files = task.TorrentFiles
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[TorrentShell] Could not show '{id}': {ex.Message}");
+        }
     }
 }

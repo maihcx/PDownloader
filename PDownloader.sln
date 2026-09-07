@@ -16,7 +16,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Installer", "sr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Runner", "src\PDownloader.Runner\PDownloader.Runner.csproj", "{D8A75511-64C4-42EB-9B46-8C09F37CDC10}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.TorrentSel", "src\PDownloader.TorrentSel\PDownloader.TorrentSel.csproj", "{A5D2F2E8-0AF7-4FB4-A25A-6D48631D9EE9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.TorrentShell", "src\PDownloader.TorrentShell\PDownloader.TorrentShell.csproj", "{A5D2F2E8-0AF7-4FB4-A25A-6D48631D9EE9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDownloader.Contracts", "src\PDownloader.Contracts\PDownloader.Contracts.csproj", "{8F5E3B65-743C-4E2A-9E6B-A59C6E9DE301}"
 EndProject

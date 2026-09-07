@@ -37,6 +37,9 @@ public sealed class DownloadCommandService
         _progress.AttachRunner(session);
     }
 
+    public void PublishTorrentShellSnapshot(TorrentShellSession session) =>
+        _progress.AttachTorrentShell(session);
+
     public Task PauseAsync(string id, CancellationToken token) => _downloads.PauseAsync(id, token);
     public Task ResumeAsync(string id, CancellationToken token) =>
         _downloads.ResumeAsync(id, cancellationToken: token);
