@@ -17,22 +17,30 @@ public partial class MainWindow : FluentWindow
         InitializeComponent();
 
         ViewModel.CloseRequested += ViewModel_CloseRequested;
-        Loaded += MainWindow_Loaded;
+        ContentRendered += MainWindow_ContentRendered;
+        Activated += MainWindow_Activated;
         Closed += MainWindow_Closed;
     }
 
     private void ViewModel_CloseRequested() => Close();
 
-    private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    private void MainWindow_ContentRendered(object? sender, EventArgs e)
     {
-        Loaded -= MainWindow_Loaded;
-        Activate();
-        Topmost = false;
+        ContentRendered -= MainWindow_ContentRendered;
+        WindowHelper.BringToFront(this);
+    }
+
+    private void MainWindow_Activated(object? sender, EventArgs e)
+    {
+        WindowHelper.StopFlashing(this);
     }
 
     private void MainWindow_Closed(object? sender, EventArgs e)
     {
         ViewModel.CloseRequested -= ViewModel_CloseRequested;
+        ContentRendered -= MainWindow_ContentRendered;
+        Activated -= MainWindow_Activated;
+        Closed -= MainWindow_Closed;
         Application.Current.Shutdown();
     }
 }
