@@ -84,7 +84,10 @@ public sealed class TorrentFileItemViewModel : ObservableObject
     public double Progress
     {
         get => _progress;
-        private set { if (SetProperty(ref _progress, value))
+        private set
+        {
+            double normalized = double.IsFinite(value) ? Math.Clamp(value, 0, 100) : 0;
+            if (SetProperty(ref _progress, normalized))
             {
                 OnPropertyChanged(nameof(ProgressText));
             }

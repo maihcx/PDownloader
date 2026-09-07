@@ -181,8 +181,9 @@
                 <ui:TextBlock Text="{Binding ViewModel.TorrentName}" FontSize="18"
                               FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                 <ui:TextBlock Text="{Binding ViewModel.StatusText}" Margin="0,4,0,0" />
-                <ProgressBar Value="{Binding ViewModel.Progress}" Maximum="100" Height="10"
-                             Margin="0,7,0,0" />
+                <ProgressBar Minimum="0" Maximum="100"
+                             Value="{Binding ViewModel.Progress}"
+                             Height="10" Margin="0,7,0,0" />
                 <Grid Margin="0,5,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -234,8 +235,9 @@
                                 </StackPanel>
                                 <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,7,0,0">
                                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                                    <ProgressBar Style="{StaticResource TorrentProgressBar}" Value="{Binding Progress}"
-                                                 Maximum="100" Height="7" />
+                                    <ProgressBar Style="{StaticResource TorrentProgressBar}"
+                                                 Minimum="0" Maximum="100"
+                                                 Value="{Binding Progress}" Height="7" />
                                     <Grid Grid.Row="1" Margin="0,4,0,0">
                                         <ui:TextBlock Text="{Binding DownloadedText}" FontSize="10" Opacity="0.56" />
                                         <ui:TextBlock Text="{Binding SpeedText}" FontSize="10" Opacity="0.56"

@@ -170,7 +170,11 @@ public sealed class MainWindowViewModel : ObservableObject
             }
         }
     }
-    public double Progress { get => _progress; private set => SetProperty(ref _progress, value); }
+    public double Progress
+    {
+        get => _progress;
+        private set => SetProperty(ref _progress, NormalizeProgress(value));
+    }
     public string ProgressText => $"{Progress:F0}%";
     public string SpeedText { get => _speedText; private set => SetProperty(ref _speedText, value); }
     public string EtaText { get => _etaText; private set => SetProperty(ref _etaText, value); }
@@ -348,4 +352,7 @@ public sealed class MainWindowViewModel : ObservableObject
             file.RefreshLanguage();
         }
     }
+
+    private static double NormalizeProgress(double value) =>
+        double.IsFinite(value) ? Math.Clamp(value, 0, 100) : 0;
 }
