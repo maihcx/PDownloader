@@ -18,9 +18,14 @@ public sealed class DownloadCategoryItem
     public string Name { get; init; } = string.Empty;
     public string FolderPath { get; init; } = string.Empty;
     public IReadOnlyList<string> Extensions { get; init; } = [];
-    public string ExtensionsSummary => Extensions.Count == 0
-        ? LanguageBase.GetLangValue("download_group_all_other_types")
-        : string.Join(", ", Extensions);
+    public string ExtensionsSummary => string.Equals(
+        Id,
+        DownloadCategoryDefaults.TorrentsId,
+        StringComparison.OrdinalIgnoreCase)
+            ? LanguageBase.GetLangValue("download_group_all_torrent_files")
+            : Extensions.Count == 0
+                ? LanguageBase.GetLangValue("download_group_all_other_types")
+                : string.Join(", ", Extensions);
 
     public static DownloadCategoryItem FromContract(DownloadCategoryDto category) => new()
     {

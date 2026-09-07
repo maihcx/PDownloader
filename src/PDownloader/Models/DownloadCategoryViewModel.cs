@@ -16,6 +16,15 @@ public partial class DownloadCategoryViewModel : ObservableObject
 {
     public string Id { get; }
 
+    public bool IsTorrentCategory => string.Equals(
+        Id,
+        DownloadCategoryDefaults.TorrentsId,
+        StringComparison.OrdinalIgnoreCase);
+
+    public bool CanDisable => !IsTorrentCategory;
+
+    public bool UsesFileExtensions => !IsTorrentCategory;
+
     [ObservableProperty]
     private string _name;
 

@@ -293,5 +293,6 @@
   </data>
   <data name="download_group_title" xml:space="preserve"><value>Nhóm loại tệp</value></data>
   <data name="download_group_all_other_types" xml:space="preserve"><value>Tất cả loại tệp còn lại</value></data>
+  <data name="download_group_all_torrent_files" xml:space="preserve"><value>Tất cả tệp tải xuống từ torrent</value></data>
   <data name="remember_group_path_title" xml:space="preserve"><value>Ghi nhớ đường dẫn cho nhóm “{0}”</value></data>
 </root>

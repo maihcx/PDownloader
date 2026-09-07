@@ -17,10 +17,18 @@ public partial class MainWindow : FluentWindow
         InitializeComponent();
 
         ViewModel.CloseRequested += ViewModel_CloseRequested;
+        Loaded += MainWindow_Loaded;
         Closed += MainWindow_Closed;
     }
 
     private void ViewModel_CloseRequested() => Close();
+
+    private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= MainWindow_Loaded;
+        Activate();
+        Topmost = false;
+    }
 
     private void MainWindow_Closed(object? sender, EventArgs e)
     {

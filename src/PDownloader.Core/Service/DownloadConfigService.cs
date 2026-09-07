@@ -109,6 +109,9 @@ public class DownloadConfigService
         configs.DownloadCategories = NormalizeCategories(
             configs.DownloadCategories,
             configs.DefaultDownloadFolder);
+        DownloadCategoryDefaults.EnsureTorrentCategory(
+            configs.DownloadCategories,
+            configs.DefaultDownloadFolder);
     }
 
     public void Reload()
@@ -132,7 +135,8 @@ public class DownloadConfigService
     public DownloadCategorySelection CreateRunnerSelection(
         string? fileName,
         string? requestedPath,
-        bool preserveRequestedPath)
+        bool preserveRequestedPath,
+        DownloadKind downloadKind)
     {
         DownloadSettingsDto configs = GetSnapshot();
         List<DownloadCategoryDto> categories = configs.DownloadCategories
@@ -140,7 +144,10 @@ public class DownloadConfigService
             .Select(Clone)
             .ToList();
 
-        DownloadCategoryDto? selected = FindCategory(categories, fileName);
+        DownloadCategoryDto? selected = FindCategory(
+            categories,
+            fileName,
+            downloadKind);
         string saveTo = preserveRequestedPath && !string.IsNullOrWhiteSpace(requestedPath)
             ? requestedPath
             : selected?.FolderPath ?? requestedPath ?? configs.DefaultDownloadFolder;
@@ -217,8 +224,16 @@ public class DownloadConfigService
 
     private static DownloadCategoryDto? FindCategory(
         IReadOnlyList<DownloadCategoryDto> categories,
-        string? fileName)
+        string? fileName,
+        DownloadKind downloadKind)
     {
+        if (downloadKind == DownloadKind.Torrent)
+        {
+            return categories.FirstOrDefault(category =>
+                string.Equals(category.Id, DownloadCategoryDefaults.TorrentsId,
+                    StringComparison.OrdinalIgnoreCase));
+        }
+
         string extension = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
         if (!string.IsNullOrWhiteSpace(extension))
         {

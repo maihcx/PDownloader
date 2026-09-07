@@ -100,7 +100,8 @@ public sealed class RunnerSessionManager : IDisposable
         DownloadCategorySelection selection = _downloadConfig.CreateRunnerSelection(
             task.FileName,
             task.SaveTo,
-            preserveRequestedPath: task.IsRunner);
+            preserveRequestedPath: task.IsRunner,
+            downloadKind: task.DownloadKind);
         var context = new RunnerDownloadContext
         {
             Url = task.Url,
