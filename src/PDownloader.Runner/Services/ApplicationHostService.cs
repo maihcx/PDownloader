@@ -79,20 +79,46 @@ public sealed class ApplicationHostService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        _mainWindow.Loaded += MainWindow_Loaded;
+        if (_mainWindow is Window shell)
+        {
+            Application.Current.MainWindow = shell;
+            shell.ShowActivated = true;
+            shell.ContentRendered += MainWindow_ContentRendered;
+            shell.Activated += MainWindow_Activated;
+            shell.Closed += MainWindow_Closed;
+        }
         _mainWindow.Show();
         _shown = true;
     }
 
-    private static void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    private static void MainWindow_ContentRendered(object? sender, EventArgs e)
     {
-        Application? application = Application.Current;
-        if (application?.MainWindow is not Window mainWindow)
+        if (sender is not Window mainWindow)
         {
             return;
         }
 
-        mainWindow.Activate();
-        mainWindow.Topmost = false;
+        // Run once after WPF has presented the shell and its initial page.
+        // Loaded is too early to use as the final activation attempt.
+        mainWindow.ContentRendered -= MainWindow_ContentRendered;
+        WindowHelper.BringToFront(mainWindow);
+    }
+
+    private static void MainWindow_Activated(object? sender, EventArgs e)
+    {
+        if (sender is Window mainWindow)
+        {
+            WindowHelper.StopFlashing(mainWindow);
+        }
+    }
+
+    private static void MainWindow_Closed(object? sender, EventArgs e)
+    {
+        if (sender is Window mainWindow)
+        {
+            mainWindow.ContentRendered -= MainWindow_ContentRendered;
+            mainWindow.Activated -= MainWindow_Activated;
+            mainWindow.Closed -= MainWindow_Closed;
+        }
     }
 }
