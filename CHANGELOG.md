@@ -1,3 +1,33 @@
+## v1.1.0
+
+## 🚀 Changelog
+- [docs] Document torrent & grouping support in README (#251) — @maihcx
+
+## 🚀 Features
+
+- [ui-core] Add torrent download category and handling (#246) — @maihcx
+- [ui-core] Add torrent support, selector UI and engine (#245) — @maihcx
+- [runner] Add download category selection & remember-path (#242) — @maihcx
+- [ui] Add download file groups (categories) support (#241) — @maihcx
+- [core-contracts] Add download categories and settings management (#240) — @maihcx
+
+## 🐛 Bug Fixes
+
+- [runner] Improve torrentsel window activation (#249) — @maihcx
+- [runner] Improve runner window activation (#248) — @maihcx
+- [ui-core-tray] Prepare main activation & allow foreground access (#247) — @maihcx
+- [ui] Refine ConfigPage styling and spacing | see #241 (#243) — @maihcx
+
+## 🧹 Maintenance
+
+- [code-quality] Standardize GPL headers across project (#250) — @maihcx
+- [ui] Collapse config sections by default | see #241 (#244) — @maihcx
+- [download-infra] Remove unused Json imports (#239) — @maihcx
+- [download-infra] Code formatted (#238) — @maihcx
+
+
+---
+
 ## v1.0.3
 
 ## 🚀 Changelog
