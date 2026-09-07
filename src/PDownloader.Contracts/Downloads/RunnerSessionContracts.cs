@@ -41,6 +41,9 @@ public sealed class RunnerSessionView
 
     [JsonPropertyName("selectedCategoryId")]
     public string SelectedCategoryId { get; init; } = string.Empty;
+
+    [JsonPropertyName("destinationSubfolder")]
+    public string DestinationSubfolder { get; init; } = string.Empty;
 }
 
 /// <summary>

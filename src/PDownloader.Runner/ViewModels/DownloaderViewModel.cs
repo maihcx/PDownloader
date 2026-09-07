@@ -50,14 +50,28 @@ public partial class DownloaderViewModel : ObservableObject
     [RelayCommand]
     private void BrowseFolder()
     {
+        string initialDirectory = RunnerConfig.SaveTo;
+        if (!Directory.Exists(initialDirectory)
+            && !string.IsNullOrWhiteSpace(RunnerConfig.DestinationSubfolder))
+        {
+            initialDirectory = Path.GetDirectoryName(
+                Path.TrimEndingDirectorySeparator(initialDirectory))
+                ?? initialDirectory;
+        }
+
         var dlg = new OpenFolderDialog
         {
             Title = LanguageBase.GetLangValue("select_folder_title"),
-            InitialDirectory = RunnerConfig.SaveTo
+            InitialDirectory = initialDirectory
         };
         if (dlg.ShowDialog() == true)
         {
-            RunnerConfig.SaveTo = dlg.FolderName;
+            RunnerConfig.SaveTo = string.IsNullOrWhiteSpace(
+                RunnerConfig.DestinationSubfolder)
+                ? dlg.FolderName
+                : Path.Combine(
+                    dlg.FolderName,
+                    RunnerConfig.DestinationSubfolder);
         }
     }
 

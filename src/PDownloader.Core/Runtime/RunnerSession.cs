@@ -33,6 +33,7 @@ public sealed class RunnerDownloadContext
     public List<DownloadCategoryDto> Categories { get; init; } = [];
     public string SelectedCategoryId { get; init; } = string.Empty;
     public DownloadKind DownloadKind { get; init; } = DownloadKind.Http;
+    public string DestinationSubfolder { get; init; } = string.Empty;
     public string TorrentInfoHash { get; init; } = string.Empty;
     public int TorrentFileIndex { get; init; } = -1;
     public string TorrentRelativePath { get; init; } = string.Empty;
@@ -52,7 +53,8 @@ public sealed class RunnerDownloadContext
             Extensions = [.. category.Extensions],
             IsEnabled = category.IsEnabled
         }).ToList(),
-        SelectedCategoryId = SelectedCategoryId
+        SelectedCategoryId = SelectedCategoryId,
+        DestinationSubfolder = DestinationSubfolder
     };
 }
 

@@ -627,5 +627,7 @@ Do you want to continue?</value>
   <data name="page_config_groups_path_title" xml:space="preserve"><value>Destination folder</value></data>
   <data name="page_config_groups_extensions_title" xml:space="preserve"><value>Supported file extensions</value></data>
   <data name="page_config_groups_extensions_summary" xml:space="preserve"><value>Separate extensions with commas, spaces, semicolons, or new lines. The first matching group has priority; a group with no extensions can be used as the fallback.</value></data>
+  <data name="page_config_groups_torrent_enabled_summary" xml:space="preserve"><value>All torrent downloads use this group by default, so it cannot be disabled.</value></data>
+  <data name="page_config_groups_torrent_extensions_summary" xml:space="preserve"><value>This group matches every file downloaded from a torrent. File extensions are not used.</value></data>
   <data name="page_config_groups_new_name" xml:space="preserve"><value>New group</value></data>
 </root>

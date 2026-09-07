@@ -15,6 +15,7 @@
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Tabbed"
                  WindowCornerPreference="Round"
+                 Topmost="True"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -69,7 +70,8 @@
                  BorderThickness="0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  VirtualizingPanel.IsVirtualizing="True"
-                 VirtualizingPanel.VirtualizationMode="Recycling">
+                 VirtualizingPanel.VirtualizationMode="Recycling"
+                 ui:SmoothScrollBehavior.IsEnabled="True">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <Setter Property="Margin" Value="4,3" />

@@ -89,6 +89,24 @@ public class DownloadConfigService
                 configs.DownloadCategories.Add(DownloadCategoryViewModel.FromContract(category));
             }
         }
+
+        DownloadCategoryViewModel? torrent = configs.DownloadCategories.FirstOrDefault(
+            category => category.IsTorrentCategory);
+        if (torrent is null)
+        {
+            DownloadCategoryViewModel torrentGroup = DownloadCategoryViewModel.FromContract(
+                DownloadCategoryDefaults.CreateTorrent(configs.DefaultDownloadFolder));
+            int otherIndex = configs.DownloadCategories.ToList().FindIndex(category =>
+                string.Equals(category.Id, DownloadCategoryDefaults.OtherId,
+                    StringComparison.OrdinalIgnoreCase));
+            configs.DownloadCategories.Insert(
+                otherIndex >= 0 ? otherIndex : configs.DownloadCategories.Count,
+                torrentGroup);
+        }
+        else
+        {
+            torrent.IsEnabled = true;
+        }
     }
 
     public void Reload()

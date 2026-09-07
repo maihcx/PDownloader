@@ -621,5 +621,7 @@
   <data name="page_config_groups_path_title" xml:space="preserve"><value>page_config_groups_path_title</value></data>
   <data name="page_config_groups_extensions_title" xml:space="preserve"><value>page_config_groups_extensions_title</value></data>
   <data name="page_config_groups_extensions_summary" xml:space="preserve"><value>page_config_groups_extensions_summary</value></data>
+  <data name="page_config_groups_torrent_enabled_summary" xml:space="preserve"><value>page_config_groups_torrent_enabled_summary</value></data>
+  <data name="page_config_groups_torrent_extensions_summary" xml:space="preserve"><value>page_config_groups_torrent_extensions_summary</value></data>
   <data name="page_config_groups_new_name" xml:space="preserve"><value>page_config_groups_new_name</value></data>
 </root>

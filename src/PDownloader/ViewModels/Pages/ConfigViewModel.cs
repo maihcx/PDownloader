@@ -108,6 +108,7 @@ public partial class ConfigViewModel : ObservableObject
 
     private bool CanRemoveDownloadCategory() =>
         SelectedDownloadCategory is not null
+        && !SelectedDownloadCategory.IsTorrentCategory
         && (DownloadConfigs?.DownloadCategories.Count ?? 0) > 1;
 
     [RelayCommand(CanExecute = nameof(CanRemoveDownloadCategory))]

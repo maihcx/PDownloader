@@ -20,6 +20,7 @@ public static class DownloadCategoryDefaults
     public const string MusicId = "music";
     public const string VideosId = "videos";
     public const string PicturesId = "pictures";
+    public const string TorrentsId = "torrents";
     public const string OtherId = "other";
 
     public static List<DownloadCategoryDto> Create(string downloadsRoot)
@@ -49,8 +50,45 @@ public static class DownloadCategoryDefaults
             New(PicturesId, "Pictures", root, "Pictures",
                 ".avif", ".bmp", ".gif", ".heic", ".ico", ".jpeg", ".jpg", ".png",
                 ".svg", ".tif", ".tiff", ".webp"),
+            CreateTorrent(root),
             New(OtherId, "Other", root, string.Empty)
         ];
+    }
+
+    public static DownloadCategoryDto CreateTorrent(string downloadsRoot)
+    {
+        string root = string.IsNullOrWhiteSpace(downloadsRoot)
+            ? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "Downloads")
+            : downloadsRoot;
+        return New(TorrentsId, "Torrents", root, "Torrents");
+    }
+
+    /// <summary>
+    /// Completes settings loaded from versions that predate torrent groups.
+    /// The caller decides when settings are persisted; this method performs no migration write.
+    /// </summary>
+    public static void EnsureTorrentCategory(
+        IList<DownloadCategoryDto> categories,
+        string downloadsRoot)
+    {
+        DownloadCategoryDto? existing = categories.FirstOrDefault(category =>
+            string.Equals(category.Id, TorrentsId, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
+        {
+            existing.IsEnabled = true;
+            if (string.IsNullOrWhiteSpace(existing.FolderPath))
+            {
+                existing.FolderPath = CreateTorrent(downloadsRoot).FolderPath;
+            }
+            return;
+        }
+
+        DownloadCategoryDto torrent = CreateTorrent(downloadsRoot);
+        int otherIndex = categories.ToList().FindIndex(category =>
+            string.Equals(category.Id, OtherId, StringComparison.OrdinalIgnoreCase));
+        categories.Insert(otherIndex >= 0 ? otherIndex : categories.Count, torrent);
     }
 
     private static DownloadCategoryDto New(

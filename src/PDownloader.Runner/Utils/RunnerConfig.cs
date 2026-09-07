@@ -40,6 +40,9 @@ public partial class RunnerConfig : ObservableObject
     [ObservableProperty]
     public bool _isRunner = false;
 
+    [ObservableProperty]
+    private string _destinationSubfolder = string.Empty;
+
     public ObservableCollection<DownloadCategoryItem> Categories { get; } = [];
 
     [ObservableProperty]
@@ -87,6 +90,7 @@ public partial class RunnerConfig : ObservableObject
                 StringComparison.OrdinalIgnoreCase))
             ?? Categories.FirstOrDefault();
         InitialUrl = session.Url;
+        DestinationSubfolder = session.DestinationSubfolder;
         SaveTo = session.SaveTo;
         FileName = session.FileName;
         Threads = session.Threads > 0 ? session.Threads : 8;
@@ -100,10 +104,15 @@ public partial class RunnerConfig : ObservableObject
     {
         if (!_applyingSession && value is not null)
         {
-            SaveTo = value.FolderPath;
+            SaveTo = GetCategoryDestination(value.FolderPath);
         }
 
         OnPropertyChanged(nameof(RememberPathLabel));
         OnPropertyChanged(nameof(SelectedCategoryExtensions));
     }
+
+    private string GetCategoryDestination(string categoryFolder) =>
+        string.IsNullOrWhiteSpace(DestinationSubfolder)
+            ? categoryFolder
+            : Path.Combine(categoryFolder, DestinationSubfolder);
 }
