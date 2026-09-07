@@ -19,7 +19,7 @@
     <Grid>
         <tray:NotifyIcon
             x:Name="TrayIcon"
-            FocusOnLeftClick="False"
+            FocusOnLeftClick="True"
             Icon="pack://application:,,,/Assets/app-100.png"
             MenuOnRightClick="True"
             LeftClick="NotifyIcon_LeftClick"

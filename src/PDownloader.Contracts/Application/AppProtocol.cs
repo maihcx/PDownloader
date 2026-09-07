@@ -33,7 +33,12 @@ public static class AppProtocol
 
     public static readonly IpcMessageDefinition<IpcNoPayload> MainReady =
         new("app.main-ready");
+
+    public static readonly IpcRequestDefinition<IpcNoPayload, MainActivationInfo>
+        PrepareMainActivation = new("app.main-activation.prepare");
 }
+
+public sealed record MainActivationInfo(int ProcessId);
 
 public enum AppState
 {

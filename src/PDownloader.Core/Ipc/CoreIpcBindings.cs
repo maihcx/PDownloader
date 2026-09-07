@@ -159,6 +159,11 @@ public sealed class CoreIpcBindings : IDisposable
             _updates.HandleCommand);
 
         tray.RegisterRequestHandler(
+            AppProtocol.PrepareMainActivation,
+            (_, cancellationToken) =>
+                _mainGateway.PrepareActivationAsync(cancellationToken));
+
+        tray.RegisterRequestHandler(
             UpdateProtocol.GetState,
             _updates.GetStateSnapshot);
     }

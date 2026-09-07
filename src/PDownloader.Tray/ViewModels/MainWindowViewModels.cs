@@ -179,37 +179,37 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
         switch (tag)
         {
             case "tray_open":
-                _ = SendCoreAsync(
+                _ = ActivateMainAsync(
                     AppProtocol.State,
                     AppState.Start);
                 break;
             case "tray_home":
-                _ = SendCoreAsync(
+                _ = ActivateMainAsync(
                     AppProtocol.TrayEvent,
                     TrayNavigationEvent.GoHome);
                 break;
             case "tray_config":
-                _ = SendCoreAsync(
+                _ = ActivateMainAsync(
                     AppProtocol.TrayEvent,
                     TrayNavigationEvent.GoConfig);
                 break;
             case "tray_download":
-                _ = SendCoreAsync(
+                _ = ActivateMainAsync(
                     AppProtocol.TrayEvent,
                     TrayNavigationEvent.GoDownload);
                 break;
             case "tray_settings":
-                _ = SendCoreAsync(
+                _ = ActivateMainAsync(
                     AppProtocol.TrayEvent,
                     TrayNavigationEvent.GoSettings);
                 break;
             case "tray_update":
-                _ = SendCoreAsync(
+                _ = ActivateMainAsync(
                     AppProtocol.TrayEvent,
                     TrayNavigationEvent.GoSettingsUpdate);
                 break;
             case "tray_about":
-                _ = SendCoreAsync(
+                _ = ActivateMainAsync(
                     AppProtocol.TrayEvent,
                     TrayNavigationEvent.GoAbout);
                 break;
@@ -219,7 +219,7 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
         }
     }
 
-    private async Task SendCoreAsync<TPayload>(
+    private async Task ActivateMainAsync<TPayload>(
         IpcMessageDefinition<TPayload> definition, TPayload payload)
     {
         if (CoreService is not { } core)
@@ -230,6 +230,21 @@ public partial class MainWindowViewModels : ObservableObject, IDisposable
         try
         {
             await core.StartAndWaitUntilReadyAsync();
+            IpcRequestResult<MainActivationInfo> activation = await core.RequestAsync(
+                AppProtocol.PrepareMainActivation,
+                TimeSpan.FromSeconds(25));
+
+            if (!activation.Success || activation.Value is not { ProcessId: > 0 } target)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Tray] Main activation preparation failed: {activation.Error}");
+            }
+            else if (!NativeMethods.AllowSetForegroundWindow((uint)target.ProcessId))
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Tray] Windows rejected foreground permission for PID {target.ProcessId}.");
+            }
+
             if (!await core.SendAsync(definition, payload))
             {
                 System.Diagnostics.Debug.WriteLine("[Tray] Core rejected the command.");
