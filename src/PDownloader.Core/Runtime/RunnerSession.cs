@@ -32,6 +32,10 @@ public sealed class RunnerDownloadContext
     public Dictionary<string, string>? Headers { get; init; }
     public List<DownloadCategoryDto> Categories { get; init; } = [];
     public string SelectedCategoryId { get; init; } = string.Empty;
+    public DownloadKind DownloadKind { get; init; } = DownloadKind.Http;
+    public string TorrentInfoHash { get; init; } = string.Empty;
+    public int TorrentFileIndex { get; init; } = -1;
+    public string TorrentRelativePath { get; init; } = string.Empty;
 
     public RunnerSessionView ToView() => new()
     {

@@ -6,6 +6,9 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="MonoTorrent" Version="3.0.2" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\PDownloader.Contracts\PDownloader.Contracts.csproj" />
     <ProjectReference Include="..\PDownloader.Infrastructure\PDownloader.Infrastructure.csproj" />
   </ItemGroup>

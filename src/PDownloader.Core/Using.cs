@@ -29,6 +29,7 @@ global using PDownloader.Core.Utils;
 global using PDownloader.Downloads;
 global using PDownloader.Downloads.Models;
 global using PDownloader.Downloads.Runtime;
+global using PDownloader.Downloads.Torrents;
 global using PDownloader.Infrastructure.Downloads;
 global using PDownloader.Infrastructure.ExternalTools.YtDlp;
 global using System;

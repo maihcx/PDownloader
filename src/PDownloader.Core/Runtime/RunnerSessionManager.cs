@@ -113,7 +113,11 @@ public sealed class RunnerSessionManager : IDisposable
             Threads = threads > 0 ? threads : 8,
             Headers = NormalizeHeaders(task.Headers),
             Categories = selection.Categories,
-            SelectedCategoryId = selection.SelectedCategoryId
+            SelectedCategoryId = selection.SelectedCategoryId,
+            DownloadKind = task.DownloadKind,
+            TorrentInfoHash = task.TorrentInfoHash,
+            TorrentFileIndex = task.TorrentFileIndex,
+            TorrentRelativePath = task.TorrentRelativePath
         };
         var channel = new ConfluxService { CanMultiple = true };
         channel.Register(IpcTopology.RunnerProcessName,

@@ -74,7 +74,8 @@ public partial class AddLink : ObservableObject, IDataErrorInfo
 
         text = text.Trim();
 
-        return Uri.TryCreate(text, UriKind.Absolute, out Uri? uri)
+        return DownloadSource.IsMagnet(text)
+               || Uri.TryCreate(text, UriKind.Absolute, out Uri? uri)
                && (uri.Scheme == Uri.UriSchemeHttp ||
                    uri.Scheme == Uri.UriSchemeHttps);
     }
