@@ -101,7 +101,8 @@ public sealed class RunnerSessionManager : IDisposable
             task.FileName,
             task.SaveTo,
             preserveRequestedPath: task.IsRunner,
-            downloadKind: task.DownloadKind);
+            downloadKind: task.DownloadKind,
+            destinationSubfolder: task.DestinationSubfolder);
         var context = new RunnerDownloadContext
         {
             Url = task.Url,
@@ -116,6 +117,7 @@ public sealed class RunnerSessionManager : IDisposable
             Categories = selection.Categories,
             SelectedCategoryId = selection.SelectedCategoryId,
             DownloadKind = task.DownloadKind,
+            DestinationSubfolder = task.DestinationSubfolder,
             TorrentInfoHash = task.TorrentInfoHash,
             TorrentFileIndex = task.TorrentFileIndex,
             TorrentRelativePath = task.TorrentRelativePath

@@ -136,7 +136,8 @@ public class DownloadConfigService
         string? fileName,
         string? requestedPath,
         bool preserveRequestedPath,
-        DownloadKind downloadKind)
+        DownloadKind downloadKind,
+        string? destinationSubfolder = null)
     {
         DownloadSettingsDto configs = GetSnapshot();
         List<DownloadCategoryDto> categories = configs.DownloadCategories
@@ -151,6 +152,11 @@ public class DownloadConfigService
         string saveTo = preserveRequestedPath && !string.IsNullOrWhiteSpace(requestedPath)
             ? requestedPath
             : selected?.FolderPath ?? requestedPath ?? configs.DefaultDownloadFolder;
+
+        if (!preserveRequestedPath && !string.IsNullOrWhiteSpace(destinationSubfolder))
+        {
+            saveTo = Path.Combine(saveTo, destinationSubfolder);
+        }
 
         EnsureCategoryDirectories(selected is null ? [] : [selected]);
 

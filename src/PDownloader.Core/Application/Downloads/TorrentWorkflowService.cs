@@ -137,6 +137,7 @@ public sealed class TorrentWorkflowService
             Threads = threads,
             Headers = CloneHeaders(headers),
             DownloadKind = DownloadKind.Torrent,
+            DestinationSubfolder = DownloadPathUtilities.SanitizeFileName(preparation.Name),
             TorrentInfoHash = preparation.InfoHash,
             TorrentFileIndex = file.Index,
             TorrentRelativePath = file.RelativePath

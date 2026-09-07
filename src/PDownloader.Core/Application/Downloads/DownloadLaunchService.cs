@@ -126,11 +126,15 @@ public sealed class DownloadLaunchService
             ? null
             : context.FormatId;
 
+        saveTo = EnsureDestinationSubfolder(saveTo, context.DestinationSubfolder);
         saveTo = _downloadConfig.PrepareOutputFolder(saveTo);
         if (request.RememberPathForCategory
             && !string.IsNullOrWhiteSpace(request.CategoryId))
         {
-            _downloadConfig.RememberCategoryPath(request.CategoryId, saveTo);
+            string categoryFolder = GetCategoryFolderToRemember(
+                saveTo,
+                context.DestinationSubfolder);
+            _downloadConfig.RememberCategoryPath(request.CategoryId, categoryFolder);
         }
 
         await _downloads.EnqueueAsync(
@@ -148,5 +152,38 @@ public sealed class DownloadLaunchService
             torrentFileIndex: context.TorrentFileIndex,
             torrentRelativePath: context.TorrentRelativePath,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string GetCategoryFolderToRemember(
+        string saveTo,
+        string destinationSubfolder)
+    {
+        if (string.IsNullOrWhiteSpace(destinationSubfolder)
+            || !string.Equals(
+                Path.GetFileName(Path.TrimEndingDirectorySeparator(saveTo)),
+                destinationSubfolder,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return saveTo;
+        }
+
+        return Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(saveTo))
+            ?? saveTo;
+    }
+
+    private static string EnsureDestinationSubfolder(
+        string saveTo,
+        string destinationSubfolder)
+    {
+        if (string.IsNullOrWhiteSpace(destinationSubfolder)
+            || string.Equals(
+                Path.GetFileName(Path.TrimEndingDirectorySeparator(saveTo)),
+                destinationSubfolder,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return saveTo;
+        }
+
+        return Path.Combine(saveTo, destinationSubfolder);
     }
 }

@@ -79,7 +79,9 @@ public class DownloaderService : IHostedService, IDisposable
             DownloaderStatus.ErrorKey = "err_download_uri_unavailable_title";
             DownloaderStatus.HasError = true;
         }
-        else if (string.IsNullOrWhiteSpace(_runnerConfig.SaveTo) || !Directory.Exists(_runnerConfig.SaveTo))
+        else if (string.IsNullOrWhiteSpace(_runnerConfig.SaveTo)
+            || (!Directory.Exists(_runnerConfig.SaveTo)
+                && string.IsNullOrWhiteSpace(_runnerConfig.DestinationSubfolder)))
         {
             DownloaderStatus.ErrorKey = "err_download_folder_not_exists_title";
             DownloaderStatus.HasError = true;
