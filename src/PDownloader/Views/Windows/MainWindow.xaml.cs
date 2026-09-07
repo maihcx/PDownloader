@@ -70,7 +70,6 @@ public sealed partial class MainWindow : IWindow
         RootScaleTransform.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
         RootScaleTransform.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
 
-        this.Activate();
     }
 
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)

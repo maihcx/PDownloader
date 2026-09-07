@@ -69,6 +69,24 @@ public sealed class MainAppGateway
     }
 
     /// <summary>
+    /// Starts Main when necessary and returns its exact process identity so the
+    /// foreground Tray process can grant it activation rights before forwarding
+    /// the user-requested action.
+    /// </summary>
+    public async Task<MainActivationInfo> PrepareActivationAsync(
+        CancellationToken cancellationToken)
+    {
+        ConfluxService main = _ipcHost.Main
+            ?? throw new InvalidOperationException("Main IPC endpoint is unavailable.");
+
+        IpcEndpointHealth health = await main.StartAndWaitUntilReadyAsync(
+            timeout: TimeSpan.FromSeconds(20),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        NotifyReady();
+        return new MainActivationInfo(health.ProcessId);
+    }
+
+    /// <summary>
     /// Called when Main sends its startup-ready signal. Pending events are sent
     /// in their original order and retained if delivery still fails.
     /// </summary>
