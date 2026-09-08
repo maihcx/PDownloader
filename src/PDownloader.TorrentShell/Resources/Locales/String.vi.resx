@@ -117,91 +117,88 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="torrent_selector_app_title" xml:space="preserve">
-    <value>Chọn tệp torrent</value>
+  <data name="torrent_shell_app_title" xml:space="preserve">
+    <value>PDownloader TorrentShell</value>
   </data>
-  <data name="torrent_selector_default_name" xml:space="preserve">
+  <data name="torrent_shell_default_name" xml:space="preserve">
     <value>Torrent</value>
   </data>
-  <data name="torrent_selector_description" xml:space="preserve">
-    <value>Chọn các tệp torrent và nơi lưu. Chúng sẽ được tải cùng nhau trong cửa sổ này.</value>
+  <data name="torrent_shell_description" xml:space="preserve">
+    <value>Chọn tệp torrent, sau đó theo dõi và điều khiển mọi lượt tải tại đây.</value>
   </data>
-  <data name="torrent_selector_select_all" xml:space="preserve">
+  <data name="torrent_shell_select_all" xml:space="preserve">
     <value>Chọn tất cả</value>
   </data>
-  <data name="torrent_selector_clear" xml:space="preserve">
+  <data name="torrent_shell_clear" xml:space="preserve">
     <value>Bỏ chọn</value>
   </data>
-  <data name="torrent_selector_continue" xml:space="preserve">
-    <value>Tiếp tục</value>
-  </data>
-  <data name="torrent_selector_selection_summary" xml:space="preserve">
-    <value>{0}/{1} tệp · {2}</value>
-  </data>
-  <data name="torrent_selector_send_selection_error" xml:space="preserve">
-    <value>Không thể gửi lựa chọn tới PDownloader Core.</value>
-  </data>
-  <data name="torrent_selector_invalid_token_error" xml:space="preserve">
-    <value>Thiếu mã phiên chọn torrent hoặc mã không hợp lệ.</value>
-  </data>
-  <data name="torrent_selector_metadata_error" xml:space="preserve">
-    <value>PDownloader Core không thể cung cấp siêu dữ liệu torrent. {0}</value>
-  </data>
-  <data name="torrent_files_title" xml:space="preserve">
-    <value>Các tệp trong torrent</value>
-  </data>
-  <data name="torrent_files_progress_title" xml:space="preserve">
-    <value>Tiến trình từng tệp</value>
-  </data>
-  <data name="download_group_title" xml:space="preserve">
-    <value>Nhóm loại tệp</value>
-  </data>
-  <data name="save_to_title" xml:space="preserve">
-    <value>Lưu vào thư mục</value>
-  </data>
-  <data name="remember_group_path_title" xml:space="preserve">
-    <value>Ghi nhớ đường dẫn cho nhóm “{0}”</value>
-  </data>
-  <data name="select_folder_title" xml:space="preserve">
-    <value>Chọn thư mục</value>
-  </data>
-  <data name="download_start_title" xml:space="preserve">
+  <data name="torrent_shell_start" xml:space="preserve">
     <value>Bắt đầu tải</value>
   </data>
-  <data name="pause_title" xml:space="preserve">
+  <data name="torrent_shell_selection_summary" xml:space="preserve">
+    <value>{0}/{1} tệp · {2}</value>
+  </data>
+  <data name="torrent_shell_progress_summary" xml:space="preserve">
+    <value>Đã hoàn tất {0}/{1} tệp</value>
+  </data>
+  <data name="torrent_shell_completed" xml:space="preserve">
+    <value>Tất cả tệp đã chọn đã tải xong.</value>
+  </data>
+  <data name="torrent_shell_select_one_error" xml:space="preserve">
+    <value>Hãy chọn ít nhất một tệp torrent.</value>
+  </data>
+  <data name="torrent_shell_start_error" xml:space="preserve">
+    <value>Không thể bắt đầu tải torrent.</value>
+  </data>
+  <data name="torrent_shell_invalid_token_error" xml:space="preserve">
+    <value>Thiếu mã phiên TorrentShell hoặc mã không hợp lệ.</value>
+  </data>
+  <data name="torrent_shell_metadata_error" xml:space="preserve">
+    <value>PDownloader Core không thể cung cấp siêu dữ liệu torrent. {0}</value>
+  </data>
+  <data name="torrent_shell_pause" xml:space="preserve">
     <value>Tạm dừng</value>
   </data>
-  <data name="resume_title" xml:space="preserve">
+  <data name="torrent_shell_resume" xml:space="preserve">
     <value>Tiếp tục</value>
   </data>
-  <data name="retry_title" xml:space="preserve">
+  <data name="torrent_shell_retry" xml:space="preserve">
     <value>Thử lại</value>
   </data>
-  <data name="cancel_title" xml:space="preserve">
+  <data name="torrent_shell_cancel" xml:space="preserve">
     <value>Hủy</value>
   </data>
-  <data name="open_folder_title" xml:space="preserve">
+  <data name="torrent_shell_open_folder" xml:space="preserve">
     <value>Mở thư mục</value>
+  </data>
+  <data name="torrent_shell_close" xml:space="preserve">
+    <value>Đóng</value>
   </data>
   <data name="download_status_queued_title" xml:space="preserve">
     <value>Đang chờ</value>
   </data>
   <data name="download_status_connecting_title" xml:space="preserve">
-    <value>Đang kết nối...</value>
+    <value>Đang kết nối</value>
   </data>
   <data name="download_status_downloading_title" xml:space="preserve">
-    <value>Đang tải xuống</value>
+    <value>Đang tải</value>
   </data>
   <data name="download_status_paused_title" xml:space="preserve">
     <value>Đã tạm dừng</value>
   </data>
+  <data name="download_status_merging_title" xml:space="preserve">
+    <value>Đang ghép tệp</value>
+  </data>
   <data name="download_status_completed_title" xml:space="preserve">
-    <value>Đã hoàn thành</value>
+    <value>Hoàn tất</value>
+  </data>
+  <data name="download_status_cancelled_title" xml:space="preserve">
+    <value>Đã hủy</value>
+  </data>
+  <data name="download_status_retrying_title" xml:space="preserve">
+    <value>Đang thử lại: {0}</value>
   </data>
   <data name="download_status_error_title" xml:space="preserve">
     <value>Lỗi: {0}</value>
-  </data>
-  <data name="download_status_retry_title" xml:space="preserve">
-    <value>Đang thử lại: {0}</value>
   </data>
 </root>

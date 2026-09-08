@@ -15,43 +15,21 @@
 
 namespace PDownloader.TorrentShell.Views;
 
-public partial class MainWindow : FluentWindow
+public partial class MainWindow : FluentWindow, IWindow
 {
     public MainWindowViewModel ViewModel { get; }
+    public Frame FrameHost => FrameHostContent;
 
     public MainWindow(MainWindowViewModel viewModel)
     {
         ViewModel = viewModel;
         DataContext = this;
-
         InitializeComponent();
-
-        ViewModel.CloseRequested += ViewModel_CloseRequested;
-        ContentRendered += MainWindow_ContentRendered;
-        Activated += MainWindow_Activated;
         Closed += MainWindow_Closed;
     }
 
-    private void ViewModel_CloseRequested() => Close();
-
-    private void MainWindow_ContentRendered(object? sender, EventArgs e)
+    private static void MainWindow_Closed(object? sender, EventArgs e)
     {
-        // Apply the same one-time activation as Runner after WPF has rendered.
-        ContentRendered -= MainWindow_ContentRendered;
-        WindowHelper.BringToFront(this);
-    }
-
-    private void MainWindow_Activated(object? sender, EventArgs e)
-    {
-        WindowHelper.StopFlashing(this);
-    }
-
-    private void MainWindow_Closed(object? sender, EventArgs e)
-    {
-        ViewModel.CloseRequested -= ViewModel_CloseRequested;
-        ContentRendered -= MainWindow_ContentRendered;
-        Activated -= MainWindow_Activated;
-        Closed -= MainWindow_Closed;
         Application.Current.Shutdown();
     }
 }

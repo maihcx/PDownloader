@@ -55,9 +55,9 @@ public sealed partial class DownloadManager : IAsyncDisposable
         FileMergeMode mergeMode = FileMergeMode.Balanced,
         DownloadKind downloadKind = DownloadKind.Http,
         string torrentInfoHash = "",
+        string torrentName = "",
         int torrentFileIndex = -1,
         string torrentRelativePath = "",
-        IReadOnlyCollection<TorrentFileProgressDto>? torrentFiles = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
@@ -73,7 +73,7 @@ public sealed partial class DownloadManager : IAsyncDisposable
                 return session.Item;
             }
 
-            var item = new DownloadItem
+            session = new DownloadSession(new DownloadItem
             {
                 Id = id,
                 Url = url,
@@ -88,12 +88,11 @@ public sealed partial class DownloadManager : IAsyncDisposable
                 MergeMode = mergeMode,
                 DownloadKind = downloadKind,
                 TorrentInfoHash = torrentInfoHash,
+                TorrentName = torrentName,
                 TorrentFileIndex = torrentFileIndex,
                 TorrentRelativePath = torrentRelativePath,
                 Status = DownloadStatus.Queued
-            };
-            item.SetTorrentFiles(torrentFiles ?? []);
-            session = new DownloadSession(item);
+            });
             _sessions.Add(id, session);
             start = TrackCommand(session.QueueCommand(() =>
             {
@@ -274,10 +273,6 @@ public sealed partial class DownloadManager : IAsyncDisposable
                 {
                     item.Status = DownloadStatus.Paused;
                     item.SpeedBps = 0;
-                    if (item.DownloadKind == DownloadKind.Torrent)
-                    {
-                        item.SetTorrentFileStatus(DownloadStatus.Paused);
-                    }
                 }
 
                 var session = new DownloadSession(item);

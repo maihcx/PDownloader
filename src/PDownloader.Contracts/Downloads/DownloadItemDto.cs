@@ -22,9 +22,6 @@ public sealed class DownloadItemDto
 {
     [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
     [JsonPropertyName("url")] public string Url { get; set; } = string.Empty;
-    [JsonPropertyName("downloadKind")]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public DownloadKind DownloadKind { get; set; } = DownloadKind.Http;
     [JsonPropertyName("fileName")] public string FileName { get; set; } = string.Empty;
     [JsonPropertyName("savePath")] public string SavePath { get; set; } = string.Empty;
     [JsonPropertyName("startTime")] public DateTime StartTime { get; set; }
@@ -57,5 +54,10 @@ public sealed class DownloadItemDto
     public FileMergeMode FileMergeMode { get; set; } = FileMergeMode.Balanced;
     [JsonPropertyName("canPause")] public bool CanPause { get; set; }
     [JsonPropertyName("canResume")] public bool CanResume { get; set; }
-    [JsonPropertyName("torrentFiles")] public List<TorrentFileProgressDto> TorrentFiles { get; set; } = new();
+    [JsonPropertyName("downloadKind")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public DownloadKind DownloadKind { get; set; } = DownloadKind.Http;
+    [JsonPropertyName("torrentInfoHash")] public string TorrentInfoHash { get; set; } = string.Empty;
+    [JsonPropertyName("torrentName")] public string TorrentName { get; set; } = string.Empty;
+    [JsonPropertyName("torrentRelativePath")] public string TorrentRelativePath { get; set; } = string.Empty;
 }

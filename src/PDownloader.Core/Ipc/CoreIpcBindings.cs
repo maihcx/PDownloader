@@ -62,7 +62,6 @@ public sealed class CoreIpcBindings : IDisposable
         _runnerSessions.SessionStarted += BindRunner;
         _runnerSessions.SessionReady += _downloadCommands.PublishRunnerSnapshot;
         _torrentShellSessions.SessionStarted += BindTorrentShell;
-        _torrentShellSessions.SessionReady += _downloadCommands.PublishTorrentShellSnapshot;
     }
 
     public void BindMain(ConfluxService main)
@@ -103,21 +102,17 @@ public sealed class CoreIpcBindings : IDisposable
     private void BindTorrentShell(TorrentShellSession session)
     {
         ConfluxService shell = session.Channel;
-        shell.RegisterRequestHandler(DownloadProtocol.TorrentShellGetSession,
-            () => session.Context.ToView(session.Id));
-        shell.RegisterMessageHandler(DownloadProtocol.TorrentShellStart,
-            (request, token) => _torrentWorkflow.StartAsync(session, request, token));
-        shell.RegisterMessageHandler(DownloadProtocol.TorrentShellPause,
-            (_, token) => _downloadCommands.PauseAsync(session.Id, token));
-        shell.RegisterMessageHandler(DownloadProtocol.TorrentShellResume,
-            (_, token) => _downloadCommands.ResumeAsync(session.Id, token));
-        shell.RegisterMessageHandler(DownloadProtocol.TorrentShellRetry,
-            (_, token) => _downloadCommands.RetryAsync(session.Id, token));
-        shell.RegisterMessageHandler(DownloadProtocol.TorrentShellCancel,
-            (_, token) => _downloadCommands.CancelAsync(session.Id, token));
-        shell.RegisterMessageHandler(DownloadProtocol.TorrentShellCancelExperience,
+        shell.RegisterRequestHandler(DownloadProtocol.TorrentShellGetSession, session.ToView);
+        shell.RegisterRequestHandler(
+            DownloadProtocol.TorrentShellStart,
+            (request, token) => _torrentWorkflow.StartDownloadsAsync(session, request, token));
+
+        BindTorrentShellDownloadControls(shell, session);
+        shell.RegisterMessageHandler(
+            DownloadProtocol.TorrentShellCancelExperience,
             () => _ = _torrentShellSessions.CloseAsync(session.Id));
-        shell.RegisterMessageHandler(DownloadProtocol.TorrentShellUiClosed,
+        shell.RegisterMessageHandler(
+            DownloadProtocol.TorrentShellUiClosed,
             () => _ = _torrentShellSessions.CloseAsync(session.Id));
     }
 
@@ -147,6 +142,11 @@ public sealed class CoreIpcBindings : IDisposable
         tray.RegisterMessageHandler(
             UpdateProtocol.Command,
             _updates.HandleCommand);
+
+        tray.RegisterRequestHandler(
+            AppProtocol.PrepareMainActivation,
+            (_, cancellationToken) =>
+                _mainGateway.PrepareActivationAsync(cancellationToken));
 
         tray.RegisterRequestHandler(
             UpdateProtocol.GetState,
@@ -224,6 +224,26 @@ public sealed class CoreIpcBindings : IDisposable
             (_, token) => _downloadCommands.CancelAsync(session.Id, token));
     }
 
+    private void BindTorrentShellDownloadControls(ConfluxService shell, TorrentShellSession session)
+    {
+        shell.RegisterMessageHandler(
+            DownloadProtocol.RunnerPause,
+            (request, token) => session.OwnsDownload(request.DownloadId)
+                ? _downloadCommands.PauseAsync(request.DownloadId, token) : Task.CompletedTask);
+        shell.RegisterMessageHandler(
+            DownloadProtocol.RunnerResume,
+            (request, token) => session.OwnsDownload(request.DownloadId)
+                ? _downloadCommands.ResumeAsync(request.DownloadId, token) : Task.CompletedTask);
+        shell.RegisterMessageHandler(
+            DownloadProtocol.RunnerRetry,
+            (request, token) => session.OwnsDownload(request.DownloadId)
+                ? _downloadCommands.RetryAsync(request.DownloadId, token) : Task.CompletedTask);
+        shell.RegisterMessageHandler(
+            DownloadProtocol.RunnerCancel,
+            (request, token) => session.OwnsDownload(request.DownloadId)
+                ? _downloadCommands.CancelAsync(request.DownloadId, token) : Task.CompletedTask);
+    }
+
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
@@ -234,7 +254,6 @@ public sealed class CoreIpcBindings : IDisposable
         _runnerSessions.SessionStarted -= BindRunner;
         _runnerSessions.SessionReady -= _downloadCommands.PublishRunnerSnapshot;
         _torrentShellSessions.SessionStarted -= BindTorrentShell;
-        _torrentShellSessions.SessionReady -= _downloadCommands.PublishTorrentShellSnapshot;
         _downloadConfig.Changed -= PublishDownloadSettings;
         _main = null;
         GC.SuppressFinalize(this);

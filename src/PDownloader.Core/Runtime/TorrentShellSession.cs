@@ -13,81 +13,92 @@
 //
 // Copyright (C) Song Mai Software.
 
+using PDownloader.Downloads.Torrents;
+
 namespace PDownloader.Core.Runtime;
 
 public sealed class TorrentShellContext
 {
     public required string Source { get; init; }
-    public required string Name { get; init; }
-    public required string InfoHash { get; init; }
     public required string SaveTo { get; init; }
-    public required string DestinationSubfolder { get; init; }
-    public long TotalBytes { get; init; }
-    public bool IsStarted { get; init; }
+    public required TorrentPreparation Preparation { get; init; }
+    public int Threads { get; init; }
     public Dictionary<string, string>? Headers { get; init; }
-    public List<DownloadCategoryDto> Categories { get; init; } = [];
-    public string SelectedCategoryId { get; init; } = string.Empty;
-    public List<TorrentFileProgressDto> Files { get; init; } = [];
 
-    public TorrentShellSessionView ToView(string downloadId) => new()
+    public TorrentShellSessionView ToView(string sessionId) => new()
     {
-        DownloadId = downloadId,
-        Name = Name,
-        InfoHash = InfoHash,
-        TotalBytes = TotalBytes,
+        Name = Preparation.Name,
+        InfoHash = Preparation.InfoHash,
         SaveTo = SaveTo,
-        DestinationSubfolder = DestinationSubfolder,
-        IsStarted = IsStarted,
-        Categories = Categories.Select(CloneCategory).ToList(),
-        SelectedCategoryId = SelectedCategoryId,
-        Files = Files.Select(CloneFile).ToList()
+        TotalBytes = Preparation.TotalBytes,
+        Files = Preparation.Files.Select(file => new TorrentShellFileDto
+        {
+            Index = file.Index,
+            DownloadId = CreateDownloadId(sessionId, file.Index),
+            RelativePath = file.RelativePath,
+            FileName = file.FileName,
+            Length = file.Length
+        }).ToList()
     };
 
-    private static DownloadCategoryDto CloneCategory(DownloadCategoryDto category) => new()
-    {
-        Id = category.Id,
-        Name = category.Name,
-        FolderPath = category.FolderPath,
-        Extensions = [.. category.Extensions],
-        IsEnabled = category.IsEnabled
-    };
-
-    private static TorrentFileProgressDto CloneFile(TorrentFileProgressDto file) => new()
-    {
-        Index = file.Index,
-        RelativePath = file.RelativePath,
-        FileName = file.FileName,
-        SavePath = file.SavePath,
-        Length = file.Length,
-        DownloadedBytes = file.DownloadedBytes,
-        SpeedBps = file.SpeedBps,
-        Progress = file.Progress,
-        Status = file.Status,
-        ErrorMessage = file.ErrorMessage
-    };
+    public static string CreateDownloadId(string sessionId, int fileIndex) =>
+        $"{sessionId}-{fileIndex:D5}";
 }
 
 public sealed class TorrentShellSession
 {
+    private readonly object _downloadIdsLock = new();
+    private readonly HashSet<string> _downloadIds = new(StringComparer.Ordinal);
     private int _started;
-    private bool _isReady;
+    private int _ready;
 
-    public TorrentShellSession(string id, ConfluxService channel, TorrentShellContext context)
+    public TorrentShellSession(
+        string id,
+        ConfluxService channel,
+        TorrentShellContext context)
     {
         Id = id;
         Channel = channel;
         Context = context;
-        _started = context.IsStarted ? 1 : 0;
     }
 
     public string Id { get; }
     public ConfluxService Channel { get; }
     public TorrentShellContext Context { get; }
-    public bool IsReady => Volatile.Read(ref _isReady);
-    public bool IsStarted => Volatile.Read(ref _started) != 0;
+    public bool IsReady => Volatile.Read(ref _ready) != 0;
+    public bool HasStarted => Volatile.Read(ref _started) != 0;
     public bool TryStart() => Interlocked.CompareExchange(ref _started, 1, 0) == 0;
-    internal void ResetStart() => Volatile.Write(ref _started, 0);
-    internal void MarkReady() => Volatile.Write(ref _isReady, true);
+    public void MarkReady() => Volatile.Write(ref _ready, 1);
+    public TorrentShellSessionView ToView() => Context.ToView(Id);
+
+    public void SetDownloadIds(IEnumerable<string> downloadIds)
+    {
+        lock (_downloadIdsLock)
+        {
+            _downloadIds.Clear();
+            foreach (string id in downloadIds.Where(id => !string.IsNullOrWhiteSpace(id)))
+            {
+                _downloadIds.Add(id);
+            }
+        }
+    }
+
+    public bool OwnsDownload(string downloadId)
+    {
+        lock (_downloadIdsLock)
+        {
+            return _downloadIds.Contains(downloadId);
+        }
+    }
+
+    public string[] GetDownloadIds()
+    {
+        lock (_downloadIdsLock)
+        {
+            return _downloadIds.ToArray();
+        }
+    }
+
     internal CancellationTokenSource Lifetime { get; } = new();
     internal Task<ConfluxService> StartupTask { get; set; } = null!;
     internal Task? CloseTask { get; set; }

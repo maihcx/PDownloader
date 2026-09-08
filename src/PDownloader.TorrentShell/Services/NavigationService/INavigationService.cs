@@ -13,15 +13,9 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Contracts.Downloads;
+namespace PDownloader.TorrentShell.Services;
 
-/// <summary>
-/// Identifies the transfer engine used by a normal, single-file download item.
-/// A torrent with several selected files is represented by several items which
-/// share one torrent session in Core.
-/// </summary>
-public enum DownloadKind
+public interface INavigationService
 {
-    Http,
-    Torrent
+    void NavigateTo(Type pageType);
 }

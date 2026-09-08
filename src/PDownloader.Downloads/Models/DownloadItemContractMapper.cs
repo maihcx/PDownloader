@@ -21,7 +21,6 @@ internal static class DownloadItemContractMapper
     {
         Id = item.Id,
         Url = item.Url,
-        DownloadKind = item.DownloadKind,
         FileName = item.FileName,
         SavePath = item.SavePath,
         StartTime = item.StartTime,
@@ -47,6 +46,9 @@ internal static class DownloadItemContractMapper
         FileMergeMode = item.MergeMode,
         CanPause = item.CanPause,
         CanResume = item.CanResume,
-        TorrentFiles = item.GetTorrentFilesSnapshot().ToList()
+        DownloadKind = item.DownloadKind,
+        TorrentInfoHash = item.TorrentInfoHash,
+        TorrentName = item.TorrentName,
+        TorrentRelativePath = item.TorrentRelativePath
     };
 }

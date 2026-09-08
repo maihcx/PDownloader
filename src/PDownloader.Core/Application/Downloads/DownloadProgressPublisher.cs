@@ -24,6 +24,7 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
     private readonly DownloadManager _downloads;
     private readonly object _sync = new();
     private readonly Dictionary<string, ProgressClientSender> _runners = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TorrentShellTarget> _torrentShells = new(StringComparer.Ordinal);
     private readonly HashSet<ProgressClientSender> _ownedSenders = new();
     private ProgressClientSender? _main;
     private Task? _stopTask;
@@ -43,21 +44,24 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
             }
 
             _runners.TryGetValue(item.Id, out ProgressClientSender? runner);
-            if (_main is null && runner is null)
+            TorrentShellTarget[] shells = _torrentShells.Values
+                .Where(target => target.Session.OwnsDownload(item.Id))
+                .ToArray();
+            if (_main is null && runner is null && shells.Length == 0)
             {
                 return;
             }
 
-            // Capture and enqueue under the same short lock. Older callbacks must
-            // not enqueue their DTO after a newer callback or a ready snapshot.
-            // The mapper copies thread progress; neither sender mutates this DTO.
             DownloadItemDto snapshot = DownloadManager.ToContract(item);
             _main?.Publish(snapshot);
             runner?.Publish(snapshot);
+            foreach (TorrentShellTarget shell in shells)
+            {
+                shell.Sender.Publish(snapshot);
+            }
         }
     }
 
-    /// <summary>Called only after Main's readiness handshake validated its process.</summary>
     public void AttachMain(ConfluxService channel)
     {
         int processId;
@@ -78,11 +82,7 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
 
             var sender = new ProgressClientSender(channel, processId);
             _main = sender;
-            Track(sender, runnerId: null);
-
-            // GetAll returns item references, not pre-built DTOs. Capture current
-            // values inside the publication lock so startup cannot replay old progress.
-            // Main still obtains its authoritative list through GetList as before.
+            Track(sender, runnerId: null, torrentShellId: null);
             foreach (DownloadItem item in _downloads.GetAll())
             {
                 sender.Publish(DownloadManager.ToContract(item));
@@ -118,10 +118,12 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
                 _ = previous.DisposeAsync();
             }
 
-            var sender = new ProgressClientSender(session.Channel, processId, session.Lifetime.Token);
+            var sender = new ProgressClientSender(
+                session.Channel,
+                processId,
+                session.Lifetime.Token);
             _runners[session.Id] = sender;
-            Track(sender, session.Id);
-            // A download may already have completed while Runner was starting.
+            Track(sender, runnerId: session.Id, torrentShellId: null);
             if (_downloads.Find(session.Id) is { } item)
             {
                 sender.Publish(DownloadManager.ToContract(item));
@@ -131,7 +133,7 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
 
     public void AttachTorrentShell(TorrentShellSession session)
     {
-        if (!session.IsReady || session.Lifetime.IsCancellationRequested)
+        if (session.Lifetime.IsCancellationRequested)
         {
             return;
         }
@@ -147,33 +149,45 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
                 return;
             }
 
-            if (_runners.TryGetValue(session.Id, out ProgressClientSender? previous))
+            if (_torrentShells.TryGetValue(session.Id, out TorrentShellTarget? previous))
             {
-                if (previous.Matches(session.Channel, processId))
+                if (previous.Sender.Matches(session.Channel, processId))
                 {
                     return;
                 }
 
-                _ = previous.DisposeAsync();
+                _ = previous.Sender.DisposeAsync();
             }
 
-            var sender = new ProgressClientSender(session.Channel, processId, session.Lifetime.Token);
-            _runners[session.Id] = sender;
-            Track(sender, session.Id);
-            if (_downloads.Find(session.Id) is { } item)
+            var sender = new ProgressClientSender(
+                session.Channel,
+                processId,
+                session.Lifetime.Token);
+            _torrentShells[session.Id] = new TorrentShellTarget(session, sender);
+            Track(sender, runnerId: null, torrentShellId: session.Id);
+            foreach (string downloadId in session.GetDownloadIds())
             {
-                sender.Publish(DownloadManager.ToContract(item));
+                if (_downloads.Find(downloadId) is { } item)
+                {
+                    sender.Publish(DownloadManager.ToContract(item));
+                }
             }
         }
     }
 
-    private void Track(ProgressClientSender sender, string? runnerId)
+    private void Track(
+        ProgressClientSender sender,
+        string? runnerId,
+        string? torrentShellId)
     {
         _ownedSenders.Add(sender);
-        _ = ObserveSenderAsync(sender, runnerId);
+        _ = ObserveSenderAsync(sender, runnerId, torrentShellId);
     }
 
-    private async Task ObserveSenderAsync(ProgressClientSender sender, string? runnerId)
+    private async Task ObserveSenderAsync(
+        ProgressClientSender sender,
+        string? runnerId,
+        string? torrentShellId)
     {
         try
         {
@@ -189,17 +203,25 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
             lock (_sync)
             {
                 _ownedSenders.Remove(sender);
-                if (runnerId is null)
+                if (runnerId is null && torrentShellId is null)
                 {
                     if (ReferenceEquals(_main, sender))
                     {
                         _main = null;
                     }
                 }
-                else if (_runners.TryGetValue(runnerId, out ProgressClientSender? current)
+                else if (runnerId is not null
+                    && _runners.TryGetValue(runnerId, out ProgressClientSender? current)
                     && ReferenceEquals(current, sender))
                 {
                     _runners.Remove(runnerId);
+                }
+
+                if (torrentShellId is not null
+                    && _torrentShells.TryGetValue(torrentShellId, out TorrentShellTarget? shell)
+                    && ReferenceEquals(shell.Sender, sender))
+                {
+                    _torrentShells.Remove(torrentShellId);
                 }
             }
         }
@@ -216,7 +238,7 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
                 _main?.DisposeAsync();
                 _main = null;
                 _runners.Clear();
-                // Set the shared stop task before any worker can re-enter cleanup.
+                _torrentShells.Clear();
                 _stopTask = Task.Run(async () =>
                 {
                     await Task.WhenAll(senders.Select(sender => sender.DisposeAsync().AsTask()))
@@ -227,4 +249,8 @@ public sealed class DownloadProgressPublisher : IAsyncDisposable
             return new ValueTask(_stopTask);
         }
     }
+
+    private sealed record TorrentShellTarget(
+        TorrentShellSession Session,
+        ProgressClientSender Sender);
 }

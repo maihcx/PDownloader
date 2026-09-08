@@ -13,15 +13,18 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Contracts.Downloads;
+namespace PDownloader.Views.Pages;
 
-/// <summary>
-/// Identifies the transfer engine used by a normal, single-file download item.
-/// A torrent with several selected files is represented by several items which
-/// share one torrent session in Core.
-/// </summary>
-public enum DownloadKind
+[PageMeta("page_torrents_title", "page_torrents_summary", SymbolRegular.Document24, 3, false)]
+public partial class TorrentsPage : INavigableView<TorrentsViewModel>
 {
-    Http,
-    Torrent
+    public TorrentsViewModel ViewModel { get; }
+
+    public TorrentsPage(TorrentsViewModel viewModel)
+    {
+        ViewModel = viewModel;
+        DataContext = this;
+
+        InitializeComponent();
+    }
 }

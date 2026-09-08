@@ -37,7 +37,6 @@ public class DownloadConfigService
         {
             _downloadConfigs = configs;
         }
-
         EnsureCategoryDirectories(configs.DownloadCategories);
     }
 
@@ -197,7 +196,6 @@ public class DownloadConfigService
             {
                 throw new IOException("Download settings could not be read.");
             }
-
             EnsureDefaults(configs);
             DownloadCategoryDto? category = configs.DownloadCategories.FirstOrDefault(
                 item => string.Equals(item.Id, categoryId, StringComparison.OrdinalIgnoreCase));

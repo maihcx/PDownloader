@@ -28,16 +28,17 @@ public partial class App
             _host = CreateHost();
             await _host.StartAsync();
             ApplicationThemeManager.ApplySystemTheme();
-            MainWindow window = _host.Services.GetRequiredService<MainWindow>();
-            MainWindow = window;
-            window.Show();
+
+            ApplicationHostService applicationHost =
+                _host.Services.GetRequiredService<ApplicationHostService>();
+            await applicationHost.ShowAsync();
             _host.Services.GetRequiredService<TorrentShellService>().SetReady(true);
         }
         catch (Exception exception)
         {
             System.Windows.MessageBox.Show(
                 exception.Message,
-                LanguageBase.GetLangValue("torrent_selector_app_title"),
+                LanguageBase.GetLangValue("torrent_shell_app_title"),
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Error);
             Shutdown(1);
@@ -64,8 +65,15 @@ public partial class App
             services.AddSingleton<TorrentShellService>();
             services.AddHostedService(service =>
                 service.GetRequiredService<TorrentShellService>());
+            services.AddSingleton<ApplicationHostService>();
+            services.AddSingleton<INavigationService, NavigationService>();
+
+            services.AddSingleton<IWindow, MainWindow>();
             services.AddSingleton<MainWindowViewModel>();
-            services.AddSingleton<MainWindow>();
+            services.AddSingleton<DownloaderPage>();
+            services.AddSingleton<DownloaderViewModel>();
+            services.AddSingleton<DownloaderProgressPage>();
+            services.AddSingleton<DownloaderProgressViewModel>();
         })
         .Build();
 }

@@ -25,9 +25,6 @@ public static class IpcTopology
     public const string TrayProcessName = "PDownloader Tray.exe";
     public const string RunnerProcessName = "PDownloader Runner.exe";
     public const string TorrentShellProcessName = "PDownloader.TorrentShell.exe";
-    // Kept so a modified-files ZIP can be extracted over an older source tree
-    // before the orphaned TorrentSel files are removed.
-    public const string TorrentSelectorProcessName = "PDownloader.TorrentSel.exe";
 
     public const string MainToCorePipeName = "PDownloader.MainToCore";
     public const string CoreToMainPipeName = "PDownloader.CoreToMain";

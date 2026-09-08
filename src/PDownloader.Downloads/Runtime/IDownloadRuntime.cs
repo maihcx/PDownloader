@@ -27,5 +27,4 @@ public interface IDownloadRuntime
     string FallbackDownloadFolder { get; }
 
     void ShowRunner(string id, RunnerDownloadTask task);
-    void ShowTorrentShell(string id, RunnerDownloadTask task);
 }

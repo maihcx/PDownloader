@@ -78,9 +78,9 @@ public sealed partial class DownloadManager
         }
 
         StartWork(session, hashOnly: false);
-        if (showRunner)
+        if (showRunner && item.DownloadKind != DownloadKind.Torrent)
         {
-            var task = new RunnerDownloadTask
+            _runtime.ShowRunner(item.Id, new RunnerDownloadTask
             {
                 Id = item.Id,
                 FileName = item.FileName,
@@ -98,16 +98,7 @@ public sealed partial class DownloadManager
                 TorrentRelativePath = item.TorrentRelativePath,
                 Headers = item.CustomHeaders is null ? null
                     : new Dictionary<string, string>(item.CustomHeaders, StringComparer.OrdinalIgnoreCase)
-            };
-            task.TorrentFiles = item.GetTorrentFilesSnapshot().ToList();
-            if (item.DownloadKind == DownloadKind.Torrent)
-            {
-                _runtime.ShowTorrentShell(item.Id, task);
-            }
-            else
-            {
-                _runtime.ShowRunner(item.Id, task);
-            }
+            });
         }
     }
 
@@ -134,21 +125,14 @@ public sealed partial class DownloadManager
             session.Item.Status = DownloadStatus.Cancelled;
             session.Item.SpeedBps = 0;
             Notify(session.Item);
-            if (!wasCompleted && session.Item.DownloadKind == DownloadKind.Torrent)
+            if (!wasCompleted
+                && session.Item.DownloadKind == DownloadKind.Torrent
+                && !string.IsNullOrWhiteSpace(session.Item.TorrentDestinationPath))
             {
-                foreach (TorrentFileProgressDto file in session.Item.GetTorrentFilesSnapshot())
+                try { File.Delete(session.Item.TorrentDestinationPath); }
+                catch (Exception ex)
                 {
-                    try
-                    {
-                        if (!string.IsNullOrWhiteSpace(file.SavePath))
-                        {
-                            File.Delete(file.SavePath);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[Torrent] Could not delete partial file: {ex.Message}");
-                    }
+                    Debug.WriteLine($"[Torrent] Could not delete partial file: {ex.Message}");
                 }
             }
 
@@ -183,11 +167,6 @@ public sealed partial class DownloadManager
         if (!hashOnly)
         {
             session.Item.Status = DownloadStatus.Connecting;
-            if (session.Item.DownloadKind == DownloadKind.Torrent)
-            {
-                session.Item.SetTorrentFileStatus(DownloadStatus.Connecting);
-            }
-
             session.Item.ErrorMessage = string.Empty;
             session.Item.SpeedBps = 0;
             Notify(session.Item);
@@ -243,21 +222,11 @@ public sealed partial class DownloadManager
                     {
                         item.Status = DownloadStatus.Error;
                         item.ErrorMessage = ex.Message;
-                        if (item.DownloadKind == DownloadKind.Torrent)
-                        {
-                            item.SetTorrentFileStatus(DownloadStatus.Error, ex.Message);
-                        }
-
                         break;
                     }
 
                     item.Status = DownloadStatus.Retrying;
                     item.ErrorMessage = $"An error occurred! Retrying ({attempt + 1}/{maxAutoRetries})... Please wait...";
-                    if (item.DownloadKind == DownloadKind.Torrent)
-                    {
-                        item.SetTorrentFileStatus(DownloadStatus.Retrying, item.ErrorMessage);
-                    }
-
                     Notify(item);
                     await Task.Delay(2000, token).ConfigureAwait(false);
                 }
@@ -269,10 +238,6 @@ public sealed partial class DownloadManager
             if (item.Status != DownloadStatus.Completed)
             {
                 item.Status = DownloadStatus.Paused;
-                if (item.DownloadKind == DownloadKind.Torrent)
-                {
-                    item.SetTorrentFileStatus(DownloadStatus.Paused);
-                }
             }
         }
         catch (Exception ex)
@@ -288,10 +253,6 @@ public sealed partial class DownloadManager
             {
                 item.Status = DownloadStatus.Error;
                 item.ErrorMessage = ex.Message;
-                if (item.DownloadKind == DownloadKind.Torrent)
-                {
-                    item.SetTorrentFileStatus(DownloadStatus.Error, ex.Message);
-                }
             }
         }
         finally

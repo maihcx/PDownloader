@@ -42,6 +42,9 @@
     <Reference Include="Wpf.Ui.Abstractions">
       <HintPath>..\WPF-UI.LIB\Wpf.Ui.Abstractions.dll</HintPath>
     </Reference>
+    <Reference Include="Wpf.Ui.DependencyInjection">
+      <HintPath>..\WPF-UI.LIB\Wpf.Ui.DependencyInjection.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>

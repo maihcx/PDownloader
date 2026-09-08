@@ -15,44 +15,33 @@
 
 namespace PDownloader.Contracts.Downloads;
 
-/// <summary>A selected file and its live state inside one torrent download.</summary>
-public sealed class TorrentFileProgressDto
+public sealed class TorrentShellFileDto
 {
-    [JsonPropertyName("index")] public int Index { get; set; }
-    [JsonPropertyName("relativePath")] public string RelativePath { get; set; } = string.Empty;
-    [JsonPropertyName("fileName")] public string FileName { get; set; } = string.Empty;
-    [JsonPropertyName("savePath")] public string SavePath { get; set; } = string.Empty;
-    [JsonPropertyName("length")] public long Length { get; set; }
-    [JsonPropertyName("downloadedBytes")] public long DownloadedBytes { get; set; }
-    [JsonPropertyName("speedBps")] public double SpeedBps { get; set; }
-    [JsonPropertyName("progress")] public double Progress { get; set; }
-    [JsonPropertyName("status")]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public DownloadStatus Status { get; set; } = DownloadStatus.Queued;
-    [JsonPropertyName("errorMessage")] public string ErrorMessage { get; set; } = string.Empty;
+    public int Index { get; init; }
+    public string DownloadId { get; init; } = string.Empty;
+    public string RelativePath { get; init; } = string.Empty;
+    public string FileName { get; init; } = string.Empty;
+    public long Length { get; init; }
 }
 
-/// <summary>Initial state used by TorrentShell's selection screen.</summary>
 public sealed class TorrentShellSessionView
 {
-    [JsonPropertyName("downloadId")] public string DownloadId { get; init; } = string.Empty;
-    [JsonPropertyName("name")] public string Name { get; init; } = string.Empty;
-    [JsonPropertyName("infoHash")] public string InfoHash { get; init; } = string.Empty;
-    [JsonPropertyName("totalBytes")] public long TotalBytes { get; init; }
-    [JsonPropertyName("saveTo")] public string SaveTo { get; init; } = string.Empty;
-    [JsonPropertyName("destinationSubfolder")] public string DestinationSubfolder { get; init; } = string.Empty;
-    [JsonPropertyName("isStarted")] public bool IsStarted { get; init; }
-    [JsonPropertyName("categories")] public List<DownloadCategoryDto> Categories { get; init; } = [];
-    [JsonPropertyName("selectedCategoryId")] public string SelectedCategoryId { get; init; } = string.Empty;
-    [JsonPropertyName("files")] public List<TorrentFileProgressDto> Files { get; init; } = [];
+    public string Name { get; init; } = string.Empty;
+    public string InfoHash { get; init; } = string.Empty;
+    public string SaveTo { get; init; } = string.Empty;
+    public long TotalBytes { get; init; }
+    public List<TorrentShellFileDto> Files { get; init; } = [];
 }
 
 public sealed class TorrentShellStartRequest
 {
-    [JsonPropertyName("selectedFileIndexes")] public List<int> SelectedFileIndexes { get; init; } = [];
-    [JsonPropertyName("saveTo")] public string SaveTo { get; init; } = string.Empty;
-    [JsonPropertyName("categoryId")] public string CategoryId { get; init; } = string.Empty;
-    [JsonPropertyName("rememberPathForCategory")] public bool RememberPathForCategory { get; init; }
+    public List<int> SelectedFileIndexes { get; init; } = [];
+}
+
+public sealed class TorrentShellStartResult
+{
+    public bool Success { get; init; }
+    public string Error { get; init; } = string.Empty;
 }
 
 public static class TorrentShellLaunchProtocol

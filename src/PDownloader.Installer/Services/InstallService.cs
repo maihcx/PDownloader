@@ -650,12 +650,6 @@ public sealed class InstallService : IInstallService
             {
                 try { p.Kill(entireProcessTree: true); } catch { }
             }
-
-            // Upgrade compatibility for builds that used the old selector name.
-            foreach (Process p in Process.GetProcessesByName("PDownloader.TorrentSel"))
-            {
-                try { p.Kill(entireProcessTree: true); } catch { }
-            }
         }, ct);
     }
 }

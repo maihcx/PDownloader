@@ -15,11 +15,11 @@
 
 namespace PDownloader.ViewModels.Pages;
 
-public partial class DownloadsViewModel : ObservableObject, INavigationAware
+public partial class TorrentsViewModel : ObservableObject, INavigationAware
 {
     private bool _isInitialized = false;
 
-    public ObservableCollection<DownloadItemViewModel> Downloads { get; } = new();
+    public ObservableCollection<DownloadGroupViewModel> DownloadGroups { get; } = new();
 
     public ICollectionView DownloadsView { get; }
 
@@ -73,7 +73,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
     private readonly DownloadLauncherService _downloadLauncherService;
 
-    public DownloadsViewModel(
+    public TorrentsViewModel(
         DownloadsChannelService downloadsChannelService,
         DownloadLauncherService downloadLauncherService)
     {
@@ -81,7 +81,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
         _downloadLauncherService = downloadLauncherService;
 
-        DownloadsView = CollectionViewSource.GetDefaultView(Downloads);
+        DownloadsView = CollectionViewSource.GetDefaultView(DownloadGroups);
         DownloadsView.Filter = FilterDownload;
 
         SelectedSortOption = SortOptions[0];
@@ -142,23 +142,13 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
     private bool FilterDownload(object item)
     {
-        if (item is not DownloadItemViewModel download || download.IsTorrent)
+        if (item is not DownloadGroupViewModel group || !group.IsTorrentGroup)
         {
             return false;
         }
 
         string keyword = SearchText.Trim();
-
-        if (string.IsNullOrWhiteSpace(keyword))
-        {
-            return true;
-        }
-
-        return ContainsKeyword(download.FileName, keyword)
-            || ContainsKeyword(download.Url, keyword)
-            || ContainsKeyword(download.Status, keyword)
-            || ContainsKeyword(download.ErrorMessage, keyword)
-            || ContainsKeyword(download.SavePath, keyword);
+        return string.IsNullOrWhiteSpace(keyword) || group.ContainsKeyword(keyword);
     }
 
     private void ApplySort(DownloadSortMode mode)
@@ -171,51 +161,51 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
             {
                 case DownloadSortMode.NameAscending:
                     AddSort(
-                        nameof(DownloadItemViewModel.FileName),
+                        nameof(DownloadGroupViewModel.Title),
                         ListSortDirection.Ascending);
                     AddStableTieBreaker();
                     break;
 
                 case DownloadSortMode.NameDescending:
                     AddSort(
-                        nameof(DownloadItemViewModel.FileName),
+                        nameof(DownloadGroupViewModel.Title),
                         ListSortDirection.Descending);
                     AddStableTieBreaker();
                     break;
 
                 case DownloadSortMode.TimeStartAscending:
                     AddSort(
-                        nameof(DownloadItemViewModel.StartTime),
+                        nameof(DownloadGroupViewModel.StartTime),
                         ListSortDirection.Ascending);
                     break;
 
                 case DownloadSortMode.TimeStartDescending:
                     AddSort(
-                        nameof(DownloadItemViewModel.StartTime),
+                        nameof(DownloadGroupViewModel.StartTime),
                         ListSortDirection.Descending);
                     break;
 
                 case DownloadSortMode.TimeEndAscending:
                     AddSort(
-                        nameof(DownloadItemViewModel.EndTime),
+                        nameof(DownloadGroupViewModel.EndTime),
                         ListSortDirection.Ascending);
                     break;
 
                 case DownloadSortMode.TimeEndDescending:
                     AddSort(
-                        nameof(DownloadItemViewModel.EndTime),
+                        nameof(DownloadGroupViewModel.EndTime),
                         ListSortDirection.Descending);
                     break;
 
                 case DownloadSortMode.SizeAscending:
                     AddSort(
-                        nameof(DownloadItemViewModel.TotalBytes),
+                        nameof(DownloadGroupViewModel.TotalBytes),
                         ListSortDirection.Ascending);
                     break;
 
                 case DownloadSortMode.SizeDescending:
                     AddSort(
-                        nameof(DownloadItemViewModel.TotalBytes),
+                        nameof(DownloadGroupViewModel.TotalBytes),
                         ListSortDirection.Descending);
                     break;
             }
@@ -238,14 +228,8 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         // unique secondary key, equal file names can be reinserted at different
         // positions in the sorted view after every update.
         AddSort(
-            nameof(DownloadItemViewModel.Id),
+            nameof(DownloadGroupViewModel.Key),
             ListSortDirection.Ascending);
-    }
-
-    private static bool ContainsKeyword(string? value, string keyword)
-    {
-        return !string.IsNullOrWhiteSpace(value)
-            && value.Contains(keyword, StringComparison.CurrentCultureIgnoreCase);
     }
 
     private void UpdateViewState()
@@ -258,11 +242,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
     private void RefreshFilteredView()
     {
-        if (!string.IsNullOrWhiteSpace(SearchText))
-        {
-            DownloadsView.Refresh();
-        }
-
+        DownloadsView.Refresh();
         UpdateViewState();
     }
 
@@ -270,48 +250,62 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
     {
         App.Current.Dispatcher.Invoke(() =>
         {
-            Downloads.Clear();
-
-            foreach (DownloadItemViewModel item in items.Where(item => !item.IsTorrent))
+            DownloadGroups.Clear();
+            foreach (DownloadItemViewModel item in items.Where(item => item.IsTorrent))
             {
-                Downloads.Add(item);
+                UpsertGroup(item, insertFirst: false);
             }
 
             IsLoading = false;
-
             RefreshFilteredView();
         });
     }
 
-    private void OnProgress(DownloadItemViewModel dto)
+    private void OnProgress(DownloadItemViewModel item)
     {
-        if (dto.IsTorrent)
+        if (!item.IsTorrent)
         {
             return;
         }
 
         App.Current.Dispatcher.Invoke(() =>
         {
-            DownloadItemViewModel? existing = Downloads.FirstOrDefault(d => d.Id == dto.Id);
-            if (existing != null)
+            string key = DownloadGroupViewModel.GetKey(item);
+            DownloadGroupViewModel? group = DownloadGroups.FirstOrDefault(candidate => candidate.Key == key)
+                ?? DownloadGroups.FirstOrDefault(candidate => candidate.Items.Any(child => child.Id == item.Id));
+
+            if (item.StatusState == DownloadStatus.Cancelled)
             {
-                if (dto.StatusState == DownloadStatus.Cancelled)
+                if (group is not null)
                 {
-                    Downloads.Remove(existing);
-                }
-                else
-                {
-                    int index = Downloads.IndexOf(existing);
-                    Downloads[index] = dto;
+                    group.Remove(item.Id);
+                    if (group.Items.Count == 0)
+                    {
+                        DownloadGroups.Remove(group);
+                    }
                 }
             }
-            else if (dto.StatusState != DownloadStatus.Cancelled)
+            else
             {
-                Downloads.Insert(0, dto);
+                UpsertGroup(item, insertFirst: group is null);
             }
 
             RefreshFilteredView();
         });
+    }
+
+    private void UpsertGroup(DownloadItemViewModel item, bool insertFirst)
+    {
+        string key = DownloadGroupViewModel.GetKey(item);
+        DownloadGroupViewModel? group = DownloadGroups.FirstOrDefault(candidate => candidate.Key == key);
+        if (group is null)
+        {
+            group = new DownloadGroupViewModel(key, DownloadGroupViewModel.IsTorrentKey(key));
+            if (insertFirst) DownloadGroups.Insert(0, group);
+            else DownloadGroups.Add(group);
+        }
+
+        group.Upsert(item);
     }
 
     [RelayCommand]
@@ -363,6 +357,35 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         }
 
         ConfluxManager.cfsPDownloaderCore?.Send(DownloadProtocol.RunnerRetry, new DownloadIdRequest(item.Id));
+    }
+
+    [RelayCommand]
+    private void PauseGroup(DownloadGroupViewModel? group)
+    {
+        if (group is null) return;
+        foreach (DownloadItemViewModel item in group.Items.Where(item => item.CanPause).ToArray()) Pause(item);
+    }
+
+    [RelayCommand]
+    private void ResumeGroup(DownloadGroupViewModel? group)
+    {
+        if (group is null) return;
+        foreach (DownloadItemViewModel item in group.Items.Where(item => item.CanResume).ToArray()) Resume(item);
+    }
+
+    [RelayCommand]
+    private void RetryGroup(DownloadGroupViewModel? group)
+    {
+        if (group is null) return;
+        foreach (DownloadItemViewModel item in group.Items.Where(item => item.StatusState == DownloadStatus.Error).ToArray()) Retry(item);
+    }
+
+    [RelayCommand]
+    private void CancelGroup(DownloadGroupViewModel? group)
+    {
+        if (group is null) return;
+        foreach (DownloadItemViewModel item in group.Items
+            .Where(item => item.StatusState is not DownloadStatus.Completed and not DownloadStatus.Cancelled).ToArray()) Cancel(item);
     }
 
     [RelayCommand]

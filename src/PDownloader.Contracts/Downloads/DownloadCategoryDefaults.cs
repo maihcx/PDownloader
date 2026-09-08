@@ -85,7 +85,6 @@ public static class DownloadCategoryDefaults
             {
                 existing.FolderPath = CreateTorrent(downloadsRoot).FolderPath;
             }
-
             return;
         }
 

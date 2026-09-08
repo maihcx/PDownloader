@@ -21,7 +21,6 @@ namespace PDownloader.Downloads.Models;
 public class DownloadItem : INotifyPropertyChanged
 {
     private DownloadThreadProgress[] _threadProgress = Array.Empty<DownloadThreadProgress>();
-    private TorrentFileProgressDto[] _torrentFiles = Array.Empty<TorrentFileProgressDto>();
 
     public DownloadProgressVisualizationMode ProgressVisualizationMode { get; private set; } = DownloadProgressVisualizationMode.None;
 
@@ -53,78 +52,6 @@ public class DownloadItem : INotifyPropertyChanged
         Volatile.Write(ref _threadProgress, Array.Empty<DownloadThreadProgress>());
     }
 
-    public IReadOnlyList<TorrentFileProgressDto> GetTorrentFilesSnapshot() =>
-        Volatile.Read(ref _torrentFiles).Select(CloneTorrentFile).ToArray();
-
-    public void SetTorrentFiles(IEnumerable<TorrentFileProgressDto> files)
-    {
-        ArgumentNullException.ThrowIfNull(files);
-        Volatile.Write(ref _torrentFiles, files.Select(CloneTorrentFile).ToArray());
-        OnPropertyChanged(nameof(GetTorrentFilesSnapshot));
-    }
-
-    public void UpdateTorrentFile(
-        int index,
-        long downloadedBytes,
-        double speedBps,
-        DownloadStatus status,
-        string errorMessage = "",
-        string? savePath = null)
-    {
-        TorrentFileProgressDto[] current = Volatile.Read(ref _torrentFiles);
-        TorrentFileProgressDto[] next = current.Select(CloneTorrentFile).ToArray();
-        TorrentFileProgressDto? file = next.FirstOrDefault(candidate => candidate.Index == index);
-        if (file is null)
-        {
-            return;
-        }
-
-        file.DownloadedBytes = Math.Clamp(downloadedBytes, 0, Math.Max(0, file.Length));
-        file.SpeedBps = Math.Max(0, speedBps);
-        file.Progress = file.Length > 0
-            ? Math.Clamp((double)file.DownloadedBytes / file.Length * 100, 0, 100)
-            : status == DownloadStatus.Completed ? 100 : 0;
-        file.Status = status;
-        file.ErrorMessage = errorMessage;
-        if (!string.IsNullOrWhiteSpace(savePath))
-        {
-            file.SavePath = savePath;
-        }
-
-        Volatile.Write(ref _torrentFiles, next);
-        OnPropertyChanged(nameof(GetTorrentFilesSnapshot));
-    }
-
-    public void SetTorrentFileStatus(DownloadStatus status, string errorMessage = "")
-    {
-        TorrentFileProgressDto[] next = Volatile.Read(ref _torrentFiles)
-            .Select(CloneTorrentFile)
-            .ToArray();
-        foreach (TorrentFileProgressDto file in next.Where(file => file.Status != DownloadStatus.Completed))
-        {
-            file.Status = status;
-            file.ErrorMessage = errorMessage;
-            file.SpeedBps = 0;
-        }
-
-        Volatile.Write(ref _torrentFiles, next);
-        OnPropertyChanged(nameof(GetTorrentFilesSnapshot));
-    }
-
-    private static TorrentFileProgressDto CloneTorrentFile(TorrentFileProgressDto file) => new()
-    {
-        Index = file.Index,
-        RelativePath = file.RelativePath,
-        FileName = file.FileName,
-        SavePath = file.SavePath,
-        Length = file.Length,
-        DownloadedBytes = file.DownloadedBytes,
-        SpeedBps = file.SpeedBps,
-        Progress = file.Progress,
-        Status = file.Status,
-        ErrorMessage = file.ErrorMessage
-    };
-
     public Dictionary<string, string>? CustomHeaders { get; set; }
 
     public string Id = string.Empty;
@@ -138,6 +65,8 @@ public class DownloadItem : INotifyPropertyChanged
     public string DestinationFolder { get; set; } = string.Empty;
 
     public string TorrentInfoHash { get; set; } = string.Empty;
+
+    public string TorrentName { get; set; } = string.Empty;
 
     public int TorrentFileIndex { get; set; } = -1;
 

@@ -13,25 +13,26 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.TorrentShell.ViewModels;
+namespace PDownloader.TorrentShell.Services;
 
-public partial class MainWindowViewModel : ObservableObject, Services.INavigationAware
+public sealed class NavigationService : INavigationService
 {
-    private readonly INavigationService _navigationService;
+    private readonly IServiceProvider _serviceProvider;
 
-    [ObservableProperty]
-    private string _applicationTitle = LanguageBase.GetLangValue("torrent_shell_app_title");
-
-    public MainWindowViewModel(INavigationService navigationService)
+    public NavigationService(IServiceProvider serviceProvider)
     {
-        _navigationService = navigationService;
+        _serviceProvider = serviceProvider;
     }
 
-    public Task OnNavigatedToAsync()
+    public void NavigateTo(Type pageType)
     {
-        _navigationService.NavigateTo(typeof(DownloaderPage));
-        return Task.CompletedTask;
-    }
+        if (!typeof(UIElement).IsAssignableFrom(pageType))
+        {
+            throw new ArgumentException($"{pageType.Name} must inherit UIElement.");
+        }
 
-    public Task OnNavigatedFromAsync() => Task.CompletedTask;
+        IWindow window = _serviceProvider.GetRequiredService<IWindow>();
+        UIElement page = (UIElement)_serviceProvider.GetRequiredService(pageType);
+        window.FrameHost.Navigate(page);
+    }
 }

@@ -15,9 +15,27 @@
 
 namespace PDownloader.TorrentShell;
 
-public sealed class TorrentShellConfig
+public partial class TorrentShellConfig : ObservableObject
 {
-    public string Token { get; private init; } = string.Empty;
+    [ObservableProperty]
+    private string _token = string.Empty;
+
+    [ObservableProperty]
+    private string _torrentName = string.Empty;
+
+    [ObservableProperty]
+    private string _infoHash = string.Empty;
+
+    [ObservableProperty]
+    private string _saveTo = string.Empty;
+
+    [ObservableProperty]
+    private long _totalBytes;
+
+    [ObservableProperty]
+    private bool _hasStarted;
+
+    public ObservableCollection<TorrentFileViewModel> Files { get; } = [];
 
     public static TorrentShellConfig Parse(string[] args)
     {
@@ -44,6 +62,22 @@ public sealed class TorrentShellConfig
         }
 
         throw new InvalidDataException(
-            LanguageBase.GetLangValue("torrent_selector_invalid_token_error"));
+            LanguageBase.GetLangValue("torrent_shell_invalid_token_error"));
+    }
+
+    public void ApplySession(TorrentShellSessionView session)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        TorrentName = string.IsNullOrWhiteSpace(session.Name)
+            ? LanguageBase.GetLangValue("torrent_shell_default_name")
+            : session.Name;
+        InfoHash = session.InfoHash;
+        SaveTo = session.SaveTo;
+        TotalBytes = session.TotalBytes;
+        Files.Clear();
+        foreach (TorrentShellFileDto file in session.Files)
+        {
+            Files.Add(new TorrentFileViewModel(file));
+        }
     }
 }

@@ -6,280 +6,38 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:utils="clr-namespace:PDownloader.TorrentShell.Utils"
-                 Title="{utils:Localization torrent_selector_app_title}"
-                 Width="760" Height="640" MinWidth="640" MinHeight="500"
-                 WindowStartupLocation="CenterScreen" ExtendsContentIntoTitleBar="True"
-                 WindowBackdropType="Tabbed" WindowCornerPreference="Round"
-                 ShowActivated="True" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 Title="{Binding ViewModel.ApplicationTitle, Mode=OneWay}"
+                 Width="780"
+                 Height="620"
+                 MinWidth="680"
+                 MinHeight="500"
+                 WindowStartupLocation="CenterScreen"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Tabbed"
+                 WindowCornerPreference="Round"
+                 ShowActivated="True"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  d:DataContext="{d:DesignInstance local:MainWindow, IsDesignTimeCreatable=False}"
                  mc:Ignorable="d">
-    <ui:FluentWindow.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
-        <Style x:Key="TorrentProgressBar" TargetType="ProgressBar"
-               BasedOn="{StaticResource {x:Type ProgressBar}}">
-            <Setter Property="Foreground" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Status}" Value="Completed">
-                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Status}" Value="Error">
-                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Status}" Value="Paused">
-                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-    </ui:FluentWindow.Resources>
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <ui:TitleBar Grid.Row="0" Title="{utils:Localization torrent_selector_app_title}"
+
+        <ui:TitleBar Grid.Row="0"
+                     Title="{Binding ViewModel.ApplicationTitle, Mode=OneWay}"
                      CloseWindowByDoubleClickOnIcon="True">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Assets/app-256.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
-        <!-- Selection screen. It is used for both one-file and multi-file torrents. -->
-        <Grid Grid.Row="1" Margin="22,12,22,18"
-              Visibility="{Binding ViewModel.IsSelectionVisible, Converter={StaticResource BoolToVisibility}}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <StackPanel>
-                <ui:TextBlock Text="{Binding ViewModel.TorrentName}" FontSize="20"
-                              FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                <ui:TextBlock Text="{Binding ViewModel.InfoHash}" Margin="0,3,0,0"
-                              FontSize="11" Opacity="0.48" TextTrimming="CharacterEllipsis" />
-                <ui:TextBlock Text="{utils:Localization torrent_selector_description}"
-                              Margin="0,5,0,0" Opacity="0.65" TextWrapping="Wrap" />
-            </StackPanel>
-
-            <Grid Grid.Row="1" Margin="0,14,0,12">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="190" />
-                    <ColumnDefinition Width="12" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <StackPanel>
-                    <ui:TextBlock Text="{utils:Localization download_group_title}" Margin="2,0,0,4" />
-                    <ComboBox ItemsSource="{Binding ViewModel.Categories}"
-                              SelectedItem="{Binding ViewModel.SelectedCategory, Mode=TwoWay}"
-                              DisplayMemberPath="Name" />
-                </StackPanel>
-                <StackPanel Grid.Column="2">
-                    <ui:TextBlock Text="{utils:Localization save_to_title}" Margin="2,0,0,4" />
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBox Text="{Binding ViewModel.SaveTo, Mode=TwoWay}" />
-                        <ui:Button Grid.Column="1" Content="…" Margin="6,0,0,0" Padding="11,7"
-                                   Command="{Binding ViewModel.BrowseFolderCommand}" />
-                    </Grid>
-                    <CheckBox Content="{Binding ViewModel.RememberPathLabel}"
-                              IsChecked="{Binding ViewModel.RememberPathForCategory, Mode=TwoWay}"
-                              Margin="2,7,0,0" />
-                </StackPanel>
-            </Grid>
-
-            <Grid Grid.Row="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid Margin="2,0,2,5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Text="{utils:Localization torrent_files_title}" FontWeight="SemiBold"
-                                  VerticalAlignment="Center" />
-                    <ui:Button Grid.Column="1" Content="{utils:Localization torrent_selector_select_all}"
-                               Command="{Binding ViewModel.SelectAllCommand}" />
-                    <ui:Button Grid.Column="2" Content="{utils:Localization torrent_selector_clear}"
-                               Margin="7,0,0,0" Command="{Binding ViewModel.SelectNoneCommand}" />
-                </Grid>
-                <ListBox Grid.Row="1" ItemsSource="{Binding ViewModel.Files}" Background="Transparent"
-                         BorderThickness="1" BorderBrush="{DynamicResource ControlElevationBorderBrush}"
-                         Padding="5" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Padding" Value="0" />
-                            <Setter Property="Margin" Value="2" />
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="Focusable" Value="False" />
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Margin="8,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <CheckBox Margin="0,0,11,0" VerticalAlignment="Center"
-                                          IsChecked="{Binding IsSelected, Mode=TwoWay}" />
-                                <StackPanel Grid.Column="1">
-                                    <ui:TextBlock Text="{Binding FileName}" FontWeight="SemiBold"
-                                                  TextTrimming="CharacterEllipsis" />
-                                    <ui:TextBlock Text="{Binding RelativePath}" FontSize="11" Opacity="0.55"
-                                                  TextTrimming="CharacterEllipsis" />
-                                </StackPanel>
-                                <ui:TextBlock Grid.Column="2" Text="{Binding SizeText}"
-                                              VerticalAlignment="Center" Opacity="0.7" />
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </Grid>
-
-            <Grid Grid.Row="3" Margin="0,12,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel VerticalAlignment="Center">
-                    <ui:TextBlock Text="{Binding ViewModel.SelectionSummary}" FontWeight="SemiBold" />
-                    <ui:TextBlock Text="{Binding ViewModel.ErrorMessage}" Margin="0,3,12,0"
-                                  Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                                  TextWrapping="Wrap" />
-                </StackPanel>
-                <ui:Button Grid.Column="1" Content="{utils:Localization cancel_title}"
-                           Margin="0,0,7,0" Command="{Binding ViewModel.CancelCommand}" />
-                <ui:Button Grid.Column="2" MinWidth="122" Appearance="Primary"
-                           Content="{utils:Localization download_start_title}"
-                           Icon="{ui:SymbolIcon ArrowDownload24}"
-                           Command="{Binding ViewModel.StartCommand}" />
-            </Grid>
-        </Grid>
-
-        <!-- Aggregate progress plus per-file progress. -->
-        <Grid Grid.Row="1" Margin="22,12,22,18"
-              Visibility="{Binding ViewModel.IsProgressVisible, Converter={StaticResource BoolToVisibility}}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <StackPanel>
-                <ui:TextBlock Text="{Binding ViewModel.TorrentName}" FontSize="18"
-                              FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                <ui:TextBlock Text="{Binding ViewModel.StatusText}" Margin="0,4,0,0" />
-                <ProgressBar Minimum="0" Maximum="100"
-                             Value="{Binding ViewModel.Progress}"
-                             Height="10" Margin="0,7,0,0" />
-                <Grid Margin="0,5,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Text="{Binding ViewModel.ProgressText}" FontWeight="Bold" />
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
-                        <ui:TextBlock Text="↓ " /><ui:TextBlock Text="{Binding ViewModel.SpeedText}" />
-                        <ui:TextBlock Text="   ETA: " /><ui:TextBlock Text="{Binding ViewModel.EtaText}" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="2" Orientation="Horizontal">
-                        <ui:TextBlock Text="{Binding ViewModel.DownloadedText}" />
-                        <ui:TextBlock Text=" / " /><ui:TextBlock Text="{Binding ViewModel.TotalText}" />
-                    </StackPanel>
-                </Grid>
-            </StackPanel>
-
-            <ui:TextBlock Grid.Row="1" Text="{utils:Localization torrent_files_progress_title}"
-                          FontWeight="SemiBold" Margin="2,14,0,6" />
-            <ListBox Grid.Row="2" ItemsSource="{Binding ViewModel.Files}" Background="Transparent"
-                     BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
-                <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
-                        <Setter Property="Padding" Value="0" />
-                        <Setter Property="Margin" Value="0,0,0,7" />
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        <Setter Property="Focusable" Value="False" />
-                    </Style>
-                </ListBox.ItemContainerStyle>
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Border Padding="12,9" BorderThickness="1"
-                                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
-                                CornerRadius="{DynamicResource ControlCornerRadius}">
-                            <Grid>
-                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <ui:TextBlock Text="{Binding FileName}" FontWeight="SemiBold"
-                                                  TextTrimming="CharacterEllipsis" />
-                                    <ui:TextBlock Text="{Binding RelativePath}" FontSize="11" Opacity="0.52"
-                                                  TextTrimming="CharacterEllipsis" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Margin="14,0,0,0" HorizontalAlignment="Right">
-                                    <ui:TextBlock Text="{Binding ProgressText}" FontWeight="Bold" HorizontalAlignment="Right" />
-                                    <ui:TextBlock Text="{Binding StatusText}" FontSize="11" Opacity="0.7" HorizontalAlignment="Right" />
-                                </StackPanel>
-                                <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,7,0,0">
-                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                                    <ProgressBar Style="{StaticResource TorrentProgressBar}"
-                                                 Minimum="0" Maximum="100"
-                                                 Value="{Binding Progress}" Height="7" />
-                                    <Grid Grid.Row="1" Margin="0,4,0,0">
-                                        <ui:TextBlock Text="{Binding DownloadedText}" FontSize="10" Opacity="0.56" />
-                                        <ui:TextBlock Text="{Binding SpeedText}" FontSize="10" Opacity="0.56"
-                                                      HorizontalAlignment="Right" />
-                                    </Grid>
-                                </Grid>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-
-            <Grid Grid.Row="3" Margin="0,12,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <ui:TextBlock Text="{Binding ViewModel.ErrorMessage}" VerticalAlignment="Center"
-                              Foreground="{DynamicResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" />
-                <ui:Button Grid.Column="1" Margin="0,0,7,0" Content="{utils:Localization pause_title}"
-                           Command="{Binding ViewModel.PauseCommand}"
-                           Visibility="{Binding ViewModel.IsPauseVisible, Converter={StaticResource BoolToVisibility}}" />
-                <ui:Button Grid.Column="1" Margin="0,0,7,0" Content="{utils:Localization resume_title}"
-                           Command="{Binding ViewModel.ResumeCommand}"
-                           Visibility="{Binding ViewModel.IsResumeVisible, Converter={StaticResource BoolToVisibility}}" />
-                <ui:Button Grid.Column="1" Margin="0,0,7,0" Content="{utils:Localization retry_title}"
-                           Command="{Binding ViewModel.RetryCommand}"
-                           Visibility="{Binding ViewModel.IsRetryVisible, Converter={StaticResource BoolToVisibility}}" />
-                <ui:Button Grid.Column="2" Content="{utils:Localization cancel_title}" Appearance="Danger"
-                           Command="{Binding ViewModel.CancelCommand}">
-                    <ui:Button.Style>
-                        <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-                            <Setter Property="Visibility" Value="Visible" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding ViewModel.IsCompleted}" Value="True">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ui:Button.Style>
-                </ui:Button>
-                <ui:Button Grid.Column="2" Content="{utils:Localization open_folder_title}"
-                           Command="{Binding ViewModel.OpenFolderCommand}"
-                           Visibility="{Binding ViewModel.IsCompleted, Converter={StaticResource BoolToVisibility}}" />
-            </Grid>
-        </Grid>
+        <Frame x:Name="FrameHostContent"
+               Grid.Row="1"
+               Padding="17,0,17,16"
+               NavigationUIVisibility="Hidden" />
     </Grid>
 </ui:FluentWindow>

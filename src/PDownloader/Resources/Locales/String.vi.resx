@@ -630,5 +630,4 @@ Bạn có muốn tiếp tục không?</value>
   <data name="page_config_groups_torrent_enabled_summary" xml:space="preserve"><value>Mọi tệp tải xuống từ torrent đều mặc định dùng nhóm này, vì vậy không thể tắt nhóm.</value></data>
   <data name="page_config_groups_torrent_extensions_summary" xml:space="preserve"><value>Nhóm này khớp với mọi tệp được tải xuống từ torrent. Đuôi tệp không được sử dụng.</value></data>
   <data name="page_config_groups_new_name" xml:space="preserve"><value>Nhóm mới</value></data>
-  <data name="download_view_torrent_files_title" xml:space="preserve"><value>Các tệp trong torrent</value></data>
 </root>

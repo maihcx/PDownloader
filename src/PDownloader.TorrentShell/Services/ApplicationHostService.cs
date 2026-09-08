@@ -13,13 +13,8 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.Runner.Services;
+namespace PDownloader.TorrentShell.Services;
 
-/// <summary>
-/// Owns creation and presentation of the WPF shell. This service is deliberately
-/// not an IHostedService: Generic Host does not guarantee that hosted-service
-/// continuations run on the WPF Dispatcher/STA thread.
-/// </summary>
 public sealed class ApplicationHostService
 {
     private readonly IServiceProvider _serviceProvider;
@@ -31,9 +26,6 @@ public sealed class ApplicationHostService
         _serviceProvider = serviceProvider;
     }
 
-    /// <summary>
-    /// Creates, initializes and shows the main Runner window on the WPF Dispatcher.
-    /// </summary>
     public async Task ShowAsync(CancellationToken cancellationToken = default)
     {
         if (_shown)
@@ -43,14 +35,14 @@ public sealed class ApplicationHostService
 
         Application application = Application.Current
             ?? throw new InvalidOperationException(
-                "WPF Application is not available while starting Runner UI.");
+                "WPF Application is not available while starting TorrentShell UI.");
 
         if (!application.Dispatcher.CheckAccess())
         {
             await application.Dispatcher
                 .InvokeAsync(
                     () => ShowCoreAsync(cancellationToken),
-                    System.Windows.Threading.DispatcherPriority.Normal,
+                    DispatcherPriority.Normal,
                     cancellationToken)
                 .Task
                 .Unwrap();
@@ -63,21 +55,17 @@ public sealed class ApplicationHostService
     private async Task ShowCoreAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
         if (_shown)
         {
             return;
         }
 
         _mainWindow = _serviceProvider.GetRequiredService<IWindow>();
-
         if (_mainWindow is MainWindow window
             && window.ViewModel is INavigationAware navigationAware)
         {
             await navigationAware.OnNavigatedToAsync();
         }
-
-        cancellationToken.ThrowIfCancellationRequested();
 
         if (_mainWindow is Window shell)
         {
@@ -87,6 +75,7 @@ public sealed class ApplicationHostService
             shell.Activated += MainWindow_Activated;
             shell.Closed += MainWindow_Closed;
         }
+
         _mainWindow.Show();
         _shown = true;
     }
@@ -98,8 +87,6 @@ public sealed class ApplicationHostService
             return;
         }
 
-        // Run once after WPF has presented the shell and its initial page.
-        // Loaded is too early to use as the final activation attempt.
         mainWindow.ContentRendered -= MainWindow_ContentRendered;
         WindowHelper.BringToFront(mainWindow);
     }

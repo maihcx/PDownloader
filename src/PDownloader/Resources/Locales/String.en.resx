@@ -630,5 +630,4 @@ Do you want to continue?</value>
   <data name="page_config_groups_torrent_enabled_summary" xml:space="preserve"><value>All torrent downloads use this group by default, so it cannot be disabled.</value></data>
   <data name="page_config_groups_torrent_extensions_summary" xml:space="preserve"><value>This group matches every file downloaded from a torrent. File extensions are not used.</value></data>
   <data name="page_config_groups_new_name" xml:space="preserve"><value>New group</value></data>
-  <data name="download_view_torrent_files_title" xml:space="preserve"><value>Files in this torrent</value></data>
 </root>

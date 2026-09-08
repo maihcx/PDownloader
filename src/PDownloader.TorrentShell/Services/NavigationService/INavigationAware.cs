@@ -13,11 +13,10 @@
 //
 // Copyright (C) Song Mai Software.
 
-namespace PDownloader.TorrentShell.ViewModels;
+namespace PDownloader.TorrentShell.Services;
 
-public sealed class TorrentCategoryItem
+public interface INavigationAware
 {
-    public string Id { get; init; } = string.Empty;
-    public string Name { get; init; } = string.Empty;
-    public string FolderPath { get; init; } = string.Empty;
+    Task OnNavigatedToAsync();
+    Task OnNavigatedFromAsync();
 }

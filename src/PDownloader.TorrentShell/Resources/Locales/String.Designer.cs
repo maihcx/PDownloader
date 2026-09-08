@@ -61,29 +61,11 @@ namespace PDownloader.TorrentShell.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Cancel.
+        ///   Looks up a localized string similar to Cancelled.
         /// </summary>
-        internal static string cancel_title {
+        internal static string download_status_cancelled_title {
             get {
-                return ResourceManager.GetString("cancel_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to File group.
-        /// </summary>
-        internal static string download_group_title {
-            get {
-                return ResourceManager.GetString("download_group_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Start downloading.
-        /// </summary>
-        internal static string download_start_title {
-            get {
-                return ResourceManager.GetString("download_start_title", resourceCulture);
+                return ResourceManager.GetString("download_status_cancelled_title", resourceCulture);
             }
         }
         
@@ -97,7 +79,7 @@ namespace PDownloader.TorrentShell.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Connecting....
+        ///   Looks up a localized string similar to Connecting.
         /// </summary>
         internal static string download_status_connecting_title {
             get {
@@ -124,6 +106,15 @@ namespace PDownloader.TorrentShell.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Merging.
+        /// </summary>
+        internal static string download_status_merging_title {
+            get {
+                return ResourceManager.GetString("download_status_merging_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Paused.
         /// </summary>
         internal static string download_status_paused_title {
@@ -133,7 +124,7 @@ namespace PDownloader.TorrentShell.Resources.Locales {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Pending.
+        ///   Looks up a localized string similar to Queued.
         /// </summary>
         internal static string download_status_queued_title {
             get {
@@ -144,180 +135,180 @@ namespace PDownloader.TorrentShell.Resources.Locales {
         /// <summary>
         ///   Looks up a localized string similar to Retrying: {0}.
         /// </summary>
-        internal static string download_status_retry_title {
+        internal static string download_status_retrying_title {
             get {
-                return ResourceManager.GetString("download_status_retry_title", resourceCulture);
+                return ResourceManager.GetString("download_status_retrying_title", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Open folder.
+        ///   Looks up a localized string similar to PDownloader TorrentShell.
         /// </summary>
-        internal static string open_folder_title {
+        internal static string torrent_shell_app_title {
             get {
-                return ResourceManager.GetString("open_folder_title", resourceCulture);
+                return ResourceManager.GetString("torrent_shell_app_title", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Pause.
+        ///   Looks up a localized string similar to Cancel.
         /// </summary>
-        internal static string pause_title {
+        internal static string torrent_shell_cancel {
             get {
-                return ResourceManager.GetString("pause_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Remember this path for the “{0}” group.
-        /// </summary>
-        internal static string remember_group_path_title {
-            get {
-                return ResourceManager.GetString("remember_group_path_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Resume.
-        /// </summary>
-        internal static string resume_title {
-            get {
-                return ResourceManager.GetString("resume_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Retry.
-        /// </summary>
-        internal static string retry_title {
-            get {
-                return ResourceManager.GetString("retry_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Save to folder.
-        /// </summary>
-        internal static string save_to_title {
-            get {
-                return ResourceManager.GetString("save_to_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Select folder.
-        /// </summary>
-        internal static string select_folder_title {
-            get {
-                return ResourceManager.GetString("select_folder_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to File progress.
-        /// </summary>
-        internal static string torrent_files_progress_title {
-            get {
-                return ResourceManager.GetString("torrent_files_progress_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Files in this torrent.
-        /// </summary>
-        internal static string torrent_files_title {
-            get {
-                return ResourceManager.GetString("torrent_files_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Select torrent files.
-        /// </summary>
-        internal static string torrent_selector_app_title {
-            get {
-                return ResourceManager.GetString("torrent_selector_app_title", resourceCulture);
+                return ResourceManager.GetString("torrent_shell_cancel", resourceCulture);
             }
         }
         
         /// <summary>
         ///   Looks up a localized string similar to Clear.
         /// </summary>
-        internal static string torrent_selector_clear {
+        internal static string torrent_shell_clear {
             get {
-                return ResourceManager.GetString("torrent_selector_clear", resourceCulture);
+                return ResourceManager.GetString("torrent_shell_clear", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Continue.
+        ///   Looks up a localized string similar to Close.
         /// </summary>
-        internal static string torrent_selector_continue {
+        internal static string torrent_shell_close {
             get {
-                return ResourceManager.GetString("torrent_selector_continue", resourceCulture);
+                return ResourceManager.GetString("torrent_shell_close", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to All selected files are complete..
+        /// </summary>
+        internal static string torrent_shell_completed {
+            get {
+                return ResourceManager.GetString("torrent_shell_completed", resourceCulture);
             }
         }
         
         /// <summary>
         ///   Looks up a localized string similar to Torrent.
         /// </summary>
-        internal static string torrent_selector_default_name {
+        internal static string torrent_shell_default_name {
             get {
-                return ResourceManager.GetString("torrent_selector_default_name", resourceCulture);
+                return ResourceManager.GetString("torrent_shell_default_name", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Choose the torrent files and destination. They will be downloaded together in this window..
+        ///   Looks up a localized string similar to Choose torrent files, then monitor and control every download here..
         /// </summary>
-        internal static string torrent_selector_description {
+        internal static string torrent_shell_description {
             get {
-                return ResourceManager.GetString("torrent_selector_description", resourceCulture);
+                return ResourceManager.GetString("torrent_shell_description", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to The torrent selection session token is missing or invalid..
+        ///   Looks up a localized string similar to The TorrentShell session token is missing or invalid..
         /// </summary>
-        internal static string torrent_selector_invalid_token_error {
+        internal static string torrent_shell_invalid_token_error {
             get {
-                return ResourceManager.GetString("torrent_selector_invalid_token_error", resourceCulture);
+                return ResourceManager.GetString("torrent_shell_invalid_token_error", resourceCulture);
             }
         }
         
         /// <summary>
         ///   Looks up a localized string similar to PDownloader Core could not provide torrent metadata. {0}.
         /// </summary>
-        internal static string torrent_selector_metadata_error {
+        internal static string torrent_shell_metadata_error {
             get {
-                return ResourceManager.GetString("torrent_selector_metadata_error", resourceCulture);
+                return ResourceManager.GetString("torrent_shell_metadata_error", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Open folder.
+        /// </summary>
+        internal static string torrent_shell_open_folder {
+            get {
+                return ResourceManager.GetString("torrent_shell_open_folder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Pause.
+        /// </summary>
+        internal static string torrent_shell_pause {
+            get {
+                return ResourceManager.GetString("torrent_shell_pause", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} of {1} files completed.
+        /// </summary>
+        internal static string torrent_shell_progress_summary {
+            get {
+                return ResourceManager.GetString("torrent_shell_progress_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Resume.
+        /// </summary>
+        internal static string torrent_shell_resume {
+            get {
+                return ResourceManager.GetString("torrent_shell_resume", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Retry.
+        /// </summary>
+        internal static string torrent_shell_retry {
+            get {
+                return ResourceManager.GetString("torrent_shell_retry", resourceCulture);
             }
         }
         
         /// <summary>
         ///   Looks up a localized string similar to Select all.
         /// </summary>
-        internal static string torrent_selector_select_all {
+        internal static string torrent_shell_select_all {
             get {
-                return ResourceManager.GetString("torrent_selector_select_all", resourceCulture);
+                return ResourceManager.GetString("torrent_shell_select_all", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Select at least one torrent file..
+        /// </summary>
+        internal static string torrent_shell_select_one_error {
+            get {
+                return ResourceManager.GetString("torrent_shell_select_one_error", resourceCulture);
             }
         }
         
         /// <summary>
         ///   Looks up a localized string similar to {0} of {1} files · {2}.
         /// </summary>
-        internal static string torrent_selector_selection_summary {
+        internal static string torrent_shell_selection_summary {
             get {
-                return ResourceManager.GetString("torrent_selector_selection_summary", resourceCulture);
+                return ResourceManager.GetString("torrent_shell_selection_summary", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Could not send the selection to PDownloader Core..
+        ///   Looks up a localized string similar to Start downloads.
         /// </summary>
-        internal static string torrent_selector_send_selection_error {
+        internal static string torrent_shell_start {
             get {
-                return ResourceManager.GetString("torrent_selector_send_selection_error", resourceCulture);
+                return ResourceManager.GetString("torrent_shell_start", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Could not start the torrent downloads..
+        /// </summary>
+        internal static string torrent_shell_start_error {
+            get {
+                return ResourceManager.GetString("torrent_shell_start_error", resourceCulture);
             }
         }
     }

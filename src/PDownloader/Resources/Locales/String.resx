@@ -624,5 +624,4 @@
   <data name="page_config_groups_torrent_enabled_summary" xml:space="preserve"><value>page_config_groups_torrent_enabled_summary</value></data>
   <data name="page_config_groups_torrent_extensions_summary" xml:space="preserve"><value>page_config_groups_torrent_extensions_summary</value></data>
   <data name="page_config_groups_new_name" xml:space="preserve"><value>page_config_groups_new_name</value></data>
-  <data name="download_view_torrent_files_title" xml:space="preserve"><value>download_view_torrent_files_title</value></data>
 </root>

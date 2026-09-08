@@ -26,7 +26,7 @@ public sealed class TorrentShellSessionManager : IDisposable
     public event Action<TorrentShellSession>? SessionStarted;
     public event Action<TorrentShellSession>? SessionReady;
 
-    public async Task<ConfluxService> EnsureStartedAsync(
+    public async Task<ConfluxService> StartAsync(
         string token,
         TorrentShellContext context,
         CancellationToken cancellationToken = default)
@@ -43,18 +43,20 @@ public sealed class TorrentShellSessionManager : IDisposable
                 throw new InvalidOperationException("TorrentShell sessions are stopping.");
             }
 
-            if (!_sessions.TryGetValue(token, out session!))
+            if (_sessions.ContainsKey(token))
             {
-                var channel = new ConfluxService { CanMultiple = true };
-                channel.Register(
-                    IpcTopology.TorrentShellProcessName,
-                    IpcTopology.CoreToTorrentShellPipeName(token),
-                    IpcTopology.TorrentShellToCorePipeName(token));
-                session = new TorrentShellSession(token, channel, context);
-                channel.TargetExited += processId => { _ = CloseAsync(token); };
-                _sessions[token] = session;
-                session.StartupTask = Task.Run(() => StartCoreAsync(session));
+                throw new InvalidOperationException("The TorrentShell session already exists.");
             }
+
+            var channel = new ConfluxService { CanMultiple = true };
+            channel.Register(
+                IpcTopology.TorrentShellProcessName,
+                IpcTopology.CoreToTorrentShellPipeName(token),
+                IpcTopology.TorrentShellToCorePipeName(token));
+            session = new TorrentShellSession(token, channel, context);
+            channel.TargetExited += processId => { _ = CloseAsync(token); };
+            _sessions[token] = session;
+            session.StartupTask = Task.Run(() => StartCoreAsync(session));
         }
 
         return await session.StartupTask.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -100,7 +102,10 @@ public sealed class TorrentShellSessionManager : IDisposable
             session.CloseTask = Task.Run(async () =>
             {
                 try { await session.Channel.DisposeAsync().ConfigureAwait(false); }
-                catch (Exception ex) { Debug.WriteLine($"[TorrentShell] Close '{id}': {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[TorrentShell] Close '{id}': {ex.Message}");
+                }
                 finally
                 {
                     lock (_sync)
@@ -130,7 +135,9 @@ public sealed class TorrentShellSessionManager : IDisposable
         {
             try
             {
-                await session.Channel.SendAsync(AppProtocol.State, AppState.Shutdown,
+                await session.Channel.SendAsync(
+                    AppProtocol.State,
+                    AppState.Shutdown,
                     TimeSpan.FromSeconds(1)).ConfigureAwait(false);
             }
             catch { }
@@ -138,7 +145,9 @@ public sealed class TorrentShellSessionManager : IDisposable
         })).ConfigureAwait(false);
     }
 
-    public void Broadcast<TPayload>(IpcMessageDefinition<TPayload> definition, TPayload payload)
+    public void Broadcast<TPayload>(
+        IpcMessageDefinition<TPayload> definition,
+        TPayload payload)
     {
         foreach (TorrentShellSession session in _sessions.Values.ToArray())
         {

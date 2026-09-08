@@ -18,19 +18,23 @@ namespace PDownloader.TorrentShell.Services;
 public sealed class TorrentShellService : IHostedService, IAsyncDisposable
 {
     private readonly TorrentShellConfig _config;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, DownloadItemDto> _latestProgress =
+        new(StringComparer.Ordinal);
     private ConfluxService? _channel;
-    private bool _started;
 
-    public TorrentShellService(TorrentShellConfig config) => _config = config;
+    public TorrentShellService(TorrentShellConfig config)
+    {
+        _config = config;
+    }
 
-    public TorrentShellSessionView Session { get; private set; } = new();
-    public event Action<DownloadItemDto>? ProgressChanged;
+    public event Action<DownloadItemDto>? ProgressReceived;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         var channel = new ConfluxService();
         channel.SetReady(false);
-        channel.Register(IpcTopology.CoreProcessName,
+        channel.Register(
+            IpcTopology.CoreProcessName,
             IpcTopology.TorrentShellToCorePipeName(_config.Token),
             IpcTopology.CoreToTorrentShellPipeName(_config.Token));
         channel.RegisterMessageHandler(AppProtocol.State, state =>
@@ -41,49 +45,101 @@ public sealed class TorrentShellService : IHostedService, IAsyncDisposable
                     new Action(() => Application.Current.Shutdown()));
             }
         });
-        channel.RegisterMessageHandler(AppProtocol.MainEvent,
+        channel.RegisterMessageHandler(
+            AppProtocol.MainEvent,
             TorrentShellCommandHandler.HandleMainEvent);
-        channel.RegisterMessageHandler(DownloadProtocol.Progress,
-            dto => ProgressChanged?.Invoke(dto));
+        channel.RegisterMessageHandler(
+            DownloadProtocol.Progress,
+            progress =>
+            {
+                _latestProgress[progress.Id] = progress;
+                ProgressReceived?.Invoke(progress);
+            });
         _channel = channel;
 
         await channel.StartServiceAsync().ConfigureAwait(false);
         await channel.WaitUntilReadyAsync(TimeSpan.FromSeconds(15), cancellationToken)
             .ConfigureAwait(false);
+
         IpcRequestResult<TorrentShellSessionView> result = await channel.RequestAsync(
             DownloadProtocol.TorrentShellGetSession,
-            TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
-        Session = result.Success && result.Value is not null
+            TimeSpan.FromSeconds(5),
+            cancellationToken).ConfigureAwait(false);
+        TorrentShellSessionView session = result.Success && result.Value is not null
             ? result.Value
             : throw new IOException(LanguageBase.GetLangValue(
-                "torrent_selector_metadata_error", result.Error ?? string.Empty));
-        _started = Session.IsStarted;
+                "torrent_shell_metadata_error",
+                result.Error ?? string.Empty));
+        _config.ApplySession(session);
     }
 
     public void SetReady(bool ready) => _channel?.SetReady(ready);
 
-    public async Task<bool> StartDownloadAsync(TorrentShellStartRequest request,
+    public bool TryGetLatestProgress(string downloadId, out DownloadItemDto? progress) =>
+        _latestProgress.TryGetValue(downloadId, out progress);
+
+    public async Task<TorrentShellStartResult> StartDownloadsAsync(
+        IReadOnlyCollection<int> selectedIndexes,
         CancellationToken cancellationToken = default)
     {
-        if (_channel is null || request.SelectedFileIndexes.Count == 0)
+        if (_channel is null || selectedIndexes.Count == 0)
         {
-            return false;
+            return new TorrentShellStartResult
+            {
+                Success = false,
+                Error = LanguageBase.GetLangValue("torrent_shell_select_one_error")
+            };
         }
 
-        bool sent = await _channel.SendAsync(DownloadProtocol.TorrentShellStart, request,
-            TimeSpan.FromSeconds(10), cancellationToken).ConfigureAwait(false);
-        if (sent)
+        IpcRequestResult<TorrentShellStartResult> result = await _channel.RequestAsync(
+            DownloadProtocol.TorrentShellStart,
+            new TorrentShellStartRequest
+            {
+                SelectedFileIndexes = selectedIndexes.ToList()
+            },
+            TimeSpan.FromSeconds(20),
+            cancellationToken).ConfigureAwait(false);
+
+        if (!result.Success || result.Value is null)
         {
-            _started = true;
+            return new TorrentShellStartResult
+            {
+                Success = false,
+                Error = result.Error ?? LanguageBase.GetLangValue(
+                    "torrent_shell_start_error")
+            };
         }
 
-        return sent;
+        if (result.Value.Success)
+        {
+            _config.HasStarted = true;
+        }
+
+        return result.Value;
     }
 
-    public void Pause() => _channel?.Send(DownloadProtocol.TorrentShellPause, TimeSpan.FromSeconds(30));
-    public void Resume() => _channel?.Send(DownloadProtocol.TorrentShellResume, TimeSpan.FromSeconds(30));
-    public void Retry() => _channel?.Send(DownloadProtocol.TorrentShellRetry, TimeSpan.FromSeconds(30));
-    public void Cancel() => _channel?.Send(DownloadProtocol.TorrentShellCancel, TimeSpan.FromSeconds(30));
+    public void Pause(string downloadId) => SendControl(DownloadProtocol.RunnerPause, downloadId);
+
+    public void Resume(string downloadId) => SendControl(DownloadProtocol.RunnerResume, downloadId);
+
+    public void Retry(string downloadId) => SendControl(DownloadProtocol.RunnerRetry, downloadId);
+
+    public void Cancel(string downloadId) => SendControl(DownloadProtocol.RunnerCancel, downloadId);
+
+    private void SendControl(
+        IpcMessageDefinition<DownloadIdRequest> definition,
+        string downloadId)
+    {
+        if (string.IsNullOrWhiteSpace(downloadId))
+        {
+            return;
+        }
+
+        _channel?.Send(
+            definition,
+            new DownloadIdRequest(downloadId),
+            TimeSpan.FromSeconds(30));
+    }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
@@ -96,23 +152,25 @@ public sealed class TorrentShellService : IHostedService, IAsyncDisposable
         try
         {
             await _channel.SendAsync(
-                _started ? DownloadProtocol.TorrentShellUiClosed
+                _config.HasStarted
+                    ? DownloadProtocol.TorrentShellUiClosed
                     : DownloadProtocol.TorrentShellCancelExperience,
-                TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                TimeSpan.FromSeconds(1),
+                cancellationToken).ConfigureAwait(false);
         }
         catch { }
-
-        await _channel.StopServiceAsync().ConfigureAwait(false);
+        finally
+        {
+            await _channel.StopServiceAsync().ConfigureAwait(false);
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_channel is null)
+        if (_channel is not null)
         {
-            return;
+            await _channel.DisposeAsync().ConfigureAwait(false);
+            _channel = null;
         }
-
-        await _channel.DisposeAsync().ConfigureAwait(false);
-        _channel = null;
     }
 }

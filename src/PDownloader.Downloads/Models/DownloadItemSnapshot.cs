@@ -48,13 +48,13 @@ public record DownloadItemSnapshot(
 
     public string TorrentInfoHash { get; init; } = string.Empty;
 
+    public string TorrentName { get; init; } = string.Empty;
+
     public int TorrentFileIndex { get; init; } = -1;
 
     public string TorrentRelativePath { get; init; } = string.Empty;
 
     public string TorrentDestinationPath { get; init; } = string.Empty;
-
-    public List<TorrentFileProgressDto> TorrentFiles { get; init; } = [];
 
     public static DownloadItemSnapshot From(DownloadItem i) => new(
         i.Id, i.Url, i.FileName, i.SavePath,
@@ -76,16 +76,16 @@ public record DownloadItemSnapshot(
         DownloadKind = i.DownloadKind.ToString(),
         DestinationFolder = i.DestinationFolder,
         TorrentInfoHash = i.TorrentInfoHash,
+        TorrentName = i.TorrentName,
         TorrentFileIndex = i.TorrentFileIndex,
         TorrentRelativePath = i.TorrentRelativePath,
-        TorrentDestinationPath = i.TorrentDestinationPath,
-        TorrentFiles = i.GetTorrentFilesSnapshot().ToList()
+        TorrentDestinationPath = i.TorrentDestinationPath
     };
 
     public DownloadItem ToDownloadItem()
     {
         DownloadStatus status = Enum.TryParse<DownloadStatus>(Status, out DownloadStatus s) ? s : DownloadStatus.Queued;
-        DownloadItem item = new()
+        return new DownloadItem
         {
             Id = Id,
             Url = Url,
@@ -101,6 +101,7 @@ public record DownloadItemSnapshot(
                 : PDownloader.Contracts.Downloads.DownloadKind.Http,
             DestinationFolder = DestinationFolder,
             TorrentInfoHash = TorrentInfoHash,
+            TorrentName = TorrentName,
             TorrentFileIndex = TorrentFileIndex,
             TorrentRelativePath = TorrentRelativePath,
             TorrentDestinationPath = TorrentDestinationPath,
@@ -119,7 +120,5 @@ public record DownloadItemSnapshot(
             StartTime = StartTime,
             EndTime = EndTime
         };
-        item.SetTorrentFiles(TorrentFiles ?? []);
-        return item;
     }
 }
