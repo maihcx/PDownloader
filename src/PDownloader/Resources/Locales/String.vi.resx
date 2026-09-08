@@ -330,6 +330,18 @@
   <data name="page_downloads_summary" xml:space="preserve">
     <value>Xem tệp đang và đã tải</value>
   </data>
+  <data name="page_torrents_title" xml:space="preserve">
+    <value>Torrent</value>
+  </data>
+  <data name="page_torrents_summary" xml:space="preserve">
+    <value>Xem các cụm torrent và những tệp bên trong</value>
+  </data>
+  <data name="page_torrents_empty_title" xml:space="preserve">
+    <value>Chưa có torrent</value>
+  </data>
+  <data name="page_torrents_empty_hint" xml:space="preserve">
+    <value>Mở tệp torrent hoặc liên kết magnet để bắt đầu</value>
+  </data>
   <data name="page_downloads_empty_title" xml:space="preserve">
     <value>Chưa có tải xuống</value>
   </data>

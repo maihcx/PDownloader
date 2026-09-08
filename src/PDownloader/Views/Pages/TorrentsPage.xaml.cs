@@ -15,7 +15,7 @@
 
 namespace PDownloader.Views.Pages;
 
-[PageMeta("page_torrents_title", "page_torrents_summary", SymbolRegular.Document24, 3, false)]
+[PageMeta("page_torrents_title", "page_torrents_summary", SymbolRegular.ArrowCircleDownSplit24, 3, false)]
 public partial class TorrentsPage : INavigableView<TorrentsViewModel>
 {
     public TorrentsViewModel ViewModel { get; }

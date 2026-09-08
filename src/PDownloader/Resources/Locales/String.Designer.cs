@@ -1121,6 +1121,42 @@ namespace PDownloader.Resources.Locales {
                 return ResourceManager.GetString("page_downloads_title", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to page_torrents_empty_hint.
+        /// </summary>
+        internal static string page_torrents_empty_hint {
+            get {
+                return ResourceManager.GetString("page_torrents_empty_hint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to page_torrents_empty_title.
+        /// </summary>
+        internal static string page_torrents_empty_title {
+            get {
+                return ResourceManager.GetString("page_torrents_empty_title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to page_torrents_summary.
+        /// </summary>
+        internal static string page_torrents_summary {
+            get {
+                return ResourceManager.GetString("page_torrents_summary", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to page_torrents_title.
+        /// </summary>
+        internal static string page_torrents_title {
+            get {
+                return ResourceManager.GetString("page_torrents_title", resourceCulture);
+            }
+        }
         
         /// <summary>
         ///   Looks up a localized string similar to page_home_summary.

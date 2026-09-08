@@ -330,6 +330,18 @@
   <data name="page_downloads_summary" xml:space="preserve">
     <value>View active and completed downloads</value>
   </data>
+  <data name="page_torrents_title" xml:space="preserve">
+    <value>Torrents</value>
+  </data>
+  <data name="page_torrents_summary" xml:space="preserve">
+    <value>View torrent groups and their files</value>
+  </data>
+  <data name="page_torrents_empty_title" xml:space="preserve">
+    <value>No torrents yet</value>
+  </data>
+  <data name="page_torrents_empty_hint" xml:space="preserve">
+    <value>Open a torrent file or magnet link to start</value>
+  </data>
   <data name="page_downloads_empty_title" xml:space="preserve">
     <value>No downloads yet</value>
   </data>

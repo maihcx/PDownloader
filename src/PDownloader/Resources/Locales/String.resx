@@ -330,6 +330,18 @@
   <data name="page_downloads_summary" xml:space="preserve">
     <value>page_downloads_summary</value>
   </data>
+  <data name="page_torrents_title" xml:space="preserve">
+    <value>page_torrents_title</value>
+  </data>
+  <data name="page_torrents_summary" xml:space="preserve">
+    <value>page_torrents_summary</value>
+  </data>
+  <data name="page_torrents_empty_title" xml:space="preserve">
+    <value>page_torrents_empty_title</value>
+  </data>
+  <data name="page_torrents_empty_hint" xml:space="preserve">
+    <value>page_torrents_empty_hint</value>
+  </data>
   <data name="page_downloads_empty_title" xml:space="preserve">
     <value>page_downloads_empty_title</value>
   </data>
