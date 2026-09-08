@@ -151,7 +151,8 @@
 
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <ui:CardExpander Margin="0,0,0,8">
+                    <ui:CardExpander Margin="0,0,0,8"
+                                     IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
                         <ui:CardExpander.Header>
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -220,25 +221,66 @@
                                                    ToolTip="{utils:Localization page_downloads_pause}"
                                                    Command="{Binding ViewModel.PauseGroupCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
                                                    CommandParameter="{Binding Mode=OneWay}"
-                                                   IsEnabled="{Binding CanPause, Mode=OneWay}" />
+                                                   Visibility="{Binding IsActive, Mode=OneWay, Converter={StaticResource BoolToVisConverter}}"
+                                                   IsEnabled="{Binding StatusState, Mode=OneWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=!~Connecting}" />
                                         <ui:Button Icon="{ui:SymbolIcon Play24}"
                                                    Margin="0,0,2,0"
                                                    ToolTip="{utils:Localization page_downloads_resume}"
                                                    Command="{Binding ViewModel.ResumeGroupCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
                                                    CommandParameter="{Binding Mode=OneWay}"
-                                                   IsEnabled="{Binding CanResume, Mode=OneWay}" />
-                                        <ui:Button Icon="{ui:SymbolIcon ArrowCounterclockwise24}"
-                                                   Margin="0,0,2,0"
-                                                   ToolTip="{utils:Localization page_downloads_retry}"
-                                                   Command="{Binding ViewModel.RetryGroupCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
-                                                   CommandParameter="{Binding Mode=OneWay}"
-                                                   IsEnabled="{Binding CanRetry, Mode=OneWay}" />
-                                        <ui:Button Icon="{ui:SymbolIcon Delete24}"
-                                                   Foreground="#AAEF5350"
-                                                   ToolTip="{utils:Localization page_downloads_cancel}"
-                                                   Command="{Binding ViewModel.CancelGroupCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
-                                                   CommandParameter="{Binding Mode=OneWay}"
-                                                   IsEnabled="{Binding CanCancel, Mode=OneWay}" />
+                                                   IsEnabled="{Binding CanResumeOrOpenFolder, Mode=OneWay}">
+                                            <ui:Button.Visibility>
+                                                <MultiBinding Converter="{StaticResource AndVisibilityConverter}" Mode="OneWay">
+                                                    <Binding Path="IsActive" Mode="OneWay"
+                                                             Converter="{StaticResource BoolToVisConverter}"
+                                                             ConverterParameter="invert" />
+                                                    <Binding Path="StatusState" Mode="OneWay"
+                                                             Converter="{StaticResource BoolToVisConverter}"
+                                                             ConverterParameter="!~Error" />
+                                                    <Binding Path="StatusState" Mode="OneWay"
+                                                             Converter="{StaticResource BoolToVisConverter}"
+                                                             ConverterParameter="!~Retrying" />
+                                                </MultiBinding>
+                                            </ui:Button.Visibility>
+                                        </ui:Button>
+
+                                        <StackPanel Orientation="Horizontal">
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="IsEnabled" Value="True" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Status, Mode=OneWay}"
+                                                                     Value="Merging">
+                                                            <Setter Property="IsEnabled" Value="False" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
+
+                                            <ui:Button Icon="{ui:SymbolIcon ArrowCounterclockwise24}"
+                                                       Margin="0,0,2,0"
+                                                       ToolTip="{utils:Localization page_downloads_retry}"
+                                                       Command="{Binding ViewModel.RetryGroupCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
+                                                       CommandParameter="{Binding Mode=OneWay}"
+                                                       IsEnabled="{Binding StatusState, Mode=OneWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Error}">
+                                                <ui:Button.Visibility>
+                                                    <MultiBinding Converter="{StaticResource OrVisibilityConverter}" Mode="OneWay">
+                                                        <Binding Path="StatusState" Mode="OneWay"
+                                                                 Converter="{StaticResource BoolToVisConverter}"
+                                                                 ConverterParameter="Error" />
+                                                        <Binding Path="StatusState" Mode="OneWay"
+                                                                 Converter="{StaticResource BoolToVisConverter}"
+                                                                 ConverterParameter="Retrying" />
+                                                    </MultiBinding>
+                                                </ui:Button.Visibility>
+                                            </ui:Button>
+
+                                            <ui:Button Icon="{ui:SymbolIcon Delete24}"
+                                                       Foreground="#AAEF5350"
+                                                       ToolTip="{utils:Localization page_downloads_cancel}"
+                                                       Command="{Binding ViewModel.CancelGroupCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
+                                                       CommandParameter="{Binding Mode=OneWay}" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
                             </Grid>
@@ -282,29 +324,73 @@
                                                                Margin="0,0,2,0"
                                                                ToolTip="{utils:Localization page_downloads_pause}"
                                                                Command="{Binding ViewModel.PauseCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
-                                                               CommandParameter="{Binding Mode=OneWay}"
-                                                               IsEnabled="{Binding CanPause, Mode=OneWay}" />
+                                                               CommandParameter="{Binding Snapshot, Mode=OneWay}"
+                                                               Visibility="{Binding IsActive, Mode=OneWay, Converter={StaticResource BoolToVisConverter}}"
+                                                               IsEnabled="{Binding StatusState, Mode=OneWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=!~Connecting}" />
                                                     <ui:Button Icon="{ui:SymbolIcon Play24}"
                                                                Margin="0,0,2,0"
                                                                ToolTip="{utils:Localization page_downloads_resume}"
                                                                Command="{Binding ViewModel.ResumeCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
-                                                               CommandParameter="{Binding Mode=OneWay}"
-                                                               IsEnabled="{Binding CanResumeOrOpenFile, Mode=OneWay}" />
-                                                    <ui:Button Icon="{ui:SymbolIcon ArrowCounterclockwise24}"
-                                                               Margin="0,0,2,0"
-                                                               ToolTip="{utils:Localization page_downloads_retry}"
-                                                               Command="{Binding ViewModel.RetryCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
-                                                               CommandParameter="{Binding Mode=OneWay}" />
-                                                    <ui:Button Icon="{ui:SymbolIcon FolderOpen24}"
-                                                               Margin="0,0,2,0"
-                                                               ToolTip="{utils:Localization page_downloads_open_folder}"
-                                                               Command="{Binding ViewModel.OpenFolderCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
-                                                               CommandParameter="{Binding Mode=OneWay}" />
-                                                    <ui:Button Icon="{ui:SymbolIcon Delete24}"
-                                                               Foreground="#AAEF5350"
-                                                               ToolTip="{utils:Localization page_downloads_cancel}"
-                                                               Command="{Binding ViewModel.CancelCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
-                                                               CommandParameter="{Binding Mode=OneWay}" />
+                                                               CommandParameter="{Binding Snapshot, Mode=OneWay}"
+                                                               IsEnabled="{Binding CanResumeOrOpenFile, Mode=OneWay}">
+                                                        <ui:Button.Visibility>
+                                                            <MultiBinding Converter="{StaticResource AndVisibilityConverter}" Mode="OneWay">
+                                                                <Binding Path="IsActive" Mode="OneWay"
+                                                                         Converter="{StaticResource BoolToVisConverter}"
+                                                                         ConverterParameter="invert" />
+                                                                <Binding Path="StatusState" Mode="OneWay"
+                                                                         Converter="{StaticResource BoolToVisConverter}"
+                                                                         ConverterParameter="!~Error" />
+                                                                <Binding Path="StatusState" Mode="OneWay"
+                                                                         Converter="{StaticResource BoolToVisConverter}"
+                                                                         ConverterParameter="!~Retrying" />
+                                                            </MultiBinding>
+                                                        </ui:Button.Visibility>
+                                                    </ui:Button>
+
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <StackPanel.Style>
+                                                            <Style TargetType="StackPanel">
+                                                                <Setter Property="IsEnabled" Value="True" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Status, Mode=OneWay}"
+                                                                                 Value="Merging">
+                                                                        <Setter Property="IsEnabled" Value="False" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </StackPanel.Style>
+
+                                                        <ui:Button Icon="{ui:SymbolIcon ArrowCounterclockwise24}"
+                                                                   Margin="0,0,2,0"
+                                                                   ToolTip="{utils:Localization page_downloads_retry}"
+                                                                   Command="{Binding ViewModel.RetryCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
+                                                                   CommandParameter="{Binding Snapshot, Mode=OneWay}"
+                                                                   IsEnabled="{Binding StatusState, Mode=OneWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Error}">
+                                                            <ui:Button.Visibility>
+                                                                <MultiBinding Converter="{StaticResource OrVisibilityConverter}" Mode="OneWay">
+                                                                    <Binding Path="StatusState" Mode="OneWay"
+                                                                             Converter="{StaticResource BoolToVisConverter}"
+                                                                             ConverterParameter="Error" />
+                                                                    <Binding Path="StatusState" Mode="OneWay"
+                                                                             Converter="{StaticResource BoolToVisConverter}"
+                                                                             ConverterParameter="Retrying" />
+                                                                </MultiBinding>
+                                                            </ui:Button.Visibility>
+                                                        </ui:Button>
+
+                                                        <ui:Button Icon="{ui:SymbolIcon FolderOpen24}"
+                                                                   Margin="0,0,2,0"
+                                                                   ToolTip="{utils:Localization page_downloads_open_folder}"
+                                                                   Command="{Binding ViewModel.OpenFolderCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
+                                                                   CommandParameter="{Binding Snapshot, Mode=OneWay}"
+                                                                   IsEnabled="{Binding StatusState, Mode=OneWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Completed}" />
+                                                        <ui:Button Icon="{ui:SymbolIcon Delete24}"
+                                                                   Foreground="#AAEF5350"
+                                                                   ToolTip="{utils:Localization page_downloads_cancel}"
+                                                                   Command="{Binding ViewModel.CancelCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
+                                                                   CommandParameter="{Binding Snapshot, Mode=OneWay}" />
+                                                    </StackPanel>
                                                 </StackPanel>
 
                                                 <ProgressBar Grid.Row="1"

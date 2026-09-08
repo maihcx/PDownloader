@@ -16,8 +16,68 @@
 namespace PDownloader.Models;
 
 /// <summary>
-/// Represents one item for regular downloads and one expandable torrent cluster
-/// for every set of files sharing an info hash.
+/// Stable UI projection for one torrent file. Progress snapshots can change
+/// without replacing the ItemsControl item/container which displays the file.
+/// </summary>
+public partial class TorrentDownloadItemViewModel : ObservableObject
+{
+    [ObservableProperty]
+    private DownloadItemViewModel _snapshot;
+
+    public TorrentDownloadItemViewModel(DownloadItemViewModel snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        _snapshot = snapshot;
+        _snapshot.PropertyChanged += Snapshot_PropertyChanged;
+    }
+
+    public string Id => Snapshot.Id;
+    public string FileName => Snapshot.FileName;
+    public string TorrentRelativePath => Snapshot.TorrentRelativePath;
+    public string SavePath => Snapshot.SavePath;
+    public string Url => Snapshot.Url;
+    public string Status => Snapshot.Status;
+    public DownloadStatus StatusState => Snapshot.StatusState;
+    public string StatusText => Snapshot.StatusText;
+    public double Progress => Snapshot.Progress;
+    public long TotalBytes => Snapshot.TotalBytes;
+    public long DownloadedBytes => Snapshot.DownloadedBytes;
+    public double SpeedBps => Snapshot.SpeedBps;
+    public string TotalFormatted => Snapshot.TotalFormatted;
+    public string DownloadedFormatted => Snapshot.DownloadedFormatted;
+    public string SpeedFormatted => Snapshot.SpeedFormatted;
+    public bool IsActive => Snapshot.IsActive;
+    public bool CanPause => Snapshot.CanPause;
+    public bool CanResume => Snapshot.CanResume;
+    public bool CanResumeOrOpenFile => Snapshot.CanResumeOrOpenFile;
+
+    public void Update(DownloadItemViewModel snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        Snapshot = snapshot;
+    }
+
+    partial void OnSnapshotChanging(DownloadItemViewModel value)
+    {
+        if (_snapshot is not null)
+        {
+            _snapshot.PropertyChanged -= Snapshot_PropertyChanged;
+        }
+    }
+
+    partial void OnSnapshotChanged(DownloadItemViewModel value)
+    {
+        value.PropertyChanged += Snapshot_PropertyChanged;
+        OnPropertyChanged(string.Empty);
+    }
+
+    private void Snapshot_PropertyChanged(object? sender, PropertyChangedEventArgs e) =>
+        OnPropertyChanged(string.Empty);
+}
+
+/// <summary>
+/// Stable projection for a torrent and its child files. UI state such as the
+/// CardExpander expansion is owned here instead of by a recycled container.
 /// </summary>
 public partial class DownloadGroupViewModel : ObservableObject
 {
@@ -29,30 +89,70 @@ public partial class DownloadGroupViewModel : ObservableObject
     }
 
     public string Key { get; }
-
     public bool IsTorrentGroup { get; }
+    public ObservableCollection<TorrentDownloadItemViewModel> Items { get; } = [];
 
-    public ObservableCollection<DownloadItemViewModel> Items { get; } = [];
+    [ObservableProperty]
+    private bool _isExpanded;
 
-    [ObservableProperty] private string _title = string.Empty;
-    [ObservableProperty] private string _subtitle = string.Empty;
-    [ObservableProperty] private string _itemCountText = string.Empty;
-    [ObservableProperty] private DateTime _startTime;
-    [ObservableProperty] private DateTime _endTime;
-    [ObservableProperty] private long _totalBytes;
-    [ObservableProperty] private long _downloadedBytes;
-    [ObservableProperty] private double _speedBps;
-    [ObservableProperty] private double _progress;
-    [ObservableProperty] private DownloadStatus _statusState;
-    [ObservableProperty] private string _status = string.Empty;
-    [ObservableProperty] private string _statusText = string.Empty;
-    [ObservableProperty] private string _totalFormatted = "0 B";
-    [ObservableProperty] private string _downloadedFormatted = "0 B";
-    [ObservableProperty] private string _speedFormatted = "0 B/s";
-    [ObservableProperty] private bool _canPause;
-    [ObservableProperty] private bool _canResume;
-    [ObservableProperty] private bool _canRetry;
-    [ObservableProperty] private bool _canCancel;
+    [ObservableProperty]
+    private string _title = string.Empty;
+
+    [ObservableProperty]
+    private string _subtitle = string.Empty;
+
+    [ObservableProperty]
+    private string _itemCountText = string.Empty;
+
+    [ObservableProperty]
+    private double _progress;
+
+    [ObservableProperty]
+    private long _totalBytes;
+
+    [ObservableProperty]
+    private DateTime _startTime;
+
+    [ObservableProperty]
+    private DateTime _endTime;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Status))]
+    [NotifyPropertyChangedFor(nameof(CanResumeOrOpenFolder))]
+    private DownloadStatus _statusState;
+
+    [ObservableProperty]
+    private string _statusText = string.Empty;
+
+    [ObservableProperty]
+    private string _downloadedFormatted = string.Empty;
+
+    [ObservableProperty]
+    private string _totalFormatted = string.Empty;
+
+    [ObservableProperty]
+    private string _speedFormatted = string.Empty;
+
+    [ObservableProperty]
+    private bool _isActive;
+
+    [ObservableProperty]
+    private bool _canPause;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanResumeOrOpenFolder))]
+    private bool _canResume;
+
+    [ObservableProperty]
+    private bool _canRetry;
+
+    public bool HasItems => Items.Count > 0;
+    public string Status => StatusState.ToString();
+    public bool CanResumeOrOpenFolder =>
+        CanResume || StatusState == DownloadStatus.Completed;
+
+    public IEnumerable<DownloadItemViewModel> Snapshots =>
+        Items.Select(item => item.Snapshot);
 
     public static string GetKey(DownloadItemViewModel item) =>
         item.IsTorrent && !string.IsNullOrWhiteSpace(item.TorrentInfoHash)
@@ -62,85 +162,128 @@ public partial class DownloadGroupViewModel : ObservableObject
     public static bool IsTorrentKey(string key) =>
         key.StartsWith("torrent:", StringComparison.Ordinal);
 
-    public void Upsert(DownloadItemViewModel item)
+    public bool ContainsKeyword(string keyword)
     {
-        DownloadItemViewModel? existing = Items.FirstOrDefault(candidate => candidate.Id == item.Id);
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return true;
+        }
+
+        return Contains(Title, keyword)
+            || Contains(Subtitle, keyword)
+            || Items.Any(item => Contains(item.FileName, keyword)
+                || Contains(item.TorrentRelativePath, keyword)
+                || Contains(item.SavePath, keyword)
+                || Contains(item.Url, keyword)
+                || Contains(item.StatusText, keyword));
+    }
+
+    /// <returns>True when a child was added; false when an existing child was updated.</returns>
+    public bool Upsert(DownloadItemViewModel snapshot)
+    {
+        TorrentDownloadItemViewModel? existing =
+            Items.FirstOrDefault(item => item.Id == snapshot.Id);
+        bool added = existing is null;
         if (existing is null)
         {
-            Items.Add(item);
+            Items.Add(new TorrentDownloadItemViewModel(snapshot));
         }
         else
         {
-            Items[Items.IndexOf(existing)] = item;
+            existing.Update(snapshot);
         }
 
-        Refresh();
+        RefreshAggregate();
+        return added;
     }
 
-    public void Remove(string downloadId)
+    public bool Remove(string downloadId)
     {
-        DownloadItemViewModel? item = Items.FirstOrDefault(candidate => candidate.Id == downloadId);
-        if (item is not null)
+        TorrentDownloadItemViewModel? item =
+            Items.FirstOrDefault(candidate => candidate.Id == downloadId);
+        if (item is null)
+        {
+            return false;
+        }
+
+        Items.Remove(item);
+        RefreshAggregate();
+        return true;
+    }
+
+    public bool Retain(IReadOnlySet<string> downloadIds)
+    {
+        bool changed = false;
+        foreach (TorrentDownloadItemViewModel item in Items
+                     .Where(item => !downloadIds.Contains(item.Id))
+                     .ToArray())
         {
             Items.Remove(item);
-            Refresh();
+            changed = true;
         }
+
+        if (changed)
+        {
+            RefreshAggregate();
+        }
+
+        return changed;
     }
 
-    public bool ContainsKeyword(string keyword) =>
-        Contains(Title, keyword)
-        || Contains(Subtitle, keyword)
-        || Items.Any(item =>
-            Contains(item.FileName, keyword)
-            || Contains(item.TorrentRelativePath, keyword)
-            || Contains(item.Url, keyword)
-            || Contains(item.StatusText, keyword)
-            || Contains(item.ErrorMessage, keyword)
-            || Contains(item.SavePath, keyword));
-
-    private void Refresh()
+    private void RefreshAggregate()
     {
+        OnPropertyChanged(nameof(HasItems));
         if (Items.Count == 0)
         {
+            Title = string.Empty;
+            Subtitle = string.Empty;
+            ItemCountText = string.Empty;
+            Progress = 0;
+            TotalBytes = 0;
+            StartTime = default;
+            EndTime = default;
+            StatusState = DownloadStatus.Cancelled;
+            StatusText = string.Empty;
+            DownloadedFormatted = FormatBytes(0);
+            TotalFormatted = FormatBytes(0);
+            SpeedFormatted = FormatSpeed(0);
+            IsActive = false;
+            CanPause = false;
+            CanResume = false;
+            CanRetry = false;
             return;
         }
 
-        DownloadItemViewModel first = Items[0];
-        Title = IsTorrentGroup && !string.IsNullOrWhiteSpace(first.TorrentName)
+        DownloadItemViewModel first = Items[0].Snapshot;
+        Title = !string.IsNullOrWhiteSpace(first.TorrentName)
             ? first.TorrentName
             : first.FileName;
-        Subtitle = IsTorrentGroup
-            ? first.TorrentInfoHash
-            : first.Url;
-        ItemCountText = LanguageBase.GetLangValue("task_num_title", Items.Count);
-        StartTime = Items.Min(item => item.StartTime);
-        EndTime = Items.Max(item => item.EndTime);
+        Subtitle = first.TorrentInfoHash;
+        ItemCountText = LanguageBase.GetLangValue(
+            "page_torrents_file_count",
+            Items.Count);
+
         TotalBytes = Items.Sum(item => Math.Max(0, item.TotalBytes));
-        DownloadedBytes = Items.Sum(item => Math.Max(0, item.DownloadedBytes));
-        SpeedBps = Items.Sum(item => Math.Max(0, item.SpeedBps));
+        long downloadedBytes = Items.Sum(item => Math.Max(0, item.DownloadedBytes));
         Progress = TotalBytes > 0
-            ? Math.Clamp((double)DownloadedBytes / TotalBytes * 100, 0, 100)
-            : Items.Average(item => item.Progress);
-        StatusState = ResolveStatus();
-        Status = StatusState.ToString();
-        StatusText = ResolveStatusText(StatusState);
+            ? Math.Clamp(downloadedBytes * 100d / TotalBytes, 0d, 100d)
+            : Items.Average(item => Math.Clamp(item.Progress, 0d, 100d));
+        DownloadedFormatted = FormatBytes(downloadedBytes);
         TotalFormatted = FormatBytes(TotalBytes);
-        DownloadedFormatted = FormatBytes(DownloadedBytes);
-        SpeedFormatted = $"{FormatBytes((long)SpeedBps)}/s";
+        SpeedFormatted = FormatSpeed(Items.Sum(item => Math.Max(0d, item.SpeedBps)));
+        StartTime = Items.Min(item => item.Snapshot.StartTime);
+        EndTime = Items.Max(item => item.Snapshot.EndTime);
+
+        IsActive = Items.Any(item => item.IsActive);
         CanPause = Items.Any(item => item.CanPause);
         CanResume = Items.Any(item => item.CanResume);
         CanRetry = Items.Any(item => item.StatusState == DownloadStatus.Error);
-        CanCancel = Items.Any(item => item.StatusState is not DownloadStatus.Completed
-            and not DownloadStatus.Cancelled);
+        StatusState = GetAggregateStatus();
+        RefreshStatusText();
     }
 
-    private DownloadStatus ResolveStatus()
+    private DownloadStatus GetAggregateStatus()
     {
-        if (Items.All(item => item.StatusState == DownloadStatus.Completed))
-        {
-            return DownloadStatus.Completed;
-        }
-
         DownloadStatus[] priority =
         [
             DownloadStatus.Error,
@@ -148,38 +291,47 @@ public partial class DownloadGroupViewModel : ObservableObject
             DownloadStatus.Merging,
             DownloadStatus.Downloading,
             DownloadStatus.Connecting,
+            DownloadStatus.Queued,
             DownloadStatus.Paused,
-            DownloadStatus.Queued
+            DownloadStatus.Completed
         ];
-        return priority.FirstOrDefault(status => Items.Any(item => item.StatusState == status));
+
+        return priority.FirstOrDefault(status =>
+            Items.Any(item => item.StatusState == status));
     }
 
-    private string ResolveStatusText(DownloadStatus status)
+    private void RefreshStatusText()
     {
-        string key = status switch
-        {
-            DownloadStatus.Queued => "download_status_queued_title",
-            DownloadStatus.Connecting => "download_status_connecting_title",
-            DownloadStatus.Downloading => "download_status_downloading_title",
-            DownloadStatus.Paused => "download_status_paused_title",
-            DownloadStatus.Merging => "download_status_merging_title",
-            DownloadStatus.Completed => "download_status_completed_title",
-            DownloadStatus.Retrying => "download_status_retrying_title",
-            DownloadStatus.Error => "download_status_error_title",
-            _ => "download_status_queued_title"
-        };
-        string error = Items.FirstOrDefault(item => item.StatusState == status)?.ErrorMessage
-            ?? string.Empty;
-        return status is DownloadStatus.Error or DownloadStatus.Retrying
-            ? LanguageBase.GetLangValue(key, error)
-            : LanguageBase.GetLangValue(key);
+        StatusText = LanguageBase.GetLangValue(
+            StatusState switch
+            {
+                DownloadStatus.Queued => "download_status_queued_title",
+                DownloadStatus.Connecting => "download_status_connecting_title",
+                DownloadStatus.Downloading => "download_status_downloading_title",
+                DownloadStatus.Paused => "download_status_paused_title",
+                DownloadStatus.Merging => "download_status_merging_title",
+                DownloadStatus.Completed => "download_status_completed_title",
+                DownloadStatus.Retrying => "download_status_retrying_title",
+                DownloadStatus.Error => "download_status_error_title",
+                _ => "?"
+            },
+            string.Empty);
     }
 
-    private void LanguageBase_LanguageChanged(string language) => Refresh();
+    private void LanguageBase_LanguageChanged(string language)
+    {
+        ItemCountText = LanguageBase.GetLangValue(
+            "page_torrents_file_count",
+            Items.Count);
+        RefreshStatusText();
+    }
 
     private static bool Contains(string? value, string keyword) =>
         !string.IsNullOrWhiteSpace(value)
         && value.Contains(keyword, StringComparison.CurrentCultureIgnoreCase);
+
+    private static string FormatSpeed(double bytesPerSecond) =>
+        $"{FormatBytes((long)Math.Max(0, bytesPerSecond))}/s";
 
     private static string FormatBytes(long bytes)
     {

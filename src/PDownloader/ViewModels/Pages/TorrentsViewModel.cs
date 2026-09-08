@@ -18,6 +18,7 @@ namespace PDownloader.ViewModels.Pages;
 public partial class TorrentsViewModel : ObservableObject, INavigationAware
 {
     private bool _isInitialized = false;
+    private bool _isRefreshRunning;
 
     public ObservableCollection<DownloadGroupViewModel> DownloadGroups { get; } = new();
 
@@ -98,14 +99,16 @@ public partial class TorrentsViewModel : ObservableObject, INavigationAware
         return Task.CompletedTask;
     }
 
-    public void RequestRefresh()
+    public void RequestRefresh(bool force = false)
     {
-        if (!_isInitialized)
+        if (_isRefreshRunning || (_isInitialized && !force))
         {
-            IsLoading = true;
-            _isInitialized = true;
-            _ = RequestRefreshAsync();
+            return;
         }
+
+        IsLoading = true;
+        _isRefreshRunning = true;
+        _ = RequestRefreshAsync();
     }
 
     private async Task RequestRefreshAsync()
@@ -114,16 +117,29 @@ public partial class TorrentsViewModel : ObservableObject, INavigationAware
         if (coreService is null)
         {
             IsLoading = false;
+            _isRefreshRunning = false;
             _isInitialized = false;
             return;
         }
 
-        IpcRequestResult<List<DownloadItemDto>> result =
-            await coreService.RequestAsync(DownloadProtocol.GetList);
+        IpcRequestResult<List<DownloadItemDto>> result;
+        try
+        {
+            result = await coreService.RequestAsync(DownloadProtocol.GetList);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[TorrentsPage] Refresh failed: {ex.Message}");
+            IsLoading = false;
+            _isRefreshRunning = false;
+            _isInitialized = false;
+            return;
+        }
 
         if (!result.Success || result.Value is null)
         {
             IsLoading = false;
+            _isRefreshRunning = false;
             _isInitialized = false;
             return;
         }
@@ -240,9 +256,13 @@ public partial class TorrentsViewModel : ObservableObject, INavigationAware
         StatusText = LanguageBase.GetLangValue("task_num_title", visibleCount);
     }
 
-    private void RefreshFilteredView()
+    private void RefreshFilteredView(bool refreshCollectionView)
     {
-        DownloadsView.Refresh();
+        if (refreshCollectionView || !string.IsNullOrWhiteSpace(SearchText))
+        {
+            DownloadsView.Refresh();
+        }
+
         UpdateViewState();
     }
 
@@ -250,14 +270,38 @@ public partial class TorrentsViewModel : ObservableObject, INavigationAware
     {
         App.Current.Dispatcher.Invoke(() =>
         {
-            DownloadGroups.Clear();
+            bool structureChanged = false;
+            var incomingIds = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             foreach (DownloadItemViewModel item in items.Where(item => item.IsTorrent))
             {
-                UpsertGroup(item, insertFirst: false);
+                string key = DownloadGroupViewModel.GetKey(item);
+                if (!incomingIds.TryGetValue(key, out HashSet<string>? ids))
+                {
+                    ids = new HashSet<string>(StringComparer.Ordinal);
+                    incomingIds[key] = ids;
+                }
+
+                ids.Add(item.Id);
+                structureChanged |= UpsertGroup(item, insertFirst: false);
             }
 
+            foreach (DownloadGroupViewModel group in DownloadGroups.ToArray())
+            {
+                if (incomingIds.TryGetValue(group.Key, out HashSet<string>? ids))
+                {
+                    group.Retain(ids);
+                }
+                else
+                {
+                    DownloadGroups.Remove(group);
+                    structureChanged = true;
+                }
+            }
+
+            _isInitialized = true;
+            _isRefreshRunning = false;
             IsLoading = false;
-            RefreshFilteredView();
+            RefreshFilteredView(structureChanged);
         });
     }
 
@@ -273,6 +317,7 @@ public partial class TorrentsViewModel : ObservableObject, INavigationAware
             string key = DownloadGroupViewModel.GetKey(item);
             DownloadGroupViewModel? group = DownloadGroups.FirstOrDefault(candidate => candidate.Key == key)
                 ?? DownloadGroups.FirstOrDefault(candidate => candidate.Items.Any(child => child.Id == item.Id));
+            bool structureChanged = false;
 
             if (item.StatusState == DownloadStatus.Cancelled)
             {
@@ -282,22 +327,24 @@ public partial class TorrentsViewModel : ObservableObject, INavigationAware
                     if (group.Items.Count == 0)
                     {
                         DownloadGroups.Remove(group);
+                        structureChanged = true;
                     }
                 }
             }
             else
             {
-                UpsertGroup(item, insertFirst: group is null);
+                structureChanged = UpsertGroup(item, insertFirst: group is null);
             }
 
-            RefreshFilteredView();
+            RefreshFilteredView(structureChanged);
         });
     }
 
-    private void UpsertGroup(DownloadItemViewModel item, bool insertFirst)
+    private bool UpsertGroup(DownloadItemViewModel item, bool insertFirst)
     {
         string key = DownloadGroupViewModel.GetKey(item);
         DownloadGroupViewModel? group = DownloadGroups.FirstOrDefault(candidate => candidate.Key == key);
+        bool groupAdded = group is null;
         if (group is null)
         {
             group = new DownloadGroupViewModel(key, DownloadGroupViewModel.IsTorrentKey(key));
@@ -306,6 +353,7 @@ public partial class TorrentsViewModel : ObservableObject, INavigationAware
         }
 
         group.Upsert(item);
+        return groupAdded;
     }
 
     [RelayCommand]
@@ -363,29 +411,36 @@ public partial class TorrentsViewModel : ObservableObject, INavigationAware
     private void PauseGroup(DownloadGroupViewModel? group)
     {
         if (group is null) return;
-        foreach (DownloadItemViewModel item in group.Items.Where(item => item.CanPause).ToArray()) Pause(item);
+        foreach (DownloadItemViewModel item in group.Snapshots.Where(item => item.CanPause).ToArray()) Pause(item);
     }
 
     [RelayCommand]
     private void ResumeGroup(DownloadGroupViewModel? group)
     {
         if (group is null) return;
-        foreach (DownloadItemViewModel item in group.Items.Where(item => item.CanResume).ToArray()) Resume(item);
+
+        if (group.StatusState == DownloadStatus.Completed)
+        {
+            OpenFolder(group.Snapshots.FirstOrDefault());
+            return;
+        }
+
+        foreach (DownloadItemViewModel item in group.Snapshots.Where(item => item.CanResume).ToArray()) Resume(item);
     }
 
     [RelayCommand]
     private void RetryGroup(DownloadGroupViewModel? group)
     {
         if (group is null) return;
-        foreach (DownloadItemViewModel item in group.Items.Where(item => item.StatusState == DownloadStatus.Error).ToArray()) Retry(item);
+        foreach (DownloadItemViewModel item in group.Snapshots
+                     .Where(item => item.StatusState == DownloadStatus.Error).ToArray()) Retry(item);
     }
 
     [RelayCommand]
     private void CancelGroup(DownloadGroupViewModel? group)
     {
         if (group is null) return;
-        foreach (DownloadItemViewModel item in group.Items
-            .Where(item => item.StatusState is not DownloadStatus.Completed and not DownloadStatus.Cancelled).ToArray()) Cancel(item);
+        foreach (DownloadItemViewModel item in group.Snapshots.ToArray()) Cancel(item);
     }
 
     [RelayCommand]
@@ -538,7 +593,7 @@ public partial class TorrentsViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void Refresh()
     {
-        RequestRefresh();
+        RequestRefresh(force: true);
     }
 
     [RelayCommand]
