@@ -1,3 +1,30 @@
+## v1.2.0
+
+## 🚀 Changelog
+## 🚀 Features
+
+- [torrentshell] Add TorrentShell UI and aggregate torrent workflow (#253) — @maihcx
+
+## 🐛 Bug Fixes
+
+- [download] Detect stalled torrent file downloads (#262) — @maihcx
+- [download] Use registeredPreparations; disable magnet metadata cache (#261) — @maihcx
+- [download] Improve magnet metadata retrieval (#259) — @maihcx
+- [core] Lazy-init torrent engine and lifecycle fixes (#256) — @maihcx
+
+## ⚡ Performance
+
+- [download] Per-source preparation locks and graceful draining (#260) — @maihcx
+
+## 🧹 Maintenance
+
+- [core] Clean up unused torrent usings (#258) — @maihcx
+- [torrentshell] Restore torrent progress & manage progress shell (#257) — @maihcx
+- [deps] Bump Microsoft.Extensions.Hosting (#255) — @maihcx
+
+
+---
+
 ## v1.1.0
 
 ## 🚀 Changelog
