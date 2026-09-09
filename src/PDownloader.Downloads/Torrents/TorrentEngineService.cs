@@ -36,17 +36,21 @@ public sealed class TorrentEngineService : IAsyncDisposable
     private readonly string _stagingRoot;
     private readonly ConcurrentDictionary<string, TorrentPreparation> _preparations =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, PreparationLockEntry> _preparationLocks =
+        new(StringComparer.Ordinal);
+    private readonly object _preparationLocksSync = new();
     private readonly Dictionary<string, TorrentBatch> _batches =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _reservedDestinationPaths =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly SemaphoreSlim _preparationGate = new(1, 1);
     private readonly CancellationTokenSource _shutdown = new();
     private ClientEngine? _engine;
     private TaskCompletionSource? _downloadsDrained;
+    private TaskCompletionSource? _preparationsDrained;
     private int _metadataEngineUsers;
     private int _activeDownloads;
+    private int _activePreparations;
     private int _disposed;
 
     public TorrentEngineService()
@@ -69,15 +73,73 @@ public sealed class TorrentEngineService : IAsyncDisposable
             cancellationToken,
             _shutdown.Token);
         CancellationToken operationToken = operationCancellation.Token;
-        await _preparationGate.WaitAsync(operationToken).ConfigureAwait(false);
+        await BeginPreparationAsync(operationToken).ConfigureAwait(false);
+        PreparationLockEntry? preparationLock = null;
+        bool lockEntered = false;
         try
         {
+            string preparationKey = GetPreparationKey(source);
+            preparationLock = RentPreparationLock(preparationKey);
+            await preparationLock.Semaphore.WaitAsync(operationToken).ConfigureAwait(false);
+            lockEntered = true;
             return await PrepareCoreAsync(source, headers, operationToken)
                 .ConfigureAwait(false);
         }
         finally
         {
-            _preparationGate.Release();
+            if (preparationLock is not null)
+            {
+                ReturnPreparationLock(preparationLock, lockEntered);
+            }
+
+            await EndPreparationAsync().ConfigureAwait(false);
+        }
+    }
+
+    private static string GetPreparationKey(string source)
+    {
+        string normalizedSource = source.Trim();
+        if (DownloadSource.IsMagnet(normalizedSource)
+            && MagnetLink.TryParse(normalizedSource, out MagnetLink? magnet))
+        {
+            return $"magnet:{magnet.InfoHashes.V1OrV2.ToHex()}";
+        }
+
+        return $"source:{normalizedSource}";
+    }
+
+    private PreparationLockEntry RentPreparationLock(string key)
+    {
+        lock (_preparationLocksSync)
+        {
+            if (!_preparationLocks.TryGetValue(key, out PreparationLockEntry? entry))
+            {
+                entry = new PreparationLockEntry(key);
+                _preparationLocks.Add(key, entry);
+            }
+
+            entry.Users++;
+            return entry;
+        }
+    }
+
+    private void ReturnPreparationLock(PreparationLockEntry entry, bool lockEntered)
+    {
+        if (lockEntered)
+        {
+            entry.Semaphore.Release();
+        }
+
+        lock (_preparationLocksSync)
+        {
+            entry.Users--;
+            if (entry.Users != 0)
+            {
+                return;
+            }
+
+            _preparationLocks.Remove(entry.Key);
+            entry.Semaphore.Dispose();
         }
     }
 
@@ -261,25 +323,10 @@ public sealed class TorrentEngineService : IAsyncDisposable
             return cached;
         }
 
-        await _preparationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        TorrentPreparation preparation;
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(item.TorrentInfoHash)
-                && _preparations.TryGetValue(item.TorrentInfoHash, out cached))
-            {
-                return cached;
-            }
-
-            preparation = await PrepareCoreAsync(
-                item.Url,
-                item.CustomHeaders,
-                cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            _preparationGate.Release();
-        }
+        TorrentPreparation preparation = await PrepareAsync(
+            item.Url,
+            item.CustomHeaders,
+            cancellationToken).ConfigureAwait(false);
         if (!string.IsNullOrWhiteSpace(item.TorrentInfoHash)
             && !string.Equals(item.TorrentInfoHash, preparation.InfoHash,
                 StringComparison.OrdinalIgnoreCase))
@@ -506,6 +553,20 @@ public sealed class TorrentEngineService : IAsyncDisposable
         }
     }
 
+    private async Task BeginPreparationAsync(CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(_disposed != 0, this);
+            _activePreparations++;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     private async Task EndDownloadAsync()
     {
         await _gate.WaitAsync().ConfigureAwait(false);
@@ -520,6 +581,30 @@ public sealed class TorrentEngineService : IAsyncDisposable
             {
                 _downloadsDrained?.TrySetResult();
                 _downloadsDrained = null;
+            }
+
+            DisposeEngineIfIdle();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private async Task EndPreparationAsync()
+    {
+        await _gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_activePreparations > 0)
+            {
+                _activePreparations--;
+            }
+
+            if (_activePreparations == 0)
+            {
+                _preparationsDrained?.TrySetResult();
+                _preparationsDrained = null;
             }
 
             DisposeEngineIfIdle();
@@ -863,6 +948,7 @@ public sealed class TorrentEngineService : IAsyncDisposable
         }
 
         Task downloadsDrained;
+        Task preparationsDrained;
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -876,14 +962,24 @@ public sealed class TorrentEngineService : IAsyncDisposable
                     TaskCreationOptions.RunContinuationsAsynchronously);
                 downloadsDrained = _downloadsDrained.Task;
             }
+
+            if (_activePreparations == 0)
+            {
+                preparationsDrained = Task.CompletedTask;
+            }
+            else
+            {
+                _preparationsDrained ??= new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                preparationsDrained = _preparationsDrained.Task;
+            }
         }
         finally
         {
             _gate.Release();
         }
 
-        await downloadsDrained.ConfigureAwait(false);
-        await _preparationGate.WaitAsync().ConfigureAwait(false);
+        await Task.WhenAll(downloadsDrained, preparationsDrained).ConfigureAwait(false);
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -908,13 +1004,20 @@ public sealed class TorrentEngineService : IAsyncDisposable
             _metadataEngineUsers = 0;
             DisposeEngineIfIdle();
             _preparations.Clear();
+            lock (_preparationLocksSync)
+            {
+                foreach (PreparationLockEntry preparationLock in _preparationLocks.Values)
+                {
+                    preparationLock.Semaphore.Dispose();
+                }
+
+                _preparationLocks.Clear();
+            }
         }
         finally
         {
             _gate.Release();
-            _preparationGate.Release();
             _gate.Dispose();
-            _preparationGate.Dispose();
             _shutdown.Dispose();
         }
     }
@@ -930,6 +1033,18 @@ public sealed class TorrentEngineService : IAsyncDisposable
         public string InfoHash { get; }
         public TorrentManager Manager { get; }
         public HashSet<int> ActiveFileIndexes { get; } = [];
+    }
+
+    private sealed class PreparationLockEntry
+    {
+        public PreparationLockEntry(string key)
+        {
+            Key = key;
+        }
+
+        public string Key { get; }
+        public SemaphoreSlim Semaphore { get; } = new(1, 1);
+        public int Users { get; set; }
     }
 
     private sealed record TorrentAttachment(
