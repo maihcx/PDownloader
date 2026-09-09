@@ -637,6 +637,141 @@ namespace PDownloader.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_add.
+        /// </summary>
+        internal static string page_config_groups_add {
+            get {
+                return ResourceManager.GetString("page_config_groups_add", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_enabled_summary.
+        /// </summary>
+        internal static string page_config_groups_enabled_summary {
+            get {
+                return ResourceManager.GetString("page_config_groups_enabled_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_enabled_title.
+        /// </summary>
+        internal static string page_config_groups_enabled_title {
+            get {
+                return ResourceManager.GetString("page_config_groups_enabled_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_extensions_summary.
+        /// </summary>
+        internal static string page_config_groups_extensions_summary {
+            get {
+                return ResourceManager.GetString("page_config_groups_extensions_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_extensions_title.
+        /// </summary>
+        internal static string page_config_groups_extensions_title {
+            get {
+                return ResourceManager.GetString("page_config_groups_extensions_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_list_title.
+        /// </summary>
+        internal static string page_config_groups_list_title {
+            get {
+                return ResourceManager.GetString("page_config_groups_list_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_move_down.
+        /// </summary>
+        internal static string page_config_groups_move_down {
+            get {
+                return ResourceManager.GetString("page_config_groups_move_down", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_move_up.
+        /// </summary>
+        internal static string page_config_groups_move_up {
+            get {
+                return ResourceManager.GetString("page_config_groups_move_up", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_name_title.
+        /// </summary>
+        internal static string page_config_groups_name_title {
+            get {
+                return ResourceManager.GetString("page_config_groups_name_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_new_name.
+        /// </summary>
+        internal static string page_config_groups_new_name {
+            get {
+                return ResourceManager.GetString("page_config_groups_new_name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_path_title.
+        /// </summary>
+        internal static string page_config_groups_path_title {
+            get {
+                return ResourceManager.GetString("page_config_groups_path_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_remove.
+        /// </summary>
+        internal static string page_config_groups_remove {
+            get {
+                return ResourceManager.GetString("page_config_groups_remove", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_root_title.
+        /// </summary>
+        internal static string page_config_groups_root_title {
+            get {
+                return ResourceManager.GetString("page_config_groups_root_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_torrent_enabled_summary.
+        /// </summary>
+        internal static string page_config_groups_torrent_enabled_summary {
+            get {
+                return ResourceManager.GetString("page_config_groups_torrent_enabled_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_config_groups_torrent_extensions_summary.
+        /// </summary>
+        internal static string page_config_groups_torrent_extensions_summary {
+            get {
+                return ResourceManager.GetString("page_config_groups_torrent_extensions_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to page_config_header_summary.
         /// </summary>
         internal static string page_config_header_summary {
@@ -1452,6 +1587,51 @@ namespace PDownloader.Resources.Locales {
         internal static string page_settings_vab_title {
             get {
                 return ResourceManager.GetString("page_settings_vab_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_torrents_empty_hint.
+        /// </summary>
+        internal static string page_torrents_empty_hint {
+            get {
+                return ResourceManager.GetString("page_torrents_empty_hint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_torrents_empty_title.
+        /// </summary>
+        internal static string page_torrents_empty_title {
+            get {
+                return ResourceManager.GetString("page_torrents_empty_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_torrents_file_count.
+        /// </summary>
+        internal static string page_torrents_file_count {
+            get {
+                return ResourceManager.GetString("page_torrents_file_count", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_torrents_summary.
+        /// </summary>
+        internal static string page_torrents_summary {
+            get {
+                return ResourceManager.GetString("page_torrents_summary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to page_torrents_title.
+        /// </summary>
+        internal static string page_torrents_title {
+            get {
+                return ResourceManager.GetString("page_torrents_title", resourceCulture);
             }
         }
         

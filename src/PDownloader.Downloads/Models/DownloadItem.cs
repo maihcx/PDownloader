@@ -66,6 +66,8 @@ public class DownloadItem : INotifyPropertyChanged
 
     public string TorrentInfoHash { get; set; } = string.Empty;
 
+    public string TorrentName { get; set; } = string.Empty;
+
     public int TorrentFileIndex { get; set; } = -1;
 
     public string TorrentRelativePath { get; set; } = string.Empty;

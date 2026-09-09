@@ -55,6 +55,7 @@ public sealed partial class DownloadManager : IAsyncDisposable
         FileMergeMode mergeMode = FileMergeMode.Balanced,
         DownloadKind downloadKind = DownloadKind.Http,
         string torrentInfoHash = "",
+        string torrentName = "",
         int torrentFileIndex = -1,
         string torrentRelativePath = "",
         CancellationToken cancellationToken = default)
@@ -87,6 +88,7 @@ public sealed partial class DownloadManager : IAsyncDisposable
                 MergeMode = mergeMode,
                 DownloadKind = downloadKind,
                 TorrentInfoHash = torrentInfoHash,
+                TorrentName = torrentName,
                 TorrentFileIndex = torrentFileIndex,
                 TorrentRelativePath = torrentRelativePath,
                 Status = DownloadStatus.Queued

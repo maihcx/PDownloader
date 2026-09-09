@@ -149,6 +149,7 @@ public sealed class DownloadLaunchService
             mergeMode: _downloadConfig.GetFileMergeMode(),
             downloadKind: context.DownloadKind,
             torrentInfoHash: context.TorrentInfoHash,
+            torrentName: context.Title,
             torrentFileIndex: context.TorrentFileIndex,
             torrentRelativePath: context.TorrentRelativePath,
             cancellationToken: cancellationToken).ConfigureAwait(false);

@@ -26,6 +26,7 @@ namespace PDownloader.Downloads.Torrents;
 public sealed class TorrentEngineService : IAsyncDisposable
 {
     private const int MaximumMetadataBytes = 16 * 1024 * 1024;
+    private static readonly TimeSpan MetadataDownloadTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(10);
 
     private readonly ClientEngine _engine;
@@ -49,7 +50,7 @@ public sealed class TorrentEngineService : IAsyncDisposable
         Directory.CreateDirectory(cacheRoot);
         Directory.CreateDirectory(_stagingRoot);
 
-        var settings = new EngineSettingsBuilder
+        EngineSettings settings = new EngineSettingsBuilder
         {
             AllowPortForwarding = true,
             AutoSaveLoadDhtCache = true,
@@ -101,10 +102,27 @@ public sealed class TorrentEngineService : IAsyncDisposable
                 return cached;
             }
 
-            ReadOnlyMemory<byte> result = await _engine
-                .DownloadMetadataAsync(magnet, cancellationToken)
-                .ConfigureAwait(false);
-            metadata = result.ToArray();
+            using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken);
+            timeoutSource.CancelAfter(MetadataDownloadTimeout);
+
+            try
+            {
+                ReadOnlyMemory<byte> result = await _engine
+                    .DownloadMetadataAsync(magnet, timeoutSource.Token)
+                    .ConfigureAwait(false);
+                metadata = result.ToArray();
+            }
+            catch (OperationCanceledException) when (
+                timeoutSource.IsCancellationRequested
+                && !cancellationToken.IsCancellationRequested)
+            {
+                throw new TimeoutException(
+                    $"Torrent metadata could not be loaded within "
+                    + $"{MetadataDownloadTimeout.TotalSeconds:0} seconds. "
+                    + "No metadata peer responded. Check the magnet trackers "
+                    + "or try a direct .torrent URL.");
+            }
         }
         else
         {
@@ -265,7 +283,7 @@ public sealed class TorrentEngineService : IAsyncDisposable
             {
                 string staging = Path.Combine(_stagingRoot, preparation.InfoHash);
                 Directory.CreateDirectory(staging);
-                var torrentSettings = new TorrentSettingsBuilder
+                TorrentSettings torrentSettings = new TorrentSettingsBuilder
                 {
                     CreateContainingDirectory = false,
                     MaximumConnections = 60

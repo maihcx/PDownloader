@@ -17,24 +17,24 @@ namespace PDownloader.Core.Application.App;
 
 /// <summary>
 /// Relays presentation-level application events between Main, Tray, Runner
-/// and TorrentSel without exposing IPC routing rules to business services.
+/// and TorrentShell without exposing IPC routing rules to business services.
 /// </summary>
 public sealed class AppEventRelay
 {
     private readonly CoreIpcHost _ipcHost;
     private readonly RunnerSessionManager _runnerSessions;
-    private readonly TorrentSelectionSessionManager _torrentSelectionSessions;
+    private readonly TorrentShellSessionManager _torrentShellSessions;
     private readonly MainAppGateway _mainGateway;
 
     public AppEventRelay(
         CoreIpcHost ipcHost,
         RunnerSessionManager runnerSessions,
-        TorrentSelectionSessionManager torrentSelectionSessions,
+        TorrentShellSessionManager torrentShellSessions,
         MainAppGateway mainGateway)
     {
         _ipcHost = ipcHost;
         _runnerSessions = runnerSessions;
-        _torrentSelectionSessions = torrentSelectionSessions;
+        _torrentShellSessions = torrentShellSessions;
         _mainGateway = mainGateway;
     }
 
@@ -42,7 +42,7 @@ public sealed class AppEventRelay
     {
         _ipcHost.Tray?.Send(AppProtocol.MainEvent, mainEvent);
         _runnerSessions.Broadcast(AppProtocol.MainEvent, mainEvent);
-        _torrentSelectionSessions.Broadcast(AppProtocol.MainEvent, mainEvent);
+        _torrentShellSessions.Broadcast(AppProtocol.MainEvent, mainEvent);
     }
 
     public void ForwardTrayEvent(TrayNavigationEvent trayEvent) =>

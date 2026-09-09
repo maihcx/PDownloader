@@ -78,7 +78,7 @@ public sealed partial class DownloadManager
         }
 
         StartWork(session, hashOnly: false);
-        if (showRunner)
+        if (showRunner && item.DownloadKind != DownloadKind.Torrent)
         {
             _runtime.ShowRunner(item.Id, new RunnerDownloadTask
             {

@@ -64,7 +64,7 @@ internal class Program
                     services.AddSingleton<CoreIpcHost>();
                     services.AddSingleton<MainAppGateway>();
                     services.AddSingleton<RunnerSessionManager>();
-                    services.AddSingleton<TorrentSelectionSessionManager>();
+                    services.AddSingleton<TorrentShellSessionManager>();
                     services.AddSingleton<AppEventRelay>();
                     services.AddSingleton<CoreLifecycleService>();
 

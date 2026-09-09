@@ -48,6 +48,8 @@ public record DownloadItemSnapshot(
 
     public string TorrentInfoHash { get; init; } = string.Empty;
 
+    public string TorrentName { get; init; } = string.Empty;
+
     public int TorrentFileIndex { get; init; } = -1;
 
     public string TorrentRelativePath { get; init; } = string.Empty;
@@ -74,6 +76,7 @@ public record DownloadItemSnapshot(
         DownloadKind = i.DownloadKind.ToString(),
         DestinationFolder = i.DestinationFolder,
         TorrentInfoHash = i.TorrentInfoHash,
+        TorrentName = i.TorrentName,
         TorrentFileIndex = i.TorrentFileIndex,
         TorrentRelativePath = i.TorrentRelativePath,
         TorrentDestinationPath = i.TorrentDestinationPath
@@ -98,6 +101,7 @@ public record DownloadItemSnapshot(
                 : PDownloader.Contracts.Downloads.DownloadKind.Http,
             DestinationFolder = DestinationFolder,
             TorrentInfoHash = TorrentInfoHash,
+            TorrentName = TorrentName,
             TorrentFileIndex = TorrentFileIndex,
             TorrentRelativePath = TorrentRelativePath,
             TorrentDestinationPath = TorrentDestinationPath,
