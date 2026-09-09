@@ -29,6 +29,7 @@ public sealed class TorrentEngineService : IAsyncDisposable
     private const int MaximumMetadataBytes = 16 * 1024 * 1024;
     private static readonly TimeSpan MetadataDownloadTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan ExactSourceAttemptTimeout = TimeSpan.FromSeconds(8);
+    private static readonly TimeSpan FileStallTimeout = TimeSpan.FromSeconds(60);
     private const int ExactSourceAttemptCount = 2;
     private static readonly TimeSpan StopTimeout = TimeSpan.FromMilliseconds(100);
 
@@ -260,6 +261,8 @@ public sealed class TorrentEngineService : IAsyncDisposable
                 item.SetTotalBytes(preparedFile.Length);
                 long lastBytes = attachment.File.BytesDownloaded();
                 long lastTick = Stopwatch.GetTimestamp();
+                long lastProgressBytes = lastBytes;
+                long lastProgressTick = lastTick;
                 reportProgress(lastBytes, 0);
 
                 using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
@@ -281,6 +284,27 @@ public sealed class TorrentEngineService : IAsyncDisposable
                     double seconds = Stopwatch.GetElapsedTime(lastTick, now).TotalSeconds;
                     double speed = seconds > 0 ? Math.Max(0, bytes - lastBytes) / seconds : 0;
                     reportProgress(bytes, speed);
+
+                    if (bytes > lastProgressBytes)
+                    {
+                        lastProgressBytes = bytes;
+                        lastProgressTick = now;
+                    }
+                    else if (attachment.Batch.Manager.State == TorrentState.Downloading
+                        && Stopwatch.GetElapsedTime(lastProgressTick, now) >= FileStallTimeout)
+                    {
+                        throw new TimeoutException(
+                            $"Torrent file '{preparedFile.RelativePath}' made no progress for "
+                            + $"{FileStallTimeout.TotalSeconds:0} seconds.");
+                    }
+                    else if (attachment.Batch.Manager.State != TorrentState.Downloading)
+                    {
+                        // Hash checking and state transitions are legitimate periods
+                        // without downloaded bytes. Start the watchdog only after the
+                        // manager is actively downloading this file again.
+                        lastProgressTick = now;
+                    }
+
                     lastBytes = bytes;
                     lastTick = now;
                 }
