@@ -4,7 +4,7 @@
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY without even the implied warranty of
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
@@ -17,6 +17,9 @@ namespace PDownloader.Core.Runtime;
 
 public sealed class TorrentShellSessionManager : IDisposable
 {
+    private static readonly TimeSpan ShutdownSignalTimeout =
+        TimeSpan.FromMilliseconds(150);
+
     private readonly ConcurrentDictionary<string, TorrentShellSession> _sessions =
         new(StringComparer.Ordinal);
     private readonly object _sync = new();
@@ -139,7 +142,7 @@ public sealed class TorrentShellSessionManager : IDisposable
                 await session.Channel.SendAsync(
                     AppProtocol.State,
                     AppState.Shutdown,
-                    TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                    ShutdownSignalTimeout).ConfigureAwait(false);
             }
             catch { }
             finally { await CloseAsync(session.Id).ConfigureAwait(false); }

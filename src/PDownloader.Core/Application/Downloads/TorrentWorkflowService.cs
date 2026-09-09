@@ -4,7 +4,7 @@
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY without even the implied warranty of
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
@@ -20,7 +20,7 @@ namespace PDownloader.Core.Application.Downloads;
 
 public sealed class TorrentWorkflowService
 {
-    private readonly TorrentEngineService _torrentEngine;
+    private readonly Lazy<TorrentEngineService> _torrentEngine;
     private readonly TorrentShellSessionManager _shellSessions;
     private readonly DownloadConfigService _downloadConfig;
     private readonly DownloadManager _downloads;
@@ -28,7 +28,7 @@ public sealed class TorrentWorkflowService
     private readonly UserDataStore _userDataStore;
 
     public TorrentWorkflowService(
-        TorrentEngineService torrentEngine,
+        Lazy<TorrentEngineService> torrentEngine,
         TorrentShellSessionManager shellSessions,
         DownloadConfigService downloadConfig,
         DownloadManager downloads,
@@ -156,7 +156,7 @@ public sealed class TorrentWorkflowService
 
         try
         {
-            _torrentEngine.Register(preparation);
+            _torrentEngine.Value.Register(preparation);
 
             string[] downloadIds = selected
                 .Select(index => TorrentShellContext.CreateDownloadId(session.Id, index))
@@ -203,13 +203,13 @@ public sealed class TorrentWorkflowService
         TorrentShellContext context = session.Context;
         try
         {
-            TorrentPreparation preparation = await _torrentEngine
+            TorrentPreparation preparation = await _torrentEngine.Value
                 .PrepareAsync(
                     context.Source,
                     CloneHeaders(context.Headers),
                     session.LifetimeToken)
                 .ConfigureAwait(false);
-            _torrentEngine.Register(preparation);
+            _torrentEngine.Value.Register(preparation);
 
             string destinationSubfolder = DownloadPathUtilities.SanitizeFileName(
                 preparation.Name);

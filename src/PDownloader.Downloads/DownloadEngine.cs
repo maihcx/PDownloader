@@ -26,7 +26,7 @@ public class DownloadEngine
     private readonly HlsDownloadHandler _hlsHandler;
     private readonly YoutubeDownloadHandler _youtubeHandler;
     private readonly FfmpegMuxer _ffmpegMuxer;
-    private readonly TorrentEngineService _torrentEngine;
+    private readonly Lazy<TorrentEngineService> _torrentEngine;
 
     internal DownloadEngine(
         DownloadItem item,
@@ -35,7 +35,7 @@ public class DownloadEngine
         DownloadPathService pathService,
         YtDlpService ytDlpService,
         FfmpegMuxer ffmpegMuxer,
-        TorrentEngineService torrentEngine)
+        Lazy<TorrentEngineService> torrentEngine)
     {
         _item = item;
         _progress = progress;
@@ -130,7 +130,7 @@ public class DownloadEngine
             _item.TorrentDestinationPath = finalPath;
         }
 
-        finalPath = await _torrentEngine.DownloadFileAsync(
+        finalPath = await _torrentEngine.Value.DownloadFileAsync(
             _item,
             finalPath,
             ReportProgress,

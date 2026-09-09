@@ -25,7 +25,7 @@ public sealed partial class DownloadManager : IAsyncDisposable
     private readonly DownloadPathService _pathService;
     private readonly YtDlpService _ytDlpService;
     private readonly FfmpegMuxer _ffmpegMuxer;
-    private readonly TorrentEngineService _torrentEngine;
+    private readonly Lazy<TorrentEngineService> _torrentEngine;
     private readonly object _sync = new();
     private readonly Dictionary<string, DownloadSession> _sessions = new(StringComparer.Ordinal);
     private readonly HashSet<Task> _commands = new();
@@ -38,7 +38,7 @@ public sealed partial class DownloadManager : IAsyncDisposable
     public DownloadManager(
         IDownloadRuntime runtime,
         YtDlpService ytDlpService,
-        TorrentEngineService torrentEngine)
+        Lazy<TorrentEngineService> torrentEngine)
     {
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _ytDlpService = ytDlpService ?? throw new ArgumentNullException(nameof(ytDlpService));

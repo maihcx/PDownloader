@@ -17,6 +17,9 @@ namespace PDownloader.Core;
 
 public sealed class Bootstrap
 {
+    private static readonly TimeSpan ShutdownNotificationTimeout =
+        TimeSpan.FromMilliseconds(150);
+
     private readonly RunnerSessionManager _runnerSessions;
     private readonly DownloadManagerBootstrap _downloadManagerBootstrap;
     private readonly CoreIpcHost _ipcHost;
@@ -104,7 +107,10 @@ public sealed class Bootstrap
 
         try
         {
-            await endpoint.SendAsync(AppProtocol.State, AppState.Shutdown, TimeSpan.FromSeconds(2))
+            await endpoint.SendAsync(
+                AppProtocol.State,
+                AppState.Shutdown,
+                ShutdownNotificationTimeout)
                 .ConfigureAwait(false);
         }
         catch (Exception ex) { Debug.WriteLine($"[Bootstrap] UI shutdown: {ex.Message}"); }

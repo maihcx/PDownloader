@@ -59,6 +59,9 @@ internal class Program
                     services.AddSingleton<YtDlpService>();
                     services.AddSingleton<IDownloadRuntime, CoreDownloadRuntime>();
                     services.AddSingleton<TorrentEngineService>();
+                    services.AddSingleton(provider => new Lazy<TorrentEngineService>(
+                        () => provider.GetRequiredService<TorrentEngineService>(),
+                        LazyThreadSafetyMode.ExecutionAndPublication));
                     services.AddSingleton<DownloadManager>();
 
                     services.AddSingleton<CoreIpcHost>();
