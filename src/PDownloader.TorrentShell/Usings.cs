@@ -23,6 +23,7 @@ global using PDownloader.CoreClient.Settings;
 global using PDownloader.Contracts.Application;
 global using PDownloader.Contracts.Downloads;
 global using PDownloader.Contracts.Ipc;
+global using PDownloader.TorrentShell.Models;
 global using PDownloader.TorrentShell.Services;
 global using PDownloader.TorrentShell.Services.Contracts;
 global using PDownloader.TorrentShell.Utils;

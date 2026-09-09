@@ -15,6 +15,13 @@
 
 namespace PDownloader.Models;
 
+public enum DownloadGroupControlTransition
+{
+    None,
+    Pausing,
+    Resuming
+}
+
 /// <summary>
 /// Stable UI projection for one torrent file. Progress snapshots can change
 /// without replacing the ItemsControl item/container which displays the file.
@@ -81,6 +88,8 @@ public partial class TorrentDownloadItemViewModel : ObservableObject
 /// </summary>
 public partial class DownloadGroupViewModel : ObservableObject
 {
+    private readonly HashSet<string> _pendingControlIds = new(StringComparer.Ordinal);
+
     public DownloadGroupViewModel(string key, bool isTorrentGroup)
     {
         Key = key;
@@ -119,6 +128,9 @@ public partial class DownloadGroupViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Status))]
     [NotifyPropertyChangedFor(nameof(CanResumeOrOpenFolder))]
+    [NotifyPropertyChangedFor(nameof(IsResumeControlVisible))]
+    [NotifyPropertyChangedFor(nameof(CanPauseGroup))]
+    [NotifyPropertyChangedFor(nameof(CanResumeGroup))]
     private DownloadStatus _statusState;
 
     [ObservableProperty]
@@ -134,22 +146,48 @@ public partial class DownloadGroupViewModel : ObservableObject
     private string _speedFormatted = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPauseControlVisible))]
+    [NotifyPropertyChangedFor(nameof(IsResumeControlVisible))]
     private bool _isActive;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanPauseGroup))]
     private bool _canPause;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanResumeOrOpenFolder))]
+    [NotifyPropertyChangedFor(nameof(CanResumeGroup))]
     private bool _canResume;
 
     [ObservableProperty]
     private bool _canRetry;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPauseControlVisible))]
+    [NotifyPropertyChangedFor(nameof(IsResumeControlVisible))]
+    [NotifyPropertyChangedFor(nameof(CanPauseGroup))]
+    [NotifyPropertyChangedFor(nameof(CanResumeGroup))]
+    private DownloadGroupControlTransition _controlTransition;
+
     public bool HasItems => Items.Count > 0;
     public string Status => StatusState.ToString();
     public bool CanResumeOrOpenFolder =>
         CanResume || StatusState == DownloadStatus.Completed;
+    public bool IsPauseControlVisible =>
+        ControlTransition == DownloadGroupControlTransition.Pausing
+        || (ControlTransition != DownloadGroupControlTransition.Resuming && IsActive);
+    public bool IsResumeControlVisible =>
+        ControlTransition == DownloadGroupControlTransition.Resuming
+        || (ControlTransition != DownloadGroupControlTransition.Pausing
+            && !IsActive
+            && StatusState is not DownloadStatus.Error and not DownloadStatus.Retrying);
+    public bool CanPauseGroup =>
+        ControlTransition == DownloadGroupControlTransition.None
+        && CanPause
+        && StatusState != DownloadStatus.Connecting;
+    public bool CanResumeGroup =>
+        ControlTransition == DownloadGroupControlTransition.None
+        && CanResumeOrOpenFolder;
 
     public IEnumerable<DownloadItemViewModel> Snapshots =>
         Items.Select(item => item.Snapshot);
@@ -230,6 +268,27 @@ public partial class DownloadGroupViewModel : ObservableObject
         return changed;
     }
 
+    public void BeginPause(IEnumerable<string> downloadIds) =>
+        BeginControlTransition(DownloadGroupControlTransition.Pausing, downloadIds);
+
+    public void BeginResume(IEnumerable<string> downloadIds) =>
+        BeginControlTransition(DownloadGroupControlTransition.Resuming, downloadIds);
+
+    private void BeginControlTransition(
+        DownloadGroupControlTransition transition,
+        IEnumerable<string> downloadIds)
+    {
+        _pendingControlIds.Clear();
+        foreach (string id in downloadIds.Where(id => !string.IsNullOrWhiteSpace(id)))
+        {
+            _pendingControlIds.Add(id);
+        }
+
+        ControlTransition = _pendingControlIds.Count == 0
+            ? DownloadGroupControlTransition.None
+            : transition;
+    }
+
     private void RefreshAggregate()
     {
         OnPropertyChanged(nameof(HasItems));
@@ -251,6 +310,8 @@ public partial class DownloadGroupViewModel : ObservableObject
             CanPause = false;
             CanResume = false;
             CanRetry = false;
+            _pendingControlIds.Clear();
+            ControlTransition = DownloadGroupControlTransition.None;
             return;
         }
 
@@ -279,7 +340,37 @@ public partial class DownloadGroupViewModel : ObservableObject
         CanResume = Items.Any(item => item.CanResume);
         CanRetry = Items.Any(item => item.StatusState == DownloadStatus.Error);
         StatusState = GetAggregateStatus();
+        RefreshControlTransition();
         RefreshStatusText();
+    }
+
+    private void RefreshControlTransition()
+    {
+        if (ControlTransition == DownloadGroupControlTransition.None)
+        {
+            return;
+        }
+
+        _pendingControlIds.RemoveWhere(id => Items.All(item => item.Id != id));
+        bool isWaiting = ControlTransition switch
+        {
+            DownloadGroupControlTransition.Pausing => Items.Any(item =>
+                _pendingControlIds.Contains(item.Id)
+                && item.StatusState is not DownloadStatus.Paused
+                    and not DownloadStatus.Completed
+                    and not DownloadStatus.Cancelled
+                    and not DownloadStatus.Error),
+            DownloadGroupControlTransition.Resuming => Items.Any(item =>
+                _pendingControlIds.Contains(item.Id)
+                && item.StatusState == DownloadStatus.Paused),
+            _ => false
+        };
+
+        if (!isWaiting)
+        {
+            _pendingControlIds.Clear();
+            ControlTransition = DownloadGroupControlTransition.None;
+        }
     }
 
     private DownloadStatus GetAggregateStatus()

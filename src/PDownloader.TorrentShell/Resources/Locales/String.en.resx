@@ -174,6 +174,27 @@
   <data name="torrent_shell_close" xml:space="preserve">
     <value>Close</value>
   </data>
+  <data name="torrent_shell_loading_metadata" xml:space="preserve">
+    <value>Loading torrent metadata…</value>
+  </data>
+  <data name="download_group_title" xml:space="preserve">
+    <value>File group</value>
+  </data>
+  <data name="download_group_all_other_types" xml:space="preserve">
+    <value>All other file types</value>
+  </data>
+  <data name="download_group_all_torrent_files" xml:space="preserve">
+    <value>All files from torrent downloads</value>
+  </data>
+  <data name="remember_group_path_title" xml:space="preserve">
+    <value>Remember this path for the “{0}” group</value>
+  </data>
+  <data name="save_to_title" xml:space="preserve">
+    <value>Save to</value>
+  </data>
+  <data name="select_folder_title" xml:space="preserve">
+    <value>Select folder</value>
+  </data>
   <data name="download_status_queued_title" xml:space="preserve">
     <value>Queued</value>
   </data>

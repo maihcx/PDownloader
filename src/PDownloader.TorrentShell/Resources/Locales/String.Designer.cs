@@ -61,6 +61,33 @@ namespace PDownloader.TorrentShell.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to All other file types.
+        /// </summary>
+        internal static string download_group_all_other_types {
+            get {
+                return ResourceManager.GetString("download_group_all_other_types", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to All files from torrent downloads.
+        /// </summary>
+        internal static string download_group_all_torrent_files {
+            get {
+                return ResourceManager.GetString("download_group_all_torrent_files", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to File group.
+        /// </summary>
+        internal static string download_group_title {
+            get {
+                return ResourceManager.GetString("download_group_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Cancelled.
         /// </summary>
         internal static string download_status_cancelled_title {
@@ -142,6 +169,33 @@ namespace PDownloader.TorrentShell.Resources.Locales {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Remember this path for the “{0}” group.
+        /// </summary>
+        internal static string remember_group_path_title {
+            get {
+                return ResourceManager.GetString("remember_group_path_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Save to.
+        /// </summary>
+        internal static string save_to_title {
+            get {
+                return ResourceManager.GetString("save_to_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Select folder.
+        /// </summary>
+        internal static string select_folder_title {
+            get {
+                return ResourceManager.GetString("select_folder_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to PDownloader TorrentShell.
         /// </summary>
         internal static string torrent_shell_app_title {
@@ -210,6 +264,15 @@ namespace PDownloader.TorrentShell.Resources.Locales {
         internal static string torrent_shell_invalid_token_error {
             get {
                 return ResourceManager.GetString("torrent_shell_invalid_token_error", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Loading torrent metadata….
+        /// </summary>
+        internal static string torrent_shell_loading_metadata {
+            get {
+                return ResourceManager.GetString("torrent_shell_loading_metadata", resourceCulture);
             }
         }
         

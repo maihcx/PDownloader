@@ -67,6 +67,9 @@ public static class DownloadProtocol
     public static readonly IpcRequestDefinition<IpcNoPayload, TorrentShellSessionView> TorrentShellGetSession =
         new("torrent-shell.session.get");
 
+    public static readonly IpcMessageDefinition<TorrentShellSessionView> TorrentShellSessionChanged =
+        new("torrent-shell.session.changed");
+
     public static readonly IpcRequestDefinition<TorrentShellStartRequest, TorrentShellStartResult> TorrentShellStart =
         new("torrent-shell.start");
 

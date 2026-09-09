@@ -55,6 +55,10 @@ public sealed class TorrentShellService : IHostedService, IAsyncDisposable
                 _latestProgress[progress.Id] = progress;
                 ProgressReceived?.Invoke(progress);
             });
+        channel.RegisterMessageHandler(
+            DownloadProtocol.TorrentShellSessionChanged,
+            session => Application.Current.Dispatcher.BeginInvoke(
+                new Action(() => _config.ApplySession(session))));
         _channel = channel;
 
         await channel.StartServiceAsync().ConfigureAwait(false);
@@ -80,6 +84,9 @@ public sealed class TorrentShellService : IHostedService, IAsyncDisposable
 
     public async Task<TorrentShellStartResult> StartDownloadsAsync(
         IReadOnlyCollection<int> selectedIndexes,
+        string saveTo,
+        string categoryId,
+        bool rememberPathForCategory,
         CancellationToken cancellationToken = default)
     {
         if (_channel is null || selectedIndexes.Count == 0)
@@ -95,7 +102,10 @@ public sealed class TorrentShellService : IHostedService, IAsyncDisposable
             DownloadProtocol.TorrentShellStart,
             new TorrentShellStartRequest
             {
-                SelectedFileIndexes = selectedIndexes.ToList()
+                SelectedFileIndexes = selectedIndexes.ToList(),
+                SaveTo = saveTo,
+                CategoryId = categoryId,
+                RememberPathForCategory = rememberPathForCategory
             },
             TimeSpan.FromSeconds(20),
             cancellationToken).ConfigureAwait(false);

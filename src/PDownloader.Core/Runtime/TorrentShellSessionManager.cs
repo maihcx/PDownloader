@@ -26,7 +26,7 @@ public sealed class TorrentShellSessionManager : IDisposable
     public event Action<TorrentShellSession>? SessionStarted;
     public event Action<TorrentShellSession>? SessionReady;
 
-    public async Task<ConfluxService> StartAsync(
+    public async Task<TorrentShellSession> StartAsync(
         string token,
         TorrentShellContext context,
         CancellationToken cancellationToken = default)
@@ -59,7 +59,8 @@ public sealed class TorrentShellSessionManager : IDisposable
             session.StartupTask = Task.Run(() => StartCoreAsync(session));
         }
 
-        return await session.StartupTask.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await session.StartupTask.WaitAsync(cancellationToken).ConfigureAwait(false);
+        return session;
     }
 
     private async Task<ConfluxService> StartCoreAsync(TorrentShellSession session)

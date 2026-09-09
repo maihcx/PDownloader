@@ -410,8 +410,24 @@ public partial class TorrentsViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void PauseGroup(DownloadGroupViewModel? group)
     {
-        if (group is null) return;
-        foreach (DownloadItemViewModel item in group.Snapshots.Where(item => item.CanPause).ToArray()) Pause(item);
+        if (group is null || ConfluxManager.cfsPDownloaderCore is not ConfluxService core)
+        {
+            return;
+        }
+
+        DownloadItemViewModel[] items = group.Snapshots
+            .Where(item => item.CanPause)
+            .ToArray();
+        if (items.Length == 0)
+        {
+            return;
+        }
+
+        group.BeginPause(items.Select(item => item.Id));
+        foreach (DownloadItemViewModel item in items)
+        {
+            core.Send(DownloadProtocol.RunnerPause, new DownloadIdRequest(item.Id));
+        }
     }
 
     [RelayCommand]
@@ -425,7 +441,24 @@ public partial class TorrentsViewModel : ObservableObject, INavigationAware
             return;
         }
 
-        foreach (DownloadItemViewModel item in group.Snapshots.Where(item => item.CanResume).ToArray()) Resume(item);
+        if (ConfluxManager.cfsPDownloaderCore is not ConfluxService core)
+        {
+            return;
+        }
+
+        DownloadItemViewModel[] items = group.Snapshots
+            .Where(item => item.CanResume)
+            .ToArray();
+        if (items.Length == 0)
+        {
+            return;
+        }
+
+        group.BeginResume(items.Select(item => item.Id));
+        foreach (DownloadItemViewModel item in items)
+        {
+            core.Send(DownloadProtocol.RunnerResume, new DownloadIdRequest(item.Id));
+        }
     }
 
     [RelayCommand]

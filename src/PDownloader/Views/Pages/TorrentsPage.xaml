@@ -221,28 +221,15 @@
                                                    ToolTip="{utils:Localization page_downloads_pause}"
                                                    Command="{Binding ViewModel.PauseGroupCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
                                                    CommandParameter="{Binding Mode=OneWay}"
-                                                   Visibility="{Binding IsActive, Mode=OneWay, Converter={StaticResource BoolToVisConverter}}"
-                                                   IsEnabled="{Binding StatusState, Mode=OneWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=!~Connecting}" />
+                                                   Visibility="{Binding IsPauseControlVisible, Mode=OneWay, Converter={StaticResource BoolToVisConverter}}"
+                                                   IsEnabled="{Binding CanPauseGroup, Mode=OneWay}" />
                                         <ui:Button Icon="{ui:SymbolIcon Play24}"
                                                    Margin="0,0,2,0"
                                                    ToolTip="{utils:Localization page_downloads_resume}"
                                                    Command="{Binding ViewModel.ResumeGroupCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
                                                    CommandParameter="{Binding Mode=OneWay}"
-                                                   IsEnabled="{Binding CanResumeOrOpenFolder, Mode=OneWay}">
-                                            <ui:Button.Visibility>
-                                                <MultiBinding Converter="{StaticResource AndVisibilityConverter}" Mode="OneWay">
-                                                    <Binding Path="IsActive" Mode="OneWay"
-                                                             Converter="{StaticResource BoolToVisConverter}"
-                                                             ConverterParameter="invert" />
-                                                    <Binding Path="StatusState" Mode="OneWay"
-                                                             Converter="{StaticResource BoolToVisConverter}"
-                                                             ConverterParameter="!~Error" />
-                                                    <Binding Path="StatusState" Mode="OneWay"
-                                                             Converter="{StaticResource BoolToVisConverter}"
-                                                             ConverterParameter="!~Retrying" />
-                                                </MultiBinding>
-                                            </ui:Button.Visibility>
-                                        </ui:Button>
+                                                   Visibility="{Binding IsResumeControlVisible, Mode=OneWay, Converter={StaticResource BoolToVisConverter}}"
+                                                   IsEnabled="{Binding CanResumeGroup, Mode=OneWay}" />
 
                                         <StackPanel Orientation="Horizontal">
                                             <StackPanel.Style>

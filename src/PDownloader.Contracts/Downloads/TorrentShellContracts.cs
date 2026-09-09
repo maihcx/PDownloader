@@ -29,13 +29,21 @@ public sealed class TorrentShellSessionView
     public string Name { get; init; } = string.Empty;
     public string InfoHash { get; init; } = string.Empty;
     public string SaveTo { get; init; } = string.Empty;
+    public string DestinationSubfolder { get; init; } = string.Empty;
+    public bool IsLoading { get; init; }
+    public string MetadataError { get; init; } = string.Empty;
     public long TotalBytes { get; init; }
     public List<TorrentShellFileDto> Files { get; init; } = [];
+    public List<DownloadCategoryDto> Categories { get; init; } = [];
+    public string SelectedCategoryId { get; init; } = string.Empty;
 }
 
 public sealed class TorrentShellStartRequest
 {
     public List<int> SelectedFileIndexes { get; init; } = [];
+    public string SaveTo { get; init; } = string.Empty;
+    public string CategoryId { get; init; } = string.Empty;
+    public bool RememberPathForCategory { get; init; }
 }
 
 public sealed class TorrentShellStartResult

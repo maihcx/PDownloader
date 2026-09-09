@@ -15,6 +15,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -40,23 +41,80 @@
                         Orientation="Horizontal"
                         VerticalAlignment="Bottom">
                 <ui:Button Content="{utils:Localization torrent_shell_select_all}"
-                           Command="{Binding ViewModel.SelectAllCommand, Mode=OneWay}" />
+                           Command="{Binding ViewModel.SelectAllCommand, Mode=OneWay}"
+                           IsEnabled="{Binding ViewModel.CanInteract, Mode=OneWay}" />
                 <ui:Button Content="{utils:Localization torrent_shell_clear}"
                            Margin="8,0,0,0"
-                           Command="{Binding ViewModel.SelectNoneCommand, Mode=OneWay}" />
+                           Command="{Binding ViewModel.SelectNoneCommand, Mode=OneWay}"
+                           IsEnabled="{Binding ViewModel.CanInteract, Mode=OneWay}" />
             </StackPanel>
         </Grid>
 
-        <ListBox Grid.Row="1"
-                 Padding="0,3"
-                 ItemsSource="{Binding ViewModel.TorrentConfig.Files, Mode=OneWay}"
-                 Background="Transparent"
-                 BorderThickness="0"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                 VirtualizingPanel.IsVirtualizing="True"
-                 VirtualizingPanel.VirtualizationMode="Recycling"
-                 ui:SmoothScrollBehavior.IsEnabled="True">
+        <StackPanel Grid.Row="1"
+                    Margin="6,0,6,9"
+                    IsEnabled="{Binding ViewModel.CanInteract, Mode=OneWay}">
+            <ui:TextBlock Text="{utils:Localization download_group_title}"
+                          Margin="2,0,0,4" />
+
+            <ComboBox ItemsSource="{Binding ViewModel.TorrentConfig.Categories, Mode=OneWay}"
+                      SelectedItem="{Binding ViewModel.TorrentConfig.SelectedCategory, Mode=TwoWay}"
+                      DisplayMemberPath="Name"
+                      HorizontalContentAlignment="Stretch" />
+
+            <ui:TextBlock Text="{Binding ViewModel.TorrentConfig.SelectedCategoryExtensions, Mode=OneWay}"
+                          Margin="2,4,0,0"
+                          FontSize="11"
+                          Opacity="0.6"
+                          TextWrapping="Wrap" />
+
+            <ui:TextBlock Text="{utils:Localization save_to_title}"
+                          Margin="2,9,0,4" />
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <ui:TextBox Grid.Column="0"
+                            Text="{Binding ViewModel.TorrentConfig.SaveTo, Mode=TwoWay}" />
+                <ui:Button Grid.Column="1"
+                           Content="…"
+                           Margin="6,0,0,0"
+                           Padding="11,7"
+                           Command="{Binding ViewModel.BrowseFolderCommand, Mode=OneWay}" />
+            </Grid>
+
+            <CheckBox Content="{Binding ViewModel.TorrentConfig.RememberPathLabel, Mode=OneWay}"
+                      IsChecked="{Binding ViewModel.TorrentConfig.RememberPathForCategory, Mode=TwoWay}"
+                      Margin="2,7,0,0"
+                      VerticalContentAlignment="Center">
+                <CheckBox.Style>
+                    <Style TargetType="{x:Type CheckBox}"
+                           BasedOn="{StaticResource {x:Type CheckBox}}">
+                        <Setter Property="IsEnabled" Value="True" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ViewModel.TorrentConfig.SelectedCategory, Mode=OneWay}"
+                                         Value="{x:Null}">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </CheckBox.Style>
+            </CheckBox>
+        </StackPanel>
+
+        <Grid Grid.Row="2">
+            <ListBox Padding="0,3"
+                     ItemsSource="{Binding ViewModel.TorrentConfig.Files, Mode=OneWay}"
+                     IsEnabled="{Binding ViewModel.CanInteract, Mode=OneWay}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.VirtualizationMode="Recycling"
+                     ui:SmoothScrollBehavior.IsEnabled="True">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <Setter Property="Margin" Value="4,3" />
@@ -119,9 +177,23 @@
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
-        </ListBox>
+            </ListBox>
 
-        <Border Grid.Row="2"
+            <StackPanel Panel.ZIndex="1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <ProgressBar Width="220"
+                             Height="4"
+                             IsIndeterminate="True" />
+                <ui:TextBlock Text="{utils:Localization torrent_shell_loading_metadata}"
+                              Margin="0,12,0,0"
+                              HorizontalAlignment="Center"
+                              Opacity="0.72" />
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="3"
                 Padding="6,14,6,2"
                 BorderThickness="0,1,0,0"
                 BorderBrush="{DynamicResource ControlElevationBorderBrush}">
@@ -145,13 +217,15 @@
                 <ui:Button Grid.Column="1"
                            Margin="0,0,8,0"
                            Content="{utils:Localization torrent_shell_cancel}"
-                           Command="{Binding ViewModel.CancelCommand, Mode=OneWay}" />
+                           Command="{Binding ViewModel.CancelCommand, Mode=OneWay}"
+                           IsEnabled="{Binding ViewModel.CanCancel, Mode=OneWay}" />
                 <ui:Button Grid.Column="2"
                            MinWidth="122"
                            Appearance="Primary"
                            Content="{utils:Localization torrent_shell_start}"
                            Icon="{ui:SymbolIcon ArrowDownload24}"
-                           Command="{Binding ViewModel.StartDownloadCommand, Mode=OneWay}" />
+                           Command="{Binding ViewModel.StartDownloadCommand, Mode=OneWay}"
+                           IsEnabled="{Binding ViewModel.CanStart, Mode=OneWay}" />
             </Grid>
         </Border>
     </Grid>

@@ -19,26 +19,139 @@ namespace PDownloader.Core.Runtime;
 
 public sealed class TorrentShellContext
 {
+    private readonly object _sync = new();
+    private TorrentPreparation? _preparation;
+    private string _saveTo = string.Empty;
+    private string _destinationSubfolder = string.Empty;
+    private string _metadataError = string.Empty;
+
     public required string Source { get; init; }
-    public required string SaveTo { get; init; }
-    public required TorrentPreparation Preparation { get; init; }
+    public required IReadOnlyList<DownloadCategoryDto> Categories { get; init; }
+    public required string SelectedCategoryId { get; init; }
     public int Threads { get; init; }
     public Dictionary<string, string>? Headers { get; init; }
 
-    public TorrentShellSessionView ToView(string sessionId) => new()
+    public TorrentPreparation? Preparation
     {
-        Name = Preparation.Name,
-        InfoHash = Preparation.InfoHash,
-        SaveTo = SaveTo,
-        TotalBytes = Preparation.TotalBytes,
-        Files = Preparation.Files.Select(file => new TorrentShellFileDto
+        get
         {
-            Index = file.Index,
-            DownloadId = CreateDownloadId(sessionId, file.Index),
-            RelativePath = file.RelativePath,
-            FileName = file.FileName,
-            Length = file.Length
-        }).ToList()
+            lock (_sync)
+            {
+                return _preparation;
+            }
+        }
+    }
+
+    public string SaveTo
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _saveTo;
+            }
+        }
+    }
+
+    public string DestinationSubfolder
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _destinationSubfolder;
+            }
+        }
+    }
+
+    public string MetadataError
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _metadataError;
+            }
+        }
+    }
+
+    public bool IsLoading
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _preparation is null && string.IsNullOrWhiteSpace(_metadataError);
+            }
+        }
+    }
+
+    public void InitializeDestination(string saveTo)
+    {
+        lock (_sync)
+        {
+            _saveTo = saveTo;
+        }
+    }
+
+    public void CompletePreparation(
+        TorrentPreparation preparation,
+        string saveTo,
+        string destinationSubfolder)
+    {
+        ArgumentNullException.ThrowIfNull(preparation);
+        lock (_sync)
+        {
+            _preparation = preparation;
+            _saveTo = saveTo;
+            _destinationSubfolder = destinationSubfolder;
+            _metadataError = string.Empty;
+        }
+    }
+
+    public void FailPreparation(string error)
+    {
+        lock (_sync)
+        {
+            _metadataError = error;
+        }
+    }
+
+    public TorrentShellSessionView ToView(string sessionId)
+    {
+        lock (_sync)
+        {
+            TorrentPreparation? preparation = _preparation;
+            return new TorrentShellSessionView
+            {
+                Name = preparation?.Name ?? string.Empty,
+                InfoHash = preparation?.InfoHash ?? string.Empty,
+                SaveTo = _saveTo,
+                DestinationSubfolder = _destinationSubfolder,
+                IsLoading = preparation is null && string.IsNullOrWhiteSpace(_metadataError),
+                MetadataError = _metadataError,
+                TotalBytes = preparation?.TotalBytes ?? 0,
+                Categories = Categories.Select(CloneCategory).ToList(),
+                SelectedCategoryId = SelectedCategoryId,
+                Files = preparation?.Files.Select(file => new TorrentShellFileDto
+                {
+                    Index = file.Index,
+                    DownloadId = CreateDownloadId(sessionId, file.Index),
+                    RelativePath = file.RelativePath,
+                    FileName = file.FileName,
+                    Length = file.Length
+                }).ToList() ?? []
+            };
+        }
+    }
+
+    private static DownloadCategoryDto CloneCategory(DownloadCategoryDto category) => new()
+    {
+        Id = category.Id,
+        Name = category.Name,
+        FolderPath = category.FolderPath,
+        IsEnabled = category.IsEnabled,
+        Extensions = [.. category.Extensions]
     };
 
     public static string CreateDownloadId(string sessionId, int fileIndex) =>
@@ -67,6 +180,7 @@ public sealed class TorrentShellSession
     public TorrentShellContext Context { get; }
     public bool IsReady => Volatile.Read(ref _ready) != 0;
     public bool HasStarted => Volatile.Read(ref _started) != 0;
+    public CancellationToken LifetimeToken => Lifetime.Token;
     public bool TryStart() => Interlocked.CompareExchange(ref _started, 1, 0) == 0;
     public void MarkReady() => Volatile.Write(ref _ready, 1);
     public TorrentShellSessionView ToView() => Context.ToView(Id);
