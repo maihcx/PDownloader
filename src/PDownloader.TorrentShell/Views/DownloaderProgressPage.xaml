@@ -2,6 +2,7 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:downloads="clr-namespace:PDownloader.Contracts.Downloads;assembly=PDownloader.Contracts"
       xmlns:local="clr-namespace:PDownloader.TorrentShell.Views"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -20,19 +21,48 @@
                     Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Status, Mode=OneWay}"
-                             Value="Completed">
+                             Value="{x:Static downloads:DownloadStatus.Completed}">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorSuccessBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Status, Mode=OneWay}"
-                             Value="Error">
+                             Value="{x:Static downloads:DownloadStatus.Error}">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorCriticalBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Status, Mode=OneWay}"
-                             Value="Paused">
+                             Value="{x:Static downloads:DownloadStatus.Paused}">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorCautionBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="OverallTorrentProgressBarStyle"
+               TargetType="ProgressBar"
+               BasedOn="{StaticResource {x:Type ProgressBar}}">
+            <Setter Property="Foreground"
+                    Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ViewModel.OverallStatus, Mode=OneWay}"
+                             Value="{x:Static downloads:DownloadStatus.Completed}">
+                    <Setter Property="Foreground"
+                            Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding ViewModel.OverallStatus, Mode=OneWay}"
+                             Value="{x:Static downloads:DownloadStatus.Error}">
+                    <Setter Property="Foreground"
+                            Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding ViewModel.OverallStatus, Mode=OneWay}"
+                             Value="{x:Static downloads:DownloadStatus.Paused}">
+                    <Setter Property="Foreground"
+                            Value="{DynamicResource SystemFillColorCautionBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding ViewModel.OverallStatus, Mode=OneWay}"
+                             Value="{x:Static downloads:DownloadStatus.Merging}">
+                    <Setter Property="Foreground"
+                            Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -89,6 +119,7 @@
                              Height="10"
                              Minimum="0"
                              Maximum="100"
+                             Style="{StaticResource OverallTorrentProgressBarStyle}"
                              Value="{Binding ViewModel.OverallProgress, Mode=OneWay}" />
                 <ui:TextBlock Grid.Row="2"
                               FontSize="11"
@@ -217,14 +248,41 @@
                 BorderThickness="0,1,0,0"
                 BorderBrush="{DynamicResource ControlElevationBorderBrush}">
             <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
                 <ui:TextBlock Text="{utils:Localization torrent_shell_completed}"
                               Foreground="{DynamicResource SystemFillColorSuccessBrush}"
                               FontWeight="SemiBold"
                               VerticalAlignment="Center"
                               Visibility="{Binding ViewModel.IsComplete, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                <ui:Button HorizontalAlignment="Right"
-                           Content="{utils:Localization torrent_shell_close}"
-                           Command="{Binding ViewModel.CloseCommand, Mode=OneWay}" />
+
+                <ui:Button Grid.Column="1"
+                           Margin="0,0,8,0"
+                           Content="{utils:Localization torrent_shell_pause}"
+                           Icon="{ui:SymbolIcon Pause16}"
+                           Command="{Binding ViewModel.PauseAllCommand, Mode=OneWay}"
+                           IsEnabled="{Binding ViewModel.CanPauseAll, Mode=OneWay}"
+                           Visibility="{Binding ViewModel.IsPauseControlVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                <ui:Button Grid.Column="1"
+                           Margin="0,0,8,0"
+                           Content="{utils:Localization torrent_shell_resume}"
+                           Icon="{ui:SymbolIcon Play16}"
+                           Command="{Binding ViewModel.ResumeAllCommand, Mode=OneWay}"
+                           IsEnabled="{Binding ViewModel.CanResumeAll, Mode=OneWay}"
+                           Visibility="{Binding ViewModel.IsResumeControlVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                <ui:Button Grid.Column="2"
+                           Content="{utils:Localization torrent_shell_cancel}"
+                           Icon="{ui:SymbolIcon Stop16}"
+                           Appearance="Danger"
+                           Command="{Binding ViewModel.CancelAllCommand, Mode=OneWay}"
+                           IsEnabled="{Binding ViewModel.CanCancelAll, Mode=OneWay}"
+                           Visibility="{Binding ViewModel.IsCancelControlVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
             </Grid>
         </Border>
     </Grid>
