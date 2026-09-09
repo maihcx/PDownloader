@@ -24,6 +24,9 @@ public sealed class TorrentShellContext
     private string _saveTo = string.Empty;
     private string _destinationSubfolder = string.Empty;
     private string _metadataError = string.Empty;
+    private string _restoredName = string.Empty;
+    private string _restoredInfoHash = string.Empty;
+    private List<TorrentShellFileDto>? _restoredFiles;
 
     public required string Source { get; init; }
     public required IReadOnlyList<DownloadCategoryDto> Categories { get; init; }
@@ -81,7 +84,9 @@ public sealed class TorrentShellContext
         {
             lock (_sync)
             {
-                return _preparation is null && string.IsNullOrWhiteSpace(_metadataError);
+                return _preparation is null
+                    && _restoredFiles is null
+                    && string.IsNullOrWhiteSpace(_metadataError);
             }
         }
     }
@@ -117,33 +122,66 @@ public sealed class TorrentShellContext
         }
     }
 
-    public TorrentShellSessionView ToView(string sessionId)
+    public void RestoreProgress(
+        string torrentName,
+        string infoHash,
+        string saveTo,
+        IEnumerable<TorrentShellFileDto> files)
+    {
+        ArgumentNullException.ThrowIfNull(files);
+        lock (_sync)
+        {
+            _restoredName = torrentName;
+            _restoredInfoHash = infoHash;
+            _saveTo = saveTo;
+            _destinationSubfolder = string.Empty;
+            _metadataError = string.Empty;
+            _restoredFiles = files.Select(CloneFile).ToList();
+        }
+    }
+
+    public TorrentShellSessionView ToView(string sessionId, bool hasStarted)
     {
         lock (_sync)
         {
             TorrentPreparation? preparation = _preparation;
-            return new TorrentShellSessionView
-            {
-                Name = preparation?.Name ?? string.Empty,
-                InfoHash = preparation?.InfoHash ?? string.Empty,
-                SaveTo = _saveTo,
-                DestinationSubfolder = _destinationSubfolder,
-                IsLoading = preparation is null && string.IsNullOrWhiteSpace(_metadataError),
-                MetadataError = _metadataError,
-                TotalBytes = preparation?.TotalBytes ?? 0,
-                Categories = Categories.Select(CloneCategory).ToList(),
-                SelectedCategoryId = SelectedCategoryId,
-                Files = preparation?.Files.Select(file => new TorrentShellFileDto
+            List<TorrentShellFileDto> files = preparation is not null
+                ? preparation.Files.Select(file => new TorrentShellFileDto
                 {
                     Index = file.Index,
                     DownloadId = CreateDownloadId(sessionId, file.Index),
                     RelativePath = file.RelativePath,
                     FileName = file.FileName,
                     Length = file.Length
-                }).ToList() ?? []
+                }).ToList()
+                : _restoredFiles?.Select(CloneFile).ToList() ?? [];
+            return new TorrentShellSessionView
+            {
+                Name = preparation?.Name ?? _restoredName,
+                InfoHash = preparation?.InfoHash ?? _restoredInfoHash,
+                SaveTo = _saveTo,
+                DestinationSubfolder = _destinationSubfolder,
+                IsLoading = preparation is null
+                    && _restoredFiles is null
+                    && string.IsNullOrWhiteSpace(_metadataError),
+                MetadataError = _metadataError,
+                TotalBytes = preparation?.TotalBytes ?? files.Sum(file => file.Length),
+                HasStarted = hasStarted,
+                Categories = Categories.Select(CloneCategory).ToList(),
+                SelectedCategoryId = SelectedCategoryId,
+                Files = files
             };
         }
     }
+
+    private static TorrentShellFileDto CloneFile(TorrentShellFileDto file) => new()
+    {
+        Index = file.Index,
+        DownloadId = file.DownloadId,
+        RelativePath = file.RelativePath,
+        FileName = file.FileName,
+        Length = file.Length
+    };
 
     private static DownloadCategoryDto CloneCategory(DownloadCategoryDto category) => new()
     {
@@ -168,11 +206,13 @@ public sealed class TorrentShellSession
     public TorrentShellSession(
         string id,
         ConfluxService channel,
-        TorrentShellContext context)
+        TorrentShellContext context,
+        bool hasStarted = false)
     {
         Id = id;
         Channel = channel;
         Context = context;
+        _started = hasStarted ? 1 : 0;
     }
 
     public string Id { get; }
@@ -182,8 +222,9 @@ public sealed class TorrentShellSession
     public bool HasStarted => Volatile.Read(ref _started) != 0;
     public CancellationToken LifetimeToken => Lifetime.Token;
     public bool TryStart() => Interlocked.CompareExchange(ref _started, 1, 0) == 0;
+    public void MarkStarted() => Volatile.Write(ref _started, 1);
     public void MarkReady() => Volatile.Write(ref _ready, 1);
-    public TorrentShellSessionView ToView() => Context.ToView(Id);
+    public TorrentShellSessionView ToView() => Context.ToView(Id, HasStarted);
 
     public void SetDownloadIds(IEnumerable<string> downloadIds)
     {

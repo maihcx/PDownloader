@@ -23,11 +23,16 @@ public sealed class DownloadCommandService
 {
     private readonly DownloadManager _downloads;
     private readonly DownloadProgressPublisher _progress;
+    private readonly TorrentWorkflowService _torrentWorkflow;
 
-    public DownloadCommandService(DownloadManager downloads, DownloadProgressPublisher progress)
+    public DownloadCommandService(
+        DownloadManager downloads,
+        DownloadProgressPublisher progress,
+        TorrentWorkflowService torrentWorkflow)
     {
         _downloads = downloads;
         _progress = progress;
+        _torrentWorkflow = torrentWorkflow;
     }
 
     public void PublishRunnerSnapshot(RunnerSession session)
@@ -38,13 +43,33 @@ public sealed class DownloadCommandService
     }
 
     public Task PauseAsync(string id, CancellationToken token) => _downloads.PauseAsync(id, token);
-    public Task ResumeAsync(string id, CancellationToken token) =>
-        _downloads.ResumeAsync(id, cancellationToken: token);
+    public async Task ResumeAsync(string id, CancellationToken token)
+    {
+        DownloadItem? item = _downloads.Find(id);
+        bool isTorrent = item?.DownloadKind == DownloadKind.Torrent;
+        await _downloads.ResumeAsync(
+            id,
+            isShowRunner: !isTorrent,
+            cancellationToken: token).ConfigureAwait(false);
+
+        if (isTorrent)
+        {
+            await _torrentWorkflow.EnsureProgressShellAsync(id, token)
+                .ConfigureAwait(false);
+        }
+    }
     public Task RetryAsync(string id, CancellationToken token) => _downloads.RetryAsync(id, token);
     public Task CancelAsync(string id, CancellationToken token) => _downloads.CancelAsync(id, token);
     public Task ClearAsync(DownloadClearScope scope, CancellationToken token) => _downloads.ClearAllAsync(scope, token);
     public Task PauseAllAsync(CancellationToken token) => _downloads.PauseAllAsync(token);
-    public Task ResumeAllAsync(CancellationToken token) => _downloads.ResumeAllAsync(token);
+    public Task ResumeAllAsync(CancellationToken token)
+    {
+        string[] pausedIds = _downloads.GetAll()
+            .Where(item => item.Status == DownloadStatus.Paused)
+            .Select(item => item.Id)
+            .ToArray();
+        return Task.WhenAll(pausedIds.Select(id => ResumeAsync(id, token)));
+    }
     public Task RetryAllAsync(CancellationToken token) => _downloads.RetryAllAsync(token);
     public List<DownloadItemDto> GetList() => _downloads.GetContractList();
 }

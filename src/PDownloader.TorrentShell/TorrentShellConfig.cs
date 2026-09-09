@@ -122,6 +122,7 @@ public partial class TorrentShellConfig : ObservableObject
             IsLoading = session.IsLoading;
             MetadataError = session.MetadataError;
             TotalBytes = session.TotalBytes;
+            HasStarted = session.HasStarted;
             Files.Clear();
             foreach (TorrentShellFileDto file in session.Files)
             {

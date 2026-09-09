@@ -33,6 +33,7 @@ public sealed class TorrentShellSessionView
     public bool IsLoading { get; init; }
     public string MetadataError { get; init; } = string.Empty;
     public long TotalBytes { get; init; }
+    public bool HasStarted { get; init; }
     public List<TorrentShellFileDto> Files { get; init; } = [];
     public List<DownloadCategoryDto> Categories { get; init; } = [];
     public string SelectedCategoryId { get; init; } = string.Empty;
