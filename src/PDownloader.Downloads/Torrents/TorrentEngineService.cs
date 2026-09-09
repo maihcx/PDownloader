@@ -34,7 +34,10 @@ public sealed class TorrentEngineService : IAsyncDisposable
 
     private readonly string _cacheRoot;
     private readonly string _stagingRoot;
-    private readonly ConcurrentDictionary<string, TorrentPreparation> _preparations =
+    // Runtime handoff for files belonging to a download that has already been
+    // created. PrepareAsync deliberately never reads this collection: every
+    // user-requested analysis downloads and parses fresh metadata.
+    private readonly ConcurrentDictionary<string, TorrentPreparation> _registeredPreparations =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, PreparationLockEntry> _preparationLocks =
         new(StringComparer.Ordinal);
@@ -157,44 +160,29 @@ public sealed class TorrentEngineService : IAsyncDisposable
                 throw new InvalidDataException("The magnet link is invalid.");
             }
 
-            string magnetInfoHash = magnet.InfoHashes.V1OrV2.ToHex();
-            if (_preparations.TryGetValue(magnetInfoHash, out TorrentPreparation? cached))
-            {
-                return cached;
-            }
+            using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken);
+            timeoutSource.CancelAfter(MetadataDownloadTimeout);
 
-            byte[]? cachedMetadata = TryLoadCachedMetadata(magnet);
-            if (cachedMetadata is not null)
+            try
             {
-                metadata = cachedMetadata;
-            }
-            else
-            {
-                using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(
-                    cancellationToken);
-                timeoutSource.CancelAfter(MetadataDownloadTimeout);
-
-                try
-                {
-                    metadata = await TryDownloadExactSourceAsync(
-                        source,
+                metadata = await TryDownloadExactSourceAsync(
+                    source,
+                    magnet,
+                    timeoutSource.Token).ConfigureAwait(false)
+                    ?? await DownloadMagnetMetadataAsync(
                         magnet,
-                        timeoutSource.Token).ConfigureAwait(false)
-                        ?? await DownloadMagnetMetadataAsync(
-                            magnet,
-                            timeoutSource.Token).ConfigureAwait(false);
-                    CacheMetadata(magnet, metadata);
-                }
-                catch (OperationCanceledException) when (
-                    timeoutSource.IsCancellationRequested
-                    && !cancellationToken.IsCancellationRequested)
-                {
-                    throw new TimeoutException(
-                        $"Torrent metadata could not be loaded within "
-                        + $"{MetadataDownloadTimeout.TotalSeconds:0} seconds. "
-                        + "No metadata peer responded. Check the magnet trackers "
-                        + "or try a direct .torrent URL.");
-                }
+                        timeoutSource.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (
+                timeoutSource.IsCancellationRequested
+                && !cancellationToken.IsCancellationRequested)
+            {
+                throw new TimeoutException(
+                    $"Torrent metadata could not be loaded within "
+                    + $"{MetadataDownloadTimeout.TotalSeconds:0} seconds. "
+                    + "No metadata peer responded. Check the magnet trackers "
+                    + "or try a direct .torrent URL.");
             }
         }
         else
@@ -216,14 +204,14 @@ public sealed class TorrentEngineService : IAsyncDisposable
             throw new InvalidDataException("The torrent does not contain any downloadable files.");
         }
 
-        _preparations[preparation.InfoHash] = preparation;
+        _registeredPreparations[preparation.InfoHash] = preparation;
         return preparation;
     }
 
     public void Register(TorrentPreparation preparation)
     {
         ArgumentNullException.ThrowIfNull(preparation);
-        _preparations[preparation.InfoHash] = preparation;
+        _registeredPreparations[preparation.InfoHash] = preparation;
     }
 
     public async Task<string> DownloadFileAsync(
@@ -318,9 +306,11 @@ public sealed class TorrentEngineService : IAsyncDisposable
         CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(item.TorrentInfoHash)
-            && _preparations.TryGetValue(item.TorrentInfoHash, out TorrentPreparation? cached))
+            && _registeredPreparations.TryGetValue(
+                item.TorrentInfoHash,
+                out TorrentPreparation? registeredPreparation))
         {
-            return cached;
+            return registeredPreparation;
         }
 
         TorrentPreparation preparation = await PrepareAsync(
@@ -654,7 +644,7 @@ public sealed class TorrentEngineService : IAsyncDisposable
             AllowPortForwarding = false,
             AutoSaveLoadDhtCache = true,
             AutoSaveLoadFastResume = true,
-            AutoSaveLoadMagnetLinkMetadata = true,
+            AutoSaveLoadMagnetLinkMetadata = false,
             CacheDirectory = _cacheRoot,
             DhtEndPoint = new IPEndPoint(IPAddress.Any, 0),
             // Prefer the IPv4 path used by DHT and the majority of trackers.
@@ -850,74 +840,6 @@ public sealed class TorrentEngineService : IAsyncDisposable
         return null;
     }
 
-    private byte[]? TryLoadCachedMetadata(MagnetLink magnet)
-    {
-        string path = GetMetadataCachePath(magnet);
-        try
-        {
-            if (!File.Exists(path))
-            {
-                return null;
-            }
-
-            var info = new FileInfo(path);
-            if (info.Length <= 0 || info.Length > MaximumMetadataBytes)
-            {
-                File.Delete(path);
-                return null;
-            }
-
-            byte[] metadata = File.ReadAllBytes(path);
-            Torrent torrent = Torrent.Load(metadata);
-            if (torrent.InfoHashes == magnet.InfoHashes)
-            {
-                return metadata;
-            }
-
-            File.Delete(path);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Torrent] Could not load cached metadata: {ex.Message}");
-        }
-
-        return null;
-    }
-
-    private void CacheMetadata(MagnetLink magnet, byte[] metadata)
-    {
-        string path = GetMetadataCachePath(magnet);
-        string temporaryPath = $"{path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllBytes(temporaryPath, metadata);
-            File.Move(temporaryPath, path, overwrite: true);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Torrent] Could not cache metadata: {ex.Message}");
-        }
-        finally
-        {
-            try
-            {
-                if (File.Exists(temporaryPath))
-                {
-                    File.Delete(temporaryPath);
-                }
-            }
-            catch
-            {
-            }
-        }
-    }
-
-    private string GetMetadataCachePath(MagnetLink magnet) => Path.Combine(
-        _cacheRoot,
-        "metadata",
-        $"{magnet.InfoHashes.V1OrV2.ToHex()}.torrent");
-
     private static void ObserveBackgroundFailure(Task task)
     {
         if (task.IsCompleted)
@@ -1003,7 +925,7 @@ public sealed class TorrentEngineService : IAsyncDisposable
             _batches.Clear();
             _metadataEngineUsers = 0;
             DisposeEngineIfIdle();
-            _preparations.Clear();
+            _registeredPreparations.Clear();
             lock (_preparationLocksSync)
             {
                 foreach (PreparationLockEntry preparationLock in _preparationLocks.Values)
