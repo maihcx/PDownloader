@@ -78,7 +78,7 @@ public sealed partial class DownloadManager
         }
 
         StartWork(session, hashOnly: false);
-        if (showRunner && item.DownloadKind != DownloadKind.Torrent)
+        if (showRunner)
         {
             _runtime.ShowRunner(item.Id, new RunnerDownloadTask
             {
@@ -226,7 +226,9 @@ public sealed partial class DownloadManager
                     }
 
                     item.Status = DownloadStatus.Retrying;
-                    item.ErrorMessage = $"An error occurred! Retrying ({attempt + 1}/{maxAutoRetries})... Please wait...";
+                    item.ErrorMessage = item.DownloadKind == DownloadKind.Torrent
+                        ? $"{ex.Message} Retrying ({attempt + 1}/{maxAutoRetries})..."
+                        : $"An error occurred! Retrying ({attempt + 1}/{maxAutoRetries})... Please wait...";
                     Notify(item);
                     await Task.Delay(2000, token).ConfigureAwait(false);
                 }
