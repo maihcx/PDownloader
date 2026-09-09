@@ -13,7 +13,6 @@
 //
 // Copyright (C) Song Mai Software.
 
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 

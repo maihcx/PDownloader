@@ -14,7 +14,6 @@
 // Copyright (C) Song Mai Software.
 
 using PDownloader.Core.Services.DownloadServices;
-using PDownloader.Downloads.Torrents;
 
 namespace PDownloader.Core.Application.Downloads;
 
