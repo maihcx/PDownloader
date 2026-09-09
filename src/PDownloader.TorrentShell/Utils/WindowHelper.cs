@@ -149,7 +149,7 @@ public static class WindowHelper
 
     private static void FlashUntilForeground(IntPtr handle)
     {
-        var info = NativeMethods.CreateFlashInfo(
+        NativeMethods.FLASHWINFO info = NativeMethods.CreateFlashInfo(
             handle,
             NativeMethods.FLASHW_ALL | NativeMethods.FLASHW_TIMERNOFG);
         NativeMethods.FlashWindowEx(ref info);
@@ -157,7 +157,7 @@ public static class WindowHelper
 
     private static void StopFlashing(IntPtr handle)
     {
-        var info = NativeMethods.CreateFlashInfo(
+        NativeMethods.FLASHWINFO info = NativeMethods.CreateFlashInfo(
             handle,
             NativeMethods.FLASHW_STOP);
         NativeMethods.FlashWindowEx(ref info);
