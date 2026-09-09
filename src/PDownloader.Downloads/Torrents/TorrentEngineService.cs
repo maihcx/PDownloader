@@ -15,6 +15,7 @@
 
 using MonoTorrent;
 using MonoTorrent.Client;
+using System.Net;
 
 namespace PDownloader.Downloads.Torrents;
 
@@ -27,6 +28,8 @@ public sealed class TorrentEngineService : IAsyncDisposable
 {
     private const int MaximumMetadataBytes = 16 * 1024 * 1024;
     private static readonly TimeSpan MetadataDownloadTimeout = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan ExactSourceAttemptTimeout = TimeSpan.FromSeconds(8);
+    private const int ExactSourceAttemptCount = 2;
     private static readonly TimeSpan StopTimeout = TimeSpan.FromMilliseconds(100);
 
     private readonly string _cacheRoot;
@@ -83,11 +86,11 @@ public sealed class TorrentEngineService : IAsyncDisposable
         Dictionary<string, string>? headers,
         CancellationToken cancellationToken)
     {
-
+        source = source.Trim();
         byte[] metadata;
         if (DownloadSource.IsMagnet(source))
         {
-            if (!MagnetLink.TryParse(source.Trim(), out MagnetLink? magnet))
+            if (!MagnetLink.TryParse(source, out MagnetLink? magnet))
             {
                 throw new InvalidDataException("The magnet link is invalid.");
             }
@@ -98,35 +101,38 @@ public sealed class TorrentEngineService : IAsyncDisposable
                 return cached;
             }
 
-            using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(
-                cancellationToken);
-            timeoutSource.CancelAfter(MetadataDownloadTimeout);
-
-            try
+            byte[]? cachedMetadata = TryLoadCachedMetadata(magnet);
+            if (cachedMetadata is not null)
             {
-                ClientEngine engine = await RentMetadataEngineAsync(timeoutSource.Token)
-                    .ConfigureAwait(false);
+                metadata = cachedMetadata;
+            }
+            else
+            {
+                using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken);
+                timeoutSource.CancelAfter(MetadataDownloadTimeout);
+
                 try
                 {
-                    ReadOnlyMemory<byte> result = await engine
-                        .DownloadMetadataAsync(magnet, timeoutSource.Token)
-                        .ConfigureAwait(false);
-                    metadata = result.ToArray();
+                    metadata = await TryDownloadExactSourceAsync(
+                        source,
+                        magnet,
+                        timeoutSource.Token).ConfigureAwait(false)
+                        ?? await DownloadMagnetMetadataAsync(
+                            magnet,
+                            timeoutSource.Token).ConfigureAwait(false);
+                    CacheMetadata(magnet, metadata);
                 }
-                finally
+                catch (OperationCanceledException) when (
+                    timeoutSource.IsCancellationRequested
+                    && !cancellationToken.IsCancellationRequested)
                 {
-                    await ReturnMetadataEngineAsync().ConfigureAwait(false);
+                    throw new TimeoutException(
+                        $"Torrent metadata could not be loaded within "
+                        + $"{MetadataDownloadTimeout.TotalSeconds:0} seconds. "
+                        + "No metadata peer responded. Check the magnet trackers "
+                        + "or try a direct .torrent URL.");
                 }
-            }
-            catch (OperationCanceledException) when (
-                timeoutSource.IsCancellationRequested
-                && !cancellationToken.IsCancellationRequested)
-            {
-                throw new TimeoutException(
-                    $"Torrent metadata could not be loaded within "
-                    + $"{MetadataDownloadTimeout.TotalSeconds:0} seconds. "
-                    + "No metadata peer responded. Check the magnet trackers "
-                    + "or try a direct .torrent URL.");
             }
         }
         else
@@ -274,7 +280,6 @@ public sealed class TorrentEngineService : IAsyncDisposable
         {
             _preparationGate.Release();
         }
-
         if (!string.IsNullOrWhiteSpace(item.TorrentInfoHash)
             && !string.Equals(item.TorrentInfoHash, preparation.InfoHash,
                 StringComparison.OrdinalIgnoreCase))
@@ -557,11 +562,22 @@ public sealed class TorrentEngineService : IAsyncDisposable
         Directory.CreateDirectory(_stagingRoot);
         var settings = new EngineSettingsBuilder
         {
-            AllowPortForwarding = true,
+            AllowLocalPeerDiscovery = true,
+            // This engine is short-lived and is created only when a torrent is
+            // actually used. UPnP/NAT-PMP discovery can block manager startup
+            // before trackers or DHT begin, and is unnecessary for metadata.
+            AllowPortForwarding = false,
             AutoSaveLoadDhtCache = true,
             AutoSaveLoadFastResume = true,
             AutoSaveLoadMagnetLinkMetadata = true,
             CacheDirectory = _cacheRoot,
+            DhtEndPoint = new IPEndPoint(IPAddress.Any, 0),
+            // Prefer the IPv4 path used by DHT and the majority of trackers.
+            // A disabled/broken IPv6 stack must not prevent engine startup.
+            ListenEndPoints = new Dictionary<string, IPEndPoint>
+            {
+                ["ipv4"] = new(IPAddress.Any, 0)
+            },
             UsePartialFiles = false
         }.ToSettings();
         _engine = new ClientEngine(settings);
@@ -631,6 +647,206 @@ public sealed class TorrentEngineService : IAsyncDisposable
         }
 
         return output.ToArray();
+    }
+
+    private async Task<byte[]> DownloadMagnetMetadataAsync(
+        MagnetLink magnet,
+        CancellationToken cancellationToken)
+    {
+        ClientEngine engine = await RentMetadataEngineAsync(cancellationToken)
+            .ConfigureAwait(false);
+        try
+        {
+            Task<ReadOnlyMemory<byte>> metadataTask = engine
+                .DownloadMetadataAsync(magnet, cancellationToken);
+            try
+            {
+                // MonoTorrent 3.0.2 only observes the token while waiting for
+                // MetadataReceived. Its StartAsync and cleanup paths can still
+                // wait indefinitely, so bound the complete operation as well.
+                ReadOnlyMemory<byte> result = await metadataTask
+                    .WaitAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                return result.ToArray();
+            }
+            catch
+            {
+                ObserveBackgroundFailure(metadataTask);
+                throw;
+            }
+        }
+        finally
+        {
+            await ReturnMetadataEngineAsync().ConfigureAwait(false);
+        }
+    }
+
+    private static async Task<byte[]?> TryDownloadExactSourceAsync(
+        string source,
+        MagnetLink magnet,
+        CancellationToken cancellationToken)
+    {
+        int queryIndex = source.IndexOf('?');
+        if (queryIndex < 0 || queryIndex == source.Length - 1)
+        {
+            return null;
+        }
+
+        foreach (string part in source[(queryIndex + 1)..]
+            .Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            int separator = part.IndexOf('=');
+            if (separator <= 0
+                || !part[..separator].Equals("xs", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string exactSource;
+            try
+            {
+                exactSource = Uri.UnescapeDataString(part[(separator + 1)..]
+                    .Replace('+', ' ')).Trim();
+            }
+            catch (UriFormatException)
+            {
+                continue;
+            }
+
+            if (!Uri.TryCreate(exactSource, UriKind.Absolute, out Uri? uri)
+                || uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+            {
+                continue;
+            }
+
+            for (int attempt = 1; attempt <= ExactSourceAttemptCount; attempt++)
+            {
+                using var attemptTimeout = CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken);
+                attemptTimeout.CancelAfter(ExactSourceAttemptTimeout);
+
+                try
+                {
+                    byte[] metadata = await DownloadTorrentFileAsync(
+                        exactSource,
+                        headers: null,
+                        attemptTimeout.Token).ConfigureAwait(false);
+                    Torrent torrent = Torrent.Load(metadata);
+                    if (torrent.InfoHashes == magnet.InfoHashes)
+                    {
+                        return metadata;
+                    }
+
+                    Debug.WriteLine(
+                        $"[Torrent] Ignored exact source with a mismatched info-hash: {uri}");
+                    break;
+                }
+                catch (OperationCanceledException) when (
+                    attemptTimeout.IsCancellationRequested
+                    && !cancellationToken.IsCancellationRequested)
+                {
+                    Debug.WriteLine(
+                        $"[Torrent] Exact source attempt {attempt} timed out: {uri}");
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    // An exact source is an optional shortcut. Retry transient
+                    // HTTP failures, then continue with tracker/DHT discovery.
+                    Debug.WriteLine(
+                        $"[Torrent] Exact source attempt {attempt} failed '{uri}': {ex.Message}");
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private byte[]? TryLoadCachedMetadata(MagnetLink magnet)
+    {
+        string path = GetMetadataCachePath(magnet);
+        try
+        {
+            if (!File.Exists(path))
+            {
+                return null;
+            }
+
+            var info = new FileInfo(path);
+            if (info.Length <= 0 || info.Length > MaximumMetadataBytes)
+            {
+                File.Delete(path);
+                return null;
+            }
+
+            byte[] metadata = File.ReadAllBytes(path);
+            Torrent torrent = Torrent.Load(metadata);
+            if (torrent.InfoHashes == magnet.InfoHashes)
+            {
+                return metadata;
+            }
+
+            File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Torrent] Could not load cached metadata: {ex.Message}");
+        }
+
+        return null;
+    }
+
+    private void CacheMetadata(MagnetLink magnet, byte[] metadata)
+    {
+        string path = GetMetadataCachePath(magnet);
+        string temporaryPath = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllBytes(temporaryPath, metadata);
+            File.Move(temporaryPath, path, overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Torrent] Could not cache metadata: {ex.Message}");
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(temporaryPath))
+                {
+                    File.Delete(temporaryPath);
+                }
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    private string GetMetadataCachePath(MagnetLink magnet) => Path.Combine(
+        _cacheRoot,
+        "metadata",
+        $"{magnet.InfoHashes.V1OrV2.ToHex()}.torrent");
+
+    private static void ObserveBackgroundFailure(Task task)
+    {
+        if (task.IsCompleted)
+        {
+            _ = task.Exception;
+            return;
+        }
+
+        _ = task.ContinueWith(
+            static completed => _ = completed.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously
+                | TaskContinuationOptions.OnlyOnFaulted,
+            TaskScheduler.Default);
     }
 
     public async ValueTask DisposeAsync()
