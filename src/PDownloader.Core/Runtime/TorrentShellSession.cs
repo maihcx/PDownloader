@@ -13,8 +13,6 @@
 //
 // Copyright (C) Song Mai Software.
 
-using PDownloader.Downloads.Torrents;
-
 namespace PDownloader.Core.Runtime;
 
 public sealed class TorrentShellContext
