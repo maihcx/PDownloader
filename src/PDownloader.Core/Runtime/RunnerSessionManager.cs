@@ -23,6 +23,9 @@ namespace PDownloader.Core.Runtime;
 /// </summary>
 public sealed class RunnerSessionManager : IDisposable
 {
+    private static readonly TimeSpan ShutdownSignalTimeout =
+        TimeSpan.FromMilliseconds(150);
+
     private readonly DownloadConfigService _downloadConfig;
     private readonly ConcurrentDictionary<string, RunnerSession> _sessions =
         new(StringComparer.Ordinal);
@@ -228,7 +231,7 @@ public sealed class RunnerSessionManager : IDisposable
             try
             {
                 await session.Channel.SendAsync(AppProtocol.State, AppState.Shutdown,
-                    TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                    ShutdownSignalTimeout).ConfigureAwait(false);
             }
             finally { await CloseSessionAsync(session).ConfigureAwait(false); }
         })).ConfigureAwait(false);
