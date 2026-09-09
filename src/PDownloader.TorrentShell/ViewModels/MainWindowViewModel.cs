@@ -18,18 +18,24 @@ namespace PDownloader.TorrentShell.ViewModels;
 public partial class MainWindowViewModel : ObservableObject, Services.INavigationAware
 {
     private readonly INavigationService _navigationService;
+    private readonly TorrentShellConfig _torrentConfig;
 
     [ObservableProperty]
     private string _applicationTitle = LanguageBase.GetLangValue("torrent_shell_app_title");
 
-    public MainWindowViewModel(INavigationService navigationService)
+    public MainWindowViewModel(
+        INavigationService navigationService,
+        TorrentShellConfig torrentConfig)
     {
         _navigationService = navigationService;
+        _torrentConfig = torrentConfig;
     }
 
     public Task OnNavigatedToAsync()
     {
-        _navigationService.NavigateTo(typeof(DownloaderPage));
+        _navigationService.NavigateTo(_torrentConfig.HasStarted
+            ? typeof(DownloaderProgressPage)
+            : typeof(DownloaderPage));
         return Task.CompletedTask;
     }
 

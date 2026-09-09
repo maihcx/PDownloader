@@ -4,7 +4,7 @@
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// but WITHOUT ANY WARRANTY without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
@@ -20,6 +20,8 @@ namespace PDownloader.Core.Application.Downloads;
 
 public sealed class TorrentWorkflowService
 {
+    private readonly ConcurrentDictionary<string, string> _sessionTokens =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly Lazy<TorrentEngineService> _torrentEngine;
     private readonly TorrentShellSessionManager _shellSessions;
     private readonly DownloadConfigService _downloadConfig;
@@ -80,6 +82,98 @@ public sealed class TorrentWorkflowService
         // Metadata discovery is intentionally detached from LaunchAsync after the
         // shell is ready, so the user sees TorrentShell immediately.
         _ = PrepareAndPublishAsync(session);
+    }
+
+    public async Task EnsureProgressShellAsync(
+        string downloadId,
+        CancellationToken cancellationToken = default)
+    {
+        DownloadItem? resumedItem = _downloads.Find(downloadId);
+        if (resumedItem?.DownloadKind != DownloadKind.Torrent)
+        {
+            return;
+        }
+
+        string infoHash = resumedItem.TorrentInfoHash.Trim();
+        DownloadItem[] items = _downloads.GetAll()
+            .Where(item => item.DownloadKind == DownloadKind.Torrent
+                && (string.IsNullOrWhiteSpace(infoHash)
+                    ? string.Equals(item.Id, resumedItem.Id, StringComparison.Ordinal)
+                    : string.Equals(
+                        item.TorrentInfoHash,
+                        infoHash,
+                        StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(item => item.TorrentFileIndex)
+            .ThenBy(item => item.Id, StringComparer.Ordinal)
+            .ToArray();
+        if (items.Length == 0)
+        {
+            return;
+        }
+
+        TorrentShellSession? existingSession = items
+            .Select(item => _shellSessions.FindByDownloadId(item.Id))
+            .FirstOrDefault(session => session is not null);
+        string sessionKey = string.IsNullOrWhiteSpace(infoHash)
+            ? resumedItem.Id
+            : infoHash;
+        string token;
+        if (existingSession is not null)
+        {
+            token = existingSession.Id;
+            _sessionTokens[sessionKey] = token;
+        }
+        else
+        {
+            token = _sessionTokens.GetOrAdd(
+                sessionKey,
+                static key => $"torrent-progress-{key.ToLowerInvariant()}");
+        }
+
+        string requestedSaveTo = items
+            .Select(item => item.DestinationFolder)
+            .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path))
+            ?? Path.GetDirectoryName(items[0].SavePath)
+            ?? string.Empty;
+        DownloadCategorySelection selection = _downloadConfig.CreateRunnerSelection(
+            fileName: null,
+            requestedPath: requestedSaveTo,
+            preserveRequestedPath: true,
+            downloadKind: DownloadKind.Torrent);
+        DownloadItem sourceItem = items[0];
+        var context = new TorrentShellContext
+        {
+            Source = sourceItem.Url,
+            Categories = selection.Categories,
+            SelectedCategoryId = selection.SelectedCategoryId,
+            Threads = sourceItem.Threads,
+            Headers = CloneHeaders(sourceItem.CustomHeaders)
+        };
+        context.RestoreProgress(
+            torrentName: items.Select(item => item.TorrentName)
+                .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name))
+                ?? sourceItem.FileName,
+            infoHash: infoHash,
+            saveTo: selection.SaveTo,
+            files: items.Select((item, ordinal) => new TorrentShellFileDto
+            {
+                Index = item.TorrentFileIndex >= 0
+                    ? item.TorrentFileIndex
+                    : ordinal,
+                DownloadId = item.Id,
+                RelativePath = string.IsNullOrWhiteSpace(item.TorrentRelativePath)
+                    ? item.FileName
+                    : item.TorrentRelativePath,
+                FileName = item.FileName,
+                Length = item.TotalBytes
+            }));
+
+        TorrentShellSession session = await _shellSessions.EnsureStartedAsync(
+            token,
+            context,
+            items.Select(item => item.Id),
+            cancellationToken).ConfigureAwait(false);
+        _progressPublisher.AttachTorrentShell(session);
     }
 
     public async Task<TorrentShellStartResult> StartDownloadsAsync(
@@ -210,6 +304,7 @@ public sealed class TorrentWorkflowService
                     session.LifetimeToken)
                 .ConfigureAwait(false);
             _torrentEngine.Value.Register(preparation);
+            _sessionTokens[preparation.InfoHash] = session.Id;
 
             string destinationSubfolder = DownloadPathUtilities.SanitizeFileName(
                 preparation.Name);

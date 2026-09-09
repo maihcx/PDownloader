@@ -4,7 +4,7 @@
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// but WITHOUT ANY WARRANTY without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
@@ -51,18 +51,96 @@ public sealed class TorrentShellSessionManager : IDisposable
                 throw new InvalidOperationException("The TorrentShell session already exists.");
             }
 
-            var channel = new ConfluxService { CanMultiple = true };
-            channel.Register(
-                IpcTopology.TorrentShellProcessName,
-                IpcTopology.CoreToTorrentShellPipeName(token),
-                IpcTopology.TorrentShellToCorePipeName(token));
-            session = new TorrentShellSession(token, channel, context);
-            channel.TargetExited += processId => { _ = CloseAsync(token); };
+            session = CreateSession(token, context, hasStarted: false);
             _sessions[token] = session;
             session.StartupTask = Task.Run(() => StartCoreAsync(session));
         }
 
         await session.StartupTask.WaitAsync(cancellationToken).ConfigureAwait(false);
+        return session;
+    }
+
+    public async Task<TorrentShellSession> EnsureStartedAsync(
+        string token,
+        TorrentShellContext context,
+        IEnumerable<string> downloadIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(token);
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(downloadIds);
+        string[] ownedDownloadIds = downloadIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            TorrentShellSession session;
+            Task? closing;
+            lock (_sync)
+            {
+                ObjectDisposedException.ThrowIf(_disposed != 0, this);
+                if (_stopping)
+                {
+                    throw new InvalidOperationException("TorrentShell sessions are stopping.");
+                }
+
+                if (!_sessions.TryGetValue(token, out session!))
+                {
+                    session = CreateSession(token, context, hasStarted: true);
+                    session.SetDownloadIds(ownedDownloadIds);
+                    _sessions[token] = session;
+                    session.StartupTask = Task.Run(() => StartCoreAsync(session));
+                }
+                else
+                {
+                    session.MarkStarted();
+                    session.SetDownloadIds(ownedDownloadIds);
+                }
+
+                closing = session.CloseTask;
+                if (closing is null
+                    && session.StartupTask.IsCompletedSuccessfully
+                    && !session.Channel.IsAppStarted())
+                {
+                    closing = CloseSessionAsync(session);
+                }
+            }
+
+            if (closing is not null)
+            {
+                await closing.WaitAsync(cancellationToken).ConfigureAwait(false);
+                continue;
+            }
+
+            await session.StartupTask.WaitAsync(cancellationToken).ConfigureAwait(false);
+            return session;
+        }
+    }
+
+    public TorrentShellSession? FindByDownloadId(string downloadId)
+    {
+        lock (_sync)
+        {
+            return _sessions.Values.FirstOrDefault(session =>
+                session.OwnsDownload(downloadId));
+        }
+    }
+
+    private TorrentShellSession CreateSession(
+        string token,
+        TorrentShellContext context,
+        bool hasStarted)
+    {
+        var channel = new ConfluxService { CanMultiple = true };
+        channel.Register(
+            IpcTopology.TorrentShellProcessName,
+            IpcTopology.CoreToTorrentShellPipeName(token),
+            IpcTopology.TorrentShellToCorePipeName(token));
+        var session = new TorrentShellSession(token, channel, context, hasStarted);
+        channel.TargetExited += processId => { _ = CloseAsync(token); };
         return session;
     }
 
@@ -92,11 +170,16 @@ public sealed class TorrentShellSessionManager : IDisposable
     {
         lock (_sync)
         {
-            if (!_sessions.TryGetValue(id, out TorrentShellSession? session))
-            {
-                return Task.CompletedTask;
-            }
+            return _sessions.TryGetValue(id, out TorrentShellSession? session)
+                ? CloseSessionAsync(session)
+                : Task.CompletedTask;
+        }
+    }
 
+    private Task CloseSessionAsync(TorrentShellSession session)
+    {
+        lock (_sync)
+        {
             if (session.CloseTask is not null)
             {
                 return session.CloseTask;
@@ -108,16 +191,18 @@ public sealed class TorrentShellSessionManager : IDisposable
                 try { await session.Channel.DisposeAsync().ConfigureAwait(false); }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[TorrentShell] Close '{id}': {ex.Message}");
+                    Debug.WriteLine($"[TorrentShell] Close '{session.Id}': {ex.Message}");
                 }
                 finally
                 {
                     lock (_sync)
                     {
-                        if (_sessions.TryGetValue(id, out TorrentShellSession? current)
+                        if (_sessions.TryGetValue(
+                                session.Id,
+                                out TorrentShellSession? current)
                             && ReferenceEquals(current, session))
                         {
-                            _sessions.TryRemove(id, out _);
+                            _sessions.TryRemove(session.Id, out _);
                         }
                     }
                 }
