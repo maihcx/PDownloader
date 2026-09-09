@@ -22,7 +22,7 @@ PDownloader is developed across the following repositories:
 - **Resume & retry** — persists segment state to disk so interrupted downloads resume where they left off, with exponential back-off retries per segment.
 - **HLS/DASH streaming support** — detects `.m3u8` playlists and downloads fragments concurrently (via `SemaphoreSlim`-bounded parallelism), then merges them into a single output file.
 - **YouTube & site downloads via yt-dlp** — resolves formats and stream URLs through `yt-dlp` (including cookie-based authentication to bypass bot checks), while the actual transfer is handled by PDownloader's own download engine.
-- **Torrent & magnet downloads** — retrieves torrent metadata through MonoTorrent, opens a dedicated file selector for multi-file torrents, and creates an independent Runner for every selected file.
+- **Torrent & magnet downloads** — retrieves metadata through MonoTorrent and opens TorrentShell for every torrent, including single-file torrents, with grouped file selection, progress, and controls.
 - **Download groups** — organizes downloads by configurable groups and destinations. Torrent files always use the `Torrents` group and are stored under a per-torrent subfolder such as `Downloads/Torrents/Big Buck Bunny/`.
 - **Browser integration** — works with the separately maintained [PDownloader browser extension](https://github.com/maihcx/PDownloader-browser-ext) over a local HTTP bridge.
 - **System tray & background service** — a lightweight background service coordinates the main UI, the download engine window, and the tray icon over local IPC.
@@ -46,7 +46,7 @@ PDownloader.Core  (background service / process owner)
         ├── CFS ──▶ PDownloader        (main WPF UI: settings, app entry point)
         ├── CFS ──▶ PDownloader.Tray   (system tray icon, navigation events)
         ├── CFS ──▶ PDownloader.Runner (one download progress/control UI per file)
-        └── CFS ──▶ PDownloader.TorrentSel (file selection for multi-file torrents)
+        └── CFS ──▶ PDownloader.TorrentShell (torrent file selection, progress and controls)
 
 PDownloader.Downloads
   • DownloadManager / HTTP segments / HLS / torrent engine / recovery orchestration
@@ -70,7 +70,7 @@ PDownloader.Contracts
 | `PDownloader.Infrastructure` | Concrete download adapters: HTTP/IO, hashing and merge recovery, external-process integration, yt-dlp and ffmpeg. |
 | `PDownloader.Contracts` | UI-free shared DTOs, enums, update contracts and download protocol constants used across process boundaries. |
 | `PDownloader.Runner` | WPF progress/control client for an individual download. The actual transfer remains owned by Core/Downloads. |
-| `PDownloader.TorrentSel` | WPF file-selection client opened for multi-file torrents. It returns selected file indexes to Core; it does not download files itself. |
+| `PDownloader.TorrentShell` | WPF torrent client opened for every torrent. It owns file selection plus grouped download progress and controls while Core owns transfer state and engine lifetime. |
 | `PDownloader.Tray` | System tray icon that forwards navigation and update events to Core. |
 | `PDownloader.CFS` | Transport-only local IPC library used by the desktop processes. |
 | `PDownloader.Installer` | Windows installer/setup application. |
@@ -98,13 +98,13 @@ If a server doesn't support ranged requests at all, the engine transparently fal
 Torrent downloads use a Core-owned MonoTorrent engine and accept both magnet links and HTTP/HTTPS URLs to `.torrent` metadata:
 
 1. **Retrieve metadata** — Core resolves the magnet link or downloads and validates the `.torrent` metadata.
-2. **Select files** — a single-file torrent opens Runner directly. A multi-file torrent opens `PDownloader.TorrentSel`, where the user chooses which files to download.
-3. **Launch one Runner per file** — every selected file becomes an independent download item with its own progress and controls.
-4. **Share one torrent session** — Runners for the same info-hash attach to a single Core-owned torrent session, avoiding duplicate swarms and preserving pieces that cross file boundaries.
+2. **Select files** — every torrent, including a single-file torrent, opens `PDownloader.TorrentShell`, where the user chooses the files to download.
+3. **Start grouped downloads** — every selected file becomes an independent Core download item, while TorrentShell presents them together with per-file progress and controls.
+4. **Share one torrent session** — files with the same info-hash attach to a single Core-owned torrent session, avoiding duplicate swarms and preserving pieces that cross file boundaries.
 5. **Choose the destination** — torrent downloads use the configurable `Torrents` group regardless of file extension and add the torrent name as a subfolder.
 6. **Resume safely** — torrent identity, selected file index, relative path, and destination are stored with the download item so paused downloads can be restored.
 
-Runner and TorrentSel are presentation clients only; Core and `PDownloader.Downloads` continue to own all transfer state and engine lifetime.
+Runner and TorrentShell are presentation clients only; Core and `PDownloader.Downloads` continue to own all transfer state and engine lifetime.
 
 ---
 
@@ -115,7 +115,7 @@ Runner and TorrentSel are presentation clients only; Core and `PDownloader.Downl
 | Endpoint | Method | Description |
 |---|---|---|
 | `/ping` | GET | Health check; returns app name and version. |
-| `/download` | POST | Queues a regular file, magnet link, or HTTP/HTTPS `.torrent` download. Torrent metadata and file selection are handled by Core/TorrentSel. |
+| `/download` | POST | Queues a regular file, magnet link, or HTTP/HTTPS `.torrent` download. Torrent metadata and file selection are handled by Core/TorrentShell. |
 | `/youtube/analyze` | POST | Resolves available formats for a YouTube (or supported site) URL via `yt-dlp`. |
 | `/youtube/download` | POST | Starts a YouTube/site download using a resolved format. |
 

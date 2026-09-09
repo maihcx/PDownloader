@@ -14,29 +14,33 @@
 // Copyright (C) Song Mai Software.
 
 using PDownloader.Core.Services.DownloadServices;
-using PDownloader.Downloads.Torrents;
 
 namespace PDownloader.Core.Application.Downloads;
 
 public sealed class TorrentWorkflowService
 {
-    private readonly TorrentEngineService _torrentEngine;
-    private readonly TorrentSelectionSessionManager _selectionSessions;
-    private readonly RunnerSessionManager _runnerSessions;
+    private readonly ConcurrentDictionary<string, string> _sessionTokens =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Lazy<TorrentEngineService> _torrentEngine;
+    private readonly TorrentShellSessionManager _shellSessions;
     private readonly DownloadConfigService _downloadConfig;
+    private readonly DownloadManager _downloads;
+    private readonly DownloadProgressPublisher _progressPublisher;
     private readonly UserDataStore _userDataStore;
 
     public TorrentWorkflowService(
-        TorrentEngineService torrentEngine,
-        TorrentSelectionSessionManager selectionSessions,
-        RunnerSessionManager runnerSessions,
+        Lazy<TorrentEngineService> torrentEngine,
+        TorrentShellSessionManager shellSessions,
         DownloadConfigService downloadConfig,
+        DownloadManager downloads,
+        DownloadProgressPublisher progressPublisher,
         UserDataStore userDataStore)
     {
         _torrentEngine = torrentEngine;
-        _selectionSessions = selectionSessions;
-        _runnerSessions = runnerSessions;
+        _shellSessions = shellSessions;
         _downloadConfig = downloadConfig;
+        _downloads = downloads;
+        _progressPublisher = progressPublisher;
         _userDataStore = userDataStore;
     }
 
@@ -47,111 +51,293 @@ public sealed class TorrentWorkflowService
         Dictionary<string, string>? headers,
         CancellationToken cancellationToken = default)
     {
-        TorrentPreparation preparation = await _torrentEngine
-            .PrepareAsync(source, headers, cancellationToken)
-            .ConfigureAwait(false);
-        _torrentEngine.Register(preparation);
-
-        string saveTo = ResolveDownloadFolder(requestedFolder);
+        string requestedSaveTo = ResolveDownloadFolder(requestedFolder);
+        DownloadCategorySelection selection = _downloadConfig.CreateRunnerSelection(
+            fileName: null,
+            requestedPath: requestedSaveTo,
+            preserveRequestedPath: false,
+            downloadKind: DownloadKind.Torrent);
         int actualThreads = threads > 0
             ? threads
             : _downloadConfig.DownloadConfigs.DefaultThreadCount;
 
-        if (preparation.Files.Count == 1)
+        // Every torrent, including a single-file torrent, belongs to TorrentShell.
+        // Runner remains dedicated to non-torrent, single-download experiences.
+        string token = Guid.NewGuid().ToString("N");
+        var context = new TorrentShellContext
         {
-            await LaunchRunnerAsync(
-                source,
-                saveTo,
-                actualThreads,
-                headers,
-                preparation,
-                preparation.Files[0],
-                cancellationToken).ConfigureAwait(false);
+            Source = source,
+            Categories = selection.Categories,
+            SelectedCategoryId = selection.SelectedCategoryId,
+            Threads = actualThreads,
+            Headers = CloneHeaders(headers)
+        };
+        context.InitializeDestination(selection.SaveTo);
+
+        TorrentShellSession session = await _shellSessions
+            .StartAsync(token, context, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Metadata discovery is intentionally detached from LaunchAsync after the
+        // shell is ready, so the user sees TorrentShell immediately.
+        _ = PrepareAndPublishAsync(session);
+    }
+
+    public async Task EnsureProgressShellAsync(
+        string downloadId,
+        CancellationToken cancellationToken = default)
+    {
+        DownloadItem? resumedItem = _downloads.Find(downloadId);
+        if (resumedItem?.DownloadKind != DownloadKind.Torrent)
+        {
             return;
         }
 
-        string token = Guid.NewGuid().ToString("N");
-        await _selectionSessions.StartAsync(token, new TorrentSelectionContext
+        string infoHash = resumedItem.TorrentInfoHash.Trim();
+        DownloadItem[] items = _downloads.GetAll()
+            .Where(item => item.DownloadKind == DownloadKind.Torrent
+                && (string.IsNullOrWhiteSpace(infoHash)
+                    ? string.Equals(item.Id, resumedItem.Id, StringComparison.Ordinal)
+                    : string.Equals(
+                        item.TorrentInfoHash,
+                        infoHash,
+                        StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(item => item.TorrentFileIndex)
+            .ThenBy(item => item.Id, StringComparer.Ordinal)
+            .ToArray();
+        if (items.Length == 0)
         {
-            Source = source,
-            SaveTo = saveTo,
-            Threads = actualThreads,
-            Headers = CloneHeaders(headers),
-            Preparation = preparation
-        }, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        TorrentShellSession? existingSession = items
+            .Select(item => _shellSessions.FindByDownloadId(item.Id))
+            .FirstOrDefault(session => session is not null);
+        string sessionKey = string.IsNullOrWhiteSpace(infoHash)
+            ? resumedItem.Id
+            : infoHash;
+        string token;
+        if (existingSession is not null)
+        {
+            token = existingSession.Id;
+            _sessionTokens[sessionKey] = token;
+        }
+        else
+        {
+            token = _sessionTokens.GetOrAdd(
+                sessionKey,
+                static key => $"torrent-progress-{key.ToLowerInvariant()}");
+        }
+
+        string requestedSaveTo = items
+            .Select(item => item.DestinationFolder)
+            .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path))
+            ?? Path.GetDirectoryName(items[0].SavePath)
+            ?? string.Empty;
+        DownloadCategorySelection selection = _downloadConfig.CreateRunnerSelection(
+            fileName: null,
+            requestedPath: requestedSaveTo,
+            preserveRequestedPath: true,
+            downloadKind: DownloadKind.Torrent);
+        DownloadItem sourceItem = items[0];
+        var context = new TorrentShellContext
+        {
+            Source = sourceItem.Url,
+            Categories = selection.Categories,
+            SelectedCategoryId = selection.SelectedCategoryId,
+            Threads = sourceItem.Threads,
+            Headers = CloneHeaders(sourceItem.CustomHeaders)
+        };
+        context.RestoreProgress(
+            torrentName: items.Select(item => item.TorrentName)
+                .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name))
+                ?? sourceItem.FileName,
+            infoHash: infoHash,
+            saveTo: selection.SaveTo,
+            files: items.Select((item, ordinal) => new TorrentShellFileDto
+            {
+                Index = item.TorrentFileIndex >= 0
+                    ? item.TorrentFileIndex
+                    : ordinal,
+                DownloadId = item.Id,
+                RelativePath = string.IsNullOrWhiteSpace(item.TorrentRelativePath)
+                    ? item.FileName
+                    : item.TorrentRelativePath,
+                FileName = item.FileName,
+                Length = item.TotalBytes
+            }));
+
+        TorrentShellSession session = await _shellSessions.EnsureStartedAsync(
+            token,
+            context,
+            items.Select(item => item.Id),
+            cancellationToken).ConfigureAwait(false);
+        _progressPublisher.AttachTorrentShell(session);
     }
 
-    public async Task CompleteSelectionAsync(
-        TorrentSelectionSession session,
-        TorrentSelectionResult result,
+    public async Task<TorrentShellStartResult> StartDownloadsAsync(
+        TorrentShellSession session,
+        TorrentShellStartRequest request,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(result);
-        if (!session.TryComplete())
+        ArgumentNullException.ThrowIfNull(request);
+
+        TorrentShellContext context = session.Context;
+        TorrentPreparation? preparation = context.Preparation;
+        if (preparation is null)
         {
-            return;
+            return new TorrentShellStartResult
+            {
+                Success = false,
+                Error = string.IsNullOrWhiteSpace(context.MetadataError)
+                    ? "Torrent metadata is still loading."
+                    : context.MetadataError
+            };
+        }
+
+        int[] selected = request.SelectedFileIndexes
+            .Distinct()
+            .Where(index => preparation.Files.Any(file => file.Index == index))
+            .ToArray();
+
+        if (selected.Length == 0)
+        {
+            return new TorrentShellStartResult
+            {
+                Success = false,
+                Error = "Select at least one torrent file."
+            };
+        }
+
+        string saveTo;
+        try
+        {
+            string requestedSaveTo = string.IsNullOrWhiteSpace(request.SaveTo)
+                ? context.SaveTo
+                : request.SaveTo;
+            saveTo = EnsureDestinationSubfolder(
+                requestedSaveTo,
+                context.DestinationSubfolder);
+            saveTo = _downloadConfig.PrepareOutputFolder(saveTo);
+            if (request.RememberPathForCategory
+                && !string.IsNullOrWhiteSpace(request.CategoryId))
+            {
+                string categoryFolder = GetCategoryFolderToRemember(
+                    saveTo,
+                    context.DestinationSubfolder);
+                _downloadConfig.RememberCategoryPath(request.CategoryId, categoryFolder);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return new TorrentShellStartResult
+            {
+                Success = false,
+                Error = ex.Message
+            };
+        }
+
+        if (!session.TryStart())
+        {
+            return new TorrentShellStartResult
+            {
+                Success = session.HasStarted,
+                Error = session.HasStarted ? string.Empty : "The torrent session could not be started."
+            };
         }
 
         try
         {
-            TorrentSelectionContext context = session.Context;
-            int[] selected = result.SelectedFileIndexes
-                .Distinct()
-                .Where(index => context.Preparation.Files.Any(file => file.Index == index))
+            _torrentEngine.Value.Register(preparation);
+
+            string[] downloadIds = selected
+                .Select(index => TorrentShellContext.CreateDownloadId(session.Id, index))
                 .ToArray();
-            if (selected.Length == 0)
+            session.SetDownloadIds(downloadIds);
+            _progressPublisher.AttachTorrentShell(session);
+
+            foreach (int index in selected)
             {
-                return;
+                cancellationToken.ThrowIfCancellationRequested();
+                TorrentPreparedFile file = preparation.Files.First(candidate =>
+                    candidate.Index == index);
+                await _downloads.EnqueueAsync(
+                    id: TorrentShellContext.CreateDownloadId(session.Id, file.Index),
+                    url: context.Source,
+                    saveTo: saveTo,
+                    fileName: string.IsNullOrWhiteSpace(file.FileName) ? "download" : file.FileName,
+                    threads: context.Threads > 0 ? context.Threads : 8,
+                    customHeaders: CloneHeaders(context.Headers),
+                    mergeMode: _downloadConfig.GetFileMergeMode(),
+                    downloadKind: DownloadKind.Torrent,
+                    torrentInfoHash: preparation.InfoHash,
+                    torrentName: preparation.Name,
+                    torrentFileIndex: file.Index,
+                    torrentRelativePath: file.RelativePath,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
             }
 
-            _torrentEngine.Register(context.Preparation);
-            await Task.WhenAll(selected.Select(index =>
-            {
-                TorrentPreparedFile file = context.Preparation.Files.First(candidate =>
-                    candidate.Index == index);
-                return LaunchRunnerAsync(
-                    context.Source,
-                    context.SaveTo,
-                    context.Threads,
-                    context.Headers,
-                    context.Preparation,
-                    file,
-                    cancellationToken);
-            })).ConfigureAwait(false);
+            return new TorrentShellStartResult { Success = true };
         }
-        finally
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            await _selectionSessions.CloseAsync(session.Id).ConfigureAwait(false);
+            Debug.WriteLine($"[TorrentShell] Could not start torrent downloads: {ex}");
+            return new TorrentShellStartResult
+            {
+                Success = false,
+                Error = ex.Message
+            };
         }
     }
 
-    private Task LaunchRunnerAsync(
-        string source,
-        string saveTo,
-        int threads,
-        Dictionary<string, string>? headers,
-        TorrentPreparation preparation,
-        TorrentPreparedFile file,
-        CancellationToken cancellationToken)
+    private async Task PrepareAndPublishAsync(TorrentShellSession session)
     {
-        string id = Guid.NewGuid().ToString("N");
-        return _runnerSessions.EnsureStartedAsync(id, new RunnerDownloadTask
+        TorrentShellContext context = session.Context;
+        try
         {
-            Id = id,
-            Url = source,
-            SaveTo = saveTo,
-            FileName = string.IsNullOrWhiteSpace(file.FileName) ? "download" : file.FileName,
-            Title = preparation.Name,
-            FileSize = file.Length,
-            Threads = threads,
-            Headers = CloneHeaders(headers),
-            DownloadKind = DownloadKind.Torrent,
-            DestinationSubfolder = DownloadPathUtilities.SanitizeFileName(preparation.Name),
-            TorrentInfoHash = preparation.InfoHash,
-            TorrentFileIndex = file.Index,
-            TorrentRelativePath = file.RelativePath
-        }, cancellationToken);
+            TorrentPreparation preparation = await _torrentEngine.Value
+                .PrepareAsync(
+                    context.Source,
+                    CloneHeaders(context.Headers),
+                    session.LifetimeToken)
+                .ConfigureAwait(false);
+            _torrentEngine.Value.Register(preparation);
+            _sessionTokens[preparation.InfoHash] = session.Id;
+
+            string destinationSubfolder = DownloadPathUtilities.SanitizeFileName(
+                preparation.Name);
+            string saveTo = EnsureDestinationSubfolder(
+                context.SaveTo,
+                destinationSubfolder);
+            context.CompletePreparation(
+                preparation,
+                saveTo,
+                destinationSubfolder);
+        }
+        catch (OperationCanceledException) when (session.LifetimeToken.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[TorrentShell] Could not load torrent metadata: {ex}");
+            context.FailPreparation(ex.Message);
+        }
+
+        try
+        {
+            if (!session.LifetimeToken.IsCancellationRequested)
+            {
+                session.Channel.Send(
+                    DownloadProtocol.TorrentShellSessionChanged,
+                    session.ToView());
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[TorrentShell] Could not publish torrent metadata: {ex.Message}");
+        }
     }
 
     private string ResolveDownloadFolder(string? requestedFolder)
@@ -166,6 +352,39 @@ public sealed class TorrentWorkflowService
             string.IsNullOrWhiteSpace(configured)
                 ? Helpers.GetDefaultFolder(_userDataStore)
                 : configured);
+    }
+
+    private static string EnsureDestinationSubfolder(
+        string saveTo,
+        string destinationSubfolder)
+    {
+        if (string.IsNullOrWhiteSpace(destinationSubfolder)
+            || string.Equals(
+                Path.GetFileName(Path.TrimEndingDirectorySeparator(saveTo)),
+                destinationSubfolder,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return saveTo;
+        }
+
+        return Path.Combine(saveTo, destinationSubfolder);
+    }
+
+    private static string GetCategoryFolderToRemember(
+        string saveTo,
+        string destinationSubfolder)
+    {
+        if (string.IsNullOrWhiteSpace(destinationSubfolder)
+            || !string.Equals(
+                Path.GetFileName(Path.TrimEndingDirectorySeparator(saveTo)),
+                destinationSubfolder,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return saveTo;
+        }
+
+        return Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(saveTo))
+            ?? saveTo;
     }
 
     private static Dictionary<string, string>? CloneHeaders(

@@ -80,6 +80,12 @@ public partial class DownloadItemViewModel : ObservableObject
     public string Md5Hash { get; set; } = string.Empty;
     public string Sha1Hash { get; set; } = string.Empty;
     public string Sha256Hash { get; set; } = string.Empty;
+    public DownloadKind DownloadKind { get; set; } = DownloadKind.Http;
+    public string TorrentInfoHash { get; set; } = string.Empty;
+    public string TorrentName { get; set; } = string.Empty;
+    public string TorrentRelativePath { get; set; } = string.Empty;
+    public bool IsTorrent => DownloadKind ==
+        PDownloader.Contracts.Downloads.DownloadKind.Torrent;
 
     public static DownloadItemViewModel FromContract(DownloadItemDto dto)
     {
@@ -109,6 +115,10 @@ public partial class DownloadItemViewModel : ObservableObject
             Md5Hash = dto.Md5Hash,
             Sha1Hash = dto.Sha1Hash,
             Sha256Hash = dto.Sha256Hash,
+            DownloadKind = dto.DownloadKind,
+            TorrentInfoHash = dto.TorrentInfoHash,
+            TorrentName = dto.TorrentName,
+            TorrentRelativePath = dto.TorrentRelativePath,
             Status = dto.Status.ToString()
         };
     }

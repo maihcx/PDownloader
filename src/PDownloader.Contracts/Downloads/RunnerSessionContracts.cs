@@ -66,5 +66,4 @@ public sealed class RunnerStartDownloadRequest
 
     [JsonPropertyName("rememberPathForCategory")]
     public bool RememberPathForCategory { get; init; }
-
 }

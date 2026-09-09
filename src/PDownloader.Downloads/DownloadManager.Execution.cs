@@ -226,7 +226,9 @@ public sealed partial class DownloadManager
                     }
 
                     item.Status = DownloadStatus.Retrying;
-                    item.ErrorMessage = $"An error occurred! Retrying ({attempt + 1}/{maxAutoRetries})... Please wait...";
+                    item.ErrorMessage = item.DownloadKind == DownloadKind.Torrent
+                        ? $"{ex.Message} Retrying ({attempt + 1}/{maxAutoRetries})..."
+                        : $"An error occurred! Retrying ({attempt + 1}/{maxAutoRetries})... Please wait...";
                     Notify(item);
                     await Task.Delay(2000, token).ConfigureAwait(false);
                 }

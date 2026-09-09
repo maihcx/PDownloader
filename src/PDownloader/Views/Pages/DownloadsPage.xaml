@@ -27,22 +27,22 @@
                     Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
             
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Completed">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorSuccessBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Error">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorCriticalBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Paused">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorCautionBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Merging">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
@@ -55,22 +55,22 @@
             <Setter Property="Foreground"
                     Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Completed">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorSuccessBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Error">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorCriticalBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Paused">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorCautionBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Merging">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
@@ -83,22 +83,22 @@
             <Setter Property="Foreground"
                     Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Completed">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorSuccessBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Error">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorCriticalBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Paused">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorCautionBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Merging">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
@@ -111,22 +111,22 @@
             <Setter Property="Foreground"
                     Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Completed">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorSuccessBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Error">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorCriticalBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Paused">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemFillColorCautionBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding Status}"
+                <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                              Value="Merging">
                     <Setter Property="Foreground"
                             Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
@@ -159,13 +159,13 @@
                 </Grid.ColumnDefinitions>
 
                 <ui:TextBox Grid.Column="0"
-                            Text="{Binding ViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                            Text="{Binding ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                             PlaceholderText="{utils:Localization download_filter_searchbox_desc}"
                             Icon="{ui:SymbolIcon Search24}"
                             VerticalContentAlignment="Center" />
 
                 <ComboBox Grid.Column="2"
-                          ItemsSource="{Binding ViewModel.SortOptions}"
+                          ItemsSource="{Binding ViewModel.SortOptions, Mode=OneWay}"
                           SelectedItem="{Binding ViewModel.SelectedSortOption, Mode=TwoWay}"
                           DisplayMemberPath="DisplayValue"
                           HorizontalContentAlignment="Stretch"
@@ -184,7 +184,7 @@
                     VerticalAlignment="Center"
                     HorizontalAlignment="Center"
                     Margin="0,0,0,10"
-                    Visibility="{Binding ViewModel.IsEmpty, Converter={StaticResource BoolToVisConverter}}">
+                    Visibility="{Binding ViewModel.IsEmpty, Mode=OneWay, Converter={StaticResource BoolToVisConverter}}">
             <ui:SymbolIcon Symbol="ArrowDownload24"
                            FontSize="64"
                            Opacity="0.2"
@@ -203,7 +203,7 @@
         </StackPanel>
 
         <ListBox Grid.Row="1"
-                 ItemsSource="{Binding ViewModel.Downloads}"
+                 ItemsSource="{Binding ViewModel.Downloads, Mode=OneWay}"
                  Background="Transparent"
                  BorderThickness="0"
                  ScrollViewer.CanContentScroll="True"
@@ -259,18 +259,18 @@
                                                VerticalAlignment="Center"
                                                Margin="0,0,14,0"
                                                Style="{StaticResource DownloadStatusIconStyle}"
-                                               Symbol="{Binding StatusState, Converter={StaticResource StatusToIconConverter}}" />
+                                               Symbol="{Binding StatusState, Mode=OneWay, Converter={StaticResource StatusToIconConverter}}" />
 
                                 <!-- File info -->
                                 <StackPanel Grid.Column="1"
                                             Margin="0 0 10 0"
                                             VerticalAlignment="Center">
-                                    <ui:TextBlock Text="{Binding FileName}"
+                                    <ui:TextBlock Text="{Binding FileName, Mode=OneWay}"
                                                FontSize="13"
                                                FontWeight="SemiBold"
                                                TextTrimming="CharacterEllipsis"
                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    <ui:TextBlock Text="{Binding Url}"
+                                    <ui:TextBlock Text="{Binding Url, Mode=OneWay}"
                                                FontSize="11"
                                                Opacity="0.45"
                                                TextTrimming="CharacterEllipsis"
@@ -291,8 +291,8 @@
                                             <Run.Text>
                                                 <MultiBinding Converter="{StaticResource StatusToTextConverter}"
                                                               Mode="OneWay">
-                                                    <Binding Path="Status" />
-                                                    <Binding Path="ErrorMessage" />
+                                                    <Binding Path="Status" Mode="OneWay" />
+                                                    <Binding Path="ErrorMessage" Mode="OneWay" />
                                                 </MultiBinding>
                                             </Run.Text>
                                         </Run>
@@ -340,29 +340,27 @@
                                         <ui:Button Icon="{ui:SymbolIcon Pause24}"
                                                    Margin="0 0 2 0"
                                                    ToolTip="{utils:Localization page_downloads_pause}"
-                                                   Command="{Binding DataContext.ViewModel.PauseCommand,
-                                                                RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                   CommandParameter="{Binding}"
-                                                   Visibility="{Binding IsActive, Converter={StaticResource BoolToVisConverter}}"
-                                                   IsEnabled="{Binding StatusState, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=!~Connecting}"/>
+                                                   Command="{Binding DataContext.ViewModel.PauseCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                   CommandParameter="{Binding Mode=OneWay}"
+                                                   Visibility="{Binding IsActive, Mode=OneWay, Converter={StaticResource BoolToVisConverter}}"
+                                                   IsEnabled="{Binding StatusState, Mode=OneWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=!~Connecting}"/>
 
                                         <ui:Button Icon="{ui:SymbolIcon Play24}"
                                                    Margin="0 0 2 0"
                                                    ToolTip="{utils:Localization page_downloads_resume}"
-                                                   Command="{Binding DataContext.ViewModel.ResumeCommand,
-                                                                RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                   CommandParameter="{Binding}">
+                                                   Command="{Binding DataContext.ViewModel.ResumeCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                   CommandParameter="{Binding Mode=OneWay}">
                                             <ui:Button.Visibility>
-                                                <MultiBinding Converter="{StaticResource AndVisibilityConverter}">
-                                                    <Binding Path="IsActive"
+                                                <MultiBinding Converter="{StaticResource AndVisibilityConverter}" Mode="OneWay">
+                                                    <Binding Path="IsActive" Mode="OneWay"
                                                              Converter="{StaticResource BoolToVisConverter}"
                                                              ConverterParameter="invert" />
 
-                                                    <Binding Path="StatusState"
+                                                    <Binding Path="StatusState" Mode="OneWay"
                                                              Converter="{StaticResource BoolToVisConverter}"
                                                              ConverterParameter="!~Error" />
 
-                                                    <Binding Path="StatusState"
+                                                    <Binding Path="StatusState" Mode="OneWay"
                                                              Converter="{StaticResource BoolToVisConverter}"
                                                              ConverterParameter="!~Retrying" />
                                                 </MultiBinding>
@@ -376,7 +374,7 @@
                                                     <Setter Property="IsEnabled"
                                                             Value="True" />
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Status}"
+                                                        <DataTrigger Binding="{Binding Status, Mode=OneWay}"
                                                                      Value="Merging">
                                                             <Setter Property="IsEnabled"
                                                                     Value="False" />
@@ -388,17 +386,16 @@
                                             <ui:Button Icon="{ui:SymbolIcon ArrowCounterclockwise24}"
                                                        ToolTip="{utils:Localization page_downloads_retry}"
                                                        Margin="0 0 2 0"
-                                                       Command="{Binding DataContext.ViewModel.RetryCommand,
-                                             RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                       CommandParameter="{Binding}"
-                                                       IsEnabled="{Binding StatusState, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Error}">
+                                                       Command="{Binding DataContext.ViewModel.RetryCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       CommandParameter="{Binding Mode=OneWay}"
+                                                       IsEnabled="{Binding StatusState, Mode=OneWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Error}">
                                                 <ui:Button.Visibility>
-                                                    <MultiBinding Converter="{StaticResource OrVisibilityConverter}">
-                                                        <Binding Path="StatusState"
+                                                    <MultiBinding Converter="{StaticResource OrVisibilityConverter}" Mode="OneWay">
+                                                        <Binding Path="StatusState" Mode="OneWay"
                                                                  Converter="{StaticResource BoolToVisConverter}"
                                                                  ConverterParameter="Error" />
 
-                                                        <Binding Path="StatusState"
+                                                        <Binding Path="StatusState" Mode="OneWay"
                                                                  Converter="{StaticResource BoolToVisConverter}"
                                                                  ConverterParameter="Retrying" />
                                                     </MultiBinding>
@@ -408,17 +405,15 @@
                                             <ui:Button Icon="{ui:SymbolIcon FolderOpen24}"
                                                        ToolTip="{utils:Localization page_downloads_open_folder}"
                                                        Margin="0 0 2 0"
-                                                       Command="{Binding DataContext.ViewModel.OpenFolderCommand, 
-                                                RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                       CommandParameter="{Binding}"
-                                                       IsEnabled="{Binding StatusState, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Completed}"/>
+                                                       Command="{Binding DataContext.ViewModel.OpenFolderCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       CommandParameter="{Binding Mode=OneWay}"
+                                                       IsEnabled="{Binding StatusState, Mode=OneWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Completed}"/>
 
                                             <ui:Button Icon="{ui:SymbolIcon Delete24}"
                                                        ToolTip="{utils:Localization page_downloads_cancel}"
                                                        Foreground="#AAEF5350"
-                                                       Command="{Binding DataContext.ViewModel.CancelCommand,
-                                             RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                       CommandParameter="{Binding}" />
+                                                       Command="{Binding DataContext.ViewModel.CancelCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       CommandParameter="{Binding Mode=OneWay}" />
                                         </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
@@ -428,21 +423,21 @@
                         <ui:CardExpander.Content>
                             <StackPanel>
                                 <controls:InfoRow LabelText="{utils:Localization download_view_file_name_title}"
-                                                  ValueText="{Binding FileName}"
+                                                  ValueText="{Binding FileName, Mode=OneWay}"
                                                   Margin="0 -10 0 0" />
                                 <controls:InfoRow LabelText="{utils:Localization download_view_file_save_path_title}"
-                                                  ValueText="{Binding SavePath}" />
+                                                  ValueText="{Binding SavePath, Mode=OneWay}" />
                                 <controls:InfoRow LabelText="{utils:Localization download_view_file_url_title}"
-                                                  ValueText="{Binding Url}" />
+                                                  ValueText="{Binding Url, Mode=OneWay}" />
                                 <controls:InfoRow LabelText="MD5"
-                                                  ValueText="{Binding Md5Hash}"
-                                                  Visibility="{Binding Md5Hash, Converter={StaticResource NullOrEmptyToVisibilityConverter}}" />
+                                                  ValueText="{Binding Md5Hash, Mode=OneWay}"
+                                                  Visibility="{Binding Md5Hash, Mode=OneWay, Converter={StaticResource NullOrEmptyToVisibilityConverter}}" />
                                 <controls:InfoRow LabelText="SHA-1"
-                                                  ValueText="{Binding Sha1Hash}"
-                                                  Visibility="{Binding Sha1Hash, Converter={StaticResource NullOrEmptyToVisibilityConverter}}" />
+                                                  ValueText="{Binding Sha1Hash, Mode=OneWay}"
+                                                  Visibility="{Binding Sha1Hash, Mode=OneWay, Converter={StaticResource NullOrEmptyToVisibilityConverter}}" />
                                 <controls:InfoRow LabelText="SHA-256"
-                                                  ValueText="{Binding Sha256Hash}"
-                                                  Visibility="{Binding Sha256Hash, Converter={StaticResource NullOrEmptyToVisibilityConverter}}" />
+                                                  ValueText="{Binding Sha256Hash, Mode=OneWay}"
+                                                  Visibility="{Binding Sha256Hash, Mode=OneWay, Converter={StaticResource NullOrEmptyToVisibilityConverter}}" />
                                 <controls:InfoRow LabelText="{utils:Localization download_view_file_cap_loaded_title}">
                                     <controls:InfoRow.ValueContent>
                                         <StackPanel Orientation="Horizontal"
@@ -451,19 +446,19 @@
                                                           FontWeight="Medium"
                                                           VerticalAlignment="Center"
                                                           TextTrimming="CharacterEllipsis">
-                                                <Run Text="{Binding DownloadedFormatted}" />
+                                                <Run Text="{Binding DownloadedFormatted, Mode=OneWay}" />
                                                 <Run Text="/" />
-                                                <Run Text="{Binding TotalFormatted}" />
+                                                <Run Text="{Binding TotalFormatted, Mode=OneWay}" />
                                             </ui:TextBlock>
                                         </StackPanel>
                                     </controls:InfoRow.ValueContent>
                                 </controls:InfoRow>
                                 <controls:InfoRow LabelText="{utils:Localization download_view_file_status_title}"
-                                                  ValueText="{Binding StatusText}" />
+                                                  ValueText="{Binding StatusText, Mode=OneWay}" />
                                 <controls:InfoRow LabelText="{utils:Localization download_view_file_start_time_title}"
-                                                  ValueText="{Binding StartTime}" />
+                                                  ValueText="{Binding StartTime, Mode=OneWay}" />
                                 <controls:InfoRow LabelText="{utils:Localization download_view_file_end_time_title}"
-                                                  ValueText="{Binding EndTime}"
+                                                  ValueText="{Binding EndTime, Mode=OneWay}"
                                                   IsLast="True" />
                             </StackPanel>
                         </ui:CardExpander.Content>
@@ -487,7 +482,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <ui:TextBlock Grid.Column="0"
-                           Text="{Binding ViewModel.StatusText}"
+                           Text="{Binding ViewModel.StatusText, Mode=OneWay}"
                            Opacity="0.5"
                            FontSize="12"
                            VerticalAlignment="Center" />
@@ -528,7 +523,7 @@
                            Icon="{ui:SymbolIcon ExpandUpRight20}"
                            Appearance="Caution"
                            Command="{Binding ViewModel.OpenActionFlyoutCommand, Mode=OneWay}"
-                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Mode=OneWay}" />
+                           CommandParameter="{Binding Mode=OneWay, RelativeSource={RelativeSource Self}}" />
                 <ui:Button Grid.Column="3"
                            Content="{utils:Localization page_downloads_add_title}"
                            Icon="{ui:SymbolIcon AddCircle24}"

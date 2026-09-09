@@ -24,7 +24,7 @@ public static class IpcTopology
     public const string CoreProcessName = "PDownloader Core.exe";
     public const string TrayProcessName = "PDownloader Tray.exe";
     public const string RunnerProcessName = "PDownloader Runner.exe";
-    public const string TorrentSelectorProcessName = "PDownloader.TorrentSel.exe";
+    public const string TorrentShellProcessName = "PDownloader.TorrentShell.exe";
 
     public const string MainToCorePipeName = "PDownloader.MainToCore";
     public const string CoreToMainPipeName = "PDownloader.CoreToMain";
@@ -47,9 +47,9 @@ public static class IpcTopology
     public static string CoreToRunnerPipeName(string token) =>
         $"PDownloader.CoreToRunner-{token}";
 
-    public static string TorrentSelectorToCorePipeName(string token) =>
-        $"PDownloader.TorrentSelectorToCore-{token}";
+    public static string TorrentShellToCorePipeName(string token) =>
+        $"PDownloader.TorrentShellToCore-{token}";
 
-    public static string CoreToTorrentSelectorPipeName(string token) =>
-        $"PDownloader.CoreToTorrentSelector-{token}";
+    public static string CoreToTorrentShellPipeName(string token) =>
+        $"PDownloader.CoreToTorrentShell-{token}";
 }

@@ -50,6 +50,7 @@ public partial class DownloadConfigs : ObservableObject
         {
             DownloadCategories.Add(DownloadCategoryViewModel.FromContract(category));
         }
+
         DefaultTempFolder = settings.DefaultTempFolder;
         DefaultThreadCount = settings.DefaultThreadCount;
         FileMergeMode = settings.FileMergeMode;

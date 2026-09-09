@@ -45,6 +45,10 @@ internal static class DownloadItemContractMapper
         Sha256Hash = item.Sha256Hash,
         FileMergeMode = item.MergeMode,
         CanPause = item.CanPause,
-        CanResume = item.CanResume
+        CanResume = item.CanResume,
+        DownloadKind = item.DownloadKind,
+        TorrentInfoHash = item.TorrentInfoHash,
+        TorrentName = item.TorrentName,
+        TorrentRelativePath = item.TorrentRelativePath
     };
 }

@@ -15,6 +15,7 @@
 
 using MonoTorrent;
 using MonoTorrent.Client;
+using System.Net;
 
 namespace PDownloader.Downloads.Torrents;
 
@@ -26,39 +27,42 @@ namespace PDownloader.Downloads.Torrents;
 public sealed class TorrentEngineService : IAsyncDisposable
 {
     private const int MaximumMetadataBytes = 16 * 1024 * 1024;
-    private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan MetadataDownloadTimeout = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan ExactSourceAttemptTimeout = TimeSpan.FromSeconds(8);
+    private static readonly TimeSpan FileStallTimeout = TimeSpan.FromSeconds(60);
+    private const int ExactSourceAttemptCount = 2;
+    private static readonly TimeSpan StopTimeout = TimeSpan.FromMilliseconds(100);
 
-    private readonly ClientEngine _engine;
+    private readonly string _cacheRoot;
     private readonly string _stagingRoot;
-    private readonly ConcurrentDictionary<string, TorrentPreparation> _preparations =
+    // Runtime handoff for files belonging to a download that has already been
+    // created. PrepareAsync deliberately never reads this collection: every
+    // user-requested analysis downloads and parses fresh metadata.
+    private readonly ConcurrentDictionary<string, TorrentPreparation> _registeredPreparations =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, PreparationLockEntry> _preparationLocks =
+        new(StringComparer.Ordinal);
+    private readonly object _preparationLocksSync = new();
     private readonly Dictionary<string, TorrentBatch> _batches =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _reservedDestinationPaths =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly SemaphoreSlim _preparationGate = new(1, 1);
+    private readonly CancellationTokenSource _shutdown = new();
+    private ClientEngine? _engine;
+    private TaskCompletionSource? _downloadsDrained;
+    private TaskCompletionSource? _preparationsDrained;
+    private int _metadataEngineUsers;
+    private int _activeDownloads;
+    private int _activePreparations;
     private int _disposed;
 
     public TorrentEngineService()
     {
-        string cacheRoot = Path.Combine(
+        _cacheRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "SM SOFT", "PDownloader", "TorrentCache");
-        _stagingRoot = Path.Combine(cacheRoot, "staging");
-        Directory.CreateDirectory(cacheRoot);
-        Directory.CreateDirectory(_stagingRoot);
-
-        var settings = new EngineSettingsBuilder
-        {
-            AllowPortForwarding = true,
-            AutoSaveLoadDhtCache = true,
-            AutoSaveLoadFastResume = true,
-            AutoSaveLoadMagnetLinkMetadata = true,
-            CacheDirectory = cacheRoot,
-            UsePartialFiles = false
-        }.ToSettings();
-        _engine = new ClientEngine(settings);
+        _stagingRoot = Path.Combine(_cacheRoot, "staging");
     }
 
     public async Task<TorrentPreparation> PrepareAsync(
@@ -69,15 +73,77 @@ public sealed class TorrentEngineService : IAsyncDisposable
         ObjectDisposedException.ThrowIf(_disposed != 0, this);
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
 
-        await _preparationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        using var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            _shutdown.Token);
+        CancellationToken operationToken = operationCancellation.Token;
+        await BeginPreparationAsync(operationToken).ConfigureAwait(false);
+        PreparationLockEntry? preparationLock = null;
+        bool lockEntered = false;
         try
         {
-            return await PrepareCoreAsync(source, headers, cancellationToken)
+            string preparationKey = GetPreparationKey(source);
+            preparationLock = RentPreparationLock(preparationKey);
+            await preparationLock.Semaphore.WaitAsync(operationToken).ConfigureAwait(false);
+            lockEntered = true;
+            return await PrepareCoreAsync(source, headers, operationToken)
                 .ConfigureAwait(false);
         }
         finally
         {
-            _preparationGate.Release();
+            if (preparationLock is not null)
+            {
+                ReturnPreparationLock(preparationLock, lockEntered);
+            }
+
+            await EndPreparationAsync().ConfigureAwait(false);
+        }
+    }
+
+    private static string GetPreparationKey(string source)
+    {
+        string normalizedSource = source.Trim();
+        if (DownloadSource.IsMagnet(normalizedSource)
+            && MagnetLink.TryParse(normalizedSource, out MagnetLink? magnet))
+        {
+            return $"magnet:{magnet.InfoHashes.V1OrV2.ToHex()}";
+        }
+
+        return $"source:{normalizedSource}";
+    }
+
+    private PreparationLockEntry RentPreparationLock(string key)
+    {
+        lock (_preparationLocksSync)
+        {
+            if (!_preparationLocks.TryGetValue(key, out PreparationLockEntry? entry))
+            {
+                entry = new PreparationLockEntry(key);
+                _preparationLocks.Add(key, entry);
+            }
+
+            entry.Users++;
+            return entry;
+        }
+    }
+
+    private void ReturnPreparationLock(PreparationLockEntry entry, bool lockEntered)
+    {
+        if (lockEntered)
+        {
+            entry.Semaphore.Release();
+        }
+
+        lock (_preparationLocksSync)
+        {
+            entry.Users--;
+            if (entry.Users != 0)
+            {
+                return;
+            }
+
+            _preparationLocks.Remove(entry.Key);
+            entry.Semaphore.Dispose();
         }
     }
 
@@ -86,25 +152,39 @@ public sealed class TorrentEngineService : IAsyncDisposable
         Dictionary<string, string>? headers,
         CancellationToken cancellationToken)
     {
-
+        source = source.Trim();
         byte[] metadata;
         if (DownloadSource.IsMagnet(source))
         {
-            if (!MagnetLink.TryParse(source.Trim(), out MagnetLink? magnet))
+            if (!MagnetLink.TryParse(source, out MagnetLink? magnet))
             {
                 throw new InvalidDataException("The magnet link is invalid.");
             }
 
-            string magnetInfoHash = magnet.InfoHashes.V1OrV2.ToHex();
-            if (_preparations.TryGetValue(magnetInfoHash, out TorrentPreparation? cached))
-            {
-                return cached;
-            }
+            using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken);
+            timeoutSource.CancelAfter(MetadataDownloadTimeout);
 
-            ReadOnlyMemory<byte> result = await _engine
-                .DownloadMetadataAsync(magnet, cancellationToken)
-                .ConfigureAwait(false);
-            metadata = result.ToArray();
+            try
+            {
+                metadata = await TryDownloadExactSourceAsync(
+                    source,
+                    magnet,
+                    timeoutSource.Token).ConfigureAwait(false)
+                    ?? await DownloadMagnetMetadataAsync(
+                        magnet,
+                        timeoutSource.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (
+                timeoutSource.IsCancellationRequested
+                && !cancellationToken.IsCancellationRequested)
+            {
+                throw new TimeoutException(
+                    $"Torrent metadata could not be loaded within "
+                    + $"{MetadataDownloadTimeout.TotalSeconds:0} seconds. "
+                    + "No metadata peer responded. Check the magnet trackers "
+                    + "or try a direct .torrent URL.");
+            }
         }
         else
         {
@@ -125,14 +205,14 @@ public sealed class TorrentEngineService : IAsyncDisposable
             throw new InvalidDataException("The torrent does not contain any downloadable files.");
         }
 
-        _preparations[preparation.InfoHash] = preparation;
+        _registeredPreparations[preparation.InfoHash] = preparation;
         return preparation;
     }
 
     public void Register(TorrentPreparation preparation)
     {
         ArgumentNullException.ThrowIfNull(preparation);
-        _preparations[preparation.InfoHash] = preparation;
+        _registeredPreparations[preparation.InfoHash] = preparation;
     }
 
     public async Task<string> DownloadFileAsync(
@@ -146,64 +226,103 @@ public sealed class TorrentEngineService : IAsyncDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
         ArgumentNullException.ThrowIfNull(reportProgress);
 
-        TorrentPreparation preparation = await GetPreparationAsync(item, cancellationToken)
-            .ConfigureAwait(false);
-        TorrentAttachment attachment = await AttachAsync(
-            preparation,
-            item.TorrentFileIndex,
-            destinationPath,
-            cancellationToken).ConfigureAwait(false);
-        item.TorrentDestinationPath = attachment.DestinationPath;
+        using var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            _shutdown.Token);
+        CancellationToken operationToken = operationCancellation.Token;
+        await BeginDownloadAsync(operationToken).ConfigureAwait(false);
 
         try
         {
-            TorrentPreparedFile preparedFile = preparation.Files.First(file =>
-                file.Index == item.TorrentFileIndex);
-            if (!string.IsNullOrWhiteSpace(item.TorrentRelativePath)
-                && !string.Equals(
-                    item.TorrentRelativePath,
-                    preparedFile.RelativePath,
-                    StringComparison.Ordinal))
-            {
-                throw new InvalidDataException("Torrent file metadata does not match the saved download.");
-            }
+            TorrentPreparation preparation = await GetPreparationAsync(item, operationToken)
+                .ConfigureAwait(false);
+            TorrentAttachment attachment = await AttachAsync(
+                preparation,
+                item.TorrentFileIndex,
+                destinationPath,
+                operationToken).ConfigureAwait(false);
+            item.TorrentDestinationPath = attachment.DestinationPath;
 
-            item.TorrentRelativePath = preparedFile.RelativePath;
-            item.SetTotalBytes(preparedFile.Length);
-            long lastBytes = attachment.File.BytesDownloaded();
-            long lastTick = Stopwatch.GetTimestamp();
-            reportProgress(lastBytes, 0);
-
-            using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
-            while (attachment.File.Length > 0
-                && attachment.File.BitField.PercentComplete < 99.999)
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (attachment.Batch.Manager.State == TorrentState.Error)
+                TorrentPreparedFile preparedFile = preparation.Files.First(file =>
+                    file.Index == item.TorrentFileIndex);
+                if (!string.IsNullOrWhiteSpace(item.TorrentRelativePath)
+                    && !string.Equals(
+                        item.TorrentRelativePath,
+                        preparedFile.RelativePath,
+                        StringComparison.Ordinal))
                 {
-                    throw attachment.Batch.Manager.Error?.Exception
-                        ?? new IOException("The torrent engine entered an error state.");
+                    throw new InvalidDataException(
+                        "Torrent file metadata does not match the saved download.");
                 }
 
-                await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false);
-                long bytes = Math.Min(attachment.File.Length, attachment.File.BytesDownloaded());
-                long now = Stopwatch.GetTimestamp();
-                double seconds = Stopwatch.GetElapsedTime(lastTick, now).TotalSeconds;
-                double speed = seconds > 0 ? Math.Max(0, bytes - lastBytes) / seconds : 0;
-                reportProgress(bytes, speed);
-                lastBytes = bytes;
-                lastTick = now;
+                item.TorrentRelativePath = preparedFile.RelativePath;
+                item.SetTotalBytes(preparedFile.Length);
+                long lastBytes = attachment.File.BytesDownloaded();
+                long lastTick = Stopwatch.GetTimestamp();
+                long lastProgressBytes = lastBytes;
+                long lastProgressTick = lastTick;
+                reportProgress(lastBytes, 0);
+
+                using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
+                while (attachment.File.Length > 0
+                    && attachment.File.BitField.PercentComplete < 99.999)
+                {
+                    operationToken.ThrowIfCancellationRequested();
+                    if (attachment.Batch.Manager.State == TorrentState.Error)
+                    {
+                        throw attachment.Batch.Manager.Error?.Exception
+                            ?? new IOException("The torrent engine entered an error state.");
+                    }
+
+                    await timer.WaitForNextTickAsync(operationToken).ConfigureAwait(false);
+                    long bytes = Math.Min(
+                        attachment.File.Length,
+                        attachment.File.BytesDownloaded());
+                    long now = Stopwatch.GetTimestamp();
+                    double seconds = Stopwatch.GetElapsedTime(lastTick, now).TotalSeconds;
+                    double speed = seconds > 0 ? Math.Max(0, bytes - lastBytes) / seconds : 0;
+                    reportProgress(bytes, speed);
+
+                    if (bytes > lastProgressBytes)
+                    {
+                        lastProgressBytes = bytes;
+                        lastProgressTick = now;
+                    }
+                    else if (attachment.Batch.Manager.State == TorrentState.Downloading
+                        && Stopwatch.GetElapsedTime(lastProgressTick, now) >= FileStallTimeout)
+                    {
+                        throw new TimeoutException(
+                            $"Torrent file '{preparedFile.RelativePath}' made no progress for "
+                            + $"{FileStallTimeout.TotalSeconds:0} seconds.");
+                    }
+                    else if (attachment.Batch.Manager.State != TorrentState.Downloading)
+                    {
+                        // Hash checking and state transitions are legitimate periods
+                        // without downloaded bytes. Start the watchdog only after the
+                        // manager is actively downloading this file again.
+                        lastProgressTick = now;
+                    }
+
+                    lastBytes = bytes;
+                    lastTick = now;
+                }
+
+                operationToken.ThrowIfCancellationRequested();
+                reportProgress(attachment.File.Length, 0);
+            }
+            finally
+            {
+                await DetachAsync(attachment).ConfigureAwait(false);
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
-            reportProgress(attachment.File.Length, 0);
+            return attachment.DestinationPath;
         }
         finally
         {
-            await DetachAsync(attachment).ConfigureAwait(false);
+            await EndDownloadAsync().ConfigureAwait(false);
         }
-
-        return attachment.DestinationPath;
     }
 
     private async Task<TorrentPreparation> GetPreparationAsync(
@@ -211,30 +330,17 @@ public sealed class TorrentEngineService : IAsyncDisposable
         CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(item.TorrentInfoHash)
-            && _preparations.TryGetValue(item.TorrentInfoHash, out TorrentPreparation? cached))
+            && _registeredPreparations.TryGetValue(
+                item.TorrentInfoHash,
+                out TorrentPreparation? registeredPreparation))
         {
-            return cached;
+            return registeredPreparation;
         }
 
-        await _preparationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        TorrentPreparation preparation;
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(item.TorrentInfoHash)
-                && _preparations.TryGetValue(item.TorrentInfoHash, out cached))
-            {
-                return cached;
-            }
-
-            preparation = await PrepareCoreAsync(
-                item.Url,
-                item.CustomHeaders,
-                cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            _preparationGate.Release();
-        }
+        TorrentPreparation preparation = await PrepareAsync(
+            item.Url,
+            item.CustomHeaders,
+            cancellationToken).ConfigureAwait(false);
         if (!string.IsNullOrWhiteSpace(item.TorrentInfoHash)
             && !string.Equals(item.TorrentInfoHash, preparation.InfoHash,
                 StringComparison.OrdinalIgnoreCase))
@@ -263,6 +369,7 @@ public sealed class TorrentEngineService : IAsyncDisposable
         {
             if (!_batches.TryGetValue(preparation.InfoHash, out TorrentBatch? batch))
             {
+                ClientEngine engine = GetOrCreateEngine();
                 string staging = Path.Combine(_stagingRoot, preparation.InfoHash);
                 Directory.CreateDirectory(staging);
                 var torrentSettings = new TorrentSettingsBuilder
@@ -270,18 +377,26 @@ public sealed class TorrentEngineService : IAsyncDisposable
                     CreateContainingDirectory = false,
                     MaximumConnections = 60
                 }.ToSettings();
-                TorrentManager manager = await _engine.AddAsync(
-                    preparation.Torrent,
-                    staging,
-                    torrentSettings).ConfigureAwait(false);
-                foreach (ITorrentManagerFile file in manager.Files)
+                try
                 {
-                    await manager.SetFilePriorityAsync(file, Priority.DoNotDownload)
-                        .ConfigureAwait(false);
-                }
+                    TorrentManager manager = await engine.AddAsync(
+                        preparation.Torrent,
+                        staging,
+                        torrentSettings).ConfigureAwait(false);
+                    foreach (ITorrentManagerFile file in manager.Files)
+                    {
+                        await manager.SetFilePriorityAsync(file, Priority.DoNotDownload)
+                            .ConfigureAwait(false);
+                    }
 
-                batch = new TorrentBatch(preparation.InfoHash, manager);
-                _batches.Add(preparation.InfoHash, batch);
+                    batch = new TorrentBatch(preparation.InfoHash, manager);
+                    _batches.Add(preparation.InfoHash, batch);
+                }
+                catch
+                {
+                    DisposeEngineIfIdle();
+                    throw;
+                }
             }
 
             if (batch.ActiveFileIndexes.Contains(fileIndex))
@@ -311,6 +426,11 @@ public sealed class TorrentEngineService : IAsyncDisposable
             {
                 batch.ActiveFileIndexes.Remove(fileIndex);
                 _reservedDestinationPaths.Remove(destinationPath);
+                if (batch.ActiveFileIndexes.Count == 0)
+                {
+                    await RemoveBatchAsync(batch).ConfigureAwait(false);
+                }
+
                 throw;
             }
         }
@@ -334,15 +454,20 @@ public sealed class TorrentEngineService : IAsyncDisposable
 
             _reservedDestinationPaths.Remove(attachment.DestinationPath);
 
-            await batch.Manager.SetFilePriorityAsync(
-                attachment.File,
-                Priority.DoNotDownload).ConfigureAwait(false);
+            try
+            {
+                await batch.Manager.SetFilePriorityAsync(
+                    attachment.File,
+                    Priority.DoNotDownload).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Torrent] Could not disable file: {ex.Message}");
+            }
+
             if (batch.ActiveFileIndexes.Count == 0)
             {
-                await batch.Manager.StopAsync(StopTimeout).ConfigureAwait(false);
-                await _engine.RemoveAsync(batch.Manager, RemoveMode.KeepAllData)
-                    .ConfigureAwait(false);
-                _batches.Remove(batch.InfoHash);
+                await RemoveBatchAsync(batch).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
@@ -353,6 +478,35 @@ public sealed class TorrentEngineService : IAsyncDisposable
         {
             _gate.Release();
         }
+    }
+
+    // Must be called while _gate is held.
+    private async Task RemoveBatchAsync(TorrentBatch batch)
+    {
+        try
+        {
+            await batch.Manager.StopAsync(StopTimeout).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Torrent] Could not stop manager: {ex.Message}");
+        }
+
+        try
+        {
+            if (_engine is not null)
+            {
+                await _engine.RemoveAsync(batch.Manager, RemoveMode.KeepAllData)
+                    .ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Torrent] Could not remove manager: {ex.Message}");
+        }
+
+        _batches.Remove(batch.InfoHash);
+        DisposeEngineIfIdle();
     }
 
     private string ReserveDestinationPath(string requestedPath)
@@ -381,6 +535,172 @@ public sealed class TorrentEngineService : IAsyncDisposable
         }
 
         throw new IOException("A unique destination file name could not be reserved.");
+    }
+
+    private async Task<ClientEngine> RentMetadataEngineAsync(
+        CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ClientEngine engine = GetOrCreateEngine();
+            _metadataEngineUsers++;
+            return engine;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private async Task BeginDownloadAsync(CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(_disposed != 0, this);
+            _activeDownloads++;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private async Task BeginPreparationAsync(CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(_disposed != 0, this);
+            _activePreparations++;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private async Task EndDownloadAsync()
+    {
+        await _gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_activeDownloads > 0)
+            {
+                _activeDownloads--;
+            }
+
+            if (_activeDownloads == 0)
+            {
+                _downloadsDrained?.TrySetResult();
+                _downloadsDrained = null;
+            }
+
+            DisposeEngineIfIdle();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private async Task EndPreparationAsync()
+    {
+        await _gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_activePreparations > 0)
+            {
+                _activePreparations--;
+            }
+
+            if (_activePreparations == 0)
+            {
+                _preparationsDrained?.TrySetResult();
+                _preparationsDrained = null;
+            }
+
+            DisposeEngineIfIdle();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private async Task ReturnMetadataEngineAsync()
+    {
+        await _gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_metadataEngineUsers > 0)
+            {
+                _metadataEngineUsers--;
+            }
+
+            DisposeEngineIfIdle();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    // Must be called while _gate is held. Constructing the service itself does
+    // not load MonoTorrent resources, open sockets or start background work.
+    private ClientEngine GetOrCreateEngine()
+    {
+        ObjectDisposedException.ThrowIf(_disposed != 0, this);
+        if (_engine is not null)
+        {
+            return _engine;
+        }
+
+        Directory.CreateDirectory(_cacheRoot);
+        Directory.CreateDirectory(_stagingRoot);
+        var settings = new EngineSettingsBuilder
+        {
+            AllowLocalPeerDiscovery = true,
+            // This engine is short-lived and is created only when a torrent is
+            // actually used. UPnP/NAT-PMP discovery can block manager startup
+            // before trackers or DHT begin, and is unnecessary for metadata.
+            AllowPortForwarding = false,
+            AutoSaveLoadDhtCache = true,
+            AutoSaveLoadFastResume = true,
+            AutoSaveLoadMagnetLinkMetadata = false,
+            CacheDirectory = _cacheRoot,
+            DhtEndPoint = new IPEndPoint(IPAddress.Any, 0),
+            // Prefer the IPv4 path used by DHT and the majority of trackers.
+            // A disabled/broken IPv6 stack must not prevent engine startup.
+            ListenEndPoints = new Dictionary<string, IPEndPoint>
+            {
+                ["ipv4"] = new(IPAddress.Any, 0)
+            },
+            UsePartialFiles = false
+        }.ToSettings();
+        _engine = new ClientEngine(settings);
+        return _engine;
+    }
+
+    // Must be called while _gate is held. A metadata request or live manager
+    // pins the engine; otherwise its sockets, caches and worker resources are
+    // released immediately instead of being retained for the Core lifetime.
+    private void DisposeEngineIfIdle()
+    {
+        if (_engine is null || _metadataEngineUsers != 0 || _batches.Count != 0)
+        {
+            return;
+        }
+
+        ClientEngine engine = _engine;
+        _engine = null;
+        _reservedDestinationPaths.Clear();
+        try { engine.Dispose(); }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Torrent] Could not dispose idle engine: {ex.Message}");
+        }
     }
 
     private static async Task<byte[]> DownloadTorrentFileAsync(
@@ -428,6 +748,138 @@ public sealed class TorrentEngineService : IAsyncDisposable
         return output.ToArray();
     }
 
+    private async Task<byte[]> DownloadMagnetMetadataAsync(
+        MagnetLink magnet,
+        CancellationToken cancellationToken)
+    {
+        ClientEngine engine = await RentMetadataEngineAsync(cancellationToken)
+            .ConfigureAwait(false);
+        try
+        {
+            Task<ReadOnlyMemory<byte>> metadataTask = engine
+                .DownloadMetadataAsync(magnet, cancellationToken);
+            try
+            {
+                // MonoTorrent 3.0.2 only observes the token while waiting for
+                // MetadataReceived. Its StartAsync and cleanup paths can still
+                // wait indefinitely, so bound the complete operation as well.
+                ReadOnlyMemory<byte> result = await metadataTask
+                    .WaitAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                return result.ToArray();
+            }
+            catch
+            {
+                ObserveBackgroundFailure(metadataTask);
+                throw;
+            }
+        }
+        finally
+        {
+            await ReturnMetadataEngineAsync().ConfigureAwait(false);
+        }
+    }
+
+    private static async Task<byte[]?> TryDownloadExactSourceAsync(
+        string source,
+        MagnetLink magnet,
+        CancellationToken cancellationToken)
+    {
+        int queryIndex = source.IndexOf('?');
+        if (queryIndex < 0 || queryIndex == source.Length - 1)
+        {
+            return null;
+        }
+
+        foreach (string part in source[(queryIndex + 1)..]
+            .Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            int separator = part.IndexOf('=');
+            if (separator <= 0
+                || !part[..separator].Equals("xs", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string exactSource;
+            try
+            {
+                exactSource = Uri.UnescapeDataString(part[(separator + 1)..]
+                    .Replace('+', ' ')).Trim();
+            }
+            catch (UriFormatException)
+            {
+                continue;
+            }
+
+            if (!Uri.TryCreate(exactSource, UriKind.Absolute, out Uri? uri)
+                || uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+            {
+                continue;
+            }
+
+            for (int attempt = 1; attempt <= ExactSourceAttemptCount; attempt++)
+            {
+                using var attemptTimeout = CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken);
+                attemptTimeout.CancelAfter(ExactSourceAttemptTimeout);
+
+                try
+                {
+                    byte[] metadata = await DownloadTorrentFileAsync(
+                        exactSource,
+                        headers: null,
+                        attemptTimeout.Token).ConfigureAwait(false);
+                    Torrent torrent = Torrent.Load(metadata);
+                    if (torrent.InfoHashes == magnet.InfoHashes)
+                    {
+                        return metadata;
+                    }
+
+                    Debug.WriteLine(
+                        $"[Torrent] Ignored exact source with a mismatched info-hash: {uri}");
+                    break;
+                }
+                catch (OperationCanceledException) when (
+                    attemptTimeout.IsCancellationRequested
+                    && !cancellationToken.IsCancellationRequested)
+                {
+                    Debug.WriteLine(
+                        $"[Torrent] Exact source attempt {attempt} timed out: {uri}");
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    // An exact source is an optional shortcut. Retry transient
+                    // HTTP failures, then continue with tracker/DHT discovery.
+                    Debug.WriteLine(
+                        $"[Torrent] Exact source attempt {attempt} failed '{uri}': {ex.Message}");
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static void ObserveBackgroundFailure(Task task)
+    {
+        if (task.IsCompleted)
+        {
+            _ = task.Exception;
+            return;
+        }
+
+        _ = task.ContinueWith(
+            static completed => _ = completed.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously
+                | TaskContinuationOptions.OnlyOnFaulted,
+            TaskScheduler.Default);
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
@@ -435,6 +887,45 @@ public sealed class TorrentEngineService : IAsyncDisposable
             return;
         }
 
+        try { await _shutdown.CancelAsync().ConfigureAwait(false); }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Torrent] Could not signal shutdown: {ex.Message}");
+        }
+
+        Task downloadsDrained;
+        Task preparationsDrained;
+        await _gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_activeDownloads == 0)
+            {
+                downloadsDrained = Task.CompletedTask;
+            }
+            else
+            {
+                _downloadsDrained ??= new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                downloadsDrained = _downloadsDrained.Task;
+            }
+
+            if (_activePreparations == 0)
+            {
+                preparationsDrained = Task.CompletedTask;
+            }
+            else
+            {
+                _preparationsDrained ??= new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                preparationsDrained = _preparationsDrained.Task;
+            }
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        await Task.WhenAll(downloadsDrained, preparationsDrained).ConfigureAwait(false);
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -443,8 +934,11 @@ public sealed class TorrentEngineService : IAsyncDisposable
                 try
                 {
                     await batch.Manager.StopAsync(StopTimeout).ConfigureAwait(false);
-                    await _engine.RemoveAsync(batch.Manager, RemoveMode.KeepAllData)
-                        .ConfigureAwait(false);
+                    if (_engine is not null)
+                    {
+                        await _engine.RemoveAsync(batch.Manager, RemoveMode.KeepAllData)
+                            .ConfigureAwait(false);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -453,13 +947,24 @@ public sealed class TorrentEngineService : IAsyncDisposable
             }
 
             _batches.Clear();
-            _engine.Dispose();
+            _metadataEngineUsers = 0;
+            DisposeEngineIfIdle();
+            _registeredPreparations.Clear();
+            lock (_preparationLocksSync)
+            {
+                foreach (PreparationLockEntry preparationLock in _preparationLocks.Values)
+                {
+                    preparationLock.Semaphore.Dispose();
+                }
+
+                _preparationLocks.Clear();
+            }
         }
         finally
         {
             _gate.Release();
             _gate.Dispose();
-            _preparationGate.Dispose();
+            _shutdown.Dispose();
         }
     }
 
@@ -474,6 +979,18 @@ public sealed class TorrentEngineService : IAsyncDisposable
         public string InfoHash { get; }
         public TorrentManager Manager { get; }
         public HashSet<int> ActiveFileIndexes { get; } = [];
+    }
+
+    private sealed class PreparationLockEntry
+    {
+        public PreparationLockEntry(string key)
+        {
+            Key = key;
+        }
+
+        public string Key { get; }
+        public SemaphoreSlim Semaphore { get; } = new(1, 1);
+        public int Users { get; set; }
     }
 
     private sealed record TorrentAttachment(

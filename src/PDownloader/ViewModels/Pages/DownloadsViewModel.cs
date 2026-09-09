@@ -142,7 +142,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
     private bool FilterDownload(object item)
     {
-        if (item is not DownloadItemViewModel download)
+        if (item is not DownloadItemViewModel download || download.IsTorrent)
         {
             return false;
         }
@@ -272,7 +272,7 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
         {
             Downloads.Clear();
 
-            foreach (DownloadItemViewModel item in items)
+            foreach (DownloadItemViewModel item in items.Where(item => !item.IsTorrent))
             {
                 Downloads.Add(item);
             }
@@ -285,6 +285,11 @@ public partial class DownloadsViewModel : ObservableObject, INavigationAware
 
     private void OnProgress(DownloadItemViewModel dto)
     {
+        if (dto.IsTorrent)
+        {
+            return;
+        }
+
         App.Current.Dispatcher.Invoke(() =>
         {
             DownloadItemViewModel? existing = Downloads.FirstOrDefault(d => d.Id == dto.Id);

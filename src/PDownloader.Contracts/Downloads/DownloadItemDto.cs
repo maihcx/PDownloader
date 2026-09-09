@@ -54,4 +54,10 @@ public sealed class DownloadItemDto
     public FileMergeMode FileMergeMode { get; set; } = FileMergeMode.Balanced;
     [JsonPropertyName("canPause")] public bool CanPause { get; set; }
     [JsonPropertyName("canResume")] public bool CanResume { get; set; }
+    [JsonPropertyName("downloadKind")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public DownloadKind DownloadKind { get; set; } = DownloadKind.Http;
+    [JsonPropertyName("torrentInfoHash")] public string TorrentInfoHash { get; set; } = string.Empty;
+    [JsonPropertyName("torrentName")] public string TorrentName { get; set; } = string.Empty;
+    [JsonPropertyName("torrentRelativePath")] public string TorrentRelativePath { get; set; } = string.Empty;
 }
