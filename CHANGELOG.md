@@ -1,3 +1,13 @@
+## v1.2.1
+
+## 🚀 Changelog
+## 🐛 Bug Fixes
+
+- [tray] Fix Tray Left-Click Window Behavior (#264) — @maihcx
+
+
+---
+
 ## v1.2.0
 
 ## 🚀 Changelog
