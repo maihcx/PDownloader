@@ -1,4 +1,4 @@
-﻿<Window 
+<Window 
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" x:Class="PDownloader.Tray.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -19,7 +19,7 @@
     <Grid>
         <tray:NotifyIcon
             x:Name="TrayIcon"
-            FocusOnLeftClick="True"
+            FocusOnLeftClick="False"
             Icon="pack://application:,,,/Assets/app-100.png"
             MenuOnRightClick="True"
             LeftClick="NotifyIcon_LeftClick"
